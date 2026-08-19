@@ -71,6 +71,63 @@ describe('ciclo automático con finales de carrera', () => {
 })
 
 // ---------------------------------------------------------------------------
+// Encadenar movimientos: un cilindro de simple efecto que, al llegar al final
+// de su carrera, pisa un rodillo y ese rodillo pilota otra válvula.
+// ---------------------------------------------------------------------------
+describe('un simple efecto acciona otra válvula al llegar al final de carrera', () => {
+  const circuito = (): Circuito => ({
+    componentes: [
+      { id: 'F1', tipo: 'fuente', params: { presion: 6 } },
+      { id: 'V1', tipo: 'valvula32', params: { reposo: 'NC' } },
+      { id: 'C1', tipo: 'cilindroSimpleEfecto' },
+      { id: 'S1', tipo: 'finalCarrera', params: { cilindro: 'C1', puntoDisparo: 1, reposo: 'NC' } },
+      { id: 'V2', tipo: 'valvula52', params: { modo: 'monoestable', accionamiento: 'pilotaje' } },
+      { id: 'C2', tipo: 'cilindroDobleEfecto' },
+    ],
+    mangueras: [
+      { id: 'm1', a: ref('F1', '1'), b: ref('V1', '1') },
+      { id: 'm2', a: ref('V1', '2'), b: ref('C1', '1') },
+      { id: 'm3', a: ref('F1', '1'), b: ref('S1', '1') },
+      { id: 'm4', a: ref('S1', '2'), b: ref('V2', '14') },
+      { id: 'm5', a: ref('F1', '1'), b: ref('V2', '1') },
+      { id: 'm6', a: ref('V2', '4'), b: ref('C2', 'A') },
+      { id: 'm7', a: ref('V2', '2'), b: ref('C2', 'B') },
+    ],
+  })
+
+  it('mientras C1 no llega al final, el rodillo no da señal', () => {
+    const motor = new Motor(circuito())
+    motor.accionar('V1', true)
+    motor.simular(0.6) // a media carrera
+    expect(motor.estadoDe<{ posicion: number }>('C1').posicion).toBeLessThan(1)
+    expect(motor.estadoDe<EstadoFinalCarrera>('S1').accionada).toBe(false)
+    expect(motor.presionEn('V2', '14')).toBe(0)
+    expect(cil(motor, 'C2').posicion).toBe(0)
+  })
+
+  it('al completar la carrera, el rodillo pilota la segunda válvula y mueve C2', () => {
+    const motor = new Motor(circuito())
+    motor.accionar('V1', true)
+    motor.simular(4)
+    expect(motor.estadoDe<{ posicion: number }>('C1').posicion).toBe(1)
+    expect(motor.estadoDe<EstadoFinalCarrera>('S1').accionada).toBe(true)
+    expect(motor.presionEn('V2', '14')).toBe(6)
+    expect(cil(motor, 'C2').posicion).toBe(1)
+  })
+
+  it('al soltar el pulsador, el muelle retrae C1, cae la señal y C2 retorna', () => {
+    const motor = new Motor(circuito())
+    motor.accionar('V1', true)
+    motor.simular(4)
+    motor.accionar('V1', false)
+    motor.simular(4)
+    expect(motor.estadoDe<{ posicion: number }>('C1').posicion).toBe(0)
+    expect(motor.estadoDe<EstadoFinalCarrera>('S1').accionada).toBe(false)
+    expect(cil(motor, 'C2').posicion).toBe(0)
+  })
+})
+
+// ---------------------------------------------------------------------------
 // Mando bimanual: dos pulsadores + válvula de simultaneidad "Y".
 // ---------------------------------------------------------------------------
 function circuitoBimanual(): Circuito {

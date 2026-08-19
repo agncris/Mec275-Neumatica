@@ -36,6 +36,7 @@ banco de prácticas. Todo el contenido y la interfaz están en español.
 | 3 | 5/2 biestable con dos pulsadores | Memoria neumática, pilotaje 12/14 |
 | 4 | Ciclo automático ida-vuelta | Finales de carrera de rodillo |
 | 5 | Mando bimanual | Válvula de simultaneidad «Y», seguridad |
+| 6 | Encadenar dos cilindros | Final de carrera que pilota otra válvula |
 
 ## Biblioteca de componentes
 
@@ -99,7 +100,7 @@ npm run dev        # http://localhost:5173
 ```
 
 ```bash
-npm test           # 68 pruebas del motor y de la persistencia
+npm test           # 71 pruebas del motor y de la persistencia
 npm run typecheck  # comprobación de tipos
 npm run build      # compila a /dist
 ```

@@ -30,6 +30,7 @@ const EJEMPLOS: Array<{ n: NumeroEjemplo; etiqueta: string }> = [
   { n: 3, etiqueta: '3 · Biestable con memoria' },
   { n: 4, etiqueta: '4 · Ciclo automático (finales de carrera)' },
   { n: 5, etiqueta: '5 · Mando bimanual (válvula Y)' },
+  { n: 6, etiqueta: '6 · Encadenar dos cilindros (rodillo)' },
 ]
 
 /** Detecta pantallas estrechas para reordenar la interfaz en tablet/móvil. */

@@ -15,7 +15,7 @@ export interface Pieza {
 
 export type Seleccion = { clase: 'pieza' | 'manguera'; id: string } | null
 
-export type NumeroEjemplo = 1 | 2 | 3 | 4 | 5
+export type NumeroEjemplo = 1 | 2 | 3 | 4 | 5 | 6
 
 /** Ficha de la paleta que se está arrastrando hacia la pizarra. */
 export interface Colocacion {
@@ -281,6 +281,29 @@ export const useStore = create<EstadoApp>((set, get) => ({
           { id: 'm6', a: { componente: 'Y1', puerto: 'A' }, b: { componente: 'V1', puerto: '14' } },
           { id: 'm7', a: { componente: 'V1', puerto: '4' }, b: { componente: 'C1', puerto: 'A' } },
           { id: 'm8', a: { componente: 'V1', puerto: '2' }, b: { componente: 'C1', puerto: 'B' } },
+        ],
+      },
+      // Encadenar dos cilindros: al llegar C1 al final de carrera, su rodillo
+      // pilota la válvula que mueve C2.
+      6: {
+        piezas: [
+          { id: 'F1', tipo: 'fuente', x: 40, y: 460, params: { presion: 6, encendida: true } },
+          { id: 'V1', tipo: 'valvula32', x: 150, y: 250, params: { reposo: 'NC', accionamiento: 'pulsador' } },
+          { id: 'C1', tipo: 'cilindroSimpleEfecto', x: 150, y: 70, params: {} },
+          { id: 'S1', tipo: 'finalCarrera', x: 380, y: 375, params: { reposo: 'NC', cilindro: 'C1', puntoDisparo: 1 } },
+          { id: 'V2', tipo: 'valvula52', x: 620, y: 230, params: { modo: 'monoestable', accionamiento: 'pilotaje' } },
+          { id: 'C2', tipo: 'cilindroDobleEfecto', x: 620, y: 70, params: {} },
+        ],
+        mangueras: [
+          { id: 'm1', a: { componente: 'F1', puerto: '1' }, b: { componente: 'V1', puerto: '1' } },
+          { id: 'm2', a: { componente: 'V1', puerto: '2' }, b: { componente: 'C1', puerto: '1' } },
+          // El rodillo es una válvula más: necesita su propia alimentación
+          { id: 'm3', a: { componente: 'F1', puerto: '1' }, b: { componente: 'S1', puerto: '1' } },
+          // …y su salida es la señal que pilota la segunda válvula
+          { id: 'm4', a: { componente: 'S1', puerto: '2' }, b: { componente: 'V2', puerto: '14' } },
+          { id: 'm5', a: { componente: 'F1', puerto: '1' }, b: { componente: 'V2', puerto: '1' } },
+          { id: 'm6', a: { componente: 'V2', puerto: '4' }, b: { componente: 'C2', puerto: 'A' } },
+          { id: 'm7', a: { componente: 'V2', puerto: '2' }, b: { componente: 'C2', puerto: 'B' } },
         ],
       },
     }
