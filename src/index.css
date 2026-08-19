@@ -1,0 +1,47 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: #1c2733;
+  background-color: #f6f7f9;
+  background-image:
+    linear-gradient(#e6e9ee 1px, transparent 1px),
+    linear-gradient(90deg, #e6e9ee 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+code {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+}
+
+button {
+  font-family: inherit;
+  transition: filter 120ms, box-shadow 120ms;
+}
+
+button:hover {
+  filter: brightness(0.94);
+}
+
+button:focus-visible,
+select:focus-visible,
+input:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid #1668c7;
+  outline-offset: 2px;
+}
+
+/* Flujo de aire animado en las mangueras presurizadas */
+.manguera-flujo {
+  stroke-dasharray: 8 6;
+  animation: flujo-aire 0.45s linear infinite;
+}
+
+@keyframes flujo-aire {
+  to {
+    stroke-dashoffset: -14;
+  }
+}
