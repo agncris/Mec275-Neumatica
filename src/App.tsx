@@ -14,6 +14,7 @@ import Propiedades from './components/Propiedades'
 import VistaCorte from './components/VistaCorte'
 import DiagramaEspacioFase from './components/DiagramaEspacioFase'
 import TablaNomenclatura from './components/TablaNomenclatura'
+import MetodoCascada from './components/MetodoCascada'
 import { circuitoDesdeStore, useStore, type NumeroEjemplo } from './store'
 import {
   descargarJson,
@@ -374,6 +375,10 @@ export default function App() {
           <DiagramaEspacioFase motor={motor} />
         </section>
       )}
+
+      <section style={tarjeta}>
+        <MetodoCascada />
+      </section>
 
       <section style={tarjeta}>
         <TablaNomenclatura />

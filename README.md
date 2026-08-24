@@ -38,6 +38,20 @@ banco de prácticas. Todo el contenido y la interfaz están en español.
 | 5 | Mando bimanual | Válvula de simultaneidad «Y», seguridad |
 | 6 | Encadenar dos cilindros | Final de carrera que pilota otra válvula |
 
+## Sección «Método cascada»
+
+Una sección didáctica desplegable, aparte de los ejemplos, dedicada a resolver secuencias
+con **señales bloqueantes**:
+
+1. **El problema**, con un botón que carga en la pizarra el montaje que se bloquea: la
+   secuencia `A+ B+ B− A−` cableada a lo bruto, donde el rodillo `a1` sigue dando señal
+   cuando toca hacer `B−` y la válvula recibe los dos pilotajes a la vez.
+2. **Un divisor de grupos interactivo**: el alumno escribe cualquier secuencia
+   (`A+ A- B+ B-`, `A+ B+ C+ C- B- A-`…) y la app la parte en grupos y le dice cuántas
+   válvulas de cascada hacen falta (siempre una menos que grupos).
+3. **Las tres reglas de cableado** y **el ejemplo resuelto paso a paso**, con otro botón
+   que carga el circuito en cascada ya montado y funcionando.
+
 ## Biblioteca de componentes
 
 - **Fuente:** compresor + unidad de mantenimiento FRL, presión regulable 2–8 bar con manómetro.
@@ -100,7 +114,7 @@ npm run dev        # http://localhost:5173
 ```
 
 ```bash
-npm test           # 71 pruebas del motor y de la persistencia
+npm test           # 86 pruebas: motor, persistencia y análisis de secuencias
 npm run typecheck  # comprobación de tipos
 npm run build      # compila a /dist
 ```
