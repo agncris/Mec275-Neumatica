@@ -43,14 +43,22 @@ banco de prácticas. Todo el contenido y la interfaz están en español.
 Una sección didáctica desplegable, aparte de los ejemplos, dedicada a resolver secuencias
 con **señales bloqueantes**:
 
-1. **El problema**, con un botón que carga en la pizarra el montaje que se bloquea: la
-   secuencia `A+ B+ B− A−` cableada a lo bruto, donde el rodillo `a1` sigue dando señal
-   cuando toca hacer `B−` y la válvula recibe los dos pilotajes a la vez.
-2. **Un divisor de grupos interactivo**: el alumno escribe cualquier secuencia
+1. **Un explicador animado** con dos modos, *sin cascada* y *con cascada*, que se puede
+   reproducir solo o recorrer paso a paso. Enseña la única idea que hay que entender:
+   un rodillo verde (pisado) cuya bajante está gris (sin aire) **no manda nada**. En el
+   modo sin cascada se ven las dos órdenes opuestas chocando en rojo sobre la misma
+   válvula; en el modo con cascada se ve cómo, al morir la línea L1, la señal de `a1`
+   desaparece sola y el ciclo puede continuar.
+2. **Los dos circuitos reales** para cargar en la pizarra y simular: el que se bloquea y
+   el resuelto por cascada.
+3. **Un divisor de grupos interactivo**: el alumno escribe cualquier secuencia
    (`A+ A- B+ B-`, `A+ B+ C+ C- B- A-`…) y la app la parte en grupos y le dice cuántas
    válvulas de cascada hacen falta (siempre una menos que grupos).
-3. **Las tres reglas de cableado** y **el ejemplo resuelto paso a paso**, con otro botón
-   que carga el circuito en cascada ya montado y funcionando.
+4. **Las tres reglas de cableado** y **los tiempos del ejemplo resuelto**.
+
+Ni el dibujo ni las órdenes del explicador están escritos a mano: se calculan a partir del
+estado de cada paso con la misma regla que el circuito real (*señal = pisado Y con aire*),
+y hay pruebas que lo verifican, para que la animación no pueda contradecir a la teoría.
 
 ## Biblioteca de componentes
 
@@ -114,7 +122,7 @@ npm run dev        # http://localhost:5173
 ```
 
 ```bash
-npm test           # 86 pruebas: motor, persistencia y análisis de secuencias
+npm test           # 92 pruebas: motor, persistencia, secuencias y explicador
 npm run typecheck  # comprobación de tipos
 npm run build      # compila a /dist
 ```

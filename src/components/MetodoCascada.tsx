@@ -6,6 +6,7 @@
  * y el resuelto por cascada.
  */
 import { useState } from 'react'
+import ExplicadorCascada from './ExplicadorCascada'
 import { analizarSecuencia } from '../secuencias'
 import { CIRCUITO_BLOQUEADO, CIRCUITO_CASCADA, type CircuitoPreparado } from '../circuitos/cascada'
 import { useStore } from '../store'
@@ -44,32 +45,38 @@ export default function MetodoCascada() {
     <details>
       <summary style={resumen}>Método cascada · secuencias con señales bloqueantes</summary>
 
-      {/* 1 — El problema ---------------------------------------------------- */}
-      <h3 style={titulo}>1 · El problema: la señal que se queda pegada</h3>
-      <p style={parrafo}>
-        Un final de carrera no da un pulso: da una <strong>señal permanente</strong> mientras el
-        vástago lo esté pisando. En la secuencia <code style={codigo}>A+ B+ B− A−</code>, el rodillo{' '}
-        <strong>a1</strong> sigue pisado mientras A está fuera, así que cuando llega el momento de
-        hacer <strong>B−</strong> la válvula de B todavía está recibiendo la orden de{' '}
-        <strong>B+</strong>. Dos pilotajes opuestos a la vez: la corredera se queda clavada. A eso
-        se le llama <strong>señal bloqueante</strong> o solapamiento de señales.
-      </p>
-      <button onClick={() => cargar(CIRCUITO_BLOQUEADO)} style={{ ...boton, background: '#b3261e' }}>
-        Cargar el montaje que se bloquea
-      </button>
-      <p style={pie}>
-        Pulsa <strong>▶ Simular</strong> y mantén la válvula <strong>M</strong>. No se moverá nada, y
-        en «¿Qué está pasando?» aparecerá el aviso de que una válvula está pilotada por 12 y 14 a la vez.
+      {/* 1 — La idea en una frase ------------------------------------------- */}
+      <p style={{ ...parrafo, fontSize: '1rem', borderLeft: '3px solid #12a35a', paddingLeft: 12, marginTop: 14 }}>
+        Un final de carrera no da un pulso: <strong>manda sin parar</strong> mientras esté pisado. Si
+        esa orden estorba, la solución es quitarle el aire:{' '}
+        <strong>sin aire no manda, aunque siga pisado</strong>.
       </p>
 
-      {/* 2 — La idea -------------------------------------------------------- */}
-      <h3 style={titulo}>2 · La idea, en una frase</h3>
-      <p style={{ ...parrafo, fontSize: '1rem', borderLeft: '3px solid #12a35a', paddingLeft: 12 }}>
-        Si al emisor de la señal molesta le quitas el aire, <strong>la señal desaparece sola</strong>.
-      </p>
+      {/* 2 — Explicador animado (la pieza central) --------------------------- */}
+      <h3 style={titulo}>1 · Míralo paso a paso</h3>
       <p style={parrafo}>
-        Por eso los finales de carrera no se cuelgan de la red, sino de <strong>líneas de grupo</strong>{' '}
-        de las que sólo una tiene aire en cada momento.
+        Compara los dos montajes de la secuencia <code style={codigo}>A+ B+ B− A−</code>. Dale a{' '}
+        <strong>▶ Reproducir</strong>, o ve paso a paso para leer con calma lo que ocurre en cada
+        instante.
+      </p>
+      <ExplicadorCascada />
+
+      <h3 style={titulo}>2 · Compruébalo en la pizarra de verdad</h3>
+      <p style={parrafo}>
+        Los mismos dos circuitos, montados con fichas y mangueras. Cárgalos, pulsa{' '}
+        <strong>▶ Simular</strong> y mantén la válvula <strong>M</strong>.
+      </p>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button onClick={() => cargar(CIRCUITO_BLOQUEADO)} style={{ ...boton, background: '#b3261e' }}>
+          Cargar el montaje que se bloquea
+        </button>
+        <button onClick={() => cargar(CIRCUITO_CASCADA)} style={{ ...boton, background: '#12a35a' }}>
+          Cargar el circuito en cascada
+        </button>
+      </div>
+      <p style={pie}>
+        El primero no mueve nada y avisa de que una válvula está pilotada por 12 y 14 a la vez. El
+        segundo repite el ciclo solo, y el diagrama espacio-fase dibuja A+ B+ B− A− sin ayuda.
       </p>
 
       {/* 3 — Divisor de grupos ---------------------------------------------- */}
@@ -185,11 +192,8 @@ export default function MetodoCascada() {
       </p>
 
       {/* 5 — El ejemplo resuelto -------------------------------------------- */}
-      <h3 style={titulo}>5 · El ejemplo resuelto, paso a paso</h3>
-      <button onClick={() => cargar(CIRCUITO_CASCADA)} style={{ ...boton, background: '#12a35a' }}>
-        Cargar el circuito en cascada
-      </button>
-      <div style={{ overflowX: 'auto', marginTop: 10 }}>
+      <h3 style={titulo}>5 · Los tiempos del ejemplo resuelto</h3>
+      <div style={{ overflowX: 'auto', marginTop: 6 }}>
         <table style={tabla}>
           <tbody>
             {PASOS_EJEMPLO.map(([t, texto], i) => (
