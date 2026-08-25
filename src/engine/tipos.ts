@@ -79,6 +79,13 @@ export interface EntradasPuertos {
 export type EmitirEvento = (tipo: string, mensaje: string) => void
 
 /**
+ * Actuadores con posición: cilindros y actuador giratorio. Son los que pueden
+ * accionar un final de carrera y los que aparecen en el diagrama de fase.
+ */
+export const esActuador = (tipo: string): boolean =>
+  tipo.startsWith('cilindro') || tipo === 'actuadorGiratorio'
+
+/**
  * Ventana al resto del circuito que el motor entrega a los componentes que la
  * necesitan. Hoy la usan los finales de carrera, que se accionan cuando el
  * vástago de un cilindro llega a su punto de disparo.

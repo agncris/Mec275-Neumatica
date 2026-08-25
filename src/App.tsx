@@ -14,7 +14,10 @@ import Propiedades from './components/Propiedades'
 import VistaCorte from './components/VistaCorte'
 import DiagramaEspacioFase from './components/DiagramaEspacioFase'
 import TablaNomenclatura from './components/TablaNomenclatura'
+import { Seccion } from './components/Seccion'
 import MetodoCascada from './components/MetodoCascada'
+import SimbologiaVDI from './components/SimbologiaVDI'
+import EjerciciosCurso from './components/EjerciciosCurso'
 import { circuitoDesdeStore, useStore, type NumeroEjemplo } from './store'
 import {
   descargarJson,
@@ -24,6 +27,7 @@ import {
   leerDeUrl,
   leerLocal,
 } from './persistencia'
+import { exportarPng, exportarSvg, nombreSeguro } from './exportar'
 
 const EJEMPLOS: Array<{ n: NumeroEjemplo; etiqueta: string }> = [
   { n: 1, etiqueta: '1 · Simple efecto con 3/2' },
@@ -53,9 +57,11 @@ export default function App() {
   const mangueras = useStore((s) => s.mangueras)
   const modo = useStore((s) => s.modo)
   const aire = useStore((s) => s.aire)
+  const nombreTrabajo = useStore((s) => s.nombreTrabajo)
   const {
     setModo,
     setAire,
+    setNombreTrabajo,
     cargarEjemplo,
     cargarCircuito,
     limpiarPizarra,
@@ -66,6 +72,7 @@ export default function App() {
   const [motor, setMotor] = useState<Motor | null>(null)
   const [, setFotograma] = useState(0)
   const [aviso, setAviso] = useState<string | null>(null)
+  const [zoom, setZoom] = useState(1)
   const estrecha = useEsEstrecha()
   const inputArchivo = useRef<HTMLInputElement>(null)
 
@@ -175,6 +182,23 @@ export default function App() {
     }
   }
 
+  /** Lámina del circuito o del diagrama, para pegar en el informe. */
+  const exportarLamina = async (id: string, sufijo: string, formato: 'png' | 'svg') => {
+    const svg = document.getElementById(id) as SVGSVGElement | null
+    if (!svg) {
+      setAviso('No hay nada que exportar todavía.')
+      return
+    }
+    const archivo = nombreSeguro(`${nombreTrabajo || 'circuito'}_${sufijo}`, formato)
+    try {
+      if (formato === 'png') await exportarPng(svg, archivo)
+      else exportarSvg(svg, archivo)
+      setAviso(`Imagen descargada: ${archivo}`)
+    } catch (error) {
+      setAviso(error instanceof Error ? error.message : 'No se pudo exportar la imagen.')
+    }
+  }
+
   const abrirArchivo = async (archivo: File | undefined) => {
     if (!archivo) return
     try {
@@ -269,8 +293,14 @@ export default function App() {
             Compartir
           </button>
           <button
-            onClick={() => descargarJson({ version: 1, piezas, mangueras })}
+            onClick={() =>
+              descargarJson(
+                { version: 1, nombre: nombreTrabajo || undefined, piezas, mangueras },
+                nombreSeguro(`${nombreTrabajo || 'circuito'}_neumalab`, 'json'),
+              )
+            }
             style={botonSuave}
+            title="Descarga el circuito para volver a abrirlo y seguir editándolo"
           >
             Guardar
           </button>
@@ -296,6 +326,52 @@ export default function App() {
         </span>
       </div>
 
+      {/* fila de entrega: nombre del trabajo y láminas para el informe */}
+      <div
+        style={{
+          display: 'flex',
+          gap: 8,
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          marginBottom: 10,
+          padding: '0.5rem 0.7rem',
+          background: '#fff',
+          border: '1px solid #e0e5eb',
+          borderRadius: 8,
+        }}
+      >
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.85rem', color: '#33475c' }}>
+          Trabajo:
+          <input
+            value={nombreTrabajo}
+            onChange={(e) => setNombreTrabajo(e.target.value)}
+            placeholder="Nombre_Apellido_Tarea-1"
+            spellCheck={false}
+            style={{
+              padding: '0.3rem 0.5rem',
+              border: '1px solid #c6ced6',
+              borderRadius: 6,
+              fontSize: '0.85rem',
+              minWidth: 210,
+            }}
+          />
+        </label>
+        <span style={{ fontSize: '0.85rem', color: '#5a6b7d' }}>Láminas para el informe:</span>
+        <button onClick={() => void exportarLamina('pizarra-svg', 'circuito', 'png')} style={botonSuave}>
+          Circuito (PNG)
+        </button>
+        <button onClick={() => void exportarLamina('pizarra-svg', 'circuito', 'svg')} style={botonSuave}>
+          Circuito (SVG)
+        </button>
+        <button
+          onClick={() => void exportarLamina('diagrama-fase-svg', 'diagrama-fase', 'png')}
+          style={botonSuave}
+          title="Disponible mientras la simulación está corriendo"
+        >
+          Diagrama de fase (PNG)
+        </button>
+      </div>
+
       {aviso && (
         <p
           role="status"
@@ -316,7 +392,27 @@ export default function App() {
       <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', flexDirection: estrecha ? 'column' : 'row' }}>
         {modo === 'editar' && <Paleta horizontal={estrecha} />}
         <div style={{ flex: 1, minWidth: 0, width: '100%' }}>
-          <Pizarra motor={motor} />
+          <div style={{ overflow: zoom > 1 ? 'auto' : 'visible', maxWidth: '100%' }}>
+            <Pizarra motor={motor} zoom={zoom} />
+          </div>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', margin: '6px 2px 0' }}>
+            <span style={{ fontSize: '0.8rem', color: '#5a6b7d' }}>Zoom:</span>
+            {[1, 1.4, 1.8].map((z) => (
+              <button
+                key={z}
+                onClick={() => setZoom(z)}
+                style={{
+                  ...botonSuave,
+                  padding: '0.15rem 0.5rem',
+                  fontSize: '0.78rem',
+                  background: zoom === z ? '#33475c' : '#fff',
+                  color: zoom === z ? '#fff' : '#33475c',
+                }}
+              >
+                {z === 1 ? 'Ajustar' : `${Math.round(z * 100)}%`}
+              </button>
+            ))}
+          </div>
           <p style={{ margin: '6px 2px', fontSize: '0.82rem', color: '#5a6b7d' }}>
             {modo === 'editar'
               ? 'Clic cerca de un puerto para cablear (son magnéticos) · Supr borra la selección · Esc cancela · Espacio simula'
@@ -377,11 +473,27 @@ export default function App() {
       )}
 
       <section style={tarjeta}>
-        <MetodoCascada />
+        <Seccion titulo="Ejercicios y evaluaciones del curso">
+          <EjerciciosCurso />
+        </Seccion>
       </section>
 
       <section style={tarjeta}>
-        <TablaNomenclatura />
+        <Seccion titulo="Método cascada · secuencias con señales bloqueantes">
+          <MetodoCascada />
+        </Seccion>
+      </section>
+
+      <section style={tarjeta}>
+        <Seccion titulo="Simbología VDI 2860 · funciones de manipulación">
+          <SimbologiaVDI />
+        </Seccion>
+      </section>
+
+      <section style={tarjeta}>
+        <Seccion titulo="Nº de vías y posiciones · nomenclatura de los orificios">
+          <TablaNomenclatura />
+        </Seccion>
       </section>
 
       <footer style={{ margin: '1.5rem 0 0.5rem', color: '#8a97a5', fontSize: '0.8rem', textAlign: 'center' }}>

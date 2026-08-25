@@ -5,6 +5,7 @@
  * línea 0 (retraído) / 1 (extendido), marcando los movimientos A+ y A−.
  */
 import { useEffect, useRef, useState } from 'react'
+import { esActuador } from '../engine'
 import type { Motor } from '../engine'
 
 interface Muestra {
@@ -26,7 +27,7 @@ export default function DiagramaEspacioFase({ motor }: { motor: Motor | null }) 
   const [, redibujar] = useState(0)
 
   const cilindros = motor
-    ? motor.circuito.componentes.filter((c) => c.tipo.startsWith('cilindro')).map((c) => c.id)
+    ? motor.circuito.componentes.filter((c) => esActuador(c.tipo)).map((c) => c.id)
     : []
 
   // Cada motor nuevo (cada pulsación de ▶ Simular) arranca un registro limpio
@@ -70,7 +71,7 @@ export default function DiagramaEspacioFase({ motor }: { motor: Motor | null }) 
 
   return (
     <div style={{ overflowX: 'auto' }}>
-      <svg viewBox={`0 0 ${ANCHO} ${alto}`} style={{ width: '100%', minWidth: 380, height: 'auto', display: 'block' }}>
+      <svg id="diagrama-fase-svg" viewBox={`0 0 ${ANCHO} ${alto}`} style={{ width: '100%', minWidth: 380, height: 'auto', display: 'block' }}>
         {cilindros.map((id, i) => {
           const yTop = i * ALTO_PISTA + 12
           const yBase = yTop + 32

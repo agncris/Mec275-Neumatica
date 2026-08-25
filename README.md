@@ -27,6 +27,31 @@ banco de prácticas. Todo el contenido y la interfaz están en español.
 
 **Atajos:** `Espacio` simular/detener · `Supr` borrar lo seleccionado · `Esc` cancelar cableado.
 
+## Qué entregar (en lugar de los archivos de FluidSim)
+
+Escribe tu nombre en el campo **Trabajo** de la barra superior —por ejemplo
+`Nombre_Apellido_Tarea-1`— y usa los botones de esa fila:
+
+| Botón | Qué produce |
+|-------|-------------|
+| **Circuito (PNG)** | La lámina del circuito para pegar en el informe |
+| **Circuito (SVG)** | La misma lámina en vectorial, para imprimir sin pixelar |
+| **Diagrama de fase (PNG)** | El recorrido-tiempo con la secuencia A+ / A− ya marcada |
+| **Guardar** | El `.json` del circuito: el equivalente al `.ct`, se vuelve a abrir con «Abrir» |
+| **Compartir** | Un enlace con el circuito dentro, para consultar dudas |
+
+## Secciones de estudio
+
+Bajo la pizarra hay cuatro secciones plegables que cubren la materia evaluada:
+
+- **Ejercicios y evaluaciones del curso** — enunciados de las actividades y de la tarea,
+  con el circuito de la Actividad 2 listo para cargar.
+- **Método cascada** — explicador animado paso a paso, divisor de grupos interactivo y
+  los circuitos de dos y tres grupos.
+- **Simbología VDI 2860** — los 24 símbolos de funciones de manipulación, con modo de
+  práctica tipo control (símbolo → nombre).
+- **Nº de vías y posiciones** — nomenclatura de orificios ISO 1219-1 / CETOP.
+
 ## Circuitos de ejemplo incluidos
 
 | # | Circuito | Qué se practica |
@@ -63,7 +88,8 @@ y hay pruebas que lo verifican, para que la animación no pueda contradecir a la
 ## Biblioteca de componentes
 
 - **Fuente:** compresor + unidad de mantenimiento FRL, presión regulable 2–8 bar con manómetro.
-- **Actuadores:** cilindro de simple efecto (retorno por muelle) y de doble efecto.
+- **Actuadores:** cilindro de simple efecto (retorno por muelle), de doble efecto y
+  **actuador giratorio** (unidad de volteo, 90/180/270°).
 - **Distribuidoras:** 3/2 NC y NA, 4/2 y 5/2 en versión monoestable (muelle) y biestable
   (memoria), con accionamiento por pulsador o pilotaje neumático (12 / 14).
 - **Finales de carrera** de rodillo, accionados por el vástago del cilindro que se les asigne.
@@ -122,7 +148,7 @@ npm run dev        # http://localhost:5173
 ```
 
 ```bash
-npm test           # 92 pruebas: motor, persistencia, secuencias y explicador
+npm test           # 102 pruebas: motor, circuitos del curso, persistencia y utilidades
 npm run typecheck  # comprobación de tipos
 npm run build      # compila a /dist
 ```

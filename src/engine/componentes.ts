@@ -270,6 +270,48 @@ export interface EstadoCilindroDoble {
 
 const UMBRAL_FUERZA = 0.3 // diferencia de presión mínima para mover el pistón
 
+/**
+ * Física común a los actuadores de doble efecto (lineales y giratorios): el
+ * movimiento lo limita el menor entre el aire que entra por la cámara que
+ * empuja y el que consigue escapar de la contraria.
+ */
+function moverDobleEfecto(
+  estado: EstadoCilindroDoble,
+  entradas: EntradasPuertos,
+  dt: number,
+  params: Params,
+  emitir: EmitirEvento,
+  mensajes: Record<FaseCilindro, string>,
+): void {
+  const velIda = num(params, 'velocidadAvance', 0.8)
+  const velVuelta = num(params, 'velocidadRetorno', 0.8)
+
+  const pA = entradas.presion['A'] ?? 0
+  const pB = entradas.presion['B'] ?? 0
+
+  let v = 0
+  if (pA - pB > UMBRAL_FUERZA) {
+    v = velIda * Math.min(entradas.caudalSuministro['A'] ?? 0, entradas.caudalEscape['B'] ?? 0)
+  } else if (pB - pA > UMBRAL_FUERZA) {
+    v = -velVuelta * Math.min(entradas.caudalSuministro['B'] ?? 0, entradas.caudalEscape['A'] ?? 0)
+  }
+
+  estado.velocidad = v
+  estado.posicion = limitar(estado.posicion + v * dt)
+
+  let nuevaFase: FaseCilindro
+  if (estado.posicion >= 1 && v >= 0) nuevaFase = 'extendido'
+  else if (estado.posicion <= 0 && v <= 0) nuevaFase = 'reposo'
+  else if (v > 0) nuevaFase = 'avanzando'
+  else if (v < 0) nuevaFase = 'retornando'
+  else nuevaFase = estado.fase
+
+  if (nuevaFase !== estado.fase) {
+    estado.fase = nuevaFase
+    emitir(nuevaFase, mensajes[nuevaFase])
+  }
+}
+
 export const CilindroDobleEfecto: ModeloComponente<EstadoCilindroDoble> = {
   tipo: 'cilindroDobleEfecto',
   nombre: 'Cilindro de doble efecto',
@@ -279,41 +321,38 @@ export const CilindroDobleEfecto: ModeloComponente<EstadoCilindroDoble> = {
   ],
   estadoInicial: () => ({ posicion: 0, velocidad: 0, fase: 'reposo' }),
   caminos: () => [],
-  actualizar(estado, entradas: EntradasPuertos, dt, params, emitir: EmitirEvento) {
-    const velAvance = num(params, 'velocidadAvance', 0.8)
-    const velRetorno = num(params, 'velocidadRetorno', 0.8)
+  actualizar(estado, entradas, dt, params, emitir) {
+    moverDobleEfecto(estado, entradas, dt, params, emitir, {
+      avanzando: 'entra aire por A y el vástago avanza (la cámara B escapa)',
+      extendido: 'el vástago llegó al final de carrera (extendido)',
+      retornando: 'entra aire por B y el vástago retorna (la cámara A escapa)',
+      reposo: 'el vástago quedó retraído (posición inicial)',
+    })
+  },
+}
 
-    const pA = entradas.presion['A'] ?? 0
-    const pB = entradas.presion['B'] ?? 0
-
-    let v = 0
-    if (pA - pB > UMBRAL_FUERZA) {
-      // Avanza: limita el caudal que entra por A y el que escapa por B.
-      v = velAvance * Math.min(entradas.caudalSuministro['A'] ?? 0, entradas.caudalEscape['B'] ?? 0)
-    } else if (pB - pA > UMBRAL_FUERZA) {
-      v = -velRetorno * Math.min(entradas.caudalSuministro['B'] ?? 0, entradas.caudalEscape['A'] ?? 0)
-    }
-
-    estado.velocidad = v
-    estado.posicion = limitar(estado.posicion + v * dt)
-
-    let nuevaFase: FaseCilindro
-    if (estado.posicion >= 1 && v >= 0) nuevaFase = 'extendido'
-    else if (estado.posicion <= 0 && v <= 0) nuevaFase = 'reposo'
-    else if (v > 0) nuevaFase = 'avanzando'
-    else if (v < 0) nuevaFase = 'retornando'
-    else nuevaFase = estado.fase
-
-    if (nuevaFase !== estado.fase) {
-      estado.fase = nuevaFase
-      const mensajes: Record<FaseCilindro, string> = {
-        avanzando: 'entra aire por A y el vástago avanza (la cámara B escapa)',
-        extendido: 'el vástago llegó al final de carrera (extendido)',
-        retornando: 'entra aire por B y el vástago retorna (la cámara A escapa)',
-        reposo: 'el vástago quedó retraído (posición inicial)',
-      }
-      emitir(nuevaFase, mensajes[nuevaFase])
-    }
+// ---------------------------------------------------------------------------
+// Actuador giratorio (unidad giratoria de paletas): el mismo doble efecto,
+// pero el aire hace girar un eje un ángulo limitado en vez de desplazar un
+// vástago. Es el elemento de las unidades de volteo (giro de 180°).
+// ---------------------------------------------------------------------------
+export const ActuadorGiratorio: ModeloComponente<EstadoCilindroDoble> = {
+  tipo: 'actuadorGiratorio',
+  nombre: 'Actuador giratorio',
+  puertos: [
+    { id: 'A', rol: 'trabajo', descripcion: 'Cámara de giro directo' },
+    { id: 'B', rol: 'trabajo', descripcion: 'Cámara de giro inverso' },
+  ],
+  estadoInicial: () => ({ posicion: 0, velocidad: 0, fase: 'reposo' }),
+  caminos: () => [],
+  actualizar(estado, entradas, dt, params, emitir) {
+    const angulo = num(params, 'angulo', 180)
+    moverDobleEfecto(estado, entradas, dt, params, emitir, {
+      avanzando: `entra aire por A y el eje gira hacia los ${angulo}°`,
+      extendido: `el eje llegó al tope de giro (${angulo}°)`,
+      retornando: 'entra aire por B y el eje gira de vuelta',
+      reposo: 'el eje volvió a su posición inicial (0°)',
+    })
   },
 }
 
@@ -569,6 +608,7 @@ export const MODELOS: Record<string, ModeloComponente<any>> = {
   [Valvula52.tipo]: Valvula52,
   [CilindroSimpleEfecto.tipo]: CilindroSimpleEfecto,
   [CilindroDobleEfecto.tipo]: CilindroDobleEfecto,
+  [ActuadorGiratorio.tipo]: ActuadorGiratorio,
   [ReguladorCaudal.tipo]: ReguladorCaudal,
   [FinalCarrera.tipo]: FinalCarrera,
   [ValvulaO.tipo]: ValvulaO,

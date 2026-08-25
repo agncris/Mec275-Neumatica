@@ -13,18 +13,7 @@ const FILAS = [
 
 export default function TablaNomenclatura() {
   return (
-    <details>
-      <summary
-        style={{
-          cursor: 'pointer',
-          fontSize: '1rem',
-          fontWeight: 600,
-          color: '#33475c',
-          listStyle: 'revert',
-        }}
-      >
-        Nº de vías y posiciones · nomenclatura de los orificios
-      </summary>
+    <>
 
       <p style={{ fontSize: '0.88rem', color: '#33475c', lineHeight: 1.55, margin: '10px 0' }}>
         La designación de una válvula se lee <strong>vías / posiciones</strong>. Una{' '}
@@ -60,7 +49,7 @@ export default function TablaNomenclatura() {
         NeumaLab usa la numeración CETOP (1, 2, 3, 4, 5, 12, 14), que es la que verás grabada en los
         componentes del banco.
       </p>
-    </details>
+    </>
   )
 }
 

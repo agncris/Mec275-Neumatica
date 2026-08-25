@@ -4,6 +4,7 @@
  */
 import { MODELOS } from './componentes'
 import { claveNodo } from './solver'
+import { esActuador } from './tipos'
 import type { Circuito } from './tipos'
 
 export function validarCircuito(circuito: Circuito): string[] {
@@ -37,7 +38,7 @@ export function validarCircuito(circuito: Circuito): string[] {
       mensajes.push(
         `El final de carrera ${comp.id} vigila el cilindro "${idCilindro}", que no está en la pizarra.`,
       )
-    } else if (!objetivo.tipo.startsWith('cilindro')) {
+    } else if (!esActuador(objetivo.tipo)) {
       mensajes.push(
         `El final de carrera ${comp.id} apunta a ${idCilindro}, que no es un cilindro: sólo los cilindros accionan rodillos.`,
       )

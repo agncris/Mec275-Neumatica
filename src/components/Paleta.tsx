@@ -22,6 +22,7 @@ const ENTRADAS: Entrada[] = [
   { tipo: 'valvula52', etiqueta: 'Válvula 5/2 biestable', params: { modo: 'biestable' } },
   { tipo: 'cilindroSimpleEfecto', etiqueta: 'Cilindro simple efecto', params: {} },
   { tipo: 'cilindroDobleEfecto', etiqueta: 'Cilindro doble efecto', params: {} },
+  { tipo: 'actuadorGiratorio', etiqueta: 'Actuador giratorio', params: { angulo: 180 } },
   { tipo: 'reguladorCaudal', etiqueta: 'Regulador de caudal', params: { apertura: 0.5 } },
   { tipo: 'finalCarrera', etiqueta: 'Final de carrera (rodillo)', params: { reposo: 'NC', puntoDisparo: 1 } },
   { tipo: 'valvulaO', etiqueta: 'Selectora «O»', params: {} },

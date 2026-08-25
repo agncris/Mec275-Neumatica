@@ -9,6 +9,7 @@ import { useState } from 'react'
 import ExplicadorCascada from './ExplicadorCascada'
 import { analizarSecuencia } from '../secuencias'
 import { CIRCUITO_BLOQUEADO, CIRCUITO_CASCADA, type CircuitoPreparado } from '../circuitos/cascada'
+import { CIRCUITO_TRES_GRUPOS } from '../circuitos/ejercicios'
 import { useStore } from '../store'
 
 const COLORES_GRUPO = ['#1668c7', '#12a35a', '#b3671a', '#8a3ab0']
@@ -42,8 +43,7 @@ export default function MetodoCascada() {
   }
 
   return (
-    <details>
-      <summary style={resumen}>Método cascada · secuencias con señales bloqueantes</summary>
+    <>
 
       {/* 1 — La idea en una frase ------------------------------------------- */}
       <p style={{ ...parrafo, fontSize: '1rem', borderLeft: '3px solid #12a35a', paddingLeft: 12, marginTop: 14 }}>
@@ -222,22 +222,25 @@ export default function MetodoCascada() {
         <li>Cada final de carrera cuelga de una línea de grupo, jamás de la red directa.</li>
         <li>Cada línea de grupo pilota directamente un solo movimiento: el primero de su grupo.</li>
       </ul>
-      <p style={pie}>
+      <h3 style={titulo}>7 · Con tres grupos: el circuito de la Actividad 2</h3>
+      <p style={parrafo}>
         Con tres o más grupos las válvulas van encadenadas —de ahí el nombre—: cada una o alimenta su
-        línea, o pasa el aire a la siguiente. Existe también el <strong>método paso a paso</strong>,
-        que gasta más válvulas pero escala mejor y no obliga a agrupar.
+        línea, o pasa el aire a la siguiente. Este es el circuito de la secuencia{' '}
+        <code style={codigo}>A+ B+ | B− A− C+ | C−</code> del curso, con dos cilindros de doble
+        efecto, un actuador giratorio, seis finales de carrera y dos válvulas de cascada.
       </p>
-    </details>
+      <button onClick={() => cargar(CIRCUITO_TRES_GRUPOS)} style={{ ...boton, background: '#1668c7' }}>
+        Cargar el circuito de tres grupos
+      </button>
+      <p style={pie}>
+        Es un circuito grande: usa el <strong>zoom</strong> de la pizarra para trabajarlo cómodo.
+        Existe también el <strong>método paso a paso</strong>, que gasta más válvulas pero escala
+        mejor y no obliga a agrupar.
+      </p>
+    </>
   )
 }
 
-const resumen: React.CSSProperties = {
-  cursor: 'pointer',
-  fontSize: '1rem',
-  fontWeight: 600,
-  color: '#33475c',
-  listStyle: 'revert',
-}
 
 const titulo: React.CSSProperties = {
   margin: '18px 0 6px',

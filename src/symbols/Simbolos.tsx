@@ -332,6 +332,37 @@ export function SimboloCilindroDoble({ vivo }: PropsSimbolo) {
 }
 
 // ---------------------------------------------------------------------------
+// Actuador giratorio (unidad de volteo): cuerpo con eje y doble flecha curva.
+// El indicador de posición gira con la simulación.
+export function SimboloActuadorGiratorio({ params, vivo }: PropsSimbolo) {
+  const pos = vivo?.posicion ?? 0
+  const angulo = Number(params.angulo ?? 180)
+  const giro = pos * angulo
+  return (
+    <g>
+      <rect x={20} y={15} width={90} height={70} rx={4} {...TRAZO} fill="#fff" />
+      <circle cx={65} cy={50} r={26} {...TRAZO} strokeWidth={1.8} />
+      {/* doble flecha curva: sentido de giro */}
+      <path d="M47,34 A22,22 0 0 1 83,34" {...TRAZO} strokeWidth={2} />
+      <polygon points="83,34 76,30 79,39" fill="#14181d" stroke="none" />
+      <path d="M83,66 A22,22 0 0 1 47,66" {...TRAZO} strokeWidth={2} />
+      <polygon points="47,66 54,70 51,61" fill="#14181d" stroke="none" />
+      {/* indicador de posición del eje */}
+      <g transform={`rotate(${giro} 65 50)`} style={{ transition: 'transform 120ms linear' }}>
+        <line x1={65} y1={50} x2={65} y2={28} stroke="#1668c7" strokeWidth={3.4} strokeLinecap="round" />
+      </g>
+      <circle cx={65} cy={50} r={4} fill="#14181d" />
+      {/* conexiones a puertos */}
+      <line x1={45} y1={85} x2={45} y2={97} {...TRAZO} />
+      <line x1={85} y1={85} x2={85} y2={97} {...TRAZO} />
+      <Etiqueta x={36} y={93} texto="A" />
+      <Etiqueta x={94} y={93} texto="B" />
+      <Etiqueta x={65} y={11} texto={`${Math.round(giro)}° / ${angulo}°`} />
+    </g>
+  )
+}
+
+// ---------------------------------------------------------------------------
 export function SimboloRegulador({ params }: PropsSimbolo) {
   const apertura = Number(params.apertura ?? 0.5)
   return (
@@ -504,6 +535,8 @@ export function SimboloPieza({ tipo, params, vivo }: { tipo: string } & PropsSim
       return <SimboloCilindroSimple params={params} vivo={vivo} />
     case 'cilindroDobleEfecto':
       return <SimboloCilindroDoble params={params} vivo={vivo} />
+    case 'actuadorGiratorio':
+      return <SimboloActuadorGiratorio params={params} vivo={vivo} />
     case 'reguladorCaudal':
       return <SimboloRegulador params={params} vivo={vivo} />
     default:

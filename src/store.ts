@@ -33,7 +33,10 @@ interface EstadoApp {
   seleccion: Seleccion
   origenCable: RefPuerto | null
   colocando: Colocacion | null
+  /** Título del trabajo; da nombre a los archivos que entrega el alumno. */
+  nombreTrabajo: string
 
+  setNombreTrabajo(nombre: string): void
   agregarPieza(tipo: string, params?: Params): void
   agregarPiezaEn(tipo: string, params: Params, x: number, y: number): void
   iniciarColocacion(tipo: string, params: Params, inicio: { x: number; y: number }): void
@@ -59,6 +62,7 @@ const PREFIJOS: Record<string, string> = {
   valvula52: 'V',
   cilindroSimpleEfecto: 'C',
   cilindroDobleEfecto: 'C',
+  actuadorGiratorio: 'C',
   reguladorCaudal: 'R',
   finalCarrera: 'S',
   valvulaO: 'O',
@@ -90,6 +94,11 @@ export const useStore = create<EstadoApp>((set, get) => ({
   seleccion: null,
   origenCable: null,
   colocando: null,
+  nombreTrabajo: '',
+
+  setNombreTrabajo(nombreTrabajo) {
+    set({ nombreTrabajo })
+  },
 
   agregarPieza(tipo, params = {}) {
     // Colocación escalonada para que las fichas nuevas no se apilen

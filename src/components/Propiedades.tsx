@@ -1,6 +1,7 @@
 /**
  * Panel de propiedades de la pieza seleccionada (modo editar).
  */
+import { esActuador } from '../engine'
 import { DESCRIPTORES } from './descriptores'
 import { useStore } from '../store'
 
@@ -106,7 +107,7 @@ export default function Propiedades() {
             >
               <option value="">— elige un cilindro —</option>
               {piezas
-                .filter((p) => p.tipo.startsWith('cilindro'))
+                .filter((p) => esActuador(p.tipo))
                 .map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.id}
@@ -135,6 +136,20 @@ export default function Propiedades() {
             </select>
           </label>
         </>
+      )}
+
+      {pieza.tipo === 'actuadorGiratorio' && (
+        <label style={etiqueta}>
+          Ángulo de giro:
+          <select
+            value={String(pieza.params.angulo ?? 180)}
+            onChange={(e) => setParamPieza(pieza.id, 'angulo', Number(e.target.value))}
+          >
+            <option value="90">90°</option>
+            <option value="180">180°</option>
+            <option value="270">270°</option>
+          </select>
+        </label>
       )}
 
       {pieza.tipo === 'temporizador' && (

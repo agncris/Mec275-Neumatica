@@ -143,6 +143,16 @@ export const DESCRIPTORES: Record<string, Descriptor> = {
       { id: 'B', x: 120, y: 80, dir: 'S' },
     ],
   },
+  actuadorGiratorio: {
+    tipo: 'actuadorGiratorio',
+    nombre: 'Actuador giratorio',
+    ancho: 130,
+    alto: 100,
+    puertos: [
+      { id: 'A', x: 45, y: 100, dir: 'S' },
+      { id: 'B', x: 85, y: 100, dir: 'S' },
+    ],
+  },
   reguladorCaudal: {
     tipo: 'reguladorCaudal',
     nombre: 'Regulador de caudal',

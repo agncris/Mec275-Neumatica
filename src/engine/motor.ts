@@ -4,6 +4,7 @@
  */
 import { MODELOS } from './componentes'
 import { claveNodo, resolver, type Solucion } from './solver'
+import { esActuador } from './tipos'
 import type { Circuito, ContextoSimulacion, EntradasPuertos, IdPuerto, Params } from './tipos'
 
 export interface EventoSimulacion {
@@ -161,7 +162,7 @@ export class Motor {
       return typeof estado?.posicion === 'number' ? estado.posicion : null
     },
     cilindros: () =>
-      this.circuito.componentes.filter((c) => c.tipo.startsWith('cilindro')).map((c) => c.id),
+      this.circuito.componentes.filter((c) => esActuador(c.tipo)).map((c) => c.id),
   }
 
   /** Presión (bar) en un puerto según la última solución calculada. */

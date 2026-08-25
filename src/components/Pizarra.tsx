@@ -10,8 +10,10 @@ import { SimboloPieza } from '../symbols/Simbolos'
 import { DESCRIPTORES, VECTOR_DIR, puertosVisibles } from './descriptores'
 import { useStore, type Pieza } from '../store'
 
-export const ANCHO_PIZARRA = 1000
-export const ALTO_PIZARRA = 560
+// Tablero amplio: los circuitos de cascada con tres grupos usan una quincena
+// de fichas y no caben en un tablero pequeño.
+export const ANCHO_PIZARRA = 1240
+export const ALTO_PIZARRA = 700
 const REJILLA = 10
 /** Radio del imán de los puertos: un clic o el extremo del cable dentro de
  *  esta distancia se "pega" al puerto más cercano. */
@@ -19,6 +21,8 @@ const RADIO_IMAN = 30
 
 interface Props {
   motor: Motor | null
+  /** Escala de dibujo: 1 = ajustado al ancho disponible. */
+  zoom?: number
 }
 
 interface Punto {
@@ -70,7 +74,7 @@ function rutaManguera(pieza1: Pieza, ref1: RefPuerto, pieza2: Pieza, ref2: RefPu
   return puntos.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ')
 }
 
-export default function Pizarra({ motor }: Props) {
+export default function Pizarra({ motor, zoom = 1 }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
   const piezas = useStore((s) => s.piezas)
   const mangueras = useStore((s) => s.mangueras)
@@ -288,9 +292,10 @@ export default function Pizarra({ motor }: Props) {
   return (
     <svg
       ref={svgRef}
+      id="pizarra-svg"
       viewBox={`0 0 ${ANCHO_PIZARRA} ${ALTO_PIZARRA}`}
       style={{
-        width: '100%',
+        width: `${zoom * 100}%`,
         height: 'auto',
         display: 'block',
         background: '#f7f5ef',
@@ -316,13 +321,13 @@ export default function Pizarra({ motor }: Props) {
       {/* estado vacío: onboarding en 3 pasos */}
       {piezas.length === 0 && modo === 'editar' && (
         <g>
-          <text x={500} y={218} textAnchor="middle" fontSize={24} fontWeight={700} fill="#33475c" pointerEvents="none">
+          <text x={620} y={288} textAnchor="middle" fontSize={24} fontWeight={700} fill="#33475c" pointerEvents="none">
             Tu banco está vacío
           </text>
-          <text x={500} y={256} textAnchor="middle" fontSize={16} fill="#5a6b7d" pointerEvents="none">
+          <text x={620} y={326} textAnchor="middle" fontSize={16} fill="#5a6b7d" pointerEvents="none">
             1 · Arrastra una ficha desde la paleta&nbsp;&nbsp;&nbsp;2 · Cablea los puertos (son magnéticos)
           </text>
-          <text x={500} y={282} textAnchor="middle" fontSize={16} fill="#5a6b7d" pointerEvents="none">
+          <text x={620} y={352} textAnchor="middle" fontSize={16} fill="#5a6b7d" pointerEvents="none">
             3 · Pulsa ▶ Simular y acciona las válvulas
           </text>
           <g
@@ -332,8 +337,8 @@ export default function Pizarra({ motor }: Props) {
               useStore.getState().cargarEjemplo(1)
             }}
           >
-            <rect x={410} y={306} width={180} height={38} rx={8} fill="#fff" stroke="#c6ced6" strokeWidth={1.5} />
-            <text x={500} y={330} textAnchor="middle" fontSize={15} fontWeight={600} fill="#33475c">
+            <rect x={530} y={376} width={180} height={38} rx={8} fill="#fff" stroke="#c6ced6" strokeWidth={1.5} />
+            <text x={620} y={400} textAnchor="middle" fontSize={15} fontWeight={600} fill="#33475c">
               …o carga un ejemplo
             </text>
           </g>
