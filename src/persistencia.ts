@@ -11,6 +11,12 @@ export interface CircuitoGuardado {
   nombre?: string
   piezas: Pieza[]
   mangueras: Manguera[]
+  /** Trabajo en curso: se conserva junto al circuito en la copia local. */
+  trabajo?: {
+    alumno?: { nombre: string; rol: string }
+    ejercicio?: string
+    respuestas?: unknown
+  }
 }
 
 const CLAVE = 'neumalab.circuito'

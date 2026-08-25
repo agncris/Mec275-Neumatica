@@ -27,17 +27,36 @@ banco de prácticas. Todo el contenido y la interfaz están en español.
 
 **Atajos:** `Espacio` simular/detener · `Supr` borrar lo seleccionado · `Esc` cancelar cableado.
 
-## Qué entregar (en lugar de los archivos de FluidSim)
+## La entrega
 
-Escribe tu nombre en el campo **Trabajo** de la barra superior —por ejemplo
-`Nombre_Apellido_Tarea-1`— y usa los botones de esa fila:
+Toda la evaluación se resuelve dentro de la aplicación. En la sección
+**«Mi entrega»** el alumno se identifica, elige el enunciado y responde las cinco
+preguntas:
+
+| Pregunta del enunciado | Dónde se responde |
+|---|---|
+| 1 · Diagrama de funcionamiento VDI 2860 | Se arma con los símbolos de la norma, ordenables y anotables |
+| 2 · Secuencia, grupos y activadores | Escribe la secuencia y la app divide los grupos y dice cuántas válvulas de cascada hacen falta |
+| 3 · Elementos necesarios | Se rellena solo con el inventario del circuito montado, y se puede editar |
+| 4 · Diagrama de fase | Se dibuja solo al simular; exportable a PNG |
+| 5 · Circuito neumático | La pizarra |
+
+**Comprobar mi trabajo** contrasta lo declarado con lo que hace de verdad el circuito:
+si está bien montado, si se mueve, si hay señales bloqueantes, si el ciclo se cierra y
+si la secuencia escrita coincide con la que ejecuta.
+
+**Descargar mi entrega** produce un único `.json` con las respuestas y el circuito
+dentro. Es lo que sustituye al par PDF + `.ct`/`.bak`: el profesor lo abre con
+**Abrir** y recupera la identidad del alumno, sus respuestas y su circuito, que sigue
+siendo ejecutable, así que la corrección se puede comprobar simulando.
+
+Además, para informes con imágenes, la barra superior exporta láminas:
 
 | Botón | Qué produce |
 |-------|-------------|
-| **Circuito (PNG)** | La lámina del circuito para pegar en el informe |
-| **Circuito (SVG)** | La misma lámina en vectorial, para imprimir sin pixelar |
+| **Circuito (PNG / SVG)** | La lámina del circuito, en mapa de bits o vectorial |
 | **Diagrama de fase (PNG)** | El recorrido-tiempo con la secuencia A+ / A− ya marcada |
-| **Guardar** | El `.json` del circuito: el equivalente al `.ct`, se vuelve a abrir con «Abrir» |
+| **Guardar** | El `.json` sólo del circuito, sin respuestas |
 | **Compartir** | Un enlace con el circuito dentro, para consultar dudas |
 
 ## Secciones de estudio
@@ -148,7 +167,7 @@ npm run dev        # http://localhost:5173
 ```
 
 ```bash
-npm test           # 102 pruebas: motor, circuitos del curso, persistencia y utilidades
+npm test           # 119 pruebas: motor, análisis, circuitos del curso, entregas y utilidades
 npm run typecheck  # comprobación de tipos
 npm run build      # compila a /dist
 ```

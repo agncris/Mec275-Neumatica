@@ -4,6 +4,7 @@
  */
 import { create } from 'zustand'
 import type { Circuito, Manguera, Params, RefPuerto } from './engine'
+import { RESPUESTAS_VACIAS, type Respuestas } from './entrega'
 
 export interface Pieza {
   id: string
@@ -35,8 +36,17 @@ interface EstadoApp {
   colocando: Colocacion | null
   /** Título del trabajo; da nombre a los archivos que entrega el alumno. */
   nombreTrabajo: string
+  /** Datos e identidad de quien entrega. */
+  alumno: { nombre: string; rol: string }
+  /** Enunciado sobre el que se trabaja. */
+  ejercicio: string
+  /** Respuestas escritas a las preguntas del enunciado. */
+  respuestas: Respuestas
 
   setNombreTrabajo(nombre: string): void
+  setAlumno(alumno: { nombre: string; rol: string }): void
+  setEjercicio(ejercicio: string): void
+  setRespuestas(cambio: Partial<Respuestas>): void
   agregarPieza(tipo: string, params?: Params): void
   agregarPiezaEn(tipo: string, params: Params, x: number, y: number): void
   iniciarColocacion(tipo: string, params: Params, inicio: { x: number; y: number }): void
@@ -95,9 +105,24 @@ export const useStore = create<EstadoApp>((set, get) => ({
   origenCable: null,
   colocando: null,
   nombreTrabajo: '',
+  alumno: { nombre: '', rol: '' },
+  ejercicio: 'tarea',
+  respuestas: { ...RESPUESTAS_VACIAS },
 
   setNombreTrabajo(nombreTrabajo) {
     set({ nombreTrabajo })
+  },
+
+  setAlumno(alumno) {
+    set({ alumno })
+  },
+
+  setEjercicio(ejercicio) {
+    set({ ejercicio })
+  },
+
+  setRespuestas(cambio) {
+    set((s) => ({ respuestas: { ...s.respuestas, ...cambio } }))
   },
 
   agregarPieza(tipo, params = {}) {

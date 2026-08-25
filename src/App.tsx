@@ -18,6 +18,7 @@ import { Seccion } from './components/Seccion'
 import MetodoCascada from './components/MetodoCascada'
 import SimbologiaVDI from './components/SimbologiaVDI'
 import EjerciciosCurso from './components/EjerciciosCurso'
+import PanelEntrega from './components/PanelEntrega'
 import { circuitoDesdeStore, useStore, type NumeroEjemplo } from './store'
 import {
   descargarJson,
@@ -28,6 +29,7 @@ import {
   leerLocal,
 } from './persistencia'
 import { exportarPng, exportarSvg, nombreSeguro } from './exportar'
+import { esEntrega, normalizarRespuestas } from './entrega'
 
 const EJEMPLOS: Array<{ n: NumeroEjemplo; etiqueta: string }> = [
   { n: 1, etiqueta: '1 · Simple efecto con 3/2' },
@@ -58,7 +60,11 @@ export default function App() {
   const modo = useStore((s) => s.modo)
   const aire = useStore((s) => s.aire)
   const nombreTrabajo = useStore((s) => s.nombreTrabajo)
+  const alumno = useStore((s) => s.alumno)
   const {
+    setAlumno,
+    setEjercicio,
+    setRespuestas,
     setModo,
     setAire,
     setNombreTrabajo,
@@ -86,6 +92,11 @@ export default function App() {
     }
     const local = leerLocal()
     if (local && local.piezas.length > 0) cargarCircuito(local)
+    if (local?.trabajo) {
+      if (local.trabajo.alumno) setAlumno(local.trabajo.alumno)
+      if (local.trabajo.ejercicio) setEjercicio(local.trabajo.ejercicio)
+      setRespuestas(normalizarRespuestas(local.trabajo.respuestas as never))
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -103,10 +114,17 @@ export default function App() {
     return () => window.removeEventListener('hashchange', alCambiarHash)
   }, [cargarCircuito])
 
-  // --- copia de trabajo automática ------------------------------------------
+  // --- copia de trabajo automática (circuito y respuestas) -------------------
+  const ejercicio = useStore((s) => s.ejercicio)
+  const respuestas = useStore((s) => s.respuestas)
   useEffect(() => {
-    guardarLocal({ version: 1, piezas, mangueras })
-  }, [piezas, mangueras])
+    guardarLocal({
+      version: 1,
+      piezas,
+      mangueras,
+      trabajo: { alumno, ejercicio, respuestas },
+    })
+  }, [piezas, mangueras, alumno, ejercicio, respuestas])
 
   // --- motor: se crea al entrar en Simular y se destruye al salir -----------
   useEffect(() => {
@@ -202,6 +220,20 @@ export default function App() {
   const abrirArchivo = async (archivo: File | undefined) => {
     if (!archivo) return
     try {
+      // Puede ser una entrega completa del alumno o un circuito suelto
+      const crudo = JSON.parse(await archivo.text())
+      if (esEntrega(crudo)) {
+        cargarCircuito(crudo.circuito)
+        setAlumno(crudo.alumno)
+        setEjercicio(crudo.ejercicio)
+        setRespuestas(normalizarRespuestas(crudo.respuestas))
+        setAviso(
+          `Entrega de ${crudo.alumno.nombre || 'alumno sin nombre'}${
+            crudo.alumno.rol ? ` (${crudo.alumno.rol})` : ''
+          } abierta. Ábrela en «Mi entrega» para revisarla.`,
+        )
+        return
+      }
       const datos = await leerArchivo(archivo)
       cargarCircuito(datos)
       setAviso(`Circuito «${archivo.name}» abierto.`)
@@ -471,6 +503,18 @@ export default function App() {
           <DiagramaEspacioFase motor={motor} />
         </section>
       )}
+
+      <section style={tarjeta}>
+        <Seccion
+          titulo={
+            alumno.nombre
+              ? `Mi entrega · ${alumno.nombre}${alumno.rol ? ` (${alumno.rol})` : ''}`
+              : 'Mi entrega · responder el enunciado y descargar'
+          }
+        >
+          <PanelEntrega />
+        </Seccion>
+      </section>
 
       <section style={tarjeta}>
         <Seccion titulo="Ejercicios y evaluaciones del curso">
