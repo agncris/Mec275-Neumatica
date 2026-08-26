@@ -17,9 +17,12 @@ banco de prácticas. Todo el contenido y la interfaz están en español.
 4. **Simula.** Pulsa **▶ Simular** (o la barra espaciadora). Mantén pulsadas las
    válvulas de pulsador, haz clic en una biestable para conmutarla, y clic en la fuente
    para cortar el aire.
-5. **Observa.** Mientras simula tienes tres lecturas simultáneas del mismo circuito:
-   - la **pizarra** con el esquema ISO (azul = con presión, guiones en movimiento = caudal),
-   - la **vista en corte**, que muestra el interior real de la pieza que elijas,
+5. **Observa.** Mientras simula tienes varias lecturas del mismo circuito:
+   - la **pizarra**, que se puede ver como **Esquema** (simbología ISO) o como **Taller**
+     (cada componente dibujado como es en realidad, con el aire coloreado por dentro).
+     El botón **Ver en paralelo** muestra las dos a la vez, sincronizadas, para relacionar
+     el símbolo con el objeto; se desactiva con el mismo botón.
+   - la **vista en corte**, que amplía el interior de la pieza que elijas,
    - el **diagrama espacio-fase**, con la secuencia A+ / A− de cada cilindro.
 6. **Guarda o comparte.** *Guardar* descarga un `.json`, *Abrir* lo recupera y
    *Compartir* copia un enlace con el circuito dentro (no necesita servidor ni cuenta).

@@ -9,7 +9,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { DT_POR_DEFECTO, Motor, validarCircuito } from './engine'
 import Paleta from './components/Paleta'
-import Pizarra from './components/Pizarra'
+import Pizarra, { type Vista } from './components/Pizarra'
 import Propiedades from './components/Propiedades'
 import VistaCorte from './components/VistaCorte'
 import DiagramaEspacioFase from './components/DiagramaEspacioFase'
@@ -79,6 +79,8 @@ export default function App() {
   const [, setFotograma] = useState(0)
   const [aviso, setAviso] = useState<string | null>(null)
   const [zoom, setZoom] = useState(1)
+  const [vista, setVista] = useState<Vista>('esquema')
+  const [paralela, setParalela] = useState(false)
   const estrecha = useEsEstrecha()
   const inputArchivo = useRef<HTMLInputElement>(null)
 
@@ -424,10 +426,72 @@ export default function App() {
       <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', flexDirection: estrecha ? 'column' : 'row' }}>
         {modo === 'editar' && <Paleta horizontal={estrecha} />}
         <div style={{ flex: 1, minWidth: 0, width: '100%' }}>
-          <div style={{ overflow: zoom > 1 ? 'auto' : 'visible', maxWidth: '100%' }}>
-            <Pizarra motor={motor} zoom={zoom} />
+          <div
+            style={{
+              display: paralela ? 'grid' : 'block',
+              gridTemplateColumns: paralela ? 'repeat(auto-fit, minmax(320px, 1fr))' : undefined,
+              gap: 10,
+            }}
+          >
+            <div style={{ overflow: zoom > 1 ? 'auto' : 'visible', maxWidth: '100%' }}>
+              {paralela && <p style={rotuloVista}>Esquema · simbología ISO 1219-1</p>}
+              <Pizarra motor={motor} zoom={zoom} vista={paralela ? 'esquema' : vista} />
+            </div>
+            {paralela && (
+              <div style={{ overflow: zoom > 1 ? 'auto' : 'visible', maxWidth: '100%' }}>
+                <p style={rotuloVista}>Taller · el componente por dentro</p>
+                <Pizarra
+                  motor={motor}
+                  zoom={zoom}
+                  vista="taller"
+                  soloLectura
+                  id="pizarra-taller-svg"
+                />
+              </div>
+            )}
           </div>
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center', margin: '6px 2px 0' }}>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', margin: '6px 2px 0', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.8rem', color: '#5a6b7d' }}>Vista:</span>
+            {(
+              [
+                ['esquema', 'Esquema'],
+                ['taller', 'Taller'],
+              ] as Array<[Vista, string]>
+            ).map(([v, etiqueta]) => (
+              <button
+                key={v}
+                onClick={() => {
+                  setVista(v)
+                  setParalela(false)
+                }}
+                disabled={paralela}
+                style={{
+                  ...botonSuave,
+                  padding: '0.15rem 0.5rem',
+                  fontSize: '0.78rem',
+                  opacity: paralela ? 0.5 : 1,
+                  background: !paralela && vista === v ? '#33475c' : '#fff',
+                  color: !paralela && vista === v ? '#fff' : '#33475c',
+                }}
+              >
+                {etiqueta}
+              </button>
+            ))}
+            <button
+              onClick={() => setParalela((p) => !p)}
+              title="Muestra el esquema y el taller a la vez, sincronizados"
+              style={{
+                ...botonSuave,
+                padding: '0.15rem 0.5rem',
+                fontSize: '0.78rem',
+                background: paralela ? '#12a35a' : '#fff',
+                color: paralela ? '#fff' : '#33475c',
+              }}
+            >
+              {paralela ? '✓ En paralelo' : 'Ver en paralelo'}
+            </button>
+
+            <span style={{ width: 10 }} />
             <span style={{ fontSize: '0.8rem', color: '#5a6b7d' }}>Zoom:</span>
             {[1, 1.4, 1.8].map((z) => (
               <button
@@ -570,6 +634,14 @@ const boton: React.CSSProperties = {
   fontSize: '0.9rem',
   fontWeight: 600,
   cursor: 'pointer',
+}
+
+const rotuloVista: React.CSSProperties = {
+  margin: '0 0 4px',
+  fontSize: '0.78rem',
+  fontWeight: 600,
+  color: '#5a6b7d',
+  letterSpacing: '0.02em',
 }
 
 const botonSuave: React.CSSProperties = {

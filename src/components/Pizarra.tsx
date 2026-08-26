@@ -3,10 +3,11 @@
  * real), se cablean puerto a puerto y se ve la simulación en vivo con líneas
  * presurizadas en azul y flujo animado.
  */
-import { useEffect, useRef, useState } from 'react'
+import { memo, useEffect, useRef, useState } from 'react'
 import type { Motor, RefPuerto } from '../engine'
 import type { EstadoVivo } from '../symbols/Simbolos'
 import { SimboloPieza } from '../symbols/Simbolos'
+import { PiezaRealista } from '../realistic/PiezaRealista'
 import { DESCRIPTORES, VECTOR_DIR, puertosVisibles } from './descriptores'
 import { useStore, type Pieza } from '../store'
 
@@ -19,10 +20,75 @@ const REJILLA = 10
  *  esta distancia se "pega" al puerto más cercano. */
 const RADIO_IMAN = 30
 
+export type Vista = 'esquema' | 'taller'
+
+interface PropsDibujo {
+  tipo: string
+  params: Pieza['params']
+  vivo: EstadoVivo | null
+  vista: Vista
+  ancho: number
+  alto: number
+  presiones?: Record<string, number>
+  /**
+   * Resumen del estado que afecta al dibujo. Repintar dieciséis fichas —y más
+   * si están las dos vistas— treinta veces por segundo hunde el navegador,
+   * sobre todo con los dibujos realistas. Con esta firma cada ficha sólo se
+   * redibuja cuando algo suyo ha cambiado, que en un ciclo son una o dos.
+   */
+  firma: string
+}
+
+const DibujoFicha = memo(
+  function DibujoFicha({ tipo, params, vivo, vista, ancho, alto, presiones }: PropsDibujo) {
+    return vista === 'taller' ? (
+      <PiezaRealista tipo={tipo} params={params} vivo={vivo} ancho={ancho} alto={alto} presiones={presiones} />
+    ) : (
+      <SimboloPieza tipo={tipo} params={params} vivo={vivo} />
+    )
+  },
+  (a, b) =>
+    a.tipo === b.tipo &&
+    a.vista === b.vista &&
+    a.ancho === b.ancho &&
+    a.alto === b.alto &&
+    a.firma === b.firma,
+)
+
+/** Todo lo que puede cambiar el aspecto de una ficha, en una cadena comparable. */
+function firmaDe(
+  params: Pieza['params'],
+  vivo: EstadoVivo | null,
+  presiones: Record<string, number> | undefined,
+): string {
+  const pos = typeof vivo?.posicion === 'number' ? vivo.posicion.toFixed(3) : ''
+  const aire = presiones
+    ? Object.keys(presiones)
+        .sort()
+        .map((k) => `${k}${(presiones[k] ?? 0) > 0.1 ? 1 : 0}`)
+        .join('')
+    : ''
+  return [
+    JSON.stringify(params),
+    vivo?.accionada ?? '',
+    pos,
+    vivo?.encendida ?? '',
+    vivo?.lado ?? '',
+    vivo?.purgando ?? '',
+    aire,
+  ].join('|')
+}
+
 interface Props {
   motor: Motor | null
   /** Escala de dibujo: 1 = ajustado al ancho disponible. */
   zoom?: number
+  /** Esquema = simbología ISO · Taller = el componente tal como se ve de verdad. */
+  vista?: Vista
+  /** Sólo la vista principal capta el teclado y el ratón; la paralela sólo mira. */
+  soloLectura?: boolean
+  /** Id del SVG, para poder exportar cada vista por separado. */
+  id?: string
 }
 
 interface Punto {
@@ -74,7 +140,7 @@ function rutaManguera(pieza1: Pieza, ref1: RefPuerto, pieza2: Pieza, ref2: RefPu
   return puntos.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ')
 }
 
-export default function Pizarra({ motor, zoom = 1 }: Props) {
+export default function Pizarra({ motor, zoom = 1, vista = 'esquema', soloLectura = false, id = 'pizarra-svg' }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
   const piezas = useStore((s) => s.piezas)
   const mangueras = useStore((s) => s.mangueras)
@@ -177,6 +243,16 @@ export default function Pizarra({ motor, zoom = 1 }: Props) {
     }
   }
 
+  /** Presión en cada puerto de una ficha, si la simulación está corriendo. */
+  const presionesDe = (id: string, tipo: string): Record<string, number> | undefined => {
+    if (!simulando || !motor) return undefined
+    const salida: Record<string, number> = {}
+    for (const puerto of puertosVisibles(tipo, porId.get(id)?.params ?? {})) {
+      salida[puerto.id] = motor.presionEn(id, puerto.id)
+    }
+    return salida
+  }
+
   // --- imán de puertos -----------------------------------------------------
   // El radio se calcula en píxeles de pantalla (~22 px reales) para que en
   // tablets o ventanas chicas el objetivo táctil no se encoja con el zoom.
@@ -209,6 +285,7 @@ export default function Pizarra({ motor, zoom = 1 }: Props) {
 
   // --- interacción con piezas -------------------------------------------
   const onPointerDownPieza = (e: React.PointerEvent, pieza: Pieza) => {
+    if (soloLectura) return
     e.stopPropagation()
     // Cerca de un puerto, el imán gana: el clic cablea en vez de arrastrar
     if (!simulando && modo === 'editar' && iman) {
@@ -241,6 +318,7 @@ export default function Pizarra({ motor, zoom = 1 }: Props) {
   }
 
   const onPointerMove = (e: React.PointerEvent) => {
+    if (soloLectura) return
     const pos = coordsSvg(e)
     if (origenCable) setCursor(pos)
     const arrastre = arrastreRef.current
@@ -264,11 +342,12 @@ export default function Pizarra({ motor, zoom = 1 }: Props) {
   }
 
   const onPointerDownFondo = (e: React.PointerEvent) => {
-    if (e.target !== svgRef.current) return
+    if (soloLectura || e.target !== svgRef.current) return
     if (modo === 'editar' && iman) accionPuerto(iman.ref)
   }
 
   const onPointerUp = (e: React.PointerEvent) => {
+    if (soloLectura) return
     const arrastre = arrastreRef.current
     if (arrastre) {
       if (!arrastre.movido) seleccionar({ clase: 'pieza', id: arrastre.id })
@@ -283,6 +362,7 @@ export default function Pizarra({ motor, zoom = 1 }: Props) {
   }
 
   const onClickPuerto = (e: React.PointerEvent, ref: RefPuerto) => {
+    if (soloLectura) return
     e.stopPropagation()
     if (simulando) return
     accionPuerto(ref)
@@ -292,7 +372,7 @@ export default function Pizarra({ motor, zoom = 1 }: Props) {
   return (
     <svg
       ref={svgRef}
-      id="pizarra-svg"
+      id={id}
       viewBox={`0 0 ${ANCHO_PIZARRA} ${ALTO_PIZARRA}`}
       style={{
         width: `${zoom * 100}%`,
@@ -432,6 +512,7 @@ export default function Pizarra({ motor, zoom = 1 }: Props) {
         const desc = DESCRIPTORES[pieza.tipo]
         if (!desc) return null
         const vivo = estadoVivoDe(pieza)
+        const presiones = vista === 'taller' ? presionesDe(pieza.id, pieza.tipo) : undefined
         const seleccionada = seleccion?.clase === 'pieza' && seleccion.id === pieza.id
         const clicable =
           simulando &&
@@ -457,7 +538,16 @@ export default function Pizarra({ motor, zoom = 1 }: Props) {
               onPointerDown={(e) => onPointerDownPieza(e, pieza)}
             />
             <g pointerEvents="none">
-              <SimboloPieza tipo={pieza.tipo} params={pieza.params} vivo={vivo} />
+              <DibujoFicha
+                tipo={pieza.tipo}
+                params={pieza.params}
+                vivo={vivo}
+                vista={vista}
+                ancho={desc.ancho}
+                alto={desc.alto}
+                presiones={presiones}
+                firma={firmaDe(pieza.params, vivo, presiones)}
+              />
             </g>
             <text
               x={desc.ancho / 2}

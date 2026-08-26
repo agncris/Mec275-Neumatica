@@ -69,3 +69,21 @@ export function resorteVertical(
 /** Transición estándar de las piezas móviles y de los colores de aire. */
 export const T_MOVIL = 'transform 130ms ease-out'
 export const T_AIRE = 'fill 150ms'
+
+/** Caja donde incrustar un corte dentro de otro SVG (la pizarra en vista taller). */
+export interface Incrustar {
+  x: number
+  y: number
+  w: number
+  h: number
+}
+
+/**
+ * Atributos del <svg> de un corte: suelto ocupa el ancho disponible; incrustado
+ * se coloca y se escala dentro del hueco que le den, conservando proporciones.
+ */
+export function svgCorte(viewBox: string, inc?: Incrustar) {
+  return inc
+    ? { viewBox, x: inc.x, y: inc.y, width: inc.w, height: inc.h, preserveAspectRatio: 'xMidYMid meet' }
+    : { viewBox, style: { width: '100%', height: 'auto', display: 'block' } }
+}

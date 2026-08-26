@@ -21,12 +21,16 @@ import {
   colorP,
   resorteHorizontal,
   resorteVertical,
+  svgCorte,
+  type Incrustar,
 } from './comunes'
 
 export interface PropsCorte {
   accionada: boolean
   /** Presión por puerto en bar (del motor, o heurística en modo editar). */
   presiones: Record<string, number>
+  /** Si viene, el corte se dibuja dentro de otro SVG en ese hueco. */
+  incrustar?: Incrustar
 }
 
 const Etiqueta = ({ x, y, texto }: { x: number; y: number; texto: string }) => (
@@ -48,7 +52,7 @@ const ASIENTO_SUP = 140
 const ASIENTO_INF = 190
 const RECORRIDO = 26
 
-export function CorteValvula32({ accionada, presiones, na = false }: PropsCorte & { na?: boolean }) {
+export function CorteValvula32({ accionada, presiones, na = false, incrustar }: PropsCorte & { na?: boolean }) {
   // "abierta" = paso 1→2 abierto (vástago abajo)
   const abierta = na ? !accionada : accionada
   const dy = abierta ? RECORRIDO : 0
@@ -58,7 +62,7 @@ export function CorteValvula32({ accionada, presiones, na = false }: PropsCorte 
   const yJuntaInf = ASIENTO_INF + dy
 
   return (
-    <svg viewBox="0 0 262 288" style={{ width: '100%', height: 'auto', display: 'block' }}>
+    <svg {...svgCorte('0 0 262 288', incrustar)}>
       {/* cuerpo */}
       <rect x={40} y={84} width={180} height={166} rx={5} fill={CUERPO} stroke={CUERPO_BORDE} strokeWidth={2} />
 
@@ -156,6 +160,7 @@ function CorrederaBase({
   pilotaje = false,
   escapeUnico = false,
   leyenda,
+  incrustar,
 }: PropsCorte & { biestable?: boolean; pilotaje?: boolean; escapeUnico?: boolean; leyenda: string }) {
   const s = accionada ? DESPL : 0
   const embolos = EMBOLOS.map(([a, b]) => [a + s, b + s] as [number, number])
@@ -181,7 +186,7 @@ function CorrederaBase({
   const conPiloto14 = biestable || pilotaje
 
   return (
-    <svg viewBox="0 0 388 210" style={{ width: '100%', height: 'auto', display: 'block' }}>
+    <svg {...svgCorte('0 0 388 210', incrustar)}>
       {/* cuerpo y taladro (el cuerpo sobresale a la derecha para alojar el
           muelle o la cámara de pilotaje 12) */}
       <rect x={25} y={58} width={334} height={74} rx={5} fill={CUERPO} stroke={CUERPO_BORDE} strokeWidth={2} />

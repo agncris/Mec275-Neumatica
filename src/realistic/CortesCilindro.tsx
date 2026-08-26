@@ -17,6 +17,8 @@ import {
   T_AIRE,
   colorP,
   resorteHorizontal,
+  svgCorte,
+  type Incrustar,
 } from './comunes'
 
 interface PropsCilindro {
@@ -26,6 +28,8 @@ interface PropsCilindro {
   presiones: Record<string, number>
   /** Muestra los nombres de las piezas (émbolo, muelle, vástago…). */
   nombres?: boolean
+  /** Si viene, el corte se dibuja dentro de otro SVG en ese hueco. */
+  incrustar?: Incrustar
 }
 
 function Nombre({ x, y, texto, anchor = 'middle' }: { x: number; y: number; texto: string; anchor?: 'start' | 'middle' | 'end' }) {
@@ -49,14 +53,14 @@ const X1 = 330 // cara interior de la tapa delantera
 const CY = 120 // eje del cilindro
 const RY = 42 // radio interior
 
-export function CorteCilindroSimple({ posicion, presiones, nombres = true }: PropsCilindro) {
+export function CorteCilindroSimple({ posicion, presiones, nombres = true, incrustar }: PropsCilindro) {
   const carrera = X1 - X0 - 100
   const px = X0 + posicion * carrera // cara trasera del émbolo
   const p1 = presiones['1']
   const conPresion = (p1 ?? 0) > 0.1
 
   return (
-    <svg viewBox="0 0 420 210" style={{ width: '100%', height: 'auto', display: 'block' }}>
+    <svg {...svgCorte('0 0 420 210', incrustar)}>
       {/* cuerpo exterior */}
       <path
         d={`M30,${CY - RY - 26} H${X1 + 30} v${(RY + 26) * 2} H30 Z`}
@@ -124,14 +128,14 @@ export function CorteCilindroSimple({ posicion, presiones, nombres = true }: Pro
 // Cilindro de doble efecto: dos orificios. El aire entra por un lado y sale
 // por el otro; el émbolo es empujado en ambos sentidos (no hay muelle).
 // ===========================================================================
-export function CorteCilindroDoble({ posicion, presiones, nombres = true }: PropsCilindro) {
+export function CorteCilindroDoble({ posicion, presiones, nombres = true, incrustar }: PropsCilindro) {
   const carrera = X1 - X0 - 100
   const px = X0 + posicion * carrera
   const pA = presiones['A']
   const pB = presiones['B']
 
   return (
-    <svg viewBox="0 0 420 210" style={{ width: '100%', height: 'auto', display: 'block' }}>
+    <svg {...svgCorte('0 0 420 210', incrustar)}>
       <path
         d={`M30,${CY - RY - 26} H${X1 + 30} v${(RY + 26) * 2} H30 Z`}
         fill={CUERPO_CIL}
