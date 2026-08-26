@@ -1,24 +1,25 @@
 /**
- * El circuito de la Actividad 2 / Evaluación N.º 1 del curso, tal como se carga
- * en la aplicación: secuencia A+B+ | B−A−C+ | C− resuelta por cascada.
+ * Cascada de tres grupos: secuencia A+B+ | B−A−C+ | C−. Es el caso más exigente
+ * que tiene que aguantar el motor —dos válvulas de cascada encadenadas, tres
+ * actuadores y dieciséis fichas—, así que se comprueba entera.
  */
 import { describe, expect, it } from 'vitest'
 import { Motor } from '../motor'
 import { validarCircuito } from '../validacion'
-import { CIRCUITO_TRES_GRUPOS } from '../../circuitos/ejercicios'
+import { CASCADA_TRES_GRUPOS } from './circuitos-prueba'
 
 const circuito = () => ({
-  componentes: CIRCUITO_TRES_GRUPOS.piezas.map((p) => ({
+  componentes: CASCADA_TRES_GRUPOS.piezas.map((p) => ({
     id: p.id,
     tipo: p.tipo,
     params: { ...p.params },
   })),
-  mangueras: CIRCUITO_TRES_GRUPOS.mangueras.map((m) => ({ ...m })),
+  mangueras: CASCADA_TRES_GRUPOS.mangueras.map((m) => ({ ...m })),
 })
 
 const pos = (m: Motor, id: string) => m.estadoDe<{ posicion: number }>(id).posicion
 
-describe('ejercicio del curso: A+B+ | B−A−C+ | C−', () => {
+describe('cascada de tres grupos: A+B+ | B−A−C+ | C−', () => {
   it('el circuito no tiene errores de montaje', () => {
     expect(validarCircuito(circuito())).toEqual([])
   })

@@ -34,16 +34,13 @@ interface EstadoApp {
   seleccion: Seleccion
   origenCable: RefPuerto | null
   colocando: Colocacion | null
-  /** Título del trabajo; da nombre a los archivos que entrega el alumno. */
-  nombreTrabajo: string
   /** Datos e identidad de quien entrega. */
   alumno: { nombre: string; rol: string }
-  /** Enunciado sobre el que se trabaja. */
+  /** Título del trabajo; da nombre a los archivos que se descargan. */
   ejercicio: string
   /** Respuestas escritas a las preguntas del enunciado. */
   respuestas: Respuestas
 
-  setNombreTrabajo(nombre: string): void
   setAlumno(alumno: { nombre: string; rol: string }): void
   setEjercicio(ejercicio: string): void
   setRespuestas(cambio: Partial<Respuestas>): void
@@ -104,14 +101,9 @@ export const useStore = create<EstadoApp>((set, get) => ({
   seleccion: null,
   origenCable: null,
   colocando: null,
-  nombreTrabajo: '',
   alumno: { nombre: '', rol: '' },
-  ejercicio: 'tarea',
+  ejercicio: '',
   respuestas: { ...RESPUESTAS_VACIAS },
-
-  setNombreTrabajo(nombreTrabajo) {
-    set({ nombreTrabajo })
-  },
 
   setAlumno(alumno) {
     set({ alumno })

@@ -32,44 +32,44 @@ banco de prácticas. Todo el contenido y la interfaz están en español.
 
 ## La entrega
 
-Toda la evaluación se resuelve dentro de la aplicación. En la sección
-**«Mi entrega»** el alumno se identifica, elige el enunciado y responde las cinco
-preguntas:
+La aplicación no trae enunciados: esos se reparten aparte. Lo que sí trae es todo lo
+necesario para resolverlos y entregarlos.
 
-| Pregunta del enunciado | Dónde se responde |
+En la sección **«Mi entrega»** se rellenan los datos, se pone título al trabajo y se
+responde lo que pida el enunciado:
+
+| Apartado | Cómo se responde |
 |---|---|
-| 1 · Diagrama de funcionamiento VDI 2860 | Se arma con los símbolos de la norma, ordenables y anotables |
-| 2 · Secuencia, grupos y activadores | Escribe la secuencia y la app divide los grupos y dice cuántas válvulas de cascada hacen falta |
-| 3 · Elementos necesarios | Se rellena solo con el inventario del circuito montado, y se puede editar |
-| 4 · Diagrama de fase | Se dibuja solo al simular; exportable a PNG |
-| 5 · Circuito neumático | La pizarra |
+| Diagrama de funcionamiento VDI 2860 | Se arma con los símbolos de la norma, ordenables y anotables |
+| Secuencia, grupos y activadores | Al escribir la secuencia, la aplicación divide los grupos y dice cuántas válvulas de cascada hacen falta |
+| Elementos necesarios | Se rellena solo con el inventario del circuito montado, y se puede editar |
+| Diagrama de fase | Se dibuja solo al simular; se descarga en PNG |
+| Circuito neumático | El banco |
 
-**Comprobar mi trabajo** contrasta lo declarado con lo que hace de verdad el circuito:
-si está bien montado, si se mueve, si hay señales bloqueantes, si el ciclo se cierra y
-si la secuencia escrita coincide con la que ejecuta.
+**Comprobar mi trabajo** simula el circuito y contrasta lo escrito con lo que de verdad
+hace: si está bien montado, si se mueve, si hay señales bloqueantes, si el ciclo se
+cierra y si la secuencia declarada coincide con la que ejecuta. No corrige ni califica.
 
 **Descargar mi entrega** produce un único `.json` con las respuestas y el circuito
-dentro. Es lo que sustituye al par PDF + `.ct`/`.bak`: el profesor lo abre con
-**Abrir** y recupera la identidad del alumno, sus respuestas y su circuito, que sigue
-siendo ejecutable, así que la corrección se puede comprobar simulando.
+dentro. Sustituye al par PDF + `.ct`/`.bak`, con la ventaja de que el circuito sigue
+siendo ejecutable: quien lo abra con **Abrir** puede simularlo.
 
-Además, para informes con imágenes, la barra superior exporta láminas:
+Para informes con imágenes, la barra superior descarga:
 
 | Botón | Qué produce |
 |-------|-------------|
-| **Circuito (PNG / SVG)** | La lámina del circuito, en mapa de bits o vectorial |
+| **Circuito (PNG / SVG)** | La imagen del circuito, en mapa de bits o vectorial |
 | **Diagrama de fase (PNG)** | El recorrido-tiempo con la secuencia A+ / A− ya marcada |
 | **Guardar** | El `.json` sólo del circuito, sin respuestas |
 | **Compartir** | Un enlace con el circuito dentro, para consultar dudas |
 
 ## Secciones de estudio
 
-Bajo la pizarra hay cuatro secciones plegables que cubren la materia evaluada:
+Bajo el banco hay secciones plegables con el material de apoyo:
 
-- **Ejercicios y evaluaciones del curso** — enunciados de las actividades y de la tarea,
-  con el circuito de la Actividad 2 listo para cargar.
-- **Método cascada** — explicador animado paso a paso, divisor de grupos interactivo y
-  los circuitos de dos y tres grupos.
+- **Método cascada** — explicador animado paso a paso, divisor de grupos interactivo
+  para cualquier secuencia, y dos circuitos de demostración: el que se bloquea por
+  señales bloqueantes y el mismo resuelto por cascada.
 - **Simbología VDI 2860** — los 24 símbolos de funciones de manipulación, con modo de
   práctica tipo control (símbolo → nombre).
 - **Nº de vías y posiciones** — nomenclatura de orificios ISO 1219-1 / CETOP.
@@ -96,10 +96,10 @@ con **señales bloqueantes**:
    modo sin cascada se ven las dos órdenes opuestas chocando en rojo sobre la misma
    válvula; en el modo con cascada se ve cómo, al morir la línea L1, la señal de `a1`
    desaparece sola y el ciclo puede continuar.
-2. **Los dos circuitos reales** para cargar en la pizarra y simular: el que se bloquea y
-   el resuelto por cascada.
-3. **Un divisor de grupos interactivo**: el alumno escribe cualquier secuencia
-   (`A+ A- B+ B-`, `A+ B+ C+ C- B- A-`…) y la app la parte en grupos y le dice cuántas
+2. **Los dos circuitos reales** para cargar en el banco y simular: el que se bloquea y
+   el mismo resuelto por cascada.
+3. **Un divisor de grupos interactivo**: escribes cualquier secuencia
+   (`A+ A- B+ B-`, `A+ B+ C+ C- B- A-`…) y la aplicación la parte en grupos y dice cuántas
    válvulas de cascada hacen falta (siempre una menos que grupos).
 4. **Las tres reglas de cableado** y **los tiempos del ejemplo resuelto**.
 
@@ -129,7 +129,7 @@ por separado para explorarla antes de montar nada.
 
 ---
 
-## Cómo funciona por dentro (para el docente)
+## Cómo funciona por dentro
 
 El circuito se modela como un **grafo dirigido**: los nodos son los puertos (numeración
 CETOP 1, 2, 3, 4, 5, 12, 14) y las aristas son las mangueras más los caminos internos de
@@ -170,7 +170,7 @@ npm run dev        # http://localhost:5173
 ```
 
 ```bash
-npm test           # 119 pruebas: motor, análisis, circuitos del curso, entregas y utilidades
+npm test           # 119 pruebas: motor, análisis, entregas y utilidades
 npm run typecheck  # comprobación de tipos
 npm run build      # compila a /dist
 ```

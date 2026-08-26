@@ -9,7 +9,6 @@ import { useState } from 'react'
 import ExplicadorCascada from './ExplicadorCascada'
 import { analizarSecuencia } from '../secuencias'
 import { CIRCUITO_BLOQUEADO, CIRCUITO_CASCADA, type CircuitoPreparado } from '../circuitos/cascada'
-import { CIRCUITO_TRES_GRUPOS } from '../circuitos/ejercicios'
 import { useStore } from '../store'
 
 const COLORES_GRUPO = ['#1668c7', '#12a35a', '#b3671a', '#8a3ab0']
@@ -222,18 +221,22 @@ export default function MetodoCascada() {
         <li>Cada final de carrera cuelga de una línea de grupo, jamás de la red directa.</li>
         <li>Cada línea de grupo pilota directamente un solo movimiento: el primero de su grupo.</li>
       </ul>
-      <h3 style={titulo}>7 · Con tres grupos: el circuito de la Actividad 2</h3>
+      <h3 style={titulo}>7 · Con tres o más grupos</h3>
       <p style={parrafo}>
-        Con tres o más grupos las válvulas van encadenadas —de ahí el nombre—: cada una o alimenta su
-        línea, o pasa el aire a la siguiente. Este es el circuito de la secuencia{' '}
-        <code style={codigo}>A+ B+ | B− A− C+ | C−</code> del curso, con dos cilindros de doble
-        efecto, un actuador giratorio, seis finales de carrera y dos válvulas de cascada.
+        Las válvulas de cascada van encadenadas —de ahí el nombre—: cada una o alimenta su línea, o
+        pasa el aire a la siguiente. Con tres grupos:
       </p>
-      <button onClick={() => cargar(CIRCUITO_TRES_GRUPOS)} style={{ ...boton, background: '#1668c7' }}>
-        Cargar el circuito de tres grupos
-      </button>
+      <pre style={esquemaTexto}>
+{`P → K2 ─┬─ (accionada) ────────────→ L3
+         └─ (reposo) → K1 ─┬─ (accionada) → L2
+                           └─ (reposo)    → L1`}
+      </pre>
+      <p style={parrafo}>
+        Sólo una línea tiene aire: al conmutar K2 se corta la alimentación de K1 entera, así que L1 y
+        L2 se vacían por sus escapes. La señal que devuelve al grupo 1 repone las dos válvulas a la
+        vez. Los circuitos grandes se trabajan mejor con el <strong>zoom</strong> de la pizarra.
+      </p>
       <p style={pie}>
-        Es un circuito grande: usa el <strong>zoom</strong> de la pizarra para trabajarlo cómodo.
         Existe también el <strong>método paso a paso</strong>, que gasta más válvulas pero escala
         mejor y no obliga a agrupar.
       </p>
@@ -277,6 +280,18 @@ const boton: React.CSSProperties = {
   fontSize: '0.88rem',
   fontWeight: 600,
   cursor: 'pointer',
+}
+
+const esquemaTexto: React.CSSProperties = {
+  background: '#f3f5f7',
+  border: '1px solid #dbe1e8',
+  borderRadius: 8,
+  padding: '0.6rem 0.8rem',
+  fontSize: '0.78rem',
+  lineHeight: 1.6,
+  overflowX: 'auto',
+  color: '#33475c',
+  margin: '0 0 10px',
 }
 
 const tabla: React.CSSProperties = {

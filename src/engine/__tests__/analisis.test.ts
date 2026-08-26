@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest'
 import { analizarCircuito, coincideSecuencia, inventarioDe } from '../analisis'
-import { CIRCUITO_TRES_GRUPOS } from '../../circuitos/ejercicios'
+import { CASCADA_TRES_GRUPOS } from './circuitos-prueba'
 import { CIRCUITO_BLOQUEADO, CIRCUITO_CASCADA } from '../../circuitos/cascada'
 import type { Circuito } from '../tipos'
 
@@ -23,7 +23,7 @@ describe('detección de la secuencia', () => {
   })
 
   it('reconoce A+ B+ B− A− C+ C− en el circuito de tres grupos', () => {
-    const a = analizarCircuito(comoCircuito(CIRCUITO_TRES_GRUPOS))
+    const a = analizarCircuito(comoCircuito(CASCADA_TRES_GRUPOS))
     expect(a.secuenciaDetectada.slice(0, 6)).toEqual(['A+', 'B+', 'B−', 'A−', 'C+', 'C−'])
     expect(a.cicloCompleto).toBe(true)
     expect(a.conflictos).toEqual([])
@@ -37,7 +37,7 @@ describe('detección de la secuencia', () => {
   })
 
   it('asigna las letras A, B, C… por orden de aparición', () => {
-    const a = analizarCircuito(comoCircuito(CIRCUITO_TRES_GRUPOS))
+    const a = analizarCircuito(comoCircuito(CASCADA_TRES_GRUPOS))
     expect(a.actuadores.map((x) => `${x.letra}=${x.id}`)).toEqual(['A=CA', 'B=CB', 'C=CC'])
   })
 
@@ -61,7 +61,7 @@ describe('detección de la secuencia', () => {
 
 describe('inventario de elementos', () => {
   it('cuenta cada tipo de componente con su nombre normalizado', () => {
-    const inv = inventarioDe(comoCircuito(CIRCUITO_TRES_GRUPOS))
+    const inv = inventarioDe(comoCircuito(CASCADA_TRES_GRUPOS))
     const buscar = (n: string) => inv.find((x) => x.nombre.includes(n))?.cantidad
     expect(buscar('doble efecto')).toBe(2)
     expect(buscar('giratorio')).toBe(1)

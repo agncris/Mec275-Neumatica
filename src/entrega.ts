@@ -1,10 +1,10 @@
 /**
- * Entrega del alumno: un único archivo que reúne todo lo que pide el enunciado
- * —identificación, las respuestas escritas, el diagrama VDI y el circuito— y
- * que el profesor puede volver a abrir en la aplicación para revisarlo.
+ * Entrega: un único archivo que reúne todo lo que pide el enunciado
+ * —identificación, respuestas escritas, diagrama VDI y circuito— y que se
+ * puede volver a abrir en la aplicación.
  *
- * Sustituye al par PDF + .ct/.bak de FluidSim: el circuito sigue siendo
- * ejecutable, así que la corrección puede comprobarse simulando.
+ * Sustituye al par PDF + .ct/.bak de FluidSim, con la ventaja de que el
+ * circuito sigue siendo ejecutable: quien lo abra puede simularlo.
  */
 import type { Manguera } from './engine'
 import type { Pieza } from './store'

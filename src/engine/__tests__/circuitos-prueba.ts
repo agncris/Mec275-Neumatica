@@ -1,18 +1,23 @@
 /**
- * Circuitos de los ejercicios del curso MEC275.
- *
- * El de la Actividad 2 / Evaluación N.º 1 es el de secuencia A+B+ | B−A−C+ | C−
- * resuelto por cascada de tres grupos: dos cilindros de doble efecto, un
- * actuador giratorio, seis finales de carrera, una marcha manual y dos válvulas
- * de cascada encadenadas.
+ * Circuito de prueba del motor: secuencia A+B+ | B−A−C+ | C− resuelta por
+ * cascada de tres grupos. Vive sólo en las pruebas —no se ofrece dentro de la
+ * aplicación— para verificar que el motor aguanta dos válvulas de cascada
+ * encadenadas y una quincena de fichas.
  */
-import type { Manguera } from '../engine'
-import type { Pieza } from '../store'
-import type { CircuitoPreparado } from './cascada'
+import type { Manguera } from '../tipos'
+
+interface PiezaPrueba {
+  id: string
+  tipo: string
+  x: number
+  y: number
+  params: Record<string, string | number | boolean>
+}
 
 const r = (componente: string, puerto: string) => ({ componente, puerto })
 
-const piezas: Pieza[] = [
+
+const piezas: PiezaPrueba[] = [
   // Actuadores
   { id: 'CA', tipo: 'cilindroDobleEfecto', x: 40, y: 10, params: {} },
   { id: 'CB', tipo: 'cilindroDobleEfecto', x: 420, y: 10, params: {} },
@@ -77,4 +82,4 @@ const mangueras: Manguera[] = [
   { id: 'j5', a: r('M', '2'), b: r('K1', '12') },
 ]
 
-export const CIRCUITO_TRES_GRUPOS: CircuitoPreparado = { piezas, mangueras }
+export const CASCADA_TRES_GRUPOS = { piezas, mangueras }

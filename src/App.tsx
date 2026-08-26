@@ -17,7 +17,6 @@ import TablaNomenclatura from './components/TablaNomenclatura'
 import { Seccion } from './components/Seccion'
 import MetodoCascada from './components/MetodoCascada'
 import SimbologiaVDI from './components/SimbologiaVDI'
-import EjerciciosCurso from './components/EjerciciosCurso'
 import PanelEntrega from './components/PanelEntrega'
 import { circuitoDesdeStore, useStore, type NumeroEjemplo } from './store'
 import {
@@ -59,15 +58,14 @@ export default function App() {
   const mangueras = useStore((s) => s.mangueras)
   const modo = useStore((s) => s.modo)
   const aire = useStore((s) => s.aire)
-  const nombreTrabajo = useStore((s) => s.nombreTrabajo)
   const alumno = useStore((s) => s.alumno)
+  const ejercicio = useStore((s) => s.ejercicio)
   const {
     setAlumno,
     setEjercicio,
     setRespuestas,
     setModo,
     setAire,
-    setNombreTrabajo,
     cargarEjemplo,
     cargarCircuito,
     limpiarPizarra,
@@ -117,7 +115,6 @@ export default function App() {
   }, [cargarCircuito])
 
   // --- copia de trabajo automática (circuito y respuestas) -------------------
-  const ejercicio = useStore((s) => s.ejercicio)
   const respuestas = useStore((s) => s.respuestas)
   useEffect(() => {
     guardarLocal({
@@ -163,7 +160,9 @@ export default function App() {
       }
       if (e.key === ' ' && !enCampo) {
         e.preventDefault()
-        setModo(modo === 'simular' ? 'editar' : 'simular')
+        if (useStore.getState().piezas.length > 0) {
+          setModo(modo === 'simular' ? 'editar' : 'simular')
+        }
       }
     }
     window.addEventListener('keydown', onKey)
@@ -202,14 +201,17 @@ export default function App() {
     }
   }
 
-  /** Lámina del circuito o del diagrama, para pegar en el informe. */
+  /** Nombre base de las descargas: sale de los datos de «Mi entrega». */
+  const baseArchivo = () => [alumno.nombre, ejercicio].filter(Boolean).join('_') || 'circuito'
+
+  /** Imagen del circuito o del diagrama, para pegar en el informe. */
   const exportarLamina = async (id: string, sufijo: string, formato: 'png' | 'svg') => {
     const svg = document.getElementById(id) as SVGSVGElement | null
     if (!svg) {
       setAviso('No hay nada que exportar todavía.')
       return
     }
-    const archivo = nombreSeguro(`${nombreTrabajo || 'circuito'}_${sufijo}`, formato)
+    const archivo = nombreSeguro(`${baseArchivo()}_${sufijo}`, formato)
     try {
       if (formato === 'png') await exportarPng(svg, archivo)
       else exportarSvg(svg, archivo)
@@ -230,9 +232,9 @@ export default function App() {
         setEjercicio(crudo.ejercicio)
         setRespuestas(normalizarRespuestas(crudo.respuestas))
         setAviso(
-          `Entrega de ${crudo.alumno.nombre || 'alumno sin nombre'}${
+          `Entrega de ${crudo.alumno.nombre || 'sin nombre'}${
             crudo.alumno.rol ? ` (${crudo.alumno.rol})` : ''
-          } abierta. Ábrela en «Mi entrega» para revisarla.`,
+          } abierta: circuito y respuestas cargados.`,
         )
         return
       }
@@ -247,6 +249,7 @@ export default function App() {
   const eventos = motor ? motor.eventos.slice(-6).reverse() : []
   const avisosCircuito =
     modo === 'editar' ? validarCircuito(circuitoDesdeStore(piezas, mangueras)) : (motor?.advertencias ?? [])
+  const bancoVacio = piezas.length === 0
   const hayCortes = piezas.some((p) => p.tipo.startsWith('valvula') || p.tipo.startsWith('cilindro'))
 
   return (
@@ -283,10 +286,17 @@ export default function App() {
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
         <button
           onClick={() => setModo(modo === 'simular' ? 'editar' : 'simular')}
-          title="Atajo: barra espaciadora"
+          disabled={bancoVacio}
+          title={
+            bancoVacio
+              ? 'Coloca al menos una ficha en el banco para poder simular'
+              : 'Atajo: barra espaciadora'
+          }
           style={{
             ...boton,
-            background: modo === 'simular' ? '#33475c' : '#12a35a',
+            background: bancoVacio ? '#c6ced6' : modo === 'simular' ? '#33475c' : '#12a35a',
+            color: bancoVacio ? '#7d8894' : '#fff',
+            cursor: bancoVacio ? 'not-allowed' : 'pointer',
             padding: '0.55rem 1.3rem',
             fontSize: '0.98rem',
           }}
@@ -329,8 +339,8 @@ export default function App() {
           <button
             onClick={() =>
               descargarJson(
-                { version: 1, nombre: nombreTrabajo || undefined, piezas, mangueras },
-                nombreSeguro(`${nombreTrabajo || 'circuito'}_neumalab`, 'json'),
+                { version: 1, nombre: ejercicio || undefined, piezas, mangueras },
+                nombreSeguro(`${baseArchivo()}_circuito`, 'json'),
               )
             }
             style={botonSuave}
@@ -374,23 +384,7 @@ export default function App() {
           borderRadius: 8,
         }}
       >
-        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.85rem', color: '#33475c' }}>
-          Trabajo:
-          <input
-            value={nombreTrabajo}
-            onChange={(e) => setNombreTrabajo(e.target.value)}
-            placeholder="Nombre_Apellido_Tarea-1"
-            spellCheck={false}
-            style={{
-              padding: '0.3rem 0.5rem',
-              border: '1px solid #c6ced6',
-              borderRadius: 6,
-              fontSize: '0.85rem',
-              minWidth: 210,
-            }}
-          />
-        </label>
-        <span style={{ fontSize: '0.85rem', color: '#5a6b7d' }}>Láminas para el informe:</span>
+        <span style={{ fontSize: '0.85rem', color: '#5a6b7d' }}>Imágenes para tu informe:</span>
         <button onClick={() => void exportarLamina('pizarra-svg', 'circuito', 'png')} style={botonSuave}>
           Circuito (PNG)
         </button>
@@ -577,12 +571,6 @@ export default function App() {
           }
         >
           <PanelEntrega />
-        </Seccion>
-      </section>
-
-      <section style={tarjeta}>
-        <Seccion titulo="Ejercicios y evaluaciones del curso">
-          <EjerciciosCurso />
         </Seccion>
       </section>
 

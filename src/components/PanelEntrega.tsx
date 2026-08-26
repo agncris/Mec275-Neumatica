@@ -1,7 +1,8 @@
 /**
- * Panel «Mi entrega»: aquí el alumno responde las preguntas del enunciado,
- * comprueba su propio trabajo contra la simulación y descarga un único archivo
- * con todo dentro. El profesor abre ese mismo archivo para revisarlo.
+ * Panel «Mi entrega»: aquí se responden las preguntas del enunciado, se
+ * contrasta lo escrito contra la simulación del propio circuito y se descarga
+ * un único archivo con todo dentro. Ese mismo archivo se puede volver a abrir
+ * en la aplicación, así que la entrega sigue siendo ejecutable.
  */
 import { useMemo, useState } from 'react'
 import { analizarCircuito, coincideSecuencia, inventarioDe } from '../engine'
@@ -11,13 +12,6 @@ import { crearEntrega } from '../entrega'
 import { descargarJson } from '../persistencia'
 import { nombreSeguro } from '../exportar'
 import { circuitoDesdeStore, useStore } from '../store'
-
-const EJERCICIOS = [
-  { id: 'act1', etiqueta: 'Actividad 1 · Dispositivo de fresado' },
-  { id: 'act2', etiqueta: 'Actividad 2 / Evaluación N.º 1 · Tres grupos' },
-  { id: 'tarea', etiqueta: 'Tarea 1 · Impresión bilateral por tampón' },
-  { id: 'libre', etiqueta: 'Trabajo libre' },
-]
 
 export default function PanelEntrega() {
   const piezas = useStore((s) => s.piezas)
@@ -46,7 +40,7 @@ export default function PanelEntrega() {
 
   const descargar = () => {
     const entrega = crearEntrega(alumno, ejercicio, respuestas, { piezas, mangueras })
-    const base = alumno.nombre ? `${alumno.nombre}_${ejercicio}` : `entrega_${ejercicio}`
+    const base = [alumno.nombre, ejercicio].filter(Boolean).join('_') || 'entrega'
     descargarJson(entrega as never, nombreSeguro(base, 'json'))
   }
 
@@ -76,10 +70,10 @@ export default function PanelEntrega() {
   return (
     <div>
       <p style={parrafo}>
-        Responde aquí las preguntas del enunciado. Cuando termines, pulsa{' '}
-        <strong>Comprobar mi trabajo</strong> para contrastar lo que has escrito con lo que hace de
-        verdad tu circuito, y luego <strong>Descargar mi entrega</strong>: ese único archivo lleva
-        dentro las respuestas y el circuito, y es lo que hay que enviar.
+        Aquí respondes lo que te pida el enunciado y lo dejas todo junto. Cuando termines, pulsa{' '}
+        <strong>Comprobar mi trabajo</strong>: la aplicación simula tu circuito y te dice si hace de
+        verdad lo que has escrito. Después, <strong>Descargar mi entrega</strong> te da un único
+        archivo con las respuestas y el circuito dentro — ese es el que tienes que enviar.
       </p>
 
       {/* Identificación ------------------------------------------------- */}
@@ -103,22 +97,22 @@ export default function PanelEntrega() {
           />
         </label>
         <label style={campo}>
-          Enunciado
-          <select value={ejercicio} onChange={(e) => setEjercicio(e.target.value)} style={entrada}>
-            {EJERCICIOS.map((ej) => (
-              <option key={ej.id} value={ej.id}>
-                {ej.etiqueta}
-              </option>
-            ))}
-          </select>
+          Título del trabajo
+          <input
+            value={ejercicio}
+            onChange={(e) => setEjercicio(e.target.value)}
+            placeholder="Tarea 1"
+            style={entrada}
+          />
         </label>
       </div>
 
       {/* 1 · Diagrama VDI ------------------------------------------------ */}
-      <h3 style={titulo}>1 · Diagrama de funcionamiento (VDI 2860)</h3>
+      <h3 style={titulo}>Diagrama de funcionamiento (VDI 2860)</h3>
       <p style={pie}>
-        Describe el proceso paso a paso con los símbolos de la norma. Añade uno por cada función y
-        anota a qué elemento corresponde.
+        Describe el proceso paso a paso con los símbolos de la norma: añade una función por cada
+        cosa que hace la máquina y anota a qué elemento corresponde. Si no sabes cuál es cada
+        símbolo, tienes la tabla completa en la sección «Simbología VDI 2860».
       </p>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-start', margin: '8px 0' }}>
         {respuestas.vdi.map((paso, i) => {
@@ -177,7 +171,7 @@ export default function PanelEntrega() {
       )}
 
       {/* 2 · Secuencia --------------------------------------------------- */}
-      <h3 style={titulo}>2 · Secuencia, grupos y activadores</h3>
+      <h3 style={titulo}>Secuencia, grupos y activadores</h3>
       <label style={{ ...campo, maxWidth: 340 }}>
         Secuencia de automatización
         <input
@@ -211,7 +205,7 @@ export default function PanelEntrega() {
       </label>
 
       {/* 3 · Elementos --------------------------------------------------- */}
-      <h3 style={titulo}>3 · Elementos necesarios</h3>
+      <h3 style={titulo}>Elementos necesarios</h3>
       <button onClick={usarInventario} style={{ ...boton, background: '#1668c7', marginBottom: 6 }}>
         Rellenar con el inventario de mi circuito
       </button>
@@ -226,11 +220,12 @@ export default function PanelEntrega() {
       </label>
 
       {/* 4 y 5 ------------------------------------------------------------ */}
-      <h3 style={titulo}>4 · Diagrama de fase &nbsp;·&nbsp; 5 · Circuito neumático</h3>
+      <h3 style={titulo}>Diagrama de fase y circuito</h3>
       <p style={pie}>
-        Los dos salen de la pizarra: monta el circuito arriba y pulsa <strong>▶ Simular</strong>. El
-        diagrama de fase se dibuja solo mientras corre. Si tu informe lleva imágenes, expórtalas con
-        los botones «Circuito (PNG)» y «Diagrama de fase (PNG)» de la barra superior.
+        Los dos salen del banco: monta el circuito arriba y pulsa <strong>▶ Simular</strong>. El
+        diagrama de fase se dibuja solo mientras corre, con la secuencia A+ / A− marcada. Si tu
+        informe lleva imágenes, descárgalas con «Circuito (PNG)» y «Diagrama de fase (PNG)» de la
+        barra de arriba.
       </p>
       <label style={{ ...campo, maxWidth: '100%' }}>
         Observaciones (opcional)
@@ -244,6 +239,10 @@ export default function PanelEntrega() {
 
       {/* Comprobación ----------------------------------------------------- */}
       <h3 style={titulo}>Antes de entregar</h3>
+      <p style={pie}>
+        La comprobación no corrige tu trabajo ni te pone nota: sólo contrasta lo que has escrito con
+        lo que hace tu circuito al simularlo, para que no entregues nada que no funcione.
+      </p>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
         <button onClick={comprobar} style={{ ...boton, background: '#12a35a' }}>
           Comprobar mi trabajo
