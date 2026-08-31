@@ -237,6 +237,7 @@ export default function Pizarra({ motor, zoom = 1, vista = 'esquema', soloLectur
         encendida: pieza.tipo === 'fuente' ? ((params.encendida as boolean) ?? true) : undefined,
         lado: estado.lado === 'X' || estado.lado === 'Y' ? estado.lado : undefined,
         purgando: typeof estado.purgando === 'boolean' ? estado.purgando : undefined,
+        presion: pieza.tipo === 'manometro' ? motor.presionEn(pieza.id, '1') : undefined,
       }
     } catch {
       return null

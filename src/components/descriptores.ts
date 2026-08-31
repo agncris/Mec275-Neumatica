@@ -30,6 +30,13 @@ export const DESCRIPTORES: Record<string, Descriptor> = {
     alto: 90,
     puertos: [{ id: '1', x: 90, y: 45, dir: 'E' }],
   },
+  manometro: {
+    tipo: 'manometro',
+    nombre: 'Manómetro',
+    ancho: 64,
+    alto: 80,
+    puertos: [{ id: '1', x: 44, y: 80, dir: 'S' }],
+  },
   valvula32: {
     tipo: 'valvula32',
     nombre: 'Válvula 3/2',

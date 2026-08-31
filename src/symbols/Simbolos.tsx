@@ -511,10 +511,50 @@ export function SimboloTemporizador({ params, vivo }: PropsSimbolo) {
 }
 
 // ---------------------------------------------------------------------------
+// Manómetro: instrumento pasivo que cuelga de una línea y marca la presión
+// estática de su puerto 1. Sin estado interno propio; la aguja sigue a `presion`.
+// ---------------------------------------------------------------------------
+export function SimboloManometro({ params, vivo }: PropsSimbolo) {
+  const presion = vivo?.presion ?? Number(params.presion ?? 0)
+  const valor = Math.max(0, Math.min(10, presion))
+  // Aguja: -120° (0 bar) a +60° (10 bar), como en el manómetro de la fuente.
+  const angulo = -120 + valor * 18
+  return (
+    <g>
+      <line x1={40} y1={60} x2={40} y2={97} {...TRAZO} strokeWidth={1.6} />
+      <circle cx={43} cy={45} r={30} {...TRAZO} fill="#fff" />
+      {/* trazos de escala */}
+      {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((bar) => {
+        const a = ((-120 + bar * 18 - 90) * Math.PI) / 180
+        return (
+          <line
+            key={bar}
+            x1={43 + (bar % 5 === 0 ? 24 : 26) * Math.cos(a)}
+            y1={45 + (bar % 5 === 0 ? 24 : 26) * Math.sin(a)}
+            x2={43 + 30 * Math.cos(a)}
+            y2={45 + 30 * Math.sin(a)}
+            {...TRAZO}
+            strokeWidth={bar % 5 === 0 ? 1.8 : 1.2}
+          />
+        )
+      })}
+      {/* aguja */}
+      <g style={{ transition: 'transform 200ms' }} transform={`rotate(${angulo} 43 45)`}>
+        <line x1={43} y1={45} x2={43} y2={20} stroke="#b3261e" strokeWidth={2} strokeLinecap="round" />
+      </g>
+      <circle cx={43} cy={45} r={3} fill="#14181d" />
+      <Etiqueta x={43} y={84} texto={`${presion.toFixed(1)} bar`} />
+    </g>
+  )
+}
+
+// ---------------------------------------------------------------------------
 export function SimboloPieza({ tipo, params, vivo }: { tipo: string } & PropsSimbolo) {
   switch (tipo) {
     case 'fuente':
       return <SimboloFuente params={params} vivo={vivo} />
+    case 'manometro':
+      return <SimboloManometro params={params} vivo={vivo} />
     case 'valvula32':
       return <SimboloValvula32 params={params} vivo={vivo} />
     case 'finalCarrera':

@@ -599,6 +599,22 @@ export const Temporizador: ModeloComponente<EstadoTemporizador> = {
 }
 
 // ---------------------------------------------------------------------------
+// Manómetro: instrumento pasivo de lectura. No conduce aire hacia ninguna
+// parte —cuelga de una línea y sólo indica la presión estática que hay en su
+// puerto—, por eso no tiene caminos internos. Lo usa la documentación para
+// señalizar la presión de cada línea de grupo (p. ej. G1, G2, G3).
+// ---------------------------------------------------------------------------
+export type EstadoManometro = Record<string, never>
+
+export const Manometro: ModeloComponente<EstadoManometro> = {
+  tipo: 'manometro',
+  nombre: 'Manómetro',
+  puertos: [{ id: '1', rol: 'trabajo', descripcion: 'Conexión a la línea a medir' }],
+  estadoInicial: () => ({}),
+  caminos: () => [],
+}
+
+// ---------------------------------------------------------------------------
 // Registro de modelos disponibles.
 // ---------------------------------------------------------------------------
 export const MODELOS: Record<string, ModeloComponente<any>> = {
@@ -615,4 +631,5 @@ export const MODELOS: Record<string, ModeloComponente<any>> = {
   [ValvulaY.tipo]: ValvulaY,
   [EscapeRapido.tipo]: EscapeRapido,
   [Temporizador.tipo]: Temporizador,
+  [Manometro.tipo]: Manometro,
 }

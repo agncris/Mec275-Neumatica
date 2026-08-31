@@ -15,6 +15,7 @@ interface Entrada {
 
 const ENTRADAS: Entrada[] = [
   { tipo: 'fuente', etiqueta: 'Compresor + FRL', params: { presion: 6, encendida: true } },
+  { tipo: 'manometro', etiqueta: 'Manómetro', params: {} },
   { tipo: 'valvula32', etiqueta: 'Válvula 3/2 NC (pulsador)', params: { reposo: 'NC', accionamiento: 'pulsador' } },
   { tipo: 'valvula32', etiqueta: 'Válvula 3/2 NA (pulsador)', params: { reposo: 'NA', accionamiento: 'pulsador' } },
   { tipo: 'valvula42', etiqueta: 'Válvula 4/2 monoestable', params: { modo: 'monoestable', accionamiento: 'pulsador' } },

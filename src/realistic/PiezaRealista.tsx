@@ -218,6 +218,29 @@ export function PiezaRealista({ tipo, params, vivo, ancho, alto, presiones }: Pr
           }
         />
       )
+    case 'manometro': {
+      // Manómetro de lectura: carcasa redonda con aguja que sigue la presión.
+      const cx = ancho / 2
+      const cy = alto * 0.4
+      const r = Math.min(ancho, alto) * 0.34
+      const presion = p['1'] ?? 0
+      const valor = Math.max(0, Math.min(10, presion))
+      const angulo = (-120 + valor * 18) * (Math.PI / 180)
+      const agujaX = cx + (r - 4) * Math.cos(angulo)
+      const agujaY = cy + (r - 4) * Math.sin(angulo)
+      return (
+        <g>
+          <rect x={ancho * 0.04} y={0} width={ancho * 0.92} height={alto} rx={Math.min(6, ancho * 0.1)} fill={CUERPO} stroke={CUERPO_BORDE} strokeWidth={1.8} />
+          <circle cx={cx} cy={cy} r={r} fill={METAL_CLARO} stroke={METAL_OSCURO} strokeWidth={1.6} />
+          <circle cx={cx} cy={cy} r={r - 4} fill="#fbfaf7" stroke="none" />
+          <line x1={cx} y1={cy} x2={agujaX} y2={agujaY} stroke="#b3261e" strokeWidth={2} strokeLinecap="round" />
+          <circle cx={cx} cy={cy} r={2.4} fill={METAL_OSCURO} />
+          <text x={cx} y={cy + r + 10} fontSize={Math.min(10, ancho * 0.11)} fill="#4a5561" textAnchor="middle" fontFamily="inherit">
+            {presion.toFixed(1)} bar
+          </text>
+        </g>
+      )
+    }
     default:
       return <Bloque ancho={ancho} alto={alto} etiqueta="?" />
   }

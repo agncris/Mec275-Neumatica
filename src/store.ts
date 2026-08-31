@@ -64,6 +64,7 @@ interface EstadoApp {
 
 const PREFIJOS: Record<string, string> = {
   fuente: 'F',
+  manometro: 'M',
   valvula32: 'V',
   valvula42: 'V',
   valvula52: 'V',
