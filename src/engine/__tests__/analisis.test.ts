@@ -22,9 +22,9 @@ describe('detección de la secuencia', () => {
     expect(a.sinMovimiento).toBe(false)
   })
 
-  it('reconoce A+ B+ B− A− C+ C− en el circuito de tres grupos', () => {
+  it('reconoce A+ B+ A− C+ B− C− en el circuito de tres grupos', () => {
     const a = analizarCircuito(comoCircuito(CASCADA_TRES_GRUPOS))
-    expect(a.secuenciaDetectada.slice(0, 6)).toEqual(['A+', 'B+', 'B−', 'A−', 'C+', 'C−'])
+    expect(a.secuenciaDetectada.slice(0, 6)).toEqual(['A+', 'B+', 'A−', 'C+', 'B−', 'C−'])
     expect(a.cicloCompleto).toBe(true)
     expect(a.conflictos).toEqual([])
   })

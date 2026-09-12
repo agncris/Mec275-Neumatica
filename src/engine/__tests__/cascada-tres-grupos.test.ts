@@ -1,5 +1,5 @@
 /**
- * Cascada de tres grupos: secuencia A+B+ | B−A−C+ | C−. Es el caso más exigente
+ * Cascada de tres grupos: secuencia A+B+ | A−C+B− | C−. Es el caso más exigente
  * que tiene que aguantar el motor —dos válvulas de cascada encadenadas, tres
  * actuadores y dieciséis fichas—, así que se comprueba entera.
  */
@@ -19,7 +19,7 @@ const circuito = () => ({
 
 const pos = (m: Motor, id: string) => m.estadoDe<{ posicion: number }>(id).posicion
 
-describe('cascada de tres grupos: A+B+ | B−A−C+ | C−', () => {
+describe('cascada de tres grupos: A+B+ | A−C+B− | C−', () => {
   it('el circuito no tiene errores de montaje', () => {
     expect(validarCircuito(circuito())).toEqual([])
   })
@@ -40,7 +40,7 @@ describe('cascada de tres grupos: A+B+ | B−A−C+ | C−', () => {
       if (nc === 0 && c > 0) seq.push('C−')
       a = na; b = nb; c = nc
     }
-    expect(seq.slice(0, 6)).toEqual(['A+', 'B+', 'B−', 'A−', 'C+', 'C−'])
+    expect(seq.slice(0, 6)).toEqual(['A+', 'B+', 'A−', 'C+', 'B−', 'C−'])
   })
 
   it('no aparece ningún conflicto de pilotajes', () => {

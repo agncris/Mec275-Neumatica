@@ -1,5 +1,5 @@
 /**
- * Circuito de prueba del motor: secuencia A+B+ | B−A−C+ | C− resuelta por
+ * Circuito de prueba del motor: secuencia A+B+ | A−C+B− | C− resuelta por
  * cascada de tres grupos. Vive sólo en las pruebas —no se ofrece dentro de la
  * aplicación— para verificar que el motor aguanta dos válvulas de cascada
  * encadenadas y una quincena de fichas.
@@ -64,14 +64,14 @@ const mangueras: Manguera[] = [
   { id: 'g4', a: r('K1', '2'), b: r('b1', '1') },
   { id: 'g5', a: r('b1', '2'), b: r('K1', '14') },
 
-  // --- GRUPO II (L2): B− A− C+ --------------------------------------------
-  { id: 'h1', a: r('K1', '4'), b: r('VB', '12') },
-  { id: 'h2', a: r('K1', '4'), b: r('b0', '1') },
-  { id: 'h3', a: r('b0', '2'), b: r('VA', '12') },
-  { id: 'h4', a: r('K1', '4'), b: r('a0', '1') },
-  { id: 'h5', a: r('a0', '2'), b: r('VC', '14') },
-  { id: 'h6', a: r('K1', '4'), b: r('c1', '1') },
-  { id: 'h7', a: r('c1', '2'), b: r('K2', '14') },
+  // --- GRUPO II (L2): A− C+ B− --------------------------------------------
+  { id: 'h1', a: r('K1', '4'), b: r('VA', '12') },
+  { id: 'h2', a: r('K1', '4'), b: r('a0', '1') },
+  { id: 'h3', a: r('a0', '2'), b: r('VC', '14') },
+  { id: 'h4', a: r('K1', '4'), b: r('c1', '1') },
+  { id: 'h5', a: r('c1', '2'), b: r('VB', '12') },
+  { id: 'h6', a: r('K1', '4'), b: r('b0', '1') },
+  { id: 'h7', a: r('b0', '2'), b: r('K2', '14') },
 
   // --- GRUPO III (L3): C− y vuelta al grupo I ------------------------------
   { id: 'j1', a: r('K2', '4'), b: r('VC', '12') },
