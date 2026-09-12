@@ -357,6 +357,50 @@ export const ActuadorGiratorio: ModeloComponente<EstadoCilindroDoble> = {
 }
 
 // ---------------------------------------------------------------------------
+// Motor neumático de giro continuo: a diferencia del actuador giratorio (que
+// gira un ángulo fijo y se detiene en el tope), este gira sin parar mientras
+// reciba aire por su único puerto, como el que arrastra una cinta
+// transportadora o una rueda dentada. No tiene "extendido" ni "retraído": su
+// posición dentro de la vuelta (0..1) da la vuelta sola en vez de quedarse
+// clavada en los extremos, para que el Sensor de paso pueda detectar cada
+// vuelta sin que el motor tenga que detenerse a esperarlo.
+// ---------------------------------------------------------------------------
+export interface EstadoMotor {
+  posicion: number
+  velocidad: number
+  accionada: boolean
+}
+
+export const MotorNeumatico: ModeloComponente<EstadoMotor> = {
+  tipo: 'motorNeumatico',
+  nombre: 'Motor neumático (giro continuo)',
+  puertos: [{ id: '1', rol: 'trabajo', descripcion: 'Alimentación: gira mientras reciba aire' }],
+  estadoInicial: () => ({ posicion: 0, velocidad: 0, accionada: false }),
+  caminos: () => [],
+  actualizar(estado, entradas, dt, params, emitir) {
+    const velNominal = num(params, 'velocidad', 0.4) // vueltas/s a caudal pleno
+    const p = entradas.presion['1'] ?? 0
+    const qIn = entradas.caudalSuministro['1'] ?? 0
+    const girando = p > 0.5 && qIn > 0
+
+    estado.velocidad = girando ? velNominal * qIn : 0
+    if (estado.velocidad > 0) {
+      let siguiente = (estado.posicion + estado.velocidad * dt) % 1
+      if (siguiente < 0) siguiente += 1
+      estado.posicion = siguiente
+    }
+
+    if (girando !== estado.accionada) {
+      estado.accionada = girando
+      emitir(
+        girando ? 'girando' : 'detenido',
+        girando ? 'entra aire por 1: el eje gira de forma continua' : 'sin aire en 1: el eje se detiene',
+      )
+    }
+  },
+}
+
+// ---------------------------------------------------------------------------
 // Regulador de caudal unidireccional: estrangula el paso 1→2 según `apertura`
 // y deja paso libre 2→1 por el antirretorno.
 // ---------------------------------------------------------------------------
@@ -435,6 +479,76 @@ export const FinalCarrera: ModeloComponente<EstadoFinalCarrera> = {
       return true
     }
     return false
+  },
+}
+
+// ---------------------------------------------------------------------------
+// Sensor de paso: detecta cada vez que el eje de un motor neumático cruza un
+// punto de su vuelta (p. ej. "la cinta avanzó lo suficiente"). A diferencia
+// del final de carrera —pensado para un vástago que se queda quieto en el
+// tope, donde basta mirar si está cerca del punto—, un eje que gira sin parar
+// puede cruzar el punto entre dos instantes de la simulación sin que la
+// posición llegue nunca a estar "cerca" de él. Por eso el sensor compara la
+// posición anterior con la actual y dispara si el punto quedó entre medio
+// (contando la vuelta de 1 a 0), no por proximidad: así no se le escapa un
+// pulso aunque el motor gire rápido.
+// ---------------------------------------------------------------------------
+export interface EstadoSensorGiro {
+  accionada: boolean
+  posAnterior: number | null
+  tiempoRestante: number
+}
+
+export const SensorGiro: ModeloComponente<EstadoSensorGiro> = {
+  tipo: 'sensorGiro',
+  nombre: 'Sensor de paso (motor)',
+  puertos: [
+    { id: '1', rol: 'trabajo', descripcion: 'Alimentación' },
+    { id: '2', rol: 'trabajo', descripcion: 'Salida de trabajo (pulso)' },
+    { id: '3', rol: 'escape', descripcion: 'Escape a atmósfera' },
+  ],
+  estadoInicial: () => ({ accionada: false, posAnterior: null, tiempoRestante: 0 }),
+  caminos: (estado) =>
+    estado.accionada
+      ? [{ de: '1', a: '2', restriccion: 1 }]
+      : [{ de: '2', a: '3', restriccion: 1 }],
+  actualizar(estado, _entradas, dt, params, emitir, ctx) {
+    const idMotor = typeof params.motor === 'string' ? params.motor : ''
+    const punto = limitar(num(params, 'puntoDisparo', 0))
+    const duracion = Math.max(0.05, num(params, 'duracionPulso', 0.3))
+    const pos = idMotor ? ctx.posicionDe(idMotor) : null
+
+    if (pos === null) {
+      estado.posAnterior = null
+      if (estado.accionada) {
+        estado.accionada = false
+        estado.tiempoRestante = 0
+        emitir('liberado', 'se ha quedado sin motor asignado')
+      }
+      return
+    }
+
+    if (estado.posAnterior !== null && estado.posAnterior !== pos) {
+      const cruzo =
+        estado.posAnterior <= pos
+          ? punto > estado.posAnterior && punto <= pos
+          : punto > estado.posAnterior || punto <= pos // dio la vuelta completa (1→0)
+      if (cruzo) {
+        estado.tiempoRestante = duracion
+        emitir(
+          'pulso',
+          `el eje pasa por el punto marcado (${Math.round(punto * 100)}% de la vuelta) y dispara un pulso`,
+        )
+      }
+    }
+    estado.posAnterior = pos
+
+    if (estado.tiempoRestante > 0) {
+      estado.tiempoRestante = Math.max(0, estado.tiempoRestante - dt)
+      if (!estado.accionada) estado.accionada = true
+    } else if (estado.accionada) {
+      estado.accionada = false
+    }
   },
 }
 
@@ -599,6 +713,22 @@ export const Temporizador: ModeloComponente<EstadoTemporizador> = {
 }
 
 // ---------------------------------------------------------------------------
+// Manómetro: instrumento pasivo de lectura. No conduce aire hacia ninguna
+// parte —cuelga de una línea y sólo indica la presión estática que hay en su
+// puerto—, por eso no tiene caminos internos. Lo usa la documentación para
+// señalizar la presión de cada línea de grupo (p. ej. G1, G2, G3).
+// ---------------------------------------------------------------------------
+export type EstadoManometro = Record<string, never>
+
+export const Manometro: ModeloComponente<EstadoManometro> = {
+  tipo: 'manometro',
+  nombre: 'Manómetro',
+  puertos: [{ id: '1', rol: 'trabajo', descripcion: 'Conexión a la línea a medir' }],
+  estadoInicial: () => ({}),
+  caminos: () => [],
+}
+
+// ---------------------------------------------------------------------------
 // Registro de modelos disponibles.
 // ---------------------------------------------------------------------------
 export const MODELOS: Record<string, ModeloComponente<any>> = {
@@ -609,10 +739,13 @@ export const MODELOS: Record<string, ModeloComponente<any>> = {
   [CilindroSimpleEfecto.tipo]: CilindroSimpleEfecto,
   [CilindroDobleEfecto.tipo]: CilindroDobleEfecto,
   [ActuadorGiratorio.tipo]: ActuadorGiratorio,
+  [MotorNeumatico.tipo]: MotorNeumatico,
   [ReguladorCaudal.tipo]: ReguladorCaudal,
   [FinalCarrera.tipo]: FinalCarrera,
+  [SensorGiro.tipo]: SensorGiro,
   [ValvulaO.tipo]: ValvulaO,
   [ValvulaY.tipo]: ValvulaY,
   [EscapeRapido.tipo]: EscapeRapido,
   [Temporizador.tipo]: Temporizador,
+  [Manometro.tipo]: Manometro,
 }

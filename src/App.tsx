@@ -17,6 +17,7 @@ import TablaNomenclatura from './components/TablaNomenclatura'
 import { Seccion } from './components/Seccion'
 import MetodoCascada from './components/MetodoCascada'
 import SimbologiaVDI from './components/SimbologiaVDI'
+import SimbologiaISO from './components/SimbologiaISO'
 import PanelEntrega from './components/PanelEntrega'
 import { circuitoDesdeStore, useStore, type NumeroEjemplo } from './store'
 import {
@@ -76,7 +77,6 @@ export default function App() {
   const [motor, setMotor] = useState<Motor | null>(null)
   const [, setFotograma] = useState(0)
   const [aviso, setAviso] = useState<string | null>(null)
-  const [zoom, setZoom] = useState(1)
   const [vista, setVista] = useState<Vista>('esquema')
   const [paralela, setParalela] = useState(false)
   const estrecha = useEsEstrecha()
@@ -321,7 +321,7 @@ export default function App() {
               if (confirmarDescarte(`¿Cargar el ejemplo «${etiqueta}»?`)) cargarEjemplo(n)
               e.target.value = ''
             }}
-            style={{ padding: '0.3rem 0.4rem', maxWidth: 250 }}
+            style={{ padding: '0.3rem 0.4rem', maxWidth: 260 }}
           >
             <option value="">— elige un circuito —</option>
             {EJEMPLOS.map((ej) => (
@@ -427,16 +427,15 @@ export default function App() {
               gap: 10,
             }}
           >
-            <div style={{ overflow: zoom > 1 ? 'auto' : 'visible', maxWidth: '100%' }}>
+            <div style={{ maxWidth: '100%' }}>
               {paralela && <p style={rotuloVista}>Esquema · simbología ISO 1219-1</p>}
-              <Pizarra motor={motor} zoom={zoom} vista={paralela ? 'esquema' : vista} />
+              <Pizarra motor={motor} vista={paralela ? 'esquema' : vista} />
             </div>
             {paralela && (
-              <div style={{ overflow: zoom > 1 ? 'auto' : 'visible', maxWidth: '100%' }}>
+              <div style={{ maxWidth: '100%' }}>
                 <p style={rotuloVista}>Taller · el componente por dentro</p>
                 <Pizarra
                   motor={motor}
-                  zoom={zoom}
                   vista="taller"
                   soloLectura
                   id="pizarra-taller-svg"
@@ -484,24 +483,10 @@ export default function App() {
             >
               {paralela ? '✓ En paralelo' : 'Ver en paralelo'}
             </button>
-
             <span style={{ width: 10 }} />
-            <span style={{ fontSize: '0.8rem', color: '#5a6b7d' }}>Zoom:</span>
-            {[1, 1.4, 1.8].map((z) => (
-              <button
-                key={z}
-                onClick={() => setZoom(z)}
-                style={{
-                  ...botonSuave,
-                  padding: '0.15rem 0.5rem',
-                  fontSize: '0.78rem',
-                  background: zoom === z ? '#33475c' : '#fff',
-                  color: zoom === z ? '#fff' : '#33475c',
-                }}
-              >
-                {z === 1 ? 'Ajustar' : `${Math.round(z * 100)}%`}
-              </button>
-            ))}
+            <span style={{ fontSize: '0.8rem', color: '#5a6b7d' }}>
+              Rueda para zoom · arrastra el fondo para moverte · los botones del panel ajustan la vista
+            </span>
           </div>
           <p style={{ margin: '6px 2px', fontSize: '0.82rem', color: '#5a6b7d' }}>
             {modo === 'editar'
@@ -583,6 +568,12 @@ export default function App() {
       <section style={tarjeta}>
         <Seccion titulo="Simbología VDI 2860 · funciones de manipulación">
           <SimbologiaVDI />
+        </Seccion>
+      </section>
+
+      <section style={tarjeta}>
+        <Seccion titulo="Simbología ISO 1219-1 · componentes neumáticos">
+          <SimbologiaISO />
         </Seccion>
       </section>
 

@@ -43,6 +43,8 @@ function presionesSupuestas(tipo: string, params: Params, vivo?: EstadoVivo | nu
     return { '1': 6, '2': accionada ? 0 : 6, '4': accionada ? 6 : 0, '3': 0, '5': 0, '12': 0, '14': 0 }
   }
   if (tipo === 'cilindroSimpleEfecto') return { '1': (vivo?.posicion ?? 0) > 0.02 ? 6 : 0 }
+  if (tipo === 'motorNeumatico') return { '1': accionada ? 6 : 0 }
+  if (tipo === 'sensorGiro') return { '1': 6, '2': accionada ? 6 : 0, '3': 0 }
   return { A: 0, B: 0 }
 }
 
@@ -218,6 +220,70 @@ export function PiezaRealista({ tipo, params, vivo, ancho, alto, presiones }: Pr
           }
         />
       )
+    case 'motorNeumatico': {
+      // Motor de giro continuo: una polea que gira sola mientras hay aire,
+      // sin quedar nunca clavada en un tope.
+      const angulo = (vivo?.posicion ?? 0) * 360
+      const girando = vivo?.accionada ?? false
+      const cx = ancho / 2
+      const cy = alto * 0.4
+      const r = Math.min(ancho, alto) * 0.32
+      return (
+        <g>
+          <rect x={ancho * 0.15} y={alto * 0.05} width={ancho * 0.7} height={alto * 0.7} rx={8} fill={CUERPO} stroke={CUERPO_BORDE} strokeWidth={2} />
+          <circle cx={cx} cy={cy} r={r} fill={METAL_CLARO} stroke={METAL_OSCURO} strokeWidth={1.5} />
+          <g transform={`rotate(${angulo} ${cx} ${cy})`}>
+            <line x1={cx} y1={cy - r * 0.85} x2={cx} y2={cy + r * 0.85} stroke={METAL_OSCURO} strokeWidth={2.2} />
+            <line x1={cx - r * 0.85} y1={cy} x2={cx + r * 0.85} y2={cy} stroke={METAL_OSCURO} strokeWidth={2.2} />
+          </g>
+          <circle cx={cx} cy={cy} r={r * 0.18} fill={METAL} stroke={METAL_OSCURO} strokeWidth={1} />
+          <text x={cx} y={alto * 0.92} fontSize={9} fill="#5a6b7d" textAnchor="middle" fontFamily="inherit">
+            {girando ? 'girando' : 'detenido'}
+          </text>
+        </g>
+      )
+    }
+    case 'sensorGiro':
+      return (
+        <Bloque
+          ancho={ancho}
+          alto={alto}
+          etiqueta={accionada ? 'pulso' : 'sensor'}
+          detalle={
+            <circle
+              cx={ancho / 2}
+              cy={alto * 0.22}
+              r={Math.min(7, alto * 0.1)}
+              fill={accionada ? '#12a35a' : METAL_CLARO}
+              stroke={METAL_OSCURO}
+              strokeWidth={1.2}
+            />
+          }
+        />
+      )
+    case 'manometro': {
+      // Manómetro de lectura: carcasa redonda con aguja que sigue la presión.
+      const cx = ancho / 2
+      const cy = alto * 0.4
+      const r = Math.min(ancho, alto) * 0.34
+      const presion = p['1'] ?? 0
+      const valor = Math.max(0, Math.min(10, presion))
+      const angulo = (-120 + valor * 18) * (Math.PI / 180)
+      const agujaX = cx + (r - 4) * Math.cos(angulo)
+      const agujaY = cy + (r - 4) * Math.sin(angulo)
+      return (
+        <g>
+          <rect x={ancho * 0.04} y={0} width={ancho * 0.92} height={alto} rx={Math.min(6, ancho * 0.1)} fill={CUERPO} stroke={CUERPO_BORDE} strokeWidth={1.8} />
+          <circle cx={cx} cy={cy} r={r} fill={METAL_CLARO} stroke={METAL_OSCURO} strokeWidth={1.6} />
+          <circle cx={cx} cy={cy} r={r - 4} fill="#fbfaf7" stroke="none" />
+          <line x1={cx} y1={cy} x2={agujaX} y2={agujaY} stroke="#b3261e" strokeWidth={2} strokeLinecap="round" />
+          <circle cx={cx} cy={cy} r={2.4} fill={METAL_OSCURO} />
+          <text x={cx} y={cy + r + 10} fontSize={Math.min(10, ancho * 0.11)} fill="#4a5561" textAnchor="middle" fontFamily="inherit">
+            {presion.toFixed(1)} bar
+          </text>
+        </g>
+      )
+    }
     default:
       return <Bloque ancho={ancho} alto={alto} etiqueta="?" />
   }

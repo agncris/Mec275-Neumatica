@@ -42,6 +42,30 @@ export function validarCircuito(circuito: Circuito): string[] {
       mensajes.push(
         `El final de carrera ${comp.id} apunta a ${idCilindro}, que no es un cilindro: sólo los cilindros accionan rodillos.`,
       )
+    } else if (objetivo.tipo === 'motorNeumatico') {
+      mensajes.push(
+        `El final de carrera ${comp.id} vigila a ${idCilindro}, que es un motor de giro continuo: un final de carrera no detecta bien un eje que nunca se detiene. Usa un Sensor de paso (motor) en su lugar.`,
+      )
+    }
+  }
+
+  // Sensor de paso: necesita saber a qué motor de giro continuo vigila.
+  for (const comp of circuito.componentes) {
+    if (comp.tipo !== 'sensorGiro') continue
+    const idMotor = typeof comp.params?.motor === 'string' ? comp.params.motor : ''
+    if (!idMotor) {
+      mensajes.push(
+        `El sensor de paso ${comp.id} no tiene asignado ningún motor: nunca se accionará. Elígelo en el panel de propiedades.`,
+      )
+      continue
+    }
+    const objetivoMotor = porId.get(idMotor)
+    if (!objetivoMotor) {
+      mensajes.push(`El sensor de paso ${comp.id} vigila el motor "${idMotor}", que no está en la pizarra.`)
+    } else if (objetivoMotor.tipo !== 'motorNeumatico') {
+      mensajes.push(
+        `El sensor de paso ${comp.id} apunta a ${idMotor}, que no es un motor de giro continuo.`,
+      )
     }
   }
 

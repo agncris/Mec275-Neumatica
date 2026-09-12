@@ -15,6 +15,7 @@ interface Entrada {
 
 const ENTRADAS: Entrada[] = [
   { tipo: 'fuente', etiqueta: 'Compresor + FRL', params: { presion: 6, encendida: true } },
+  { tipo: 'manometro', etiqueta: 'Manómetro', params: {} },
   { tipo: 'valvula32', etiqueta: 'Válvula 3/2 NC (pulsador)', params: { reposo: 'NC', accionamiento: 'pulsador' } },
   { tipo: 'valvula32', etiqueta: 'Válvula 3/2 NA (pulsador)', params: { reposo: 'NA', accionamiento: 'pulsador' } },
   { tipo: 'valvula42', etiqueta: 'Válvula 4/2 monoestable', params: { modo: 'monoestable', accionamiento: 'pulsador' } },
@@ -23,8 +24,10 @@ const ENTRADAS: Entrada[] = [
   { tipo: 'cilindroSimpleEfecto', etiqueta: 'Cilindro simple efecto', params: {} },
   { tipo: 'cilindroDobleEfecto', etiqueta: 'Cilindro doble efecto', params: {} },
   { tipo: 'actuadorGiratorio', etiqueta: 'Actuador giratorio', params: { angulo: 180 } },
+  { tipo: 'motorNeumatico', etiqueta: 'Motor neumático (giro continuo)', params: { velocidad: 0.4 } },
   { tipo: 'reguladorCaudal', etiqueta: 'Regulador de caudal', params: { apertura: 0.5 } },
   { tipo: 'finalCarrera', etiqueta: 'Final de carrera (rodillo)', params: { reposo: 'NC', puntoDisparo: 1 } },
+  { tipo: 'sensorGiro', etiqueta: 'Sensor de paso (motor)', params: { puntoDisparo: 0, duracionPulso: 0.3 } },
   { tipo: 'valvulaO', etiqueta: 'Selectora «O»', params: {} },
   { tipo: 'valvulaY', etiqueta: 'Simultaneidad «Y»', params: {} },
   { tipo: 'escapeRapido', etiqueta: 'Escape rápido', params: {} },

@@ -2,3 +2,13 @@ node_modules
 dist
 *.log
 .DS_Store
+
+# Material privado del profesor: soluciones de evaluaciones. Se conserva en
+# disco pero nunca debe llegar al repositorio público ni al build.
+salida/
+src/circuitos/cascada-abc.ts
+src/engine/__tests__/cascada-abc.test.ts
+scripts/exportar-cascada-abc.mts
+scripts/diag-layout.mts
+scripts/verificar-cruces.mts
+scripts/exportar-svg-layout.mts

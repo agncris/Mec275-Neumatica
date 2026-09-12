@@ -363,6 +363,69 @@ export function SimboloActuadorGiratorio({ params, vivo }: PropsSimbolo) {
 }
 
 // ---------------------------------------------------------------------------
+export function SimboloMotorNeumatico({ vivo }: PropsSimbolo) {
+  const girando = vivo?.accionada ?? false
+  const angulo = (vivo?.posicion ?? 0) * 360
+  return (
+    <g>
+      <line x1={45} y1={70} x2={45} y2={97} {...TRAZO} />
+      <circle cx={45} cy={40} r={30} {...TRAZO} />
+      <g transform={`rotate(${angulo} 45 40)`}>
+        <line x1={45} y1={16} x2={45} y2={64} {...TRAZO} strokeWidth={1.6} />
+        <line x1={21} y1={40} x2={69} y2={40} {...TRAZO} strokeWidth={1.6} />
+      </g>
+      <circle cx={45} cy={40} r={5} fill="#14181d" />
+      <Etiqueta x={45} y={93} texto={girando ? 'girando' : 'motor'} />
+    </g>
+  )
+}
+
+// ---------------------------------------------------------------------------
+export function SimboloSensorGiro({ vivo }: PropsSimbolo) {
+  const activo = vivo?.accionada ?? false
+  return (
+    <g>
+      <line x1={90} y1={35} x2={90} y2={3} {...TRAZO} />
+      <line x1={80} y1={75} x2={80} y2={97} {...TRAZO} />
+      <line x1={100} y1={75} x2={100} y2={97} {...TRAZO} />
+      <Etiqueta x={99} y={12} texto="2" />
+      <Etiqueta x={71} y={93} texto="1" />
+      <Etiqueta x={109} y={93} texto="3" />
+      <rect x={30} y={35} width={80} height={40} {...TRAZO} fill={activo ? '#e7f7ef' : '#fff'} />
+      <circle cx={70} cy={55} r={9} {...TRAZO} strokeWidth={1.8} fill={activo ? '#12a35a' : '#fff'} />
+      {activo && (
+        <>
+          <path d="M84,55 a14,14 0 0 0 -4,-10" {...TRAZO} strokeWidth={1.4} />
+          <path d="M56,55 a14,14 0 0 1 4,10" {...TRAZO} strokeWidth={1.4} />
+        </>
+      )}
+      <Etiqueta x={70} y={30} texto="sensor de paso" />
+    </g>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// FRL como componente independiente (sin compresor): así se ve en el control,
+// donde se pregunta por separado de la fuente de aire.
+// ---------------------------------------------------------------------------
+export function SimboloFRL() {
+  return (
+    <g>
+      <line x1={0} y1={40} x2={14} y2={40} {...TRAZO} />
+      <line x1={86} y1={40} x2={100} y2={40} {...TRAZO} />
+      <rect x={14} y={14} width={72} height={52} {...TRAZO} fill="#fff" />
+      <line x1={50} y1={14} x2={50} y2={66} {...TRAZO} strokeWidth={1.6} />
+      <circle cx={30} cy={40} r={10} {...TRAZO} strokeWidth={1.6} />
+      <line x1={30} y1={32} x2={30} y2={48} {...TRAZO} strokeWidth={1.4} />
+      <circle cx={68} cy={30} r={8} {...TRAZO} strokeWidth={1.4} fill="#fff" />
+      <line x1={68} y1={30} x2={72} y2={25} stroke="#b3261e" strokeWidth={1.4} />
+      <path d="M60,52 l16,0 l-4,-5 M76,52 l-4,5" {...TRAZO} strokeWidth={1.4} />
+      <Etiqueta x={50} y={78} texto="FRL" />
+    </g>
+  )
+}
+
+// ---------------------------------------------------------------------------
 export function SimboloRegulador({ params }: PropsSimbolo) {
   const apertura = Number(params.apertura ?? 0.5)
   return (
@@ -511,10 +574,50 @@ export function SimboloTemporizador({ params, vivo }: PropsSimbolo) {
 }
 
 // ---------------------------------------------------------------------------
+// Manómetro: instrumento pasivo que cuelga de una línea y marca la presión
+// estática de su puerto 1. Sin estado interno propio; la aguja sigue a `presion`.
+// ---------------------------------------------------------------------------
+export function SimboloManometro({ params, vivo }: PropsSimbolo) {
+  const presion = vivo?.presion ?? Number(params.presion ?? 0)
+  const valor = Math.max(0, Math.min(10, presion))
+  // Aguja: -120° (0 bar) a +60° (10 bar), como en el manómetro de la fuente.
+  const angulo = -120 + valor * 18
+  return (
+    <g>
+      <line x1={40} y1={60} x2={40} y2={97} {...TRAZO} strokeWidth={1.6} />
+      <circle cx={43} cy={45} r={30} {...TRAZO} fill="#fff" />
+      {/* trazos de escala */}
+      {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((bar) => {
+        const a = ((-120 + bar * 18 - 90) * Math.PI) / 180
+        return (
+          <line
+            key={bar}
+            x1={43 + (bar % 5 === 0 ? 24 : 26) * Math.cos(a)}
+            y1={45 + (bar % 5 === 0 ? 24 : 26) * Math.sin(a)}
+            x2={43 + 30 * Math.cos(a)}
+            y2={45 + 30 * Math.sin(a)}
+            {...TRAZO}
+            strokeWidth={bar % 5 === 0 ? 1.8 : 1.2}
+          />
+        )
+      })}
+      {/* aguja */}
+      <g style={{ transition: 'transform 200ms' }} transform={`rotate(${angulo} 43 45)`}>
+        <line x1={43} y1={45} x2={43} y2={20} stroke="#b3261e" strokeWidth={2} strokeLinecap="round" />
+      </g>
+      <circle cx={43} cy={45} r={3} fill="#14181d" />
+      <Etiqueta x={43} y={84} texto={`${presion.toFixed(1)} bar`} />
+    </g>
+  )
+}
+
+// ---------------------------------------------------------------------------
 export function SimboloPieza({ tipo, params, vivo }: { tipo: string } & PropsSimbolo) {
   switch (tipo) {
     case 'fuente':
       return <SimboloFuente params={params} vivo={vivo} />
+    case 'manometro':
+      return <SimboloManometro params={params} vivo={vivo} />
     case 'valvula32':
       return <SimboloValvula32 params={params} vivo={vivo} />
     case 'finalCarrera':
@@ -539,6 +642,10 @@ export function SimboloPieza({ tipo, params, vivo }: { tipo: string } & PropsSim
       return <SimboloActuadorGiratorio params={params} vivo={vivo} />
     case 'reguladorCaudal':
       return <SimboloRegulador params={params} vivo={vivo} />
+    case 'motorNeumatico':
+      return <SimboloMotorNeumatico params={params} vivo={vivo} />
+    case 'sensorGiro':
+      return <SimboloSensorGiro params={params} vivo={vivo} />
     default:
       return null
   }

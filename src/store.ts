@@ -5,6 +5,7 @@
 import { create } from 'zustand'
 import type { Circuito, Manguera, Params, RefPuerto } from './engine'
 import { RESPUESTAS_VACIAS, type Respuestas } from './entrega'
+import { autoLayout } from './layout'
 
 export interface Pieza {
   id: string
@@ -64,6 +65,7 @@ interface EstadoApp {
 
 const PREFIJOS: Record<string, string> = {
   fuente: 'F',
+  manometro: 'M',
   valvula32: 'V',
   valvula42: 'V',
   valvula52: 'V',
@@ -212,8 +214,10 @@ export const useStore = create<EstadoApp>((set, get) => ({
   },
 
   cargarCircuito(datos) {
+    const { piezas, area } = autoLayout(datos.piezas, datos.mangueras)
+    void area
     set({
-      piezas: datos.piezas.map((p) => ({ ...p, params: { ...p.params } })),
+      piezas: piezas.map((p) => ({ ...p, params: { ...p.params } })),
       mangueras: datos.mangueras.map((m) => ({ ...m, a: { ...m.a }, b: { ...m.b } })),
       seleccion: null,
       origenCable: null,
@@ -334,8 +338,9 @@ export const useStore = create<EstadoApp>((set, get) => ({
       },
     }
     const ejemplo = ejemplos[n]
+    const { piezas } = autoLayout(ejemplo.piezas, ejemplo.mangueras)
     set({
-      piezas: ejemplo.piezas.map((p) => ({ ...p, params: { ...p.params } })),
+      piezas: piezas.map((p) => ({ ...p, params: { ...p.params } })),
       mangueras: ejemplo.mangueras.map((m) => ({ ...m })),
       seleccion: null,
       origenCable: null,

@@ -23,7 +23,8 @@ banco de prácticas. Todo el contenido y la interfaz están en español.
      El botón **Ver en paralelo** muestra las dos a la vez, sincronizadas, para relacionar
      el símbolo con el objeto; se desactiva con el mismo botón.
    - la **vista en corte**, que amplía el interior de la pieza que elijas,
-   - el **diagrama espacio-fase**, con la secuencia A+ / A− de cada cilindro.
+   - el **diagrama de fase**, por **pasos** (desplazamiento-paso, como en la guía) o por
+     tiempo, con la secuencia A+ / A− de cada actuador.
 6. **Guarda o comparte.** *Guardar* descarga un `.json`, *Abrir* lo recupera y
    *Compartir* copia un enlace con el circuito dentro (no necesita servidor ni cuenta).
    Además la pizarra se conserva sola en el navegador entre sesiones.
@@ -72,6 +73,8 @@ Bajo el banco hay secciones plegables con el material de apoyo:
   señales bloqueantes y el mismo resuelto por cascada.
 - **Simbología VDI 2860** — los 24 símbolos de funciones de manipulación, con modo de
   práctica tipo control (símbolo → nombre).
+- **Simbología ISO 1219-1** — actuadores, válvulas y la unidad de mantenimiento (FRL),
+  con el mismo modo de práctica.
 - **Nº de vías y posiciones** — nomenclatura de orificios ISO 1219-1 / CETOP.
 
 ## Circuitos de ejemplo incluidos

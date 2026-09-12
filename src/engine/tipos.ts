@@ -83,7 +83,7 @@ export type EmitirEvento = (tipo: string, mensaje: string) => void
  * accionar un final de carrera y los que aparecen en el diagrama de fase.
  */
 export const esActuador = (tipo: string): boolean =>
-  tipo.startsWith('cilindro') || tipo === 'actuadorGiratorio'
+  tipo.startsWith('cilindro') || tipo === 'actuadorGiratorio' || tipo === 'motorNeumatico'
 
 /**
  * Ventana al resto del circuito que el motor entrega a los componentes que la

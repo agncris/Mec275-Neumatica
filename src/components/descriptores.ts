@@ -30,6 +30,13 @@ export const DESCRIPTORES: Record<string, Descriptor> = {
     alto: 90,
     puertos: [{ id: '1', x: 90, y: 45, dir: 'E' }],
   },
+  manometro: {
+    tipo: 'manometro',
+    nombre: 'Manómetro',
+    ancho: 64,
+    alto: 80,
+    puertos: [{ id: '1', x: 44, y: 80, dir: 'S' }],
+  },
   valvula32: {
     tipo: 'valvula32',
     nombre: 'Válvula 3/2',
@@ -151,6 +158,24 @@ export const DESCRIPTORES: Record<string, Descriptor> = {
     puertos: [
       { id: 'A', x: 45, y: 100, dir: 'S' },
       { id: 'B', x: 85, y: 100, dir: 'S' },
+    ],
+  },
+  motorNeumatico: {
+    tipo: 'motorNeumatico',
+    nombre: 'Motor neumático',
+    ancho: 90,
+    alto: 100,
+    puertos: [{ id: '1', x: 45, y: 100, dir: 'S' }],
+  },
+  sensorGiro: {
+    tipo: 'sensorGiro',
+    nombre: 'Sensor de paso (motor)',
+    ancho: 140,
+    alto: 100,
+    puertos: [
+      { id: '2', x: 90, y: 0, dir: 'N' },
+      { id: '1', x: 80, y: 100, dir: 'S' },
+      { id: '3', x: 100, y: 100, dir: 'S' },
     ],
   },
   reguladorCaudal: {
