@@ -107,7 +107,7 @@ export default function Propiedades() {
             >
               <option value="">— elige un cilindro —</option>
               {piezas
-                .filter((p) => esActuador(p.tipo))
+                .filter((p) => esActuador(p.tipo) && p.tipo !== 'motorNeumatico')
                 .map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.id}
@@ -164,6 +164,64 @@ export default function Propiedades() {
             onChange={(e) => setParamPieza(pieza.id, 'retardo', Number(e.target.value))}
           />
         </label>
+      )}
+
+      {pieza.tipo === 'motorNeumatico' && (
+        <label style={etiqueta}>
+          Velocidad: <strong>{Number(pieza.params.velocidad ?? 0.4).toFixed(2)} vueltas/s</strong>
+          <input
+            type="range"
+            min={0.1}
+            max={1.5}
+            step={0.05}
+            value={Number(pieza.params.velocidad ?? 0.4)}
+            onChange={(e) => setParamPieza(pieza.id, 'velocidad', Number(e.target.value))}
+          />
+        </label>
+      )}
+
+      {pieza.tipo === 'sensorGiro' && (
+        <>
+          <label style={etiqueta}>
+            Lo acciona:
+            <select
+              value={String(pieza.params.motor ?? '')}
+              onChange={(e) => setParamPieza(pieza.id, 'motor', e.target.value)}
+            >
+              <option value="">— elige un motor —</option>
+              {piezas
+                .filter((p) => p.tipo === 'motorNeumatico')
+                .map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.id}
+                  </option>
+                ))}
+            </select>
+          </label>
+          <label style={etiqueta}>
+            Punto de la vuelta:
+            <select
+              value={String(pieza.params.puntoDisparo ?? 0)}
+              onChange={(e) => setParamPieza(pieza.id, 'puntoDisparo', Number(e.target.value))}
+            >
+              <option value="0">0% (inicio de vuelta)</option>
+              <option value="0.25">25%</option>
+              <option value="0.5">50%</option>
+              <option value="0.75">75%</option>
+            </select>
+          </label>
+          <label style={etiqueta}>
+            Duración del pulso: <strong>{Number(pieza.params.duracionPulso ?? 0.3).toFixed(2)} s</strong>
+            <input
+              type="range"
+              min={0.05}
+              max={1}
+              step={0.05}
+              value={Number(pieza.params.duracionPulso ?? 0.3)}
+              onChange={(e) => setParamPieza(pieza.id, 'duracionPulso', Number(e.target.value))}
+            />
+          </label>
+        </>
       )}
 
       {pieza.tipo === 'reguladorCaudal' && (

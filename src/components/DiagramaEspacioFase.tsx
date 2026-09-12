@@ -5,6 +5,7 @@
  * línea 0 (retraído) / 1 (extendido), marcando los movimientos A+ y A−.
  */
 import { useEffect, useRef, useState } from 'react'
+import { diagramaPorPasos } from '../diagramaPasos'
 import { esActuador } from '../engine'
 import type { Motor } from '../engine'
 
@@ -25,6 +26,7 @@ const LETRAS = ['A', 'B', 'C', 'D', 'E', 'F']
 export default function DiagramaEspacioFase({ motor }: { motor: Motor | null }) {
   const historia = useRef<Muestra[]>([])
   const [, redibujar] = useState(0)
+  const [modoEje, setModoEje] = useState<'pasos' | 'tiempo'>('pasos')
 
   const cilindros = motor
     ? motor.circuito.componentes.filter((c) => esActuador(c.tipo)).map((c) => c.id)
@@ -69,8 +71,94 @@ export default function DiagramaEspacioFase({ motor }: { motor: Motor | null }) 
 
   const muestras = historia.current.filter((m) => m.t >= tIni - PERIODO_MUESTREO * 2)
 
+  const selector = (
+    <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 8 }}>
+      <span style={{ fontSize: '0.8rem', color: '#5a6b7d' }}>Eje horizontal:</span>
+      {(
+        [
+          ['pasos', 'Pasos (desplazamiento-paso)'],
+          ['tiempo', 'Tiempo'],
+        ] as const
+      ).map(([m, etiqueta]) => (
+        <button
+          key={m}
+          onClick={() => setModoEje(m)}
+          style={{
+            border: '1px solid #c6ced6',
+            borderRadius: 6,
+            padding: '0.15rem 0.55rem',
+            fontSize: '0.78rem',
+            cursor: 'pointer',
+            background: modoEje === m ? '#33475c' : '#fff',
+            color: modoEje === m ? '#fff' : '#33475c',
+          }}
+        >
+          {etiqueta}
+        </button>
+      ))}
+    </div>
+  )
+
+  if (modoEje === 'pasos') {
+    const actuadores = cilindros.map((id, i) => ({ id, letra: LETRAS[i] ?? id }))
+    const { inicial, pasos } = diagramaPorPasos(historia.current, actuadores)
+    const n = Math.max(pasos.length, 1)
+    const anchoPaso = Math.min(90, (ANCHO - MARGEN_IZQ - 20) / n)
+    const xPaso = (k: number) => MARGEN_IZQ + k * anchoPaso
+    const altoP = cilindros.length * ALTO_PISTA + 34
+    return (
+      <div style={{ overflowX: 'auto' }}>
+        {selector}
+        {pasos.length === 0 ? (
+          <p style={{ color: '#5a6b7d', margin: 0, fontSize: '0.88rem' }}>
+            Acciona el circuito: cada vez que un actuador complete una carrera aparecerá un paso.
+          </p>
+        ) : (
+          <svg id="diagrama-fase-svg" viewBox={`0 0 ${ANCHO} ${altoP}`} style={{ width: '100%', minWidth: 380, height: 'auto', display: 'block' }}>
+            {/* rejilla de pasos */}
+            {Array.from({ length: pasos.length + 1 }, (_, k) => (
+              <g key={`g${k}`}>
+                <line x1={xPaso(k)} y1={8} x2={xPaso(k)} y2={altoP - 22} stroke="#dbe1e8" strokeWidth={1} />
+                {k > 0 && (
+                  <text x={xPaso(k) - anchoPaso / 2} y={altoP - 6} fontSize={10} fill="#8a97a5" textAnchor="middle">
+                    {k}
+                  </text>
+                )}
+              </g>
+            ))}
+            {cilindros.map((id, i) => {
+              const yTop = i * ALTO_PISTA + 12
+              const yBase = yTop + 32
+              const y = (v: number) => yBase - v * 32
+              const letra = LETRAS[i] ?? id
+              const puntos = [`${xPaso(0)},${y(inicial[id] ?? 0)}`]
+              pasos.forEach((paso, k) => {
+                puntos.push(`${xPaso(k + 1)},${y(paso.estado[id] ?? 0)}`)
+              })
+              return (
+                <g key={id}>
+                  <text x={4} y={yBase - 10} fontSize={12} fontWeight={700} fill="#33475c">{letra} · {id}</text>
+                  <text x={MARGEN_IZQ - 8} y={y(1) + 4} fontSize={10} fill="#8a97a5" textAnchor="end">1</text>
+                  <text x={MARGEN_IZQ - 8} y={y(0) + 4} fontSize={10} fill="#8a97a5" textAnchor="end">0</text>
+                  <polyline points={puntos.join(' ')} fill="none" stroke="#1668c7" strokeWidth={2.4} strokeLinejoin="round" />
+                </g>
+              )
+            })}
+            {/* movimientos de cada paso, arriba */}
+            {pasos.map((paso, k) => (
+              <text key={`m${k}`} x={xPaso(k) + anchoPaso / 2} y={8} fontSize={10} fontWeight={700} fill="#0a8a4a" textAnchor="middle">
+                {paso.movimientos.join(' ')}
+              </text>
+            ))}
+          </svg>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div style={{ overflowX: 'auto' }}>
+      {selector}
       <svg id="diagrama-fase-svg" viewBox={`0 0 ${ANCHO} ${alto}`} style={{ width: '100%', minWidth: 380, height: 'auto', display: 'block' }}>
         {cilindros.map((id, i) => {
           const yTop = i * ALTO_PISTA + 12

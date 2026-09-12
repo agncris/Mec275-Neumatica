@@ -160,6 +160,24 @@ export const DESCRIPTORES: Record<string, Descriptor> = {
       { id: 'B', x: 85, y: 100, dir: 'S' },
     ],
   },
+  motorNeumatico: {
+    tipo: 'motorNeumatico',
+    nombre: 'Motor neumático',
+    ancho: 90,
+    alto: 100,
+    puertos: [{ id: '1', x: 45, y: 100, dir: 'S' }],
+  },
+  sensorGiro: {
+    tipo: 'sensorGiro',
+    nombre: 'Sensor de paso (motor)',
+    ancho: 140,
+    alto: 100,
+    puertos: [
+      { id: '2', x: 90, y: 0, dir: 'N' },
+      { id: '1', x: 80, y: 100, dir: 'S' },
+      { id: '3', x: 100, y: 100, dir: 'S' },
+    ],
+  },
   reguladorCaudal: {
     tipo: 'reguladorCaudal',
     nombre: 'Regulador de caudal',

@@ -17,9 +17,9 @@ import TablaNomenclatura from './components/TablaNomenclatura'
 import { Seccion } from './components/Seccion'
 import MetodoCascada from './components/MetodoCascada'
 import SimbologiaVDI from './components/SimbologiaVDI'
+import SimbologiaISO from './components/SimbologiaISO'
 import PanelEntrega from './components/PanelEntrega'
 import { circuitoDesdeStore, useStore, type NumeroEjemplo } from './store'
-import { CASCADA_ABC } from './circuitos/cascada-abc'
 import {
   descargarJson,
   enlaceCompartir,
@@ -316,12 +316,6 @@ export default function App() {
             value=""
             onChange={(e) => {
               const n = Number(e.target.value) as NumeroEjemplo
-              if (e.target.value === 'abc') {
-                if (confirmarDescarte('¿Cargar el ejercicio de cascada de tres grupos (A, B, C)?'))
-                  cargarCircuito(CASCADA_ABC)
-                e.target.value = ''
-                return
-              }
               if (!n) return
               const etiqueta = EJEMPLOS.find((x) => x.n === n)?.etiqueta ?? ''
               if (confirmarDescarte(`¿Cargar el ejemplo «${etiqueta}»?`)) cargarEjemplo(n)
@@ -330,7 +324,6 @@ export default function App() {
             style={{ padding: '0.3rem 0.4rem', maxWidth: 260 }}
           >
             <option value="">— elige un circuito —</option>
-            <option value="abc">Ejercicio · Cascada tres grupos (A, B, C)</option>
             {EJEMPLOS.map((ej) => (
               <option key={ej.n} value={ej.n}>
                 {ej.etiqueta}
@@ -575,6 +568,12 @@ export default function App() {
       <section style={tarjeta}>
         <Seccion titulo="Simbología VDI 2860 · funciones de manipulación">
           <SimbologiaVDI />
+        </Seccion>
+      </section>
+
+      <section style={tarjeta}>
+        <Seccion titulo="Simbología ISO 1219-1 · componentes neumáticos">
+          <SimbologiaISO />
         </Seccion>
       </section>
 

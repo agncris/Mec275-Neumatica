@@ -38,12 +38,12 @@ export const SEPARACIONES_DEFECTO: Separaciones = {
 }
 
 export const esActuador = (tipo: string): boolean =>
-  tipo.startsWith('cilindro') || tipo === 'actuadorGiratorio'
+  tipo.startsWith('cilindro') || tipo === 'actuadorGiratorio' || tipo === 'motorNeumatico'
 
 /** Válvulas de potencia: las de corredera (4/2, 5/2). */
 export const esValvulaPotencia = (tipo: string): boolean => tipo === 'valvula52' || tipo === 'valvula42'
 
-export const esSensor = (tipo: string): boolean => tipo === 'finalCarrera'
+export const esSensor = (tipo: string): boolean => tipo === 'finalCarrera' || tipo === 'sensorGiro'
 
 export const esManometro = (tipo: string): boolean => tipo === 'manometro'
 
