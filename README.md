@@ -121,7 +121,19 @@ sombras y materiales físicos (aluminio anodizado, cromo, racores de latón, tub
 poliuretano), y la mueve el mismo motor que la pizarra: al simular, los vástagos
 salen, la leva del vástago pisa el rodillo, la brida del actuador giratorio gira y el
 manómetro del FRL marca la presión. Con **Ver el aire**, las mangueras que tienen
-presión se aclaran, así se sigue el recorrido de la señal por el banco.
+presión se aclaran, así se sigue el recorrido de la señal por el banco, y se ven
+las bocanadas de aire que salen por los escapes.
+
+**Y se oye como el laboratorio** (botón 🔊 Sonido, sintetizado en el navegador, sin
+grabaciones): el «chac» de la corredera de cada válvula al conmutar, el clic del
+rodillo cuando la leva lo pisa, el golpe del émbolo contra la culata al final de la
+carrera y el soplido del aire. El soplido sale **por el silenciador por donde sale de
+verdad**: la aplicación sigue, en cada instante, el camino abierto desde la cámara que
+se vacía (o la línea que se ventea) hasta el escape, así que al avanzar un cilindro
+sopla el escape 3 de su 5/2 y al retornar el 5; con un escape rápido sopla el escape
+rápido, y al cerrar la llave del FRL se descarga el FRL. Cada sonido suena a la
+izquierda o a la derecha según dónde esté la pieza en pantalla. Con un regulador de
+caudal el soplido es más débil y dura más, como el movimiento.
 
 - Las piezas se colocan siguiendo el plano ordenado, salvo **los finales de carrera,
   que se montan donde trabajan**: sobre el vástago de su cilindro, en el punto de la
@@ -130,7 +142,8 @@ presión se aclaran, así se sigue el recorrido de la señal por el banco.
   pantalla completa.
 - Los pulsadores se accionan manteniendo pulsado su botón del panel **Mandos** o
   directamente sobre la pieza.
-- No descarga nada: los modelos se generan en el navegador, y three.js sólo se carga
+- Los escapes libres llevan su silenciador de bronce sinterizado, como en el banco.
+- No descarga nada: los modelos y los sonidos se generan en el navegador, y three.js sólo se carga
   cuando alguien abre esta vista.
 
 ## Cómo ordena la aplicación el plano
@@ -261,7 +274,7 @@ npm run dev        # http://localhost:5173
 ```
 
 ```bash
-npm test           # 199 pruebas: motor, análisis, entregas, plano, símbolos, banco 3D y utilidades
+npm test           # 204 pruebas: motor, análisis, entregas, plano, símbolos, banco 3D y utilidades
 npm run typecheck  # comprobación de tipos
 npm run build      # compila a /dist
 ```
@@ -296,8 +309,8 @@ No hace falta `server.js` ni variables de entorno. Netlify funciona igual public
 
 ## Estado y siguientes pasos
 
-Terminado: motor con tests, editor de pizarra, vistas en corte, diagrama espacio-fase,
+Terminado: motor con tests, editor de pizarra, vistas en corte, banco 3D con sonido, diagrama espacio-fase,
 guardado/compartir, despliegue y adaptación a tablet.
 
 Pendiente: modo *Aprender* con lecciones guiadas paso a paso, modo *Desafío* con
-enunciados verificados automáticamente, y sonido (Web Audio).
+enunciados verificados automáticamente.

@@ -4,6 +4,10 @@
  * pizarra. Es el experimento tal como se vería en el banco: los vástagos salen,
  * la leva pisa el rodillo, el manómetro sube, la brida gira.
  *
+ * Y se oye: la corredera de cada válvula al conmutar, el clic del rodillo, el
+ * golpe del émbolo contra la culata y el soplido del aire por el silenciador
+ * de la válvula que ventea (ver `oido.ts` y `sonido.ts`).
+ *
  * Las piezas se colocan en la placa siguiendo el plano ordenado, salvo los
  * finales de carrera, que van donde van de verdad: junto a su cilindro, a la
  * altura del punto de la carrera que vigilan, para que se vea a la leva
@@ -14,9 +18,12 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import type { Motor } from '../engine'
+import { MODELOS } from '../engine/componentes'
 import { useStore, type Pieza } from '../store'
 import { DESCRIPTORES } from '../components/descriptores'
 import { MAT, crearModelo, type EstadoPieza, type Modelo3D } from './modelos'
+import { Oido } from './oido'
+import { SonidoBanco } from './sonido'
 
 interface Props {
   motor: Motor | null
@@ -41,6 +48,121 @@ const TAMANO = 1.3
 
 const COLOR_TUBO = new THREE.Color(0x2a76d2)
 const COLOR_TUBO_AIRE = new THREE.Color(0x49a6ff)
+const CLAVE_SONIDO = 'neumalab.banco3d.sonido'
+
+const MAT_SILENCIADOR = new THREE.MeshStandardMaterial({ color: 0x8e7448, metalness: 0.55, roughness: 0.9 })
+
+/** Silenciador de bronce sinterizado roscado en un escape libre. */
+function crearSilenciador(punto: THREE.Vector3, dir: THREE.Vector3): THREE.Group {
+  const g = new THREE.Group()
+  const tuerca = new THREE.Mesh(new THREE.CylinderGeometry(0.0042, 0.0042, 0.003, 6), MAT.laton)
+  tuerca.position.y = 0.0015
+  const cuerpo = new THREE.Mesh(new THREE.CylinderGeometry(0.0036, 0.0042, 0.012, 20), MAT_SILENCIADOR)
+  cuerpo.position.y = 0.009
+  const punta = new THREE.Mesh(new THREE.SphereGeometry(0.0036, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), MAT_SILENCIADOR)
+  punta.position.y = 0.015
+  for (const m of [tuerca, cuerpo, punta]) {
+    m.castShadow = true
+    g.add(m)
+  }
+  g.position.copy(punto).addScaledVector(dir, -0.004)
+  g.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir)
+  return g
+}
+
+/** Textura de una bocanada de aire: mancha suave y difusa. */
+function texturaSoplo(): THREE.Texture | null {
+  if (typeof document === 'undefined') return null
+  const lienzo = document.createElement('canvas')
+  lienzo.width = lienzo.height = 64
+  const c = lienzo.getContext('2d')!
+  const g = c.createRadialGradient(32, 32, 0, 32, 32, 32)
+  g.addColorStop(0, 'rgba(255,255,255,0.9)')
+  g.addColorStop(0.45, 'rgba(255,255,255,0.35)')
+  g.addColorStop(1, 'rgba(255,255,255,0)')
+  c.fillStyle = g
+  c.fillRect(0, 0, 64, 64)
+  const t = new THREE.CanvasTexture(lienzo)
+  t.colorSpace = THREE.SRGBColorSpace
+  return t
+}
+
+interface Particula {
+  sprite: THREE.Sprite
+  material: THREE.SpriteMaterial
+  vel: THREE.Vector3
+  vida: number
+  total: number
+  tam: number
+}
+
+/**
+ * Bocanadas de aire que salen por los escapes. El aire real no se ve, pero
+ * con «Ver el aire» activo se pinta, para saber de un vistazo por qué
+ * silenciador está saliendo.
+ */
+function crearSoplos(escena: THREE.Scene) {
+  const textura = texturaSoplo()
+  const libres: Particula[] = []
+  const vivas: Particula[] = []
+  for (let i = 0; i < 120; i++) {
+    const material = new THREE.SpriteMaterial({
+      map: textura,
+      color: 0x5aaaff,
+      transparent: true,
+      depthWrite: false,
+      // Se pinta encima de todo, como el aire de las mangueras: es una ayuda
+      // para ver por dónde sale, aunque la pieza de delante lo tape.
+      depthTest: false,
+      opacity: 0,
+    })
+    const sprite = new THREE.Sprite(material)
+    sprite.visible = false
+    sprite.renderOrder = 5
+    escena.add(sprite)
+    libres.push({ sprite, material, vel: new THREE.Vector3(), vida: 0, total: 1, tam: 0.01 })
+  }
+  const lateral = new THREE.Vector3()
+  return {
+    emitir(pos: THREE.Vector3, dir: THREE.Vector3, fuerza: number) {
+      const p = libres.pop()
+      if (!p) return
+      lateral.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(0.06)
+      p.vel.copy(dir).multiplyScalar(0.06 + fuerza * 0.14).add(lateral)
+      // Cada bocanada nace algo más adelante o más atrás en el chorro: aunque
+      // salgan varias en el mismo fotograma, se ve un chorro y no una bola.
+      p.sprite.position.copy(pos).addScaledVector(p.vel, Math.random() * 0.12)
+      p.total = p.vida = 0.35 + Math.random() * 0.3 + fuerza * 0.25
+      p.tam = 0.007 + fuerza * 0.005
+      p.sprite.visible = true
+      vivas.push(p)
+    },
+    /** Avanza las bocanadas; devuelve cuántas quedan en el aire. */
+    actualizar(dt: number): number {
+      for (let i = vivas.length - 1; i >= 0; i--) {
+        const p = vivas[i]
+        p.vida -= dt
+        if (p.vida <= 0) {
+          p.sprite.visible = false
+          vivas.splice(i, 1)
+          libres.push(p)
+          continue
+        }
+        const edad = 1 - p.vida / p.total
+        p.vel.multiplyScalar(Math.exp(-dt * 3.5))
+        p.vel.y += dt * 0.02 // el aire caliente del escape sube un poco
+        p.sprite.position.addScaledVector(p.vel, dt)
+        p.sprite.scale.setScalar(p.tam * (1 + edad * 2.2))
+        p.material.opacity = 0.5 * Math.sin(Math.PI * Math.min(1, edad * 1.3 + 0.08))
+      }
+      return vivas.length
+    },
+    liberar() {
+      textura?.dispose()
+      for (const p of [...libres, ...vivas]) p.material.dispose()
+    },
+  }
+}
 
 /** Placa perfilada de aluminio con sus ranuras en T, de pie sobre la mesa. */
 function crearPlaca(ancho: number, alto: number, centro: THREE.Vector2): THREE.Group {
@@ -154,6 +276,38 @@ export default function Banco3D({ motor }: Props) {
     resaltarCambio.actual = true
   }, [resaltarAire, motor, resaltarCambio])
   const [sinWebGL, setSinWebGL] = useState(false)
+  const [conSonido, setConSonido] = useState(() => {
+    try {
+      return localStorage.getItem(CLAVE_SONIDO) !== 'no'
+    } catch {
+      return true
+    }
+  })
+  const conSonidoRef = useRef(conSonido)
+  conSonidoRef.current = conSonido
+  const sonidoRef = useRef<SonidoBanco | null>(null)
+  const sonido = () => (sonidoRef.current ??= new SonidoBanco())
+  useEffect(() => {
+    try {
+      localStorage.setItem(CLAVE_SONIDO, conSonido ? 'si' : 'no')
+    } catch {
+      /* sin almacenamiento: da igual */
+    }
+    // Al pulsar ▶ Simular ya hubo un gesto del usuario: el navegador deja sonar.
+    if (conSonido && motor) sonido().activar()
+    if (!conSonido || !motor) sonidoRef.current?.callar()
+  }, [conSonido, motor])
+  useEffect(() => {
+    const alOcultar = () => {
+      if (document.hidden) sonidoRef.current?.callar()
+    }
+    document.addEventListener('visibilitychange', alOcultar)
+    return () => {
+      document.removeEventListener('visibilitychange', alOcultar)
+      sonidoRef.current?.cerrar()
+      sonidoRef.current = null
+    }
+  }, [])
   const [pantallaCompleta, setPantallaCompleta] = useState(false)
   const encuadrarRef = useRef<() => void>(() => {})
   const piezas = useStore((s) => s.piezas)
@@ -280,6 +434,33 @@ export default function Banco3D({ motor }: Props) {
       escena.add(crearTubo(a, dirA, b, dirB, i, material))
       tubos.push({ material, componente: m.a.componente, puerto: m.a.puerto })
     })
+    // Silenciadores en los escapes libres y puntos por donde sale el aire.
+    const conManguera = new Set(mangueras.flatMap((m) => [`${m.a.componente}:${m.a.puerto}`, `${m.b.componente}:${m.b.puerto}`]))
+    const bocas = new Map<string, { pos: THREE.Vector3; dir: THREE.Vector3 }>()
+    for (const item of enEscena) {
+      const g = item.modelo.grupo
+      g.updateMatrixWorld(true)
+      bocas.set(`${item.pieza.id}:`, {
+        pos: g.localToWorld(new THREE.Vector3(0, 0, 0.04)),
+        dir: new THREE.Vector3(0, 0.3, 1).normalize(),
+      })
+      for (const puerto of MODELOS[item.pieza.tipo]?.puertos ?? []) {
+        const r = item.modelo.racores[puerto.id]
+        if (!r) continue
+        const clave = `${item.pieza.id}:${puerto.id}`
+        const dir = r.dir.clone().applyQuaternion(g.quaternion)
+        const libre = !conManguera.has(clave)
+        if (puerto.rol === 'escape' && libre) {
+          const silenciador = crearSilenciador(r.punto, r.dir)
+          g.add(silenciador)
+        }
+        const salida = r.punto.clone().addScaledVector(r.dir, puerto.rol === 'escape' && libre ? 0.018 : 0.004)
+        // El chorro se abre hacia delante, lejos de la placa: así se ve.
+        bocas.set(clave, { pos: g.localToWorld(salida), dir: dir.add(new THREE.Vector3(0, 0, 0.9)).normalize() })
+      }
+    }
+    const soplos = crearSoplos(escena)
+
     // La toma de aire del compresor: entra al FRL por detrás de la mesa.
     for (const item of enEscena) {
       if (item.pieza.tipo !== 'fuente') continue
@@ -342,6 +523,7 @@ export default function Banco3D({ motor }: Props) {
     const pulsables = enEscena.flatMap((i) => i.modelo.pulsables)
     let soltar: (() => void) | null = null
     const onDown = (e: PointerEvent) => {
+      if (conSonidoRef.current) sonido().activar()
       const mot = motorRef.current
       if (!mot) return
       const r = renderer.domElement.getBoundingClientRect()
@@ -394,13 +576,54 @@ export default function Banco3D({ motor }: Props) {
     let vivo = true
     let sucio = true
     controles.addEventListener('change', () => (sucio = true))
+    let oido: Oido | null = null
+    let hayBocanadas = false
+    let antes = performance.now()
+    const proyectada = new THREE.Vector3()
+    /** Izquierda/derecha de un punto tal como se ve ahora en pantalla. */
+    const panoramaDe = (pos: THREE.Vector3) => THREE.MathUtils.clamp(proyectada.copy(pos).project(camara).x * 0.85, -1, 1)
+    const escuchar = (mot: Motor, dt: number) => {
+      if (oido?.motor !== mot) oido = new Oido(mot)
+      const escucha = oido.escuchar()
+      const oir = conSonidoRef.current ? sonidoRef.current : null
+      const ver = resaltarRef.current
+      for (const g of escucha.golpes) {
+        const boca = bocas.get(`${g.componente}:`)
+        oir?.golpe(g.tipo, g.intensidad, boca ? panoramaDe(boca.pos) : 0)
+      }
+      let continuo = escucha.fuga ? 0.8 : 0
+      let panContinuo = 0
+      for (const s of escucha.salidas) {
+        const boca = bocas.get(`${s.componente}:${s.puerto ?? ''}`)
+        const pan = boca ? panoramaDe(boca.pos) : 0
+        if (s.rafaga) {
+          oir?.rafaga(s.intensidad, pan)
+          if (boca && ver) for (let i = 0; i < 4 + s.intensidad * 12; i++) soplos.emitir(boca.pos, boca.dir, s.intensidad)
+        } else {
+          panContinuo = (panContinuo * continuo + pan * s.intensidad) / (continuo + s.intensidad)
+          continuo += s.intensidad
+          if (boca && ver && Math.random() < s.intensidad * dt * 40) soplos.emitir(boca.pos, boca.dir, s.intensidad * 0.6)
+        }
+      }
+      oir?.continuo(Math.min(1, continuo) * 0.8, panContinuo)
+      oir?.motor(escucha.giros.reduce((m, g) => Math.max(m, g.velocidad), 0))
+    }
     const bucle = () => {
       if (!vivo) return
       requestAnimationFrame(bucle)
+      const ahora = performance.now()
+      const dt = Math.min(0.1, (ahora - antes) / 1000)
+      antes = ahora
       const mot = motorRef.current
       const seMueve = controles.update()
-      if (!mot && !seMueve && !sucio && !resaltarCambio.actual) return
+      if (!mot && !seMueve && !sucio && !resaltarCambio.actual && !hayBocanadas) return
       resaltarCambio.actual = false
+      if (mot) escuchar(mot, dt)
+      else oido = null
+      const bocanadas = soplos.actualizar(dt)
+      hayBocanadas = bocanadas > 0
+      // A la vista en el DOM, para las pruebas.
+      if (cont.dataset.bocanadas !== String(bocanadas)) cont.dataset.bocanadas = String(bocanadas)
       for (const item of enEscena) {
         const { estado, presion } = estadoDe(mot, item.pieza)
         item.modelo.actualizar(estado, presion)
@@ -429,6 +652,7 @@ export default function Banco3D({ motor }: Props) {
         if (malla.geometry) malla.geometry.dispose()
       })
       for (const t of tubos) t.material.dispose()
+      soplos.liberar()
       entorno.dispose()
       pmrem.dispose()
       renderer.dispose()
@@ -454,6 +678,7 @@ export default function Banco3D({ motor }: Props) {
       p.params.accionamiento !== 'pilotaje',
   )
   const pulsar = (id: string, si: boolean) => {
+    if (si && conSonido) sonido().activar()
     try {
       motorRef.current?.accionar(id, si)
     } catch {
@@ -504,6 +729,17 @@ export default function Banco3D({ motor }: Props) {
           title="Tiñe de azul claro las mangueras que tienen aire"
         >
           {resaltarAire ? '✓ Ver el aire' : 'Ver el aire'}
+        </button>
+        <button
+          style={{ ...boton, background: conSonido ? '#1668c7' : '#fff', color: conSonido ? '#fff' : '#33475c' }}
+          onClick={() => {
+            if (!conSonido) sonido().activar()
+            setConSonido((v) => !v)
+          }}
+          title="Válvulas, topes de los cilindros y el aire saliendo por los escapes"
+          aria-pressed={conSonido}
+        >
+          {conSonido ? '🔊 Sonido' : '🔇 Sonido'}
         </button>
         {typeof document !== 'undefined' && document.fullscreenEnabled && (
           <button style={boton} onClick={alternarPantallaCompleta}>
