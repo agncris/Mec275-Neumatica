@@ -159,6 +159,37 @@ diagonales y que las barras queden en pasillos libres y en el orden correcto.
 - **Auxiliares:** regulador de caudal unidireccional, válvula selectora «O», válvula de
   simultaneidad «Y», válvula de escape rápido y temporizador neumático.
 
+## Nomenclatura de los símbolos
+
+Los símbolos siguen **ISO 1219-1**, con los mismos criterios que FluidSim, porque es
+lo que al alumno le van a pedir dibujar:
+
+- **Cada posición de una válvula representa todos sus puertos.** Los que comunican
+  llevan su vía con la flecha del sentido de flujo; los que no, el trazo de bloqueo
+  en T. Una 5/2, por ejemplo, tiene dos vías y **un escape bloqueado** en cada
+  posición: la de reposo bloquea el 3 y la accionada el 5.
+- **El pilotaje neumático es un triángulo** hueco apuntando a la válvula, rotulado
+  14 o 12. No es un rectángulo con una diagonal: eso es el accionamiento manual
+  general y confunde una señal de aire con un mando de mano.
+- **El pulsador** es el vástago con cabeza; **el muelle**, la línea en zigzag; **el
+  final de carrera**, la palanca con rodillo y su muelle de retorno.
+- **Los puertos se numeran** 1 (alimentación), 2 y 4 (trabajo), 3 y 5 (escapes),
+  12 y 14 (pilotajes).
+- **El compresor** es el círculo con el triángulo macizo apuntando hacia la salida.
+- **Los puertos de los actuadores no se rotulan.** La vía se identifica por la de la
+  válvula que los alimenta (4 y 2), y poner «A» y «B» en un cilindro se confunde con
+  la designación de actuadores de ISO 1219-2.
+- **El actuador giratorio** es la cúpula con su eje y su sentido de giro.
+
+Hay pruebas que lo verifican símbolo a símbolo (`src/__tests__/simbolos.test.tsx`):
+cuentan las vías y los bloqueos de cada válvula y comprueban que los accionamientos
+son los que corresponden.
+
+> Dos diferencias deliberadas con FluidSim: los escapes 3 y 5 no llevan silenciador
+> dibujado, porque en la aplicación son puertos que el alumno puede cablear; y el
+> explicador animado del método cascada usa un esquema simplificado a propósito, no
+> simbología normalizada.
+
 ## Vistas en corte
 
 Cada válvula y cada cilindro se pueden ver en sección, al estilo de las láminas de clase:
@@ -211,7 +242,7 @@ npm run dev        # http://localhost:5173
 ```
 
 ```bash
-npm test           # 184 pruebas: motor, análisis, entregas, plano y utilidades
+npm test           # 194 pruebas: motor, análisis, entregas, plano, símbolos y utilidades
 npm run typecheck  # comprobación de tipos
 npm run build      # compila a /dist
 ```

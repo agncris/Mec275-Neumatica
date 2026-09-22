@@ -53,6 +53,117 @@ function Etiqueta({ x, y, texto }: { x: number; y: number; texto: string }) {
 }
 
 // ---------------------------------------------------------------------------
+// Elementos normalizados ISO 1219-1 que se repiten en varios símbolos. Van
+// marcados con `data-iso` para que las pruebas puedan comprobar que cada
+// válvula lleva las vías y los bloqueos que le corresponden.
+// ---------------------------------------------------------------------------
+
+/**
+ * Vía bloqueada (ISO 1219-1): el puerto se cierra con un trazo en T dentro de
+ * la casilla. Toda posición de una válvula tiene que representar TODOS sus
+ * puertos: los que comunican, con su flecha, y los que no, con este bloqueo.
+ */
+function Bloqueo({ x, y, hacia = 'abajo' }: { x: number; y: number; hacia?: 'abajo' | 'arriba' }) {
+  const signo = hacia === 'abajo' ? 1 : -1
+  return (
+    <g data-iso="bloqueo">
+      <line x1={x} y1={y} x2={x} y2={y - 9 * signo} {...TRAZO} strokeWidth={2} />
+      <line x1={x - 7} y1={y - 9 * signo} x2={x + 7} y2={y - 9 * signo} {...TRAZO} strokeWidth={2} />
+    </g>
+  )
+}
+
+/**
+ * Pilotaje neumático (ISO 1219-1): triángulo hueco apuntando hacia la válvula.
+ * No es un rectángulo con una diagonal —ése es el accionamiento manual
+ * general—: el triángulo es lo que identifica que la señal es de aire.
+ */
+function PilotajeNeumatico({
+  xPuerto,
+  xValvula,
+  y,
+  etiqueta,
+}: {
+  xPuerto: number
+  xValvula: number
+  y: number
+  etiqueta: string
+}) {
+  const haciaDerecha = xValvula > xPuerto
+  const s = haciaDerecha ? 1 : -1
+  const base = xPuerto + 14 * s
+  const punta = base + 14 * s
+  return (
+    <g data-iso="pilotaje">
+      <line x1={xPuerto} y1={y} x2={base} y2={y} {...TRAZO} strokeWidth={1.8} />
+      <polygon
+        points={`${base},${y - 8} ${base},${y + 8} ${punta},${y}`}
+        {...TRAZO}
+        strokeWidth={1.8}
+        fill="#fff"
+      />
+      <line x1={punta} y1={y} x2={xValvula} y2={y} {...TRAZO} strokeWidth={1.8} />
+      <Etiqueta x={(base + punta) / 2} y={y - 13} texto={etiqueta} />
+    </g>
+  )
+}
+
+/**
+ * Pulsador (ISO 1219-1): vástago con cabeza redondeada apoyado en la válvula.
+ * Se colorea al accionarlo, que es información de la simulación, no del
+ * símbolo.
+ */
+function Pulsador({
+  xCabeza,
+  xValvula,
+  y,
+  accionado,
+}: {
+  xCabeza: number
+  xValvula: number
+  y: number
+  accionado: boolean
+}) {
+  const s = xValvula > xCabeza ? 1 : -1
+  return (
+    <g data-iso="pulsador">
+      <line x1={xCabeza} y1={y} x2={xValvula} y2={y} {...TRAZO} strokeWidth={1.8} />
+      <line x1={xCabeza} y1={y - 8} x2={xCabeza} y2={y + 8} {...TRAZO} strokeWidth={1.8} />
+      <path
+        d={`M${xCabeza},${y - 8} a 8 8 0 0 ${s > 0 ? 0 : 1} 0,16`}
+        {...TRAZO}
+        strokeWidth={1.8}
+        fill={accionado ? '#12a35a' : '#fff'}
+      />
+    </g>
+  )
+}
+
+/** Muelle de retorno (ISO 1219-1). */
+function Muelle({ x, y, hacia = 'derecha' }: { x: number; y: number; hacia?: 'derecha' | 'izquierda' }) {
+  const s = hacia === 'derecha' ? 1 : -1
+  return (
+    <path
+      data-iso="muelle"
+      d={`M${x},${y} l${6 * s},-7 l${6 * s},14 l${6 * s},-14 l${6 * s},14 l${4 * s},-7`}
+      {...TRAZO}
+      strokeWidth={1.6}
+    />
+  )
+}
+
+/** Palanca con rodillo (ISO 1219-1): el vástago del cilindro lo pisa. */
+function Rodillo({ x, y, accionado }: { x: number; y: number; accionado: boolean }) {
+  return (
+    <g data-iso="rodillo">
+      <line x1={x} y1={y} x2={x + 8} y2={y} {...TRAZO} strokeWidth={1.8} />
+      <line x1={x} y1={y} x2={x} y2={y - 15} {...TRAZO} strokeWidth={1.8} />
+      <circle cx={x} cy={y - 22} r={7} {...TRAZO} strokeWidth={1.8} fill={accionado ? '#12a35a' : '#fff'} />
+    </g>
+  )
+}
+
+// ---------------------------------------------------------------------------
 export function SimboloFuente({ params, vivo }: PropsSimbolo) {
   const encendida = vivo ? (vivo.encendida ?? true) : ((params.encendida as boolean) ?? true)
   const presion = Number(params.presion ?? 6)
@@ -61,8 +172,9 @@ export function SimboloFuente({ params, vivo }: PropsSimbolo) {
   return (
     <g>
       <circle cx={38} cy={48} r={19} {...TRAZO} />
-      {/* triángulo de fuente de presión dentro del círculo */}
-      <polygon points="38,36 48,54 28,54" fill="#14181d" stroke="none" />
+      {/* Compresor (ISO 1219-1): círculo con el triángulo macizo apuntando en
+          el sentido del flujo, o sea hacia la salida. */}
+      <polygon points="30,38 30,58 51,48" fill="#14181d" stroke="none" />
       <line x1={57} y1={48} x2={90} y2={48} {...TRAZO} />
       {/* manómetro */}
       <line x1={70} y1={48} x2={70} y2={30} {...TRAZO} strokeWidth={1.6} />
@@ -97,19 +209,11 @@ export function SimboloValvula32({ params, vivo }: PropsSimbolo) {
       <Etiqueta x={109} y={93} texto="3" />
       {/* accionamientos fijos: mando a la izquierda, muelle a la derecha */}
       {params.accionamiento === 'rodillo' ? (
-        <>
-          {/* palanca con rodillo: lo pisa el vástago del cilindro */}
-          <line x1={22} y1={55} x2={30} y2={55} {...TRAZO} strokeWidth={1.8} />
-          <line x1={22} y1={55} x2={22} y2={40} {...TRAZO} strokeWidth={1.8} />
-          <circle cx={22} cy={33} r={7} {...TRAZO} strokeWidth={1.8} fill={accionada ? '#12a35a' : '#fff'} />
-        </>
+        <Rodillo x={22} y={55} accionado={accionada} />
       ) : (
-        <>
-          <line x1={20} y1={55} x2={30} y2={55} {...TRAZO} strokeWidth={1.8} />
-          <circle cx={14} cy={55} r={6} {...TRAZO} strokeWidth={1.8} fill={accionada ? '#12a35a' : '#fff'} />
-        </>
+        <Pulsador xCabeza={16} xValvula={30} y={55} accionado={accionada} />
       )}
-      <path d="M110,55 l6,-7 l6,14 l6,-14 l6,14 l4,-7" {...TRAZO} strokeWidth={1.6} />
+      <Muelle x={110} y={55} />
       {/* corredera: dos posiciones que se desplazan al conmutar */}
       <g transform={`translate(${dx} 0)`} style={{ transition: TRANSICION_CORREDERA }}>
         {/* caja izquierda = posición accionada */}
@@ -117,18 +221,20 @@ export function SimboloValvula32({ params, vivo }: PropsSimbolo) {
         {na ? (
           <>
             {/* NA accionada: 2→3, 1 bloqueado */}
-            <line x1={50} y1={37} x2={60} y2={73} {...TRAZO} strokeWidth={2} />
-            <Flecha x={59} y={70} angulo={165} />
-            <line x1={40} y1={75} x2={40} y2={66} {...TRAZO} strokeWidth={2} />
-            <line x1={33} y1={66} x2={47} y2={66} {...TRAZO} strokeWidth={2} />
+            <g data-iso="via">
+              <line x1={50} y1={37} x2={60} y2={73} {...TRAZO} strokeWidth={2} />
+              <Flecha x={59} y={70} angulo={165} />
+            </g>
+            <Bloqueo x={40} y={75} />
           </>
         ) : (
           <>
             {/* NC accionada: 1→2, 3 bloqueado */}
-            <line x1={40} y1={73} x2={50} y2={37} {...TRAZO} strokeWidth={2} />
-            <Flecha x={50} y={40} angulo={15} />
-            <line x1={60} y1={75} x2={60} y2={66} {...TRAZO} strokeWidth={2} />
-            <line x1={53} y1={66} x2={67} y2={66} {...TRAZO} strokeWidth={2} />
+            <g data-iso="via">
+              <line x1={40} y1={73} x2={50} y2={37} {...TRAZO} strokeWidth={2} />
+              <Flecha x={50} y={40} angulo={15} />
+            </g>
+            <Bloqueo x={60} y={75} />
           </>
         )}
         {/* caja derecha = posición de reposo */}
@@ -136,18 +242,20 @@ export function SimboloValvula32({ params, vivo }: PropsSimbolo) {
         {na ? (
           <>
             {/* NA reposo: 1→2, 3 bloqueado */}
-            <line x1={80} y1={73} x2={90} y2={37} {...TRAZO} strokeWidth={2} />
-            <Flecha x={90} y={40} angulo={15} />
-            <line x1={100} y1={75} x2={100} y2={66} {...TRAZO} strokeWidth={2} />
-            <line x1={93} y1={66} x2={107} y2={66} {...TRAZO} strokeWidth={2} />
+            <g data-iso="via">
+              <line x1={80} y1={73} x2={90} y2={37} {...TRAZO} strokeWidth={2} />
+              <Flecha x={90} y={40} angulo={15} />
+            </g>
+            <Bloqueo x={100} y={75} />
           </>
         ) : (
           <>
             {/* NC reposo: 2→3, 1 bloqueado */}
-            <path d="M90,37 L90,55 L100,55 L100,73" {...TRAZO} strokeWidth={2} />
-            <Flecha x={100} y={70} angulo={180} />
-            <line x1={80} y1={75} x2={80} y2={66} {...TRAZO} strokeWidth={2} />
-            <line x1={73} y1={66} x2={87} y2={66} {...TRAZO} strokeWidth={2} />
+            <g data-iso="via">
+              <path d="M90,37 L90,55 L100,55 L100,73" {...TRAZO} strokeWidth={2} />
+              <Flecha x={100} y={70} angulo={180} />
+            </g>
+            <Bloqueo x={80} y={75} />
           </>
         )}
       </g>
@@ -177,44 +285,41 @@ export function SimboloValvula52({ params, vivo }: PropsSimbolo) {
 
       {/* accionamiento izquierdo: pilotaje 14 o pulsador */}
       {pilotaje ? (
-        <>
-          <rect x={12} y={46} width={24} height={18} {...TRAZO} strokeWidth={1.8} fill="#fff" />
-          <line x1={14} y1={62} x2={34} y2={48} {...TRAZO} strokeWidth={1.4} />
-          <line x1={3} y1={55} x2={12} y2={55} {...TRAZO} strokeWidth={1.8} />
-          <Etiqueta x={24} y={42} texto="14" />
-        </>
+        <PilotajeNeumatico xPuerto={0} xValvula={40} y={55} etiqueta="14" />
       ) : (
-        <>
-          <line x1={26} y1={55} x2={38} y2={55} {...TRAZO} strokeWidth={1.8} />
-          <circle cx={19} cy={55} r={6} {...TRAZO} strokeWidth={1.8} fill={accionada ? '#12a35a' : '#fff'} />
-        </>
+        <Pulsador xCabeza={22} xValvula={40} y={55} accionado={accionada} />
       )}
       {/* accionamiento derecho: pilotaje 12 (biestable) o muelle */}
       {biestable ? (
-        <>
-          <rect x={154} y={46} width={24} height={18} {...TRAZO} strokeWidth={1.8} fill="#fff" />
-          <line x1={156} y1={62} x2={176} y2={48} {...TRAZO} strokeWidth={1.4} />
-          <line x1={178} y1={55} x2={187} y2={55} {...TRAZO} strokeWidth={1.8} />
-          <Etiqueta x={166} y={42} texto="12" />
-        </>
+        <PilotajeNeumatico xPuerto={190} xValvula={140} y={55} etiqueta="12" />
       ) : (
-        <path d="M142,55 l6,-7 l6,14 l6,-14 l6,14 l4,-7" {...TRAZO} strokeWidth={1.6} />
+        <Muelle x={142} y={55} />
       )}
 
       {/* corredera */}
       <g transform={`translate(${dx} 0)`} style={{ transition: TRANSICION_CORREDERA }}>
-        {/* caja izquierda = accionada: 1→4 y 2→3 */}
+        {/* caja izquierda = accionada: 1→4, 2→3 y el escape 5 bloqueado */}
         <rect x={40} y={35} width={50} height={40} {...TRAZO} fill="#fff" />
-        <line x1={65} y1={73} x2={55} y2={37} {...TRAZO} strokeWidth={2} />
-        <Flecha x={55.5} y={40} angulo={-15} />
-        <line x1={75} y1={37} x2={85} y2={73} {...TRAZO} strokeWidth={2} />
-        <Flecha x={84.5} y={70} angulo={165} />
-        {/* caja derecha = reposo: 1→2 y 4→5 */}
+        <g data-iso="via">
+          <line x1={65} y1={73} x2={55} y2={37} {...TRAZO} strokeWidth={2} />
+          <Flecha x={55.5} y={40} angulo={-15} />
+        </g>
+        <g data-iso="via">
+          <line x1={75} y1={37} x2={85} y2={73} {...TRAZO} strokeWidth={2} />
+          <Flecha x={84.5} y={70} angulo={165} />
+        </g>
+        <Bloqueo x={45} y={75} />
+        {/* caja derecha = reposo: 1→2, 4→5 y el escape 3 bloqueado */}
         <rect x={90} y={35} width={50} height={40} {...TRAZO} fill="#fff" />
-        <line x1={115} y1={73} x2={125} y2={37} {...TRAZO} strokeWidth={2} />
-        <Flecha x={124.5} y={40} angulo={15} />
-        <line x1={105} y1={37} x2={95} y2={73} {...TRAZO} strokeWidth={2} />
-        <Flecha x={95.5} y={70} angulo={195} />
+        <g data-iso="via">
+          <line x1={115} y1={73} x2={125} y2={37} {...TRAZO} strokeWidth={2} />
+          <Flecha x={124.5} y={40} angulo={15} />
+        </g>
+        <g data-iso="via">
+          <line x1={105} y1={37} x2={95} y2={73} {...TRAZO} strokeWidth={2} />
+          <Flecha x={95.5} y={70} angulo={195} />
+        </g>
+        <Bloqueo x={135} y={75} />
       </g>
     </g>
   )
@@ -243,44 +348,39 @@ export function SimboloValvula42({ params, vivo }: PropsSimbolo) {
 
       {/* accionamiento izquierdo */}
       {pilotaje ? (
-        <>
-          <rect x={12} y={46} width={24} height={18} {...TRAZO} strokeWidth={1.8} fill="#fff" />
-          <line x1={14} y1={62} x2={34} y2={48} {...TRAZO} strokeWidth={1.4} />
-          <line x1={3} y1={55} x2={12} y2={55} {...TRAZO} strokeWidth={1.8} />
-          <Etiqueta x={24} y={42} texto="14" />
-        </>
+        <PilotajeNeumatico xPuerto={0} xValvula={40} y={55} etiqueta="14" />
       ) : (
-        <>
-          <line x1={26} y1={55} x2={38} y2={55} {...TRAZO} strokeWidth={1.8} />
-          <circle cx={19} cy={55} r={6} {...TRAZO} strokeWidth={1.8} fill={accionada ? '#12a35a' : '#fff'} />
-        </>
+        <Pulsador xCabeza={22} xValvula={40} y={55} accionado={accionada} />
       )}
       {/* accionamiento derecho */}
       {biestable ? (
-        <>
-          <rect x={144} y={46} width={24} height={18} {...TRAZO} strokeWidth={1.8} fill="#fff" />
-          <line x1={146} y1={62} x2={166} y2={48} {...TRAZO} strokeWidth={1.4} />
-          <line x1={168} y1={55} x2={177} y2={55} {...TRAZO} strokeWidth={1.8} />
-          <Etiqueta x={156} y={42} texto="12" />
-        </>
+        <PilotajeNeumatico xPuerto={180} xValvula={140} y={55} etiqueta="12" />
       ) : (
-        <path d="M142,55 l6,-7 l6,14 l6,-14 l6,14 l4,-7" {...TRAZO} strokeWidth={1.6} />
+        <Muelle x={142} y={55} />
       )}
 
       {/* corredera */}
       <g transform={`translate(${dx} 0)`} style={{ transition: TRANSICION_CORREDERA }}>
         {/* caja izquierda = accionada: 1→4 y 2→3 (rectas) */}
         <rect x={40} y={35} width={50} height={40} {...TRAZO} fill="#fff" />
-        <line x1={55} y1={73} x2={55} y2={39} {...TRAZO} strokeWidth={2} />
-        <Flecha x={55} y={41} angulo={0} />
-        <line x1={75} y1={37} x2={75} y2={71} {...TRAZO} strokeWidth={2} />
-        <Flecha x={75} y={69} angulo={180} />
+        <g data-iso="via">
+          <line x1={55} y1={73} x2={55} y2={39} {...TRAZO} strokeWidth={2} />
+          <Flecha x={55} y={41} angulo={0} />
+        </g>
+        <g data-iso="via">
+          <line x1={75} y1={37} x2={75} y2={71} {...TRAZO} strokeWidth={2} />
+          <Flecha x={75} y={69} angulo={180} />
+        </g>
         {/* caja derecha = reposo: 1→2 y 4→3 (cruzadas) */}
         <rect x={90} y={35} width={50} height={40} {...TRAZO} fill="#fff" />
-        <line x1={105} y1={73} x2={125} y2={39} {...TRAZO} strokeWidth={2} />
-        <Flecha x={124} y={41} angulo={30} />
-        <line x1={105} y1={37} x2={125} y2={71} {...TRAZO} strokeWidth={2} />
-        <Flecha x={124} y={69} angulo={150} />
+        <g data-iso="via">
+          <line x1={105} y1={73} x2={125} y2={39} {...TRAZO} strokeWidth={2} />
+          <Flecha x={124} y={41} angulo={30} />
+        </g>
+        <g data-iso="via">
+          <line x1={105} y1={37} x2={125} y2={71} {...TRAZO} strokeWidth={2} />
+          <Flecha x={124} y={69} angulo={150} />
+        </g>
       </g>
     </g>
   )
@@ -298,7 +398,15 @@ export function SimboloCilindroSimple({ vivo }: PropsSimbolo) {
       <rect x={20} y={25} width={100} height={30} {...TRAZO} fill="#fff" />
       {/* pistón y vástago */}
       <rect x={px} y={27} width={6} height={26} fill="#14181d" />
-      <line x1={px + 6} y1={40} x2={130 + pos * 60} y2={40} stroke="#14181d" strokeWidth={4} />
+      <rect
+        x={px + 6}
+        y={36}
+        width={Math.max(4, 130 + pos * 60 - (px + 6))}
+        height={8}
+        {...TRAZO}
+        strokeWidth={1.8}
+        fill="#fff"
+      />
       {/* muelle de retorno (se comprime al avanzar) */}
       <path
         d={`M${px + 6},40 l${q / 2},-8 l${q},16 l${q},-16 l${q},16 l${q / 2},-8`}
@@ -309,7 +417,6 @@ export function SimboloCilindroSimple({ vivo }: PropsSimbolo) {
       <line x1={112} y1={55} x2={112} y2={62} {...TRAZO} strokeWidth={1.6} />
       {/* conexión al puerto */}
       <line x1={30} y1={55} x2={30} y2={77} {...TRAZO} />
-      <Etiqueta x={40} y={72} texto="1" />
     </g>
   )
 }
@@ -320,13 +427,21 @@ export function SimboloCilindroDoble({ vivo }: PropsSimbolo) {
   const px = 24 + pos * 80
   return (
     <g>
+      {/* camisa, émbolo y vástago. Los puertos de un actuador no se rotulan:
+          se identifican por la vía de la válvula que los alimenta (4 y 2). */}
       <rect x={20} y={25} width={110} height={30} {...TRAZO} fill="#fff" />
       <rect x={px} y={27} width={6} height={26} fill="#14181d" />
-      <line x1={px + 6} y1={40} x2={140 + pos * 80} y2={40} stroke="#14181d" strokeWidth={4} />
+      <rect
+        x={px + 6}
+        y={36}
+        width={Math.max(4, 140 + pos * 80 - (px + 6))}
+        height={8}
+        {...TRAZO}
+        strokeWidth={1.8}
+        fill="#fff"
+      />
       <line x1={30} y1={55} x2={30} y2={77} {...TRAZO} />
       <line x1={120} y1={55} x2={120} y2={77} {...TRAZO} />
-      <Etiqueta x={40} y={72} texto="A" />
-      <Etiqueta x={110} y={72} texto="B" />
     </g>
   )
 }
@@ -338,26 +453,31 @@ export function SimboloActuadorGiratorio({ params, vivo }: PropsSimbolo) {
   const pos = vivo?.posicion ?? 0
   const angulo = Number(params.angulo ?? 180)
   const giro = pos * angulo
+  // Cúpula con base plana, eje saliendo por arriba y paleta que gira con la
+  // simulación: es el símbolo normalizado de la unidad oscilante, no un
+  // indicador de aguja.
+  const cx = 65
+  const base = 82
+  const r = 32
   return (
     <g>
-      <rect x={20} y={15} width={90} height={70} rx={4} {...TRAZO} fill="#fff" />
-      <circle cx={65} cy={50} r={26} {...TRAZO} strokeWidth={1.8} />
-      {/* doble flecha curva: sentido de giro */}
-      <path d="M47,34 A22,22 0 0 1 83,34" {...TRAZO} strokeWidth={2} />
-      <polygon points="83,34 76,30 79,39" fill="#14181d" stroke="none" />
-      <path d="M83,66 A22,22 0 0 1 47,66" {...TRAZO} strokeWidth={2} />
-      <polygon points="47,66 54,70 51,61" fill="#14181d" stroke="none" />
-      {/* indicador de posición del eje */}
-      <g transform={`rotate(${giro} 65 50)`} style={{ transition: 'transform 120ms linear' }}>
-        <line x1={65} y1={50} x2={65} y2={28} stroke="#1668c7" strokeWidth={3.4} strokeLinecap="round" />
+      <line x1={cx - 3} y1={base - r} x2={cx - 3} y2={22} {...TRAZO} strokeWidth={1.8} />
+      <line x1={cx + 3} y1={base - r} x2={cx + 3} y2={22} {...TRAZO} strokeWidth={1.8} />
+      <path
+        d={`M${cx - r},${base} A${r},${r} 0 0 1 ${cx + r},${base} Z`}
+        {...TRAZO}
+        fill="#fff"
+      />
+      {/* paleta: gira con el eje */}
+      <g transform={`rotate(${giro} ${cx} ${base})`} style={{ transition: 'transform 120ms linear' }}>
+        <line x1={cx} y1={base} x2={cx} y2={base - r + 6} stroke="#1668c7" strokeWidth={3.4} strokeLinecap="round" />
       </g>
-      <circle cx={65} cy={50} r={4} fill="#14181d" />
-      {/* conexiones a puertos */}
-      <line x1={45} y1={85} x2={45} y2={97} {...TRAZO} />
-      <line x1={85} y1={85} x2={85} y2={97} {...TRAZO} />
-      <Etiqueta x={36} y={93} texto="A" />
-      <Etiqueta x={94} y={93} texto="B" />
-      <Etiqueta x={65} y={11} texto={`${Math.round(giro)}° / ${angulo}°`} />
+      {/* sentido de giro */}
+      <path d={`M${cx - 18},${base - 14} A22,22 0 0 1 ${cx + 6},${base - 25}`} {...TRAZO} strokeWidth={1.6} />
+      <polygon points={`${cx + 6},${base - 25} ${cx - 1},${base - 27} ${cx + 1},${base - 19}`} fill="#14181d" stroke="none" />
+      {/* conexiones a puertos: sin rótulo, como cualquier actuador */}
+      <line x1={45} y1={base} x2={45} y2={97} {...TRAZO} />
+      <line x1={85} y1={base} x2={85} y2={97} {...TRAZO} />
     </g>
   )
 }
