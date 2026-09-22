@@ -57,7 +57,7 @@ function enRejilla(ancho: number, alto: number, x: number, y: number): boolean {
 }
 
 /** Construye la rejilla con los cuerpos de los componentes como obstáculos. */
-function prepararRejilla(piezas: Pieza[], origenId: string, destinoId: string): Rejilla {
+function prepararRejilla(piezas: Pieza[], origenId: string, destinoId: string, colchonBase = COLCHON_OBSTACULO): Rejilla {
   let minX = Infinity,
     minY = Infinity,
     maxX = -Infinity,
@@ -83,7 +83,7 @@ function prepararRejilla(piezas: Pieza[], origenId: string, destinoId: string): 
     const d = DESCRIPTORES[p.tipo]
     if (!d) continue
     const esExtremo = p.id === origenId || p.id === destinoId
-    const colchon = esExtremo ? 4 : COLCHON_OBSTACULO
+    const colchon = esExtremo ? 4 : colchonBase
     const x0 = Math.floor((p.x - minX - colchon) / CELDA)
     const y0 = Math.floor((p.y - minY - colchon) / CELDA)
     const x1 = Math.floor((p.x + d.ancho + colchon - minX) / CELDA)
@@ -209,47 +209,167 @@ export function enrutarManguera(
   const g2 = puertoGeom(pieza2, ref2.puerto)
   if (!g1 || !g2) return ''
 
-  const rej = prepararRejilla(piezas, pieza1.id, pieza2.id)
-  abrirSalida(rej, pieza1, ref1.puerto)
-  abrirSalida(rej, pieza2, ref2.puerto)
 
-  const de = { x: Math.floor((g1.x - rej.minX) / CELDA), y: Math.floor((g1.y - rej.minY) / CELDA) }
-  const a = { x: Math.floor((g2.x - rej.minX) / CELDA), y: Math.floor((g2.y - rej.minY) / CELDA) }
-
-  const ruta = astar(rej, de, a)
+  // El A* busca entre las *salidas* de los puertos, no entre los puertos: así
+  // el trazado nunca tiene que entrar en la ficha para alcanzar su propio
+  // puerto (que está pegado al borde del símbolo).
+  const [v1x, v1y] = VECTOR_DIR[g1.dir]
+  const [v2x, v2y] = VECTOR_DIR[g2.dir]
+  const salida1 = { x: g1.x + v1x * RABO, y: g1.y + v1y * RABO }
+  const salida2 = { x: g2.x + v2x * RABO, y: g2.y + v2y * RABO }
+  // Si con el colchón normal no hay paso (pasillos estrechos), se reintenta
+  // con menos holgura antes de rendirse: más vale un trazado apretado que uno
+  // recto que cruce por encima de los símbolos.
+  let rej = prepararRejilla(piezas, pieza1.id, pieza2.id)
+  let ruta: Ojo[] | null = null
+  for (const colchon of [COLCHON_OBSTACULO, 6, 2]) {
+    rej = prepararRejilla(piezas, pieza1.id, pieza2.id, colchon)
+    abrirSalida(rej, pieza1, ref1.puerto)
+    abrirSalida(rej, pieza2, ref2.puerto)
+    const de2 = { x: Math.floor((salida1.x - rej.minX) / CELDA), y: Math.floor((salida1.y - rej.minY) / CELDA) }
+    const a2 = { x: Math.floor((salida2.x - rej.minX) / CELDA), y: Math.floor((salida2.y - rej.minY) / CELDA) }
+    ruta = astar(rej, de2, a2)
+    if (ruta && ruta.length >= 2) break
+  }
   if (!ruta || ruta.length < 2) return rutaSimple(g1, g2)
 
   const puntos = ruta.map((c) => ({
     x: rej.minX + (c.x + 0.5) * CELDA,
     y: rej.minY + (c.y + 0.5) * CELDA,
   }))
-  // Ajustar extremos exactos a los puertos, garantizando tramos ortogonales.
-  puntos[0] = { x: g1.x, y: g1.y }
-  puntos[puntos.length - 1] = { x: g2.x, y: g2.y }
-  ortogonalizarExtremos(puntos)
+  // Los extremos se clavan en el puerto exacto, con su tramo perpendicular.
+  puntos.splice(0, 1, { x: g1.x, y: g1.y }, salida1)
+  puntos.splice(puntos.length - 1, 1, salida2, { x: g2.x, y: g2.y })
+  ortogonalizarIntermedios(puntos)
   return aPath(simplificar(puntos))
 }
 
 /**
- * Si el primer (o último) tramo entre el puerto y el siguiente punto no es
- * horizontal ni vertical, inserta un vértice auxiliar para que el trazado
- * siga siendo ortogonal (el problema aparece al usar el puerto exacto, que no
- * cae en el centro de las celdas del enrutado).
+ * Inserta los vértices que hagan falta para que todos los tramos sean
+ * horizontales o verticales. Hace falta porque los puertos no caen en el
+ * centro de las celdas del enrutado, así que las uniones con la rejilla
+ * quedarían en diagonal.
  */
-function ortogonalizarExtremos(pts: Punto[]): void {
-  if (pts.length < 2) return
-  // Primer tramo
-  let p0 = pts[0]
-  const p1 = pts[1]
-  if (Math.abs(p0.x - p1.x) > 0.1 && Math.abs(p0.y - p1.y) > 0.1) {
-    pts.splice(1, 0, { x: p0.x, y: p1.y })
-    p0 = pts[0]
+function ortogonalizarIntermedios(pts: Punto[]): void {
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1]
+    const b = pts[i]
+    if (Math.abs(a.x - b.x) > 0.1 && Math.abs(a.y - b.y) > 0.1) {
+      // Se dobla primero en el eje por el que ya venía el tramo anterior.
+      const anterior = i >= 2 ? pts[i - 2] : null
+      const veniaEnVertical = anterior ? Math.abs(anterior.x - a.x) < 0.1 : false
+      pts.splice(i, 0, veniaEnVertical ? { x: b.x, y: a.y } : { x: a.x, y: b.y })
+      i++
+    }
   }
-  // Último tramo (puede haberse desplazado el índice tras el splice anterior)
-  const n = pts.length
-  const pLast = pts[n - 1]
-  const pPrev = pts[n - 2]
-  if (Math.abs(pLast.x - pPrev.x) > 0.1 && Math.abs(pLast.y - pPrev.y) > 0.1) {
-    pts.splice(n - 1, 0, { x: pLast.x, y: pPrev.y })
+}
+
+// ---------------------------------------------------------------------------
+// Enrutado por carril (línea de grupo)
+//
+// Cuando una manguera pertenece a una barra horizontal —una línea de grupo o
+// la de presión— no se enruta «a su aire»: baja en vertical desde su puerto
+// hasta la barra, recorre la barra y sube al otro puerto. Como todas las
+// mangueras de la barra comparten esa altura, sus trazados se superponen y en
+// pantalla se ve una única línea, igual que en el plano de clase.
+// ---------------------------------------------------------------------------
+
+/** Holgura que se le deja a los cuerpos de las piezas al buscar un canal. */
+const HOLGURA_CANAL = 10
+/** Tramo recto con el que una manguera sale del puerto antes de girar. */
+const RABO = 18
+/** Hasta dónde se busca un canal vertical libre a los lados del puerto. */
+const BUSQUEDA_CANAL = 260
+
+interface CajaPieza {
+  x: number
+  y: number
+  w: number
+  h: number
+}
+
+function cajasDe(piezas: Pieza[], excepto: Set<string>): CajaPieza[] {
+  const out: CajaPieza[] = []
+  for (const p of piezas) {
+    if (excepto.has(p.id)) continue
+    const d = DESCRIPTORES[p.tipo]
+    if (!d) continue
+    out.push({ x: p.x - HOLGURA_CANAL, y: p.y - HOLGURA_CANAL, w: d.ancho + HOLGURA_CANAL * 2, h: d.alto + HOLGURA_CANAL * 2 })
   }
+  return out
+}
+
+const cortaVertical = (c: CajaPieza, x: number, y0: number, y1: number) =>
+  x > c.x && x < c.x + c.w && Math.max(y0, y1) > c.y && Math.min(y0, y1) < c.y + c.h
+
+const cortaHorizontal = (c: CajaPieza, y: number, x0: number, x1: number) =>
+  y > c.y && y < c.y + c.h && Math.max(x0, x1) > c.x && Math.min(x0, x1) < c.x + c.w
+
+/**
+ * Lleva un puerto hasta la altura de la barra: sale por su lado, busca un
+ * canal vertical libre y baja (o sube) hasta el carril. Devuelve los vértices
+ * desde el puerto hasta el punto de empalme, o null si no hay paso limpio.
+ *
+ * El canal tiene que esquivar también el cuerpo de la propia pieza: un puerto
+ * que mira hacia abajo y una barra que va por arriba obligan a rodear la
+ * ficha, no a atravesarla.
+ */
+function ramalHastaCarril(
+  pieza: Pieza,
+  puerto: string,
+  yCarril: number,
+  cajas: CajaPieza[],
+): Punto[] | null {
+  const geo = puertoGeom(pieza, puerto)
+  if (!geo) return null
+  const [vx, vy] = VECTOR_DIR[geo.dir]
+  const salida = { x: geo.x + vx * RABO, y: geo.y + vy * RABO }
+  // Si el puerto mira hacia el carril y ya está alineado, basta con bajar.
+  const candidatos: number[] = [salida.x]
+  for (let d = CELDA; d <= BUSQUEDA_CANAL; d += CELDA) {
+    candidatos.push(salida.x + d, salida.x - d)
+  }
+  for (const xc of candidatos) {
+    const tramoH = cajas.some((c) => cortaHorizontal(c, salida.y, salida.x, xc))
+    if (tramoH) continue
+    const tramoV = cajas.some((c) => cortaVertical(c, xc, salida.y, yCarril))
+    if (tramoV) continue
+    const pts: Punto[] = [{ x: geo.x, y: geo.y }]
+    if (salida.x !== geo.x || salida.y !== geo.y) pts.push({ x: salida.x, y: salida.y })
+    if (Math.abs(xc - salida.x) > 0.1) pts.push({ x: xc, y: salida.y })
+    pts.push({ x: xc, y: yCarril })
+    return pts
+  }
+  return null
+}
+
+export interface RutaCarril {
+  d: string
+  /** Puntos donde la manguera se empalma a la barra (se dibujan como nudos). */
+  empalmes: Punto[]
+}
+
+/**
+ * Enruta una manguera apoyándose en la barra horizontal de su línea de grupo.
+ * Devuelve null si alguno de los dos extremos no puede llegar limpiamente a la
+ * barra; en ese caso el llamador se queda con el enrutado normal.
+ */
+export function enrutarPorCarril(
+  piezas: Pieza[],
+  pieza1: Pieza,
+  ref1: RefPuerto,
+  pieza2: Pieza,
+  ref2: RefPuerto,
+  yCarril: number,
+): RutaCarril | null {
+  const cajas = cajasDe(piezas, new Set())
+  const r1 = ramalHastaCarril(pieza1, ref1.puerto, yCarril, cajas)
+  const r2 = ramalHastaCarril(pieza2, ref2.puerto, yCarril, cajas)
+  if (!r1 || !r2) return null
+  const fin1 = r1[r1.length - 1]
+  const fin2 = r2[r2.length - 1]
+  // El tramo de barra entre los dos empalmes tiene que estar despejado.
+  if (cajas.some((c) => cortaHorizontal(c, yCarril, fin1.x, fin2.x))) return null
+  const puntos = [...r1, ...r2.slice().reverse()]
+  return { d: aPath(simplificar(puntos)), empalmes: [fin1, fin2] }
 }

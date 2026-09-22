@@ -4,14 +4,15 @@
  * cursor) y desplazamiento (pan) sobre un área de trabajo amplia, y dibuja
  * el circuito con auto-layout y enrutado ortogonal de mangueras.
  */
-import { memo, useEffect, useRef, useState } from 'react'
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import type { Motor, RefPuerto } from '../engine'
 import type { EstadoVivo } from '../symbols/Simbolos'
 import { SimboloPieza } from '../symbols/Simbolos'
 import { PiezaRealista } from '../realistic/PiezaRealista'
 import { DESCRIPTORES, puertosVisibles } from './descriptores'
 import { useStore, type Pieza } from '../store'
-import { enrutarManguera } from '../routing'
+import { enrutarManguera, enrutarPorCarril } from '../routing'
+import { planificarCarriles } from '../carriles'
 import { calcularAreaConMargen } from '../layout'
 
 /** Dimensiones por defecto del viewport en el espacio del circuito. */
@@ -132,6 +133,49 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
   const escalaRef = useRef(1)
 
   const porId = new Map(piezas.map((p) => [p.id, p]))
+
+  // Líneas de grupo: las salidas de la cascada y la del compresor se dibujan
+  // como barras horizontales, y de ellas cuelgan en vertical sus ramales.
+  const { carriles, porManguera } = useMemo(() => planificarCarriles(piezas, mangueras), [piezas, mangueras])
+  const trazados = useMemo(() => {
+    const mapa = new Map<string, { d: string; empalmes: Array<{ x: number; y: number }> }>()
+    const por = new Map(piezas.map((p) => [p.id, p]))
+    for (const m of mangueras) {
+      const pa = por.get(m.a.componente)
+      const pb = por.get(m.b.componente)
+      if (!pa || !pb) continue
+      const carril = porManguera.get(m.id)
+      if (carril) {
+        const ruta = enrutarPorCarril(piezas, pa, m.a, pb, m.b, carril.y)
+        if (ruta) {
+          mapa.set(m.id, ruta)
+          continue
+        }
+      }
+      mapa.set(m.id, { d: enrutarManguera(piezas, pa, m.a, pb, m.b), empalmes: [] })
+    }
+    return mapa
+  }, [piezas, mangueras, porManguera])
+
+  /** Extremos de cada barra: se dibuja como una línea continua y se rotula.
+   *  Todos los rótulos se alinean en la misma columna, como en los planos. */
+  const barras = useMemo(() => {
+    const tramos = carriles.map((c) => {
+      let minX = Infinity
+      let maxX = -Infinity
+      for (const idM of c.mangueras) {
+        for (const p of trazados.get(idM)?.empalmes ?? []) {
+          minX = Math.min(minX, p.x)
+          maxX = Math.max(maxX, p.x)
+        }
+      }
+      return { carril: c, minX, maxX, visible: Number.isFinite(minX) && maxX > minX }
+    })
+    const izquierda = Math.min(...tramos.filter((t) => t.visible).map((t) => t.minX))
+    return tramos
+      .filter((t) => t.visible)
+      .map((t) => ({ etiqueta: t.carril.etiqueta, nodo: t.carril.nodo, y: t.carril.y, x0: izquierda, x1: t.maxX }))
+  }, [carriles, trazados])
   const simulando = modo === 'simular' && motor !== null
 
   /** Convierte coordenadas de pantalla al espacio del circuito (mundo). */
@@ -557,12 +601,40 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
           </g>
         )}
 
+        {/* líneas de grupo (G1, G2… y P): barra continua con su rótulo */}
+        {barras.map((b) => {
+          const viva = simulando && motor ? (motor.ultimaSolucion?.presion.get(b.nodo) ?? 0) > 0.1 : false
+          return (
+            <g key={`barra-${b.nodo}`} pointerEvents="none">
+              <line
+                x1={b.x0}
+                y1={b.y}
+                x2={b.x1}
+                y2={b.y}
+                stroke={viva ? '#1668c7' : simulando ? '#9aa5b1' : '#2a323b'}
+                strokeWidth={viva ? 3 : 2.4}
+              />
+              <text
+                x={b.x0 - 14}
+                y={b.y + 5}
+                textAnchor="end"
+                fontSize={15}
+                fontWeight={700}
+                fill={viva ? '#1668c7' : '#7d8894'}
+              >
+                {b.etiqueta}
+              </text>
+            </g>
+          )
+        })}
+
         {/* mangueras (por debajo de las fichas) */}
         {mangueras.map((m) => {
           const pa = porId.get(m.a.componente)
           const pb = porId.get(m.b.componente)
           if (!pa || !pb) return null
-          const d = enrutarManguera(piezas, pa, m.a, pb, m.b)
+          const trazo = trazados.get(m.id)
+          const d = trazo?.d ?? ''
           const presurizada =
             simulando && motor
               ? (motor.ultimaSolucion?.presion.get(`${m.a.componente}:${m.a.puerto}`) ?? 0) > 0.1
@@ -590,6 +662,16 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
                 className={presurizada ? 'manguera-flujo' : undefined}
                 pointerEvents="none"
               />
+              {(trazo?.empalmes ?? []).map((e, i) => (
+                <circle
+                  key={i}
+                  cx={e.x}
+                  cy={e.y}
+                  r={3.4}
+                  fill={presurizada ? '#1668c7' : simulando ? '#9aa5b1' : '#2a323b'}
+                  pointerEvents="none"
+                />
+              ))}
             </g>
           )
         })}

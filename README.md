@@ -110,6 +110,40 @@ Ni el dibujo ni las órdenes del explicador están escritos a mano: se calculan 
 estado de cada paso con la misma regla que el circuito real (*señal = pisado Y con aire*),
 y hay pruebas que lo verifican, para que la animación no pueda contradecir a la teoría.
 
+## Cómo ordena la aplicación el plano
+
+Al abrir un circuito (o cargar un ejemplo) la aplicación lo redibuja como un plano
+técnico, sin tocar la lógica: sólo mueve las fichas. Los criterios, de arriba abajo
+—que es como se lee la cadena de mando, de la señal al actuador—, son:
+
+1. **Un actuador por columna**, en el orden de la secuencia, bien separados.
+2. **Su válvula de potencia justo debajo**, en el mismo eje. Lo que va en la línea
+   de potencia (un regulador de caudal, un escape rápido) se intercala entre ambos.
+3. **La lógica de señal** («O», «Y», temporizadores) bajo la válvula que pilota.
+4. **Los emisores de señal** —finales de carrera y pulsadores— en una banda común,
+   cada uno bajo la válvula a la que manda, para que su señal suba o baje en vertical.
+5. **Las líneas de grupo**, en un pasillo libre reservado para ellas.
+6. **Las válvulas de cascada**, encadenadas de izquierda a derecha, con el emisor que
+   pilota cada lado (14 a la izquierda, 12 a la derecha) pegado a ella.
+7. **La línea de presión** y, al pie, el compresor con su FRL.
+
+Entre columnas queda siempre un canal libre por el que las mangueras bajan sin
+atravesar ningún símbolo, y todo el trazado es ortogonal.
+
+### Las líneas de grupo se dibujan como barras
+
+La salida de una válvula de cascada alimenta a media instalación. Dibujarla como un
+abanico de mangueras sueltas es ilegible, así que la aplicación la reconoce sola y la
+dibuja como en el plano de clase: una **barra horizontal rotulada** (`G1`, `G2`, `G3`…,
+y `P` para la de presión) de la que cuelgan en vertical sus ramales, con un nudo en
+cada empalme. Los grupos se numeran siguiendo la cadena de cascada y se apilan en
+orden, G1 arriba. La barra se pone azul cuando esa línea tiene aire, así que de un
+vistazo se ve **qué grupo manda en cada instante**.
+
+Hay pruebas que lo verifican sobre todos los circuitos de la aplicación: que ninguna
+ficha se pise, que ninguna manguera pase por encima de un símbolo, que no haya
+diagonales y que las barras queden en pasillos libres y en el orden correcto.
+
 ## Biblioteca de componentes
 
 - **Fuente:** compresor + unidad de mantenimiento FRL, presión regulable 2–8 bar con manómetro.
@@ -173,7 +207,7 @@ npm run dev        # http://localhost:5173
 ```
 
 ```bash
-npm test           # 119 pruebas: motor, análisis, entregas y utilidades
+npm test           # 184 pruebas: motor, análisis, entregas, plano y utilidades
 npm run typecheck  # comprobación de tipos
 npm run build      # compila a /dist
 ```
