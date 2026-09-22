@@ -6,10 +6,14 @@
  *  - Simular: el motor corre a 30 Hz; se accionan las válvulas y se ve el aire
  *    circular, las correderas conmutar y los vástagos moverse.
  */
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { DT_POR_DEFECTO, Motor, validarCircuito } from './engine'
 import Paleta from './components/Paleta'
 import Pizarra, { type Vista } from './components/Pizarra'
+
+// El banco 3D arrastra three.js: se carga sólo cuando alguien lo abre.
+const Banco3D = lazy(() => import('./vista3d/Banco3D'))
+type VistaApp = Vista | 'banco3d'
 import Propiedades from './components/Propiedades'
 import VistaCorte from './components/VistaCorte'
 import DiagramaEspacioFase from './components/DiagramaEspacioFase'
@@ -77,7 +81,7 @@ export default function App() {
   const [motor, setMotor] = useState<Motor | null>(null)
   const [, setFotograma] = useState(0)
   const [aviso, setAviso] = useState<string | null>(null)
-  const [vista, setVista] = useState<Vista>('esquema')
+  const [vista, setVista] = useState<VistaApp>('esquema')
   const [paralela, setParalela] = useState(false)
   const estrecha = useEsEstrecha()
   const inputArchivo = useRef<HTMLInputElement>(null)
@@ -429,7 +433,19 @@ export default function App() {
           >
             <div style={{ maxWidth: '100%' }}>
               {paralela && <p style={rotuloVista}>Esquema · simbología ISO 1219-1</p>}
-              <Pizarra motor={motor} vista={paralela ? 'esquema' : vista} />
+              {!paralela && vista === 'banco3d' ? (
+                <>
+                  <Suspense fallback={<p style={{ padding: 20, color: '#5a6b7d' }}>Montando el banco…</p>}>
+                    <Banco3D motor={motor} />
+                  </Suspense>
+                  {/* La pizarra sigue montada, oculta, para poder exportar el circuito. */}
+                  <div style={{ display: 'none' }}>
+                    <Pizarra motor={motor} vista="esquema" />
+                  </div>
+                </>
+              ) : (
+                <Pizarra motor={motor} vista={paralela || vista === 'banco3d' ? 'esquema' : vista} />
+              )}
             </div>
             {paralela && (
               <div style={{ maxWidth: '100%' }}>
@@ -449,7 +465,8 @@ export default function App() {
               [
                 ['esquema', 'Esquema'],
                 ['taller', 'Taller'],
-              ] as Array<[Vista, string]>
+                ['banco3d', 'Banco 3D'],
+              ] as Array<[VistaApp, string]>
             ).map(([v, etiqueta]) => (
               <button
                 key={v}

@@ -114,6 +114,25 @@ Ni el dibujo ni las órdenes del explicador están escritos a mano: se calculan 
 estado de cada paso con la misma regla que el circuito real (*señal = pisado Y con aire*),
 y hay pruebas que lo verifican, para que la animación no pueda contradecir a la teoría.
 
+## Banco 3D: el experimento montado
+
+La vista **Banco 3D** monta el circuito en una placa perfilada de laboratorio, con luz,
+sombras y materiales físicos (aluminio anodizado, cromo, racores de latón, tubo de
+poliuretano), y la mueve el mismo motor que la pizarra: al simular, los vástagos
+salen, la leva del vástago pisa el rodillo, la brida del actuador giratorio gira y el
+manómetro del FRL marca la presión. Con **Ver el aire**, las mangueras que tienen
+presión se aclaran, así se sigue el recorrido de la señal por el banco.
+
+- Las piezas se colocan siguiendo el plano ordenado, salvo **los finales de carrera,
+  que se montan donde trabajan**: sobre el vástago de su cilindro, en el punto de la
+  carrera que vigilan.
+- Se gira arrastrando, se acerca con la rueda (hacia donde apunta el ratón) y tiene
+  pantalla completa.
+- Los pulsadores se accionan manteniendo pulsado su botón del panel **Mandos** o
+  directamente sobre la pieza.
+- No descarga nada: los modelos se generan en el navegador, y three.js sólo se carga
+  cuando alguien abre esta vista.
+
 ## Cómo ordena la aplicación el plano
 
 Al abrir un circuito (o cargar un ejemplo) la aplicación lo redibuja como un plano
@@ -242,7 +261,7 @@ npm run dev        # http://localhost:5173
 ```
 
 ```bash
-npm test           # 194 pruebas: motor, análisis, entregas, plano, símbolos y utilidades
+npm test           # 199 pruebas: motor, análisis, entregas, plano, símbolos, banco 3D y utilidades
 npm run typecheck  # comprobación de tipos
 npm run build      # compila a /dist
 ```
