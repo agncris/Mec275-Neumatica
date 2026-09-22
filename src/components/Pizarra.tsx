@@ -316,6 +316,31 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
     else iniciarCable(ref)
   }
 
+  // --- pantalla completa ---------------------------------------------------
+  // Útil para proyectar el circuito en clase y para trabajar un plano grande
+  // sin la distracción del resto de la página.
+  const [pantallaCompleta, setPantallaCompleta] = useState(false)
+  const hayPantallaCompleta =
+    typeof document !== 'undefined' && !!document.fullscreenEnabled
+
+  useEffect(() => {
+    const alCambiar = () => {
+      const activa = document.fullscreenElement === contenedorRef.current
+      setPantallaCompleta(activa)
+      // El contenedor ha cambiado de tamaño: se reencuadra el circuito.
+      requestAnimationFrame(() => requestAnimationFrame(() => ajustarRef.current?.()))
+    }
+    document.addEventListener('fullscreenchange', alCambiar)
+    return () => document.removeEventListener('fullscreenchange', alCambiar)
+  }, [])
+
+  const alternarPantallaCompleta = () => {
+    const cont = contenedorRef.current
+    if (!cont) return
+    if (document.fullscreenElement === cont) void document.exitFullscreen()
+    else void cont.requestFullscreen?.().catch(() => setPantallaCompleta(false))
+  }
+
   // --- pan / zoom ----------------------------------------------------------
   const escDe = (v: VistaVentana, cw: number) => cw / v.w
 
@@ -488,6 +513,10 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
     escalaRef.current = esc
   }
 
+  // El listener de pantalla completa necesita la versión vigente de `ajustar`.
+  const ajustarRef = useRef<() => void>()
+  ajustarRef.current = ajustar
+
   const escPorcentaje = () => {
     const cont = contenedorRef.current
     const cw = cont?.clientWidth || 1
@@ -509,9 +538,9 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
       style={{
         position: 'relative',
         width: '100%',
-        height: 520,
+        height: pantallaCompleta ? '100%' : 520,
         overflow: 'hidden',
-        borderRadius: 10,
+        borderRadius: pantallaCompleta ? 0 : 10,
         border: `6px solid ${simulando ? '#12a35a' : '#b9bec5'}`,
         background: '#f7f5ef',
         touchAction: 'none',
@@ -552,6 +581,20 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
         <button onClick={ajustar} title="Ajustar todo el circuito a la pantalla" style={btnNav}>
           Ajustar
         </button>
+        {hayPantallaCompleta && (
+          <button
+            onClick={alternarPantallaCompleta}
+            title={
+              pantallaCompleta
+                ? 'Salir de pantalla completa (Esc)'
+                : 'Ver la pizarra a pantalla completa'
+            }
+            aria-pressed={pantallaCompleta}
+            style={btnNav}
+          >
+            {pantallaCompleta ? '⤡ Salir' : '⤢ Pantalla completa'}
+          </button>
+        )}
       </div>
 
       <svg

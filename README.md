@@ -25,7 +25,11 @@ banco de prácticas. Todo el contenido y la interfaz están en español.
    - la **vista en corte**, que amplía el interior de la pieza que elijas,
    - el **diagrama de fase**, por **pasos** (desplazamiento-paso, como en la guía) o por
      tiempo, con la secuencia A+ / A− de cada actuador.
-6. **Guarda o comparte.** *Guardar* descarga un `.json`, *Abrir* lo recupera y
+6. **Amplía si hace falta.** El botón **Pantalla completa** de la pizarra la abre a
+   toda la pantalla, con sus mismos controles de zoom; se sale con el mismo botón o
+   con `Esc`. Va bien para proyectar el circuito en clase y para trabajar un plano
+   grande sin el resto de la página alrededor.
+7. **Guarda o comparte.** *Guardar* descarga un `.json`, *Abrir* lo recupera y
    *Compartir* copia un enlace con el circuito dentro (no necesita servidor ni cuenta).
    Además la pizarra se conserva sola en el navegador entre sesiones.
 

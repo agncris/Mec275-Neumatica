@@ -485,7 +485,7 @@ export default function App() {
             </button>
             <span style={{ width: 10 }} />
             <span style={{ fontSize: '0.8rem', color: '#5a6b7d' }}>
-              Rueda para zoom · arrastra el fondo para moverte · los botones del panel ajustan la vista
+              Rueda para zoom · arrastra el fondo para moverte · los botones del panel ajustan la vista y la abren a pantalla completa
             </span>
           </div>
           <p style={{ margin: '6px 2px', fontSize: '0.82rem', color: '#5a6b7d' }}>
