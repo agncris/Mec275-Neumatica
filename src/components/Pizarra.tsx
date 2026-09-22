@@ -131,16 +131,33 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
   } | null>(null)
   const panRef = useRef<{ x: number; y: number; px: number; py: number } | null>(null)
   const escalaRef = useRef(1)
+  /** Ficha que se está arrastrando ahora mismo (para no reenrutar todo el plano). */
+  const [arrastrando, setArrastrando] = useState<string | null>(null)
+  /** Último movimiento pendiente de aplicar, para no hacer más de uno por fotograma. */
+  const pendienteRef = useRef<Punto | null>(null)
+  const fotogramaRef = useRef<number | null>(null)
 
-  const porId = new Map(piezas.map((p) => [p.id, p]))
+  const porId = useMemo(() => new Map(piezas.map((p) => [p.id, p])), [piezas])
 
   // Líneas de grupo: las salidas de la cascada y la del compresor se dibujan
   // como barras horizontales, y de ellas cuelgan en vertical sus ramales.
   const { carriles, porManguera } = useMemo(() => planificarCarriles(piezas, mangueras), [piezas, mangueras])
+  // Enrutar es caro (una búsqueda de camino por manguera), así que mientras se
+  // arrastra una ficha sólo se recalculan las mangueras que salen de ella: las
+  // demás conservan su trazado hasta que se suelta, y ahí se recalcula todo.
+  const cacheTrazados = useRef(new Map<string, { d: string; empalmes: Array<{ x: number; y: number }> }>())
   const trazados = useMemo(() => {
     const mapa = new Map<string, { d: string; empalmes: Array<{ x: number; y: number }> }>()
+    const previo = cacheTrazados.current
     const por = new Map(piezas.map((p) => [p.id, p]))
     for (const m of mangueras) {
+      if (arrastrando && m.a.componente !== arrastrando && m.b.componente !== arrastrando) {
+        const guardado = previo.get(m.id)
+        if (guardado) {
+          mapa.set(m.id, guardado)
+          continue
+        }
+      }
       const pa = por.get(m.a.componente)
       const pb = por.get(m.b.componente)
       if (!pa || !pb) continue
@@ -154,8 +171,9 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
       }
       mapa.set(m.id, { d: enrutarManguera(piezas, pa, m.a, pb, m.b), empalmes: [] })
     }
+    cacheTrazados.current = mapa
     return mapa
-  }, [piezas, mangueras, porManguera])
+  }, [piezas, mangueras, porManguera, arrastrando])
 
   /** Extremos de cada barra: se dibuja como una línea continua y se rotula.
    *  Todos los rótulos se alinean en la misma columna, como en los planos. */
@@ -392,9 +410,23 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
     }
   }
 
+  /**
+   * El puntero dispara muchos más eventos de los que la pantalla puede pintar.
+   * Se guarda el último y se aplica uno por fotograma: así arrastrar no se
+   * atasca acumulando trabajo que ya está obsoleto.
+   */
   const onPointerMove = (e: React.PointerEvent) => {
     if (soloLectura) return
-    const pos = coordsSvg(e)
+    pendienteRef.current = coordsSvg(e)
+    if (fotogramaRef.current !== null) return
+    fotogramaRef.current = requestAnimationFrame(() => {
+      fotogramaRef.current = null
+      const pos = pendienteRef.current
+      if (pos) aplicarMovimiento(pos)
+    })
+  }
+
+  const aplicarMovimiento = (pos: Punto) => {
     if (origenCable) setCursor(pos)
     const arrastre = arrastreRef.current
     const pan = panRef.current
@@ -436,6 +468,8 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
     if (arrastre) {
       if (!arrastre.movido) seleccionar({ clase: 'pieza', id: arrastre.id })
       arrastreRef.current = null
+      // Al soltar se reenruta el plano entero, ya sin prisa.
+      setArrastrando(null)
       return
     }
     if (e.target === svgRef.current && !iman) {
@@ -443,6 +477,20 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
       cancelarCable()
     }
   }
+
+  /** Si el sistema cancela el puntero (gesto del navegador, pérdida de foco). */
+  const onPointerCancel = () => {
+    arrastreRef.current = null
+    panRef.current = null
+    setArrastrando(null)
+  }
+
+  useEffect(
+    () => () => {
+      if (fotogramaRef.current !== null) cancelAnimationFrame(fotogramaRef.current)
+    },
+    [],
+  )
 
   const onClickPuerto = (e: React.PointerEvent, ref: RefPuerto) => {
     if (soloLectura) return
@@ -479,6 +527,7 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
     }
     const pos = coordsSvg(e)
     arrastreRef.current = { id: pieza.id, dx: pos.x - pieza.x, dy: pos.y - pieza.y, movido: false }
+    setArrastrando(pieza.id)
     ;(e.target as Element).setPointerCapture?.(e.pointerId)
   }
 
@@ -609,6 +658,7 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
         onPointerDown={onPointerDownFondo}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
+        onPointerCancel={onPointerCancel}
       >
         <defs>
           <pattern id="rejilla" width={40} height={40} patternUnits="userSpaceOnUse">
