@@ -280,13 +280,6 @@ export default function UnidadPLC() {
       </header>
 
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
-        <button
-          onClick={() => setCorriendo((c) => !c)}
-          title="Atajo: barra espaciadora"
-          style={{ ...boton, background: corriendo ? '#33475c' : '#12a35a', padding: '0.55rem 1.3rem', fontSize: '0.98rem' }}
-        >
-          {corriendo ? '■ STOP' : '▶ RUN'}
-        </button>
         <button onClick={nuevo} style={{ ...boton, background: '#fff', color: '#1668c7', border: '2px solid #1668c7', padding: '0.5rem 1.1rem' }}>
           ＋ Nuevo programa
         </button>
@@ -374,10 +367,21 @@ export default function UnidadPLC() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 520px), 1fr))', gap: 14, alignItems: 'start' }}>
         <section style={{ ...tarjeta, marginTop: 0 }}>
-          <h2 style={subtitulo}>
-            Programa Ladder{programa.nombre ? ` · ${programa.nombre}` : ''}
-            <span style={{ ...estadoPLC, background: corriendo ? '#12a35a' : '#ffa726' }}>{corriendo ? 'RUN' : 'STOP'}</span>
-          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: '0.6rem' }}>
+            {/* RUN / STOP junto al programa: se prueba sin salir del diagrama. */}
+            <button
+              onClick={() => setCorriendo((c) => !c)}
+              title="Atajo: barra espaciadora"
+              aria-pressed={corriendo}
+              style={{ ...boton, background: corriendo ? '#33475c' : '#12a35a', padding: '0.5rem 1.2rem', fontSize: '0.98rem' }}
+            >
+              {corriendo ? '■ STOP' : '▶ RUN'}
+            </button>
+            <h2 style={{ ...subtitulo, margin: 0 }}>
+              Programa Ladder{programa.nombre ? ` · ${programa.nombre}` : ''}
+              <span style={{ ...estadoPLC, background: corriendo ? '#12a35a' : '#ffa726' }}>{corriendo ? 'RUN' : 'STOP'}</span>
+            </h2>
+          </div>
           {corriendo && (
             <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: '#5a6b7d' }}>
               El PLC está ejecutando el programa. Pásalo a STOP para editarlo.
