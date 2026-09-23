@@ -1,12 +1,12 @@
 /**
- * Los seis circuitos de ejemplo que trae la aplicación. Viven aquí (y no
+ * Los siete circuitos de ejemplo que trae la aplicación. Viven aquí (y no
  * dentro del store) para que el auto-orden del plano pueda medirse sobre
  * todos ellos en las pruebas.
  */
 import type { Manguera } from '../engine'
 import type { Pieza } from '../store'
 
-export type NumeroEjemplo = 1 | 2 | 3 | 4 | 5 | 6
+export type NumeroEjemplo = 1 | 2 | 3 | 4 | 5 | 6 | 7
 
 export interface CircuitoEjemplo {
   piezas: Pieza[]
@@ -121,6 +121,59 @@ export const EJEMPLOS: Record<NumeroEjemplo, CircuitoEjemplo> = {
       { id: 'm5', a: { componente: 'F1', puerto: '1' }, b: { componente: 'V2', puerto: '1' } },
       { id: 'm6', a: { componente: 'V2', puerto: '4' }, b: { componente: 'C2', puerto: 'A' } },
       { id: 'm7', a: { componente: 'V2', puerto: '2' }, b: { componente: 'C2', puerto: 'B' } },
+    ],
+  },
+  // Cascada de tres grupos (control de neumática): A+ B+ | B− A− C+ | C−.
+  // Tres cilindros (C es un actuador giratorio), tres líneas de grupo y los
+  // finales de carrera que pilotan las válvulas de potencia y de cascada.
+  7: {
+    piezas: [
+      { id: 'CA', tipo: 'cilindroDobleEfecto', x: 90, y: 20, params: {} },
+      { id: 'CB', tipo: 'cilindroDobleEfecto', x: 470, y: 20, params: {} },
+      { id: 'CC', tipo: 'actuadorGiratorio', x: 850, y: 20, params: { angulo: 180 } },
+      { id: 'VA', tipo: 'valvula52', x: 110, y: 160, params: { modo: 'biestable' } },
+      { id: 'VB', tipo: 'valvula52', x: 490, y: 160, params: { modo: 'biestable' } },
+      { id: 'VC', tipo: 'valvula52', x: 870, y: 160, params: { modo: 'biestable' } },
+      { id: 'b0', tipo: 'finalCarrera', x: 270, y: 300, params: { reposo: 'NC', cilindro: 'CB', puntoDisparo: 0 } },
+      { id: 'a1', tipo: 'finalCarrera', x: 400, y: 300, params: { reposo: 'NC', cilindro: 'CA', puntoDisparo: 1 } },
+      { id: 'a0', tipo: 'finalCarrera', x: 760, y: 300, params: { reposo: 'NC', cilindro: 'CA', puntoDisparo: 0 } },
+      { id: 'b1', tipo: 'finalCarrera', x: 900, y: 620, params: { reposo: 'NC', cilindro: 'CB', puntoDisparo: 1 } },
+      { id: 'c1', tipo: 'finalCarrera', x: 820, y: 760, params: { reposo: 'NC', cilindro: 'CC', puntoDisparo: 1 } },
+      { id: 'c0', tipo: 'finalCarrera', x: 140, y: 800, params: { reposo: 'NC', cilindro: 'CC', puntoDisparo: 0 } },
+      { id: 'M', tipo: 'valvula32', x: 220, y: 920, params: { reposo: 'NC', accionamiento: 'pulsador' } },
+      { id: 'K1', tipo: 'valvula52', x: 430, y: 520, params: { modo: 'biestable' } },
+      { id: 'K2', tipo: 'valvula52', x: 600, y: 660, params: { modo: 'biestable' } },
+      { id: 'F1', tipo: 'fuente', x: 520, y: 960, params: { presion: 6, encendida: true } },
+    ],
+    mangueras: [
+      { id: 'm1', a: { componente: 'F1', puerto: '1' }, b: { componente: 'VA', puerto: '1' } },
+      { id: 'm2', a: { componente: 'F1', puerto: '1' }, b: { componente: 'VB', puerto: '1' } },
+      { id: 'm3', a: { componente: 'F1', puerto: '1' }, b: { componente: 'VC', puerto: '1' } },
+      { id: 'm4', a: { componente: 'F1', puerto: '1' }, b: { componente: 'K2', puerto: '1' } },
+      { id: 'm5', a: { componente: 'VA', puerto: '4' }, b: { componente: 'CA', puerto: 'A' } },
+      { id: 'm6', a: { componente: 'VA', puerto: '2' }, b: { componente: 'CA', puerto: 'B' } },
+      { id: 'm7', a: { componente: 'VB', puerto: '4' }, b: { componente: 'CB', puerto: 'A' } },
+      { id: 'm8', a: { componente: 'VB', puerto: '2' }, b: { componente: 'CB', puerto: 'B' } },
+      { id: 'm9', a: { componente: 'VC', puerto: '4' }, b: { componente: 'CC', puerto: 'A' } },
+      { id: 'm10', a: { componente: 'VC', puerto: '2' }, b: { componente: 'CC', puerto: 'B' } },
+      { id: 'm11', a: { componente: 'K2', puerto: '4' }, b: { componente: 'K1', puerto: '1' } },
+      { id: 'm12', a: { componente: 'K1', puerto: '4' }, b: { componente: 'VA', puerto: '14' } },
+      { id: 'm13', a: { componente: 'K1', puerto: '4' }, b: { componente: 'a1', puerto: '1' } },
+      { id: 'm14', a: { componente: 'K1', puerto: '4' }, b: { componente: 'b1', puerto: '1' } },
+      { id: 'm15', a: { componente: 'K1', puerto: '2' }, b: { componente: 'VB', puerto: '12' } },
+      { id: 'm16', a: { componente: 'K1', puerto: '2' }, b: { componente: 'b0', puerto: '1' } },
+      { id: 'm17', a: { componente: 'K1', puerto: '2' }, b: { componente: 'a0', puerto: '1' } },
+      { id: 'm18', a: { componente: 'K1', puerto: '2' }, b: { componente: 'c1', puerto: '1' } },
+      { id: 'm19', a: { componente: 'K2', puerto: '2' }, b: { componente: 'VC', puerto: '12' } },
+      { id: 'm20', a: { componente: 'K2', puerto: '2' }, b: { componente: 'K1', puerto: '14' } },
+      { id: 'm21', a: { componente: 'K2', puerto: '2' }, b: { componente: 'M', puerto: '1' } },
+      { id: 'm22', a: { componente: 'a1', puerto: '2' }, b: { componente: 'VB', puerto: '14' } },
+      { id: 'm23', a: { componente: 'b1', puerto: '2' }, b: { componente: 'K1', puerto: '12' } },
+      { id: 'm24', a: { componente: 'b0', puerto: '2' }, b: { componente: 'VA', puerto: '12' } },
+      { id: 'm25', a: { componente: 'a0', puerto: '2' }, b: { componente: 'VC', puerto: '14' } },
+      { id: 'm26', a: { componente: 'c1', puerto: '2' }, b: { componente: 'K2', puerto: '12' } },
+      { id: 'm27', a: { componente: 'M', puerto: '2' }, b: { componente: 'c0', puerto: '1' } },
+      { id: 'm28', a: { componente: 'c0', puerto: '2' }, b: { componente: 'K2', puerto: '14' } },
     ],
   },
 }

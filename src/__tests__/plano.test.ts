@@ -29,7 +29,7 @@ interface Caso {
 }
 
 const CASOS: Caso[] = [
-  ...([1, 2, 3, 4, 5, 6] as NumeroEjemplo[]).map((n) => ({
+  ...([1, 2, 3, 4, 5, 6, 7] as NumeroEjemplo[]).map((n) => ({
     nombre: `ejemplo ${n}`,
     piezas: EJEMPLOS[n].piezas,
     mangueras: EJEMPLOS[n].mangueras,

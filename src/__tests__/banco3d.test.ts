@@ -42,7 +42,7 @@ describe('modelos 3D del banco', () => {
 
   it('las mangueras de todos los circuitos de la aplicación encuentran sus dos racores', () => {
     const circuitos = [
-      ...([1, 2, 3, 4, 5, 6] as NumeroEjemplo[]).map((n) => EJEMPLOS[n]),
+      ...([1, 2, 3, 4, 5, 6, 7] as NumeroEjemplo[]).map((n) => EJEMPLOS[n]),
       CIRCUITO_BLOQUEADO,
       CIRCUITO_CASCADA,
     ]

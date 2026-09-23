@@ -98,6 +98,7 @@ Bajo el banco hay secciones plegables con el material de apoyo:
 | 4 | Ciclo automático ida-vuelta | Finales de carrera de rodillo |
 | 5 | Mando bimanual | Válvula de simultaneidad «Y», seguridad |
 | 6 | Encadenar dos cilindros | Final de carrera que pilota otra válvula |
+| 7 | Cascada de 3 grupos (control): A+ B+ \| B− A− C+ \| C− | Método cascada con tres líneas de grupo, actuador giratorio y marcha M |
 
 ## Sección «Método cascada»
 
@@ -351,7 +352,7 @@ npm run dev        # http://localhost:5173
 ```
 
 ```bash
-npm test           # 226 pruebas: motor, análisis, entregas, plano, símbolos, banco 3D, PLC y utilidades
+npm test           # 232 pruebas: motor, análisis, entregas, plano, símbolos, banco 3D, PLC y utilidades
 npm run typecheck  # comprobación de tipos
 npm run build      # compila a /dist
 ```
