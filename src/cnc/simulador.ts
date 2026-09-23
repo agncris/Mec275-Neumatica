@@ -102,6 +102,7 @@ export class SimuladorCNC {
   cortando = 0
   private consejosDados = new Set<string>()
   private cosAxial = 1
+  private saliendo = false
   private lineaBloque: number | null = null
 
   constructor(
@@ -197,6 +198,21 @@ export class SimuladorCNC {
     this.cortando = 0
   }
 
+  /**
+   * Deja la máquina al comienzo del paso `objetivo` (para volver un bloque
+   * atrás se simula de nuevo desde el inicio hasta ahí).
+   */
+  irAPaso(objetivo: number): void {
+    let guarda = 0
+    while (this.indice < objetivo && !this.alarma && guarda++ < 100000) {
+      if (this.parado) this.parado = false
+      const p = this.programa.pasos[this.indice]
+      this.avanzar(Math.max(1e-9, p.duracion - this.t))
+    }
+    this.parado = false
+    this.cortando = 0
+  }
+
   /** Recorre el paso p entre las fracciones f0 y f1 de su largo. */
   private recorrer(p: Paso, f0: number, f1: number): boolean {
     const objetivo0 = f0 * p.largo
@@ -215,6 +231,9 @@ export class SimuladorCNC {
         const dr = (b.x - a.x) / 2
         const dzs = b.z - a.z
         this.cosAxial = Math.abs(dzs) / Math.max(1e-9, Math.hypot(dr, dzs))
+        // Alejarse del eje sin moverse en Z no puede cortar nada nuevo (la
+        // herramienta sale por donde entró; en una rosca, por el surco).
+        this.saliendo = Math.abs(dzs) < 1e-9 && dr > 0
         const n = Math.max(1, Math.ceil((s1 - s0) / paso))
         for (let k = 1; k <= n; k++) {
           const s = s0 + ((s1 - s0) * k) / n
@@ -263,6 +282,7 @@ export class SimuladorCNC {
     } else if (q.z < pz.z0 + 0.5 && Math.abs(rTip) < R + 45) {
       return this.detener(p, 'Choque: la broca llega al plato.')
     }
+    if (this.saliendo && h.forma !== 'broca') return true
     let arrancado = 0
     let profundidad = 0
     if (h.forma === 'broca') {
@@ -288,8 +308,17 @@ export class SimuladorCNC {
     } else {
       const i0 = Math.max(0, pz.indice(q.z + dz0))
       const i1 = Math.min(pz.n - 1, pz.indice(q.z + dz1))
+      // Roscando, el filo en V pasa una vez por vuelta: deja un surco cada
+      // «paso» mm (se dibuja como anillos, la hélice no se ve en este modelo).
+      const rosca = p.paso && h.forma === 'roscado' ? { paso: p.paso, z0: p.puntos[0].z } : null
       for (let i = i0; i <= i1; i++) {
-        const e = envolventeTorno(h, pz.zDe(i) - q.z)
+        let e: number | null
+        if (rosca) {
+          let f = (pz.zDe(i) - rosca.z0) % rosca.paso
+          if (f < 0) f += rosca.paso
+          if (f > rosca.paso / 2) f -= rosca.paso
+          e = envolventeTorno(h, f)
+        } else e = envolventeTorno(h, pz.zDe(i) - q.z)
         if (e === null) continue
         const r = Math.max(0, rTip + e)
         if (r < pz.ext[i] - 1e-4) {
@@ -312,7 +341,7 @@ export class SimuladorCNC {
       }
       pz.version++
       this.cortando += arrancado
-      if (profundidad > 2.5 + 0.05 && h.forma !== 'ranurado' && h.forma !== 'broca') {
+      if (profundidad > 2.5 + 0.05 && h.forma !== 'ranurado' && h.forma !== 'broca' && h.forma !== 'roscado') {
         this.consejo(p.linea, `prof-${p.linea}`, `Pasada de ${(profundidad * 2).toFixed(1)} mm en diámetro: no conviene quitar más de 5 mm por pasada.`)
       }
       this.revisarTronzado(pz)

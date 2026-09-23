@@ -275,16 +275,24 @@ perfilado 35°, ranurado, tronzado 4 mm, roscado, brocas) y el almacén de la fr
 `F`, `S`, `T`, `M` y comentarios `( … )` o `;`. Movimientos G00/G01/G02/G03, G04, G17–G19,
 G20/G21 (y G70/G71 como en el apunte), G28, G33 (roscado), G90/G91, G94/G95, G96/G97,
 ciclos G81/G83 con G98/G99 y G80; M00–M09 y M30. En el torno `T0101` elige la herramienta;
-en la fresadora `T1 M06`. Las instrucciones `$…` de CNC Simulator Pro se aceptan
-(`$Millimeter`/`$Inch` fijan las unidades; el resto se ignora).
+en la fresadora `T1 M06`.
+
+**Compatibilidad con CNC Simulator Pro.** Los programas escritos para ese simulador se
+abren tal cual: `$Millimeter`/`$Inch` fijan las unidades y `$AddRegPart n` pone en el
+plato el bruto de la preparación; con `$AddRegPart` el cero del torno pasa a la cara de
+las garras, como allá (bruto de 100 mm con 23 mm en las garras → cara en Z77), y también
+se puede elegir a mano («Cero del programa»). `G92 X… Z…` mueve el cero, `ET n` llama
+una herramienta como `T n`, `T… M6` la monta, `G81`/`G83` taladran en el eje del torno
+(como `G81 Z60 R78` del tutorial, con la broca T17) y `G76` rosca en dos bloques
+(`P` repasos/ángulo, `Q` en micrones). El resto de las instrucciones `$` se ignora.
 
 **Editor y revisión.** Editor con colores y números de línea; mientras se escribe se
 revisa el programa y los errores salen en rojo con su línea y una explicación (arco
 que no cierra, falta el avance F, eje que la máquina no tiene…). Poniendo el cursor en
 una línea, **Explicar el bloque** dice qué hace cada palabra según el modo vigente.
 
-**Simulación.** ▶ Ciclo, ⏭ Bloque a bloque, ⟲ Reiniciar, ⏩ Al final y velocidad de
-×0,5 a ×60. El material se arranca según la forma de cada herramienta (una herramienta
+**Simulación.** ▶ Ciclo, ⏭ Bloque a bloque, ⏮ Bloque anterior, ⟲ Reiniciar, ⏩ Al final
+y velocidad de ×0,5 a ×60; en el torno, vista en corte. El material se arranca según la forma de cada herramienta (una herramienta
 mal elegida se come los resaltes, como en la máquina). La simulación se detiene con
 **alarma** si se entra al material en rápido, si se corta con el husillo detenido, si
 se choca con las garras, el plato o la mesa, o si la broca se mueve de lado; los
@@ -300,7 +308,8 @@ en absolutas e incrementales (se copia con un clic); descarga del programa como
 
 **Ejemplos** (comentados línea a línea): refrentado y cilindrado; eje escalonado con
 ranura y tronzado; pomo con arcos G02/G03; buje taladrado; contorno cuadrado (el de la
-guía); círculo y arcos; agujeros en línea con G91; cajera en dos niveles; ciclos
+guía); un programa en formato CNC Simulator Pro (cero en las garras, G81 y rosca G76);
+círculo y arcos; agujeros en línea con G91; cajera en dos niveles; ciclos
 G81/G83; grabado de letras.
 
 **Teoría** (secciones plegables): qué es el CNC, ventajas y aplicaciones, cómo
@@ -441,7 +450,7 @@ npm run dev        # http://localhost:5173
 ```
 
 ```bash
-npm test           # 279 pruebas: motor, análisis, entregas, plano, símbolos, banco 3D, PLC, CNC y utilidades
+npm test           # 287 pruebas: motor, análisis, entregas, plano, símbolos, banco 3D, PLC, CNC y utilidades
 npm run typecheck  # comprobación de tipos
 npm run build      # compila a /dist
 ```

@@ -29,7 +29,12 @@ export interface VistaCNC {
   sim: SimuladorCNC
   trayectoria: boolean
   sonido: boolean
+  /** Torno: pieza cortada por la mitad para ver su interior. */
+  corte?: boolean
 }
+
+/** Plano de la vista en corte: deja la mitad trasera de la pieza (z ≤ 0). */
+const PLANO_CORTE = new THREE.Plane(new THREE.Vector3(0, 0, -1), 0)
 
 type Vista = 'iso' | 'frente' | 'arriba'
 
@@ -238,7 +243,7 @@ interface EscenaMaquina {
   raiz: THREE.Group
   caja: THREE.Box3
   punta: () => THREE.Vector3
-  actualizar: (sim: SimuladorCNC, dt: number, trayectoria: boolean) => void
+  actualizar: (sim: SimuladorCNC, dt: number, trayectoria: boolean, corte?: boolean) => void
 }
 
 /** Líneas de la trayectoria: rápidos en naranja discontinuo, cortes en azul. */
@@ -436,9 +441,14 @@ function escenaTorno(sim: SimuladorCNC): EscenaMaquina {
     raiz,
     caja: caja3,
     punta: () => new THREE.Vector3(sim.pos.z, sim.pos.x / 2, 0),
-    actualizar(s, dt, trayectoria) {
+    actualizar(s, dt, trayectoria, enCorte) {
       tray.visible = trayectoria
       marca.visible = trayectoria
+      const planos = enCorte ? [PLANO_CORTE] : []
+      if (matPieza.clippingPlanes?.length !== planos.length) {
+        matPieza.clippingPlanes = planos
+        matPieza.needsUpdate = true
+      }
       // Geometría de la pieza (a lo más ~12 veces por segundo mientras corta).
       const ahora = performance.now()
       if (pz.version !== versionPieza && (ahora - ultimaGeo > 80 || s.terminado || s.alarma)) {
@@ -704,6 +714,7 @@ export default function Maquina3D({
     renderer.toneMappingExposure = 1.05
     renderer.shadowMap.enabled = true
     renderer.shadowMap.type = THREE.PCFSoftShadowMap
+    renderer.localClippingEnabled = true
     renderer.domElement.style.display = 'block'
     renderer.domElement.dataset.cnc3d = 'si'
     cont.appendChild(renderer.domElement)
@@ -784,7 +795,7 @@ export default function Maquina3D({
         cont.dataset.maquina = maquina
         if (reencuadrar) encuadrar('iso')
       }
-      actual.esc.actualizar(v.sim, dt, v.trayectoria)
+      actual.esc.actualizar(v.sim, dt, v.trayectoria, v.corte)
       const s = v.sim
       const paso = s.terminado ? undefined : s.programa.pasos[s.indice]
       if (v.sonido) sonido.actualizar(paso && paso.husillo !== 'off' && !s.alarma ? paso.rpm : 0, Math.min(1, s.cortando / 3), paso?.tipo === 'rapido' && !s.parado && s.t > 0)

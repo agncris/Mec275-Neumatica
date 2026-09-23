@@ -67,6 +67,7 @@ export const HERRAMIENTAS_TORNO: HerramientaTorno[] = [
   { t: 8, nombre: 'Broca Ø10', forma: 'broca', medida: 10, uso: 'Taladrado centrado: se trabaja en X0 avanzando en Z−.', color: 0x4a5560 },
   { t: 9, nombre: 'Tronzado 4 mm', forma: 'ranurado', medida: 4, uso: 'Ranuras y corte final (tronzado). El punto programado es la esquina derecha de la hoja: con Z−40 la pieza queda de 40 mm.', color: 0x1f6fb2 },
   { t: 10, nombre: 'Broca de centro Ø4', forma: 'broca', medida: 4, uso: 'Punto de centro antes de taladrar.', color: 0x6b4a8a },
+  { t: 17, nombre: 'Broca Ø10 (la del tutorial de CNC Simulator Pro)', forma: 'broca', medida: 10, uso: 'Taladrado en el eje, también con el ciclo G81 (por ejemplo G81 Z60 R78).', color: 0x3d4650 },
 ]
 
 /** Largo del filo que se considera en la envolvente, en mm. */
@@ -167,9 +168,19 @@ export function perfilFresa(h: HerramientaFresa, d: number): number | null {
 // ---------------------------------------------------------------------------
 // Preparación (el «setup» del simulador)
 // ---------------------------------------------------------------------------
+/**
+ * Dónde está el cero del programa en el torno:
+ *  - 'cara': en la cara frontal de la pieza, sobre el eje (como en los planos).
+ *  - 'garras': en la cara de las garras, como CNC Simulator Pro; la cara del
+ *    bruto queda en Z = largo − agarre (con 100 mm y 23 mm de agarre, Z77).
+ *  - 'auto': 'garras' si el programa usa $AddRegPart; si no, 'cara'.
+ */
+export type OrigenTorno = 'auto' | 'cara' | 'garras'
+
 export interface BrutoTorno {
   diametro: number
   largo: number
+  origen?: OrigenTorno
   /** Largo que toman las garras del plato. */
   agarre: number
   /** Material que sobresale delante del cero pieza (para refrentar). */
@@ -194,6 +205,15 @@ export const CONFIG_INICIAL: ConfigCNC = {
   material: 'laton',
   torno: { diametro: 40, largo: 90, agarre: 25, sobremetal: 1 },
   fresa: { largo: 100, ancho: 80, alto: 20 },
+}
+
+/** Cero del programa que corresponde a la preparación y al programa. */
+export function origenPrograma(c: ConfigCNC, codigo: string): { origen: { x: number; y: number; z: number }; modo: 'cara' | 'garras' } {
+  if (c.maquina !== 'torno') return { origen: { x: 0, y: 0, z: 0 }, modo: 'cara' }
+  const pedido = c.torno.origen ?? 'auto'
+  const modo = pedido === 'auto' ? (/\$\s*AddRegPart/i.test(codigo) ? 'garras' : 'cara') : pedido
+  if (modo === 'cara') return { origen: { x: 0, y: 0, z: 0 }, modo }
+  return { origen: { x: 0, y: 0, z: c.torno.sobremetal - c.torno.largo + c.torno.agarre }, modo }
 }
 
 /** Posición de referencia (G28 / cambio de herramienta), en coordenadas pieza. */

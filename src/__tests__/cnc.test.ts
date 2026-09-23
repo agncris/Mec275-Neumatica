@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { EJEMPLOS_CNC } from '../cnc/ejemplos'
 import { analizarLinea, explicarBloque, interpretar } from '../cnc/gcode'
-import { CONFIG_INICIAL, posicionCasa, type ConfigCNC } from '../cnc/maquinas'
+import { CONFIG_INICIAL, origenPrograma, posicionCasa, type ConfigCNC } from '../cnc/maquinas'
 import { PiezaFresa, PiezaTorno, SimuladorCNC } from '../cnc/simulador'
 
 const TORNO: ConfigCNC = { ...CONFIG_INICIAL, maquina: 'torno' }
@@ -9,7 +9,7 @@ const FRESA: ConfigCNC = { ...CONFIG_INICIAL, maquina: 'fresadora' }
 
 function correr(codigo: string, config: ConfigCNC) {
   const casa = posicionCasa(config)
-  const r = interpretar(codigo, config.maquina, casa)
+  const r = interpretar(codigo, config.maquina, casa, { origen: origenPrograma(config, codigo).origen })
   const sim = new SimuladorCNC(r, config, casa)
   sim.terminar()
   return { r, sim }
@@ -20,7 +20,7 @@ const errores = (codigo: string, config = FRESA) =>
 describe('ejemplos de CNC', () => {
   for (const ej of EJEMPLOS_CNC) {
     it(`${ej.titulo} corre sin errores ni alarmas`, () => {
-      const config: ConfigCNC = { ...CONFIG_INICIAL, ...ej.config, maquina: ej.maquina }
+      const config: ConfigCNC = { ...CONFIG_INICIAL, ...ej.config, torno: { ...CONFIG_INICIAL.torno, ...ej.config.torno }, maquina: ej.maquina }
       const { r, sim } = correr(ej.codigo, config)
       expect(r.diagnosticos.filter((d) => d.nivel !== 'info')).toEqual([])
       expect(sim.alarma).toBeNull()
@@ -202,5 +202,65 @@ describe('simulación de mecanizado', () => {
     while (res === 'sigue' && n++ < 1000) res = sim.avanzar(0.01, true)
     expect(res).toBe('fin-bloque')
     expect(sim.pos.x).toBe(20)
+  })
+})
+
+describe('compatibilidad con CNC Simulator Pro', () => {
+  const SIM: ConfigCNC = { ...CONFIG_INICIAL, maquina: 'torno', torno: { diametro: 50, largo: 100, agarre: 23, sobremetal: 0, origen: 'auto' } }
+  it('con $AddRegPart el cero queda en la cara de las garras (cara del bruto en Z77)', () => {
+    const cod = '$Millimeter\n$AddRegPart 1\nG21\nT1 M6\nM04 S1000\nG00 X40 Z80\nG01 Z50 F250\nG00 X52\nM30'
+    expect(origenPrograma(SIM, cod).modo).toBe('garras')
+    const { r, sim } = correr(cod, SIM)
+    expect(r.addRegPart).toBe(1)
+    expect(sim.alarma).toBeNull()
+    const pz = sim.pieza as PiezaTorno
+    // Z60 del programa = 17 mm desde la cara (Z77): cilindrado a Ø40 hasta Z50.
+    expect(pz.ext[pz.indice(60 - 77)] * 2).toBeCloseTo(40, 1)
+    expect(pz.ext[pz.indice(45 - 77)] * 2).toBeCloseTo(50, 1)
+    expect(r.puntos[1].prog).toMatchObject({ x: 40, z: 50 })
+  })
+  it('sin $AddRegPart el cero está en la cara, salvo que se pida', () => {
+    expect(origenPrograma(SIM, 'G21\nG00 X10').modo).toBe('cara')
+    expect(origenPrograma({ ...SIM, torno: { ...SIM.torno, origen: 'garras' } }, 'G21').modo).toBe('garras')
+  })
+  it('G92 mueve el cero: la posición actual toma las coordenadas indicadas', () => {
+    const casa = posicionCasa(TORNO)
+    const r = interpretar('G21\nG00 X40 Z10\nG92 X40 Z0\nG00 Z-5\nM30', 'torno', casa)
+    expect(r.puntos[1].pos.z).toBeCloseTo(5)
+    expect(r.puntos[1].prog.z).toBeCloseTo(-5)
+  })
+  it('ET llama la herramienta integrada', () => {
+    const r = interpretar('G21\nET2 M6', 'torno', posicionCasa(TORNO))
+    expect(r.pasos.find((p) => p.tipo === 'herramienta')!.herramienta).toBe(2)
+    expect(r.diagnosticos.filter((d) => d.nivel === 'error')).toEqual([])
+  })
+  it('G81 en el torno taladra en el eje', () => {
+    const { sim } = correr('G21\nT17 M6\nM04 S1200\nG00 X0 Z5\nG81 Z-15 R2 F60\nG80\nG28\nM30', TORNO)
+    expect(sim.alarma).toBeNull()
+    const pz = sim.pieza as PiezaTorno
+    expect(pz.int[pz.indice(-8)] * 2).toBeCloseTo(10, 1)
+    expect(pz.int[pz.indice(-20)]).toBe(0)
+  })
+  it('G76 rosca en varias pasadas y deja los filetes', () => {
+    const { r, sim } = correr('G21\nT6 M6\nM04 S800\nG00 X42 Z5\nG76 P010060 Q50 R0\nG76 X37.54 Z-20 P1230 Q400 F2\nG28\nM30', TORNO)
+    expect(sim.alarma).toBeNull()
+    expect(r.pasos.filter((p) => p.codigo === 'G76' && p.tipo === 'corte').length).toBeGreaterThan(4)
+    const pz = sim.pieza as PiezaTorno
+    const radios = Array.from({ length: 21 }, (_, k) => pz.ext[pz.indice(-10 - k * 0.1)])
+    // Fondo del filete (≈Ø37,5) y cresta (Ø40) dentro del mismo paso de 2 mm.
+    expect(Math.min(...radios) * 2).toBeCloseTo(37.54, 0)
+    expect(Math.max(...radios) * 2).toBeCloseTo(40, 0)
+  })
+  it('volver un bloque atrás reproduce la pieza hasta ese punto', () => {
+    const config = TORNO
+    const casa = posicionCasa(config)
+    const cod = 'G21\nT1 M6\nM03 S1500\nG00 X36 Z2\nG01 Z-20 F200\nG00 X42\nM30'
+    const r = interpretar(cod, 'torno', casa)
+    const sim = new SimuladorCNC(r, config, casa)
+    const objetivo = r.pasos.findIndex((p) => p.linea === 4)
+    sim.irAPaso(objetivo)
+    expect(sim.pos).toMatchObject({ x: 36, z: 2 })
+    const pz = sim.pieza as PiezaTorno
+    expect(pz.ext[pz.indice(-10)] * 2).toBeCloseTo(40, 1)
   })
 })

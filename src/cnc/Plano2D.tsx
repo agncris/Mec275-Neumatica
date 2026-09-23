@@ -25,6 +25,7 @@ export default function Plano2D({
   lineas,
   seleccionada,
   onElegirLinea,
+  origen = { x: 0, y: 0, z: 0 },
 }: {
   programa: ResultadoGcode
   sim: SimuladorCNC
@@ -32,6 +33,8 @@ export default function Plano2D({
   lineas: string[]
   seleccionada: number | null
   onElegirLinea: (n: number) => void
+  /** Cero del programa: la grilla se rotula en esas coordenadas. */
+  origen?: Vec3
 }) {
   const torno = config.maquina === 'torno'
   // Coordenadas de dibujo: en el torno (Z, radio); en la fresadora (X, Y).
@@ -162,7 +165,7 @@ export default function Plano2D({
         aria-label={torno ? 'Plano Z-X de la trayectoria' : 'Vista superior X-Y de la trayectoria'}
         data-plano2d="si"
       >
-        <Grilla caja={caja} tx={tx} ty={ty} esc={escalaTexto} torno={torno} />
+        <Grilla caja={caja} tx={tx} ty={ty} esc={escalaTexto} torno={torno} desfase={torno ? origen.z : origen.x} />
         {silueta}
         <path d={trazos.rap} fill="none" stroke="#ff7a00" strokeWidth={escalaTexto * 0.18} strokeDasharray={`${escalaTexto * 0.8} ${escalaTexto * 0.6}`} />
         <path d={trazos.cor} fill="none" stroke="#1668c7" strokeWidth={escalaTexto * 0.22} />
@@ -174,7 +177,7 @@ export default function Plano2D({
             b={ty(aPlano(p.pos)[1])}
             r={escalaTexto * (seleccionada === p.linea ? 0.7 : 0.42)}
             activo={seleccionada === p.linea}
-            texto={`${bloque(lineas[p.linea]) ?? `Línea ${p.linea + 1}`}: ${textoPunto(p.pos, torno)}`}
+            texto={`${bloque(lineas[p.linea]) ?? `Línea ${p.linea + 1}`}: ${textoPunto(p.prog, torno)}`}
             onClick={() => onElegirLinea(p.linea)}
           />
         ))}
@@ -209,21 +212,26 @@ function Grilla({
   ty,
   esc,
   torno,
+  desfase,
 }: {
   caja: { x0: number; x1: number; y0: number; y1: number }
   tx: (a: number) => number
   ty: (b: number) => number
   esc: number
   torno: boolean
+  /** Dónde está el cero del programa en el eje horizontal. */
+  desfase: number
 }) {
   const span = Math.max(caja.x1 - caja.x0, caja.y1 - caja.y0)
   const paso = span > 200 ? 20 : span > 90 ? 10 : 5
   const lineas: JSX.Element[] = []
-  for (let a = Math.ceil(caja.x0 / paso) * paso; a <= caja.x1; a += paso) {
-    lineas.push(<line key={`v${a}`} x1={tx(a)} x2={tx(a)} y1={0} y2={ty(caja.y0)} stroke={a === 0 ? '#9aa6b2' : '#eef1f4'} strokeWidth={a === 0 ? esc * 0.12 : esc * 0.06} />)
+  // Las marcas van en coordenadas del programa (a − desfase).
+  for (let v = Math.ceil((caja.x0 - desfase) / paso) * paso; v + desfase <= caja.x1; v += paso) {
+    const a = v + desfase
+    lineas.push(<line key={`v${v}`} x1={tx(a)} x2={tx(a)} y1={0} y2={ty(caja.y0)} stroke={v === 0 ? '#9aa6b2' : '#eef1f4'} strokeWidth={v === 0 ? esc * 0.12 : esc * 0.06} />)
     lineas.push(
-      <text key={`tv${a}`} x={tx(a) + esc * 0.2} y={ty(caja.y0) - esc * 0.3} fontSize={esc * 0.9} fill="#8a97a5">
-        {a}
+      <text key={`tv${v}`} x={tx(a) + esc * 0.2} y={ty(caja.y0) - esc * 0.3} fontSize={esc * 0.9} fill="#8a97a5">
+        {v}
       </text>,
     )
   }
@@ -241,7 +249,7 @@ function Grilla({
       <text x={tx(caja.x1) - esc * 1.5} y={ty(0) - esc * 0.4} fontSize={esc * 1.1} fontWeight={700} fill="#33475c">
         {torno ? 'Z' : 'X'}
       </text>
-      <text x={tx(0) + esc * 0.4} y={esc * 1.3} fontSize={esc * 1.1} fontWeight={700} fill="#33475c">
+      <text x={tx(desfase) + esc * 0.4} y={esc * 1.3} fontSize={esc * 1.1} fontWeight={700} fill="#33475c">
         {torno ? 'X' : 'Y'}
       </text>
     </g>

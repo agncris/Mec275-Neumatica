@@ -19,7 +19,9 @@ import {
   MATERIALES,
   material as materialDe,
   nombreHerramienta,
+  origenPrograma,
   posicionCasa,
+  type OrigenTorno,
   type ConfigCNC,
   type TipoMaquina,
 } from './maquinas'
@@ -77,6 +79,7 @@ export default function UnidadCNC() {
   const [estado, setEstado] = useState<Estado>('listo')
   const [velocidad, setVelocidad] = useState(5)
   const [trayectoria, setTrayectoria] = useState(true)
+  const [corte, setCorte] = useState(false)
   const [sonido, setSonido] = useState(false)
   const [cursor, setCursor] = useState<number | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
@@ -88,9 +91,11 @@ export default function UnidadCNC() {
   const grabadora = useRef<MediaRecorder | null>(null)
 
   const casa = useMemo(() => posicionCasa(config), [config])
-  const resultado: ResultadoGcode = useMemo(() => interpretar(codigo, maquina, casa), [codigo, maquina, casa])
+  const cero = useMemo(() => origenPrograma(config, codigo), [config, codigo])
+  const resultado: ResultadoGcode = useMemo(() => interpretar(codigo, maquina, casa, { origen: cero.origen }), [codigo, maquina, casa, cero])
 
-  const vista = useRef<VistaCNC>({ sim: new SimuladorCNC(resultado, config, casa), trayectoria, sonido })
+  const vista = useRef<VistaCNC>({ sim: new SimuladorCNC(resultado, config, casa), trayectoria, sonido, corte })
+  vista.current.corte = corte
   vista.current.trayectoria = trayectoria
   vista.current.sonido = sonido
   // Programa o preparación nuevos: la máquina vuelve al inicio con el bruto entero.
@@ -162,6 +167,25 @@ export default function UnidadCNC() {
     }
     if (estado === 'parada') vista.current.sim.continuar()
     setEstado(modo)
+  }
+  // Volver un bloque: se simula de nuevo desde el inicio hasta ese bloque.
+  const atras = () => {
+    const s = vista.current.sim
+    const pasos = s.programa.pasos
+    if (!pasos.length) return
+    const i = Math.min(s.indice, pasos.length - 1)
+    let ini = i
+    while (ini > 0 && pasos[ini - 1].linea === pasos[i].linea) ini--
+    let objetivo = ini
+    if (!s.terminado && s.indice === ini && s.t === 0 && ini > 0) {
+      objetivo = ini - 1
+      while (objetivo > 0 && pasos[objetivo - 1].linea === pasos[ini - 1].linea) objetivo--
+    }
+    const nuevo = new SimuladorCNC(resultado, config, casa)
+    nuevo.irAPaso(objetivo)
+    vista.current.sim = nuevo
+    setEstado(objetivo === 0 ? 'listo' : 'pausa')
+    setTick((t) => t + 1)
   }
   const alFinal = () => {
     if (estado === 'fin' || estado === 'alarma') vista.current.sim = new SimuladorCNC(resultado, config, casa)
@@ -381,7 +405,7 @@ export default function UnidadCNC() {
         </p>
       )}
 
-      <Preparacion config={config} setConfig={setConfig} bloqueado={estado === 'corriendo' || estado === 'bloque'} />
+      <Preparacion config={config} setConfig={setConfig} bloqueado={estado === 'corriendo' || estado === 'bloque'} modoCero={cero.modo} addRegPart={resultado.addRegPart} />
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 480px), 1fr))', gap: 14, alignItems: 'start', marginTop: 12 }}>
         <section style={{ ...tarjeta, marginTop: 0 }}>
@@ -403,6 +427,9 @@ export default function UnidadCNC() {
             )}
             <button onClick={() => correr('bloque')} disabled={!resultado.pasos.length || estado === 'corriendo'} style={botonSuave} title="Ejecuta un bloque (una línea) y se detiene" data-control="bloque">
               ⏭ Bloque a bloque
+            </button>
+            <button onClick={atras} disabled={estado === 'corriendo' || estado === 'listo'} style={{ ...botonSuave, opacity: estado === 'corriendo' || estado === 'listo' ? 0.5 : 1 }} title="Vuelve al bloque anterior" data-control="atras">
+              ⏮ Bloque anterior
             </button>
             <button onClick={reiniciar} style={botonSuave} title="Vuelve al inicio con el bruto entero" data-control="reiniciar">
               ⟲ Reiniciar
@@ -457,6 +484,11 @@ export default function UnidadCNC() {
             <label style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
               <input type="checkbox" checked={trayectoria} onChange={(e) => setTrayectoria(e.target.checked)} /> Trayectoria
             </label>
+            {torno && (
+              <label style={{ display: 'flex', gap: 5, alignItems: 'center' }} title="Corta la pieza por la mitad para ver agujeros y ranuras por dentro">
+                <input type="checkbox" checked={corte} onChange={(e) => setCorte(e.target.checked)} /> Vista en corte
+              </label>
+            )}
             <label style={{ display: 'flex', gap: 5, alignItems: 'center' }} title="Husillo, corte y ejes; se activa al hacer clic en la vista 3D">
               <input type="checkbox" checked={sonido} onChange={(e) => setSonido(e.target.checked)} /> Sonido
             </label>
@@ -487,7 +519,7 @@ export default function UnidadCNC() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 480px), 1fr))', gap: 14, alignItems: 'start', marginTop: 14 }}>
         <section style={{ ...tarjeta, marginTop: 0 }}>
           <h2 style={subtitulo}>Trayectoria 2D {torno ? '(plano Z-X)' : '(vista desde arriba)'}</h2>
-          <Plano2D programa={resultado} sim={sim} config={config} lineas={lineas} seleccionada={cursor} onElegirLinea={irA} />
+          <Plano2D programa={resultado} sim={sim} config={config} lineas={lineas} seleccionada={cursor} onElegirLinea={irA} origen={cero.origen} />
         </section>
         <section style={{ ...tarjeta, marginTop: 0 }}>
           <h2 style={subtitulo}>Explicar el bloque · línea {lineaExplicada + 1}</h2>
@@ -508,7 +540,7 @@ export default function UnidadCNC() {
             <p style={{ color: '#8a97a5', fontSize: '0.86rem' }}>Línea vacía.</p>
           )}
           <h2 style={{ ...subtitulo, marginTop: 14 }}>Tabla de coordenadas</h2>
-          <TablaPuntos resultado={resultado} torno={torno} lineas={lineas} irA={irA} seleccionada={cursor} casa={casa} />
+          <TablaPuntos resultado={resultado} torno={torno} lineas={lineas} irA={irA} seleccionada={cursor} casa={casa} origen={cero.origen} />
         </section>
       </div>
 
@@ -567,7 +599,19 @@ export default function UnidadCNC() {
 }
 
 // ---------------------------------------------------------------------------
-function Preparacion({ config, setConfig, bloqueado }: { config: ConfigCNC; setConfig: (f: (c: ConfigCNC) => ConfigCNC) => void; bloqueado: boolean }) {
+function Preparacion({
+  config,
+  setConfig,
+  bloqueado,
+  modoCero,
+  addRegPart,
+}: {
+  config: ConfigCNC
+  setConfig: (f: (c: ConfigCNC) => ConfigCNC) => void
+  bloqueado: boolean
+  modoCero: 'cara' | 'garras'
+  addRegPart: number | null
+}) {
   const torno = config.maquina === 'torno'
   const num = (valor: number, cambiar: (v: number) => void, min: number, max: number, etiqueta: string, ayuda?: string) => (
     <label style={{ ...rotulo, flexDirection: 'column', alignItems: 'flex-start', gap: 2 }} title={ayuda}>
@@ -608,6 +652,20 @@ function Preparacion({ config, setConfig, bloqueado }: { config: ConfigCNC; setC
             {num(config.torno.largo, (v) => setConfig((c) => ({ ...c, torno: { ...c.torno, largo: v } })), 20, 300, 'Largo bruto (mm)')}
             {num(config.torno.agarre, (v) => setConfig((c) => ({ ...c, torno: { ...c.torno, agarre: v } })), 10, 60, 'Toman las garras (mm)', 'Largo del material que queda dentro del plato')}
             {num(config.torno.sobremetal, (v) => setConfig((c) => ({ ...c, torno: { ...c.torno, sobremetal: v } })), 0, 10, 'Sobremetal en la cara (mm)', 'Material que sobresale delante de Z0, para refrentar')}
+            <label style={{ ...rotulo, flexDirection: 'column', alignItems: 'flex-start', gap: 2 }} title="Dónde queda el cero (X0 Z0) del programa">
+              <span>Cero del programa</span>
+              <select
+                value={config.torno.origen ?? 'auto'}
+                disabled={bloqueado}
+                onChange={(e) => setConfig((c) => ({ ...c, torno: { ...c.torno, origen: e.target.value as OrigenTorno } }))}
+                style={selector}
+                data-origen-torno="si"
+              >
+                <option value="auto">Automático</option>
+                <option value="cara">En la cara de la pieza</option>
+                <option value="garras">En las garras (CNC Simulator Pro)</option>
+              </select>
+            </label>
           </>
         ) : (
           <>
@@ -618,8 +676,11 @@ function Preparacion({ config, setConfig, bloqueado }: { config: ConfigCNC; setC
         )}
         <p style={{ margin: 0, fontSize: '0.8rem', color: '#5a6b7d', flex: '1 1 260px' }}>
           {torno
-            ? `Cero pieza: en la cara frontal, sobre el eje. El bruto va de Z${config.torno.sobremetal} a Z${config.torno.sobremetal - config.torno.largo}; las garras llegan hasta Z${config.torno.sobremetal - config.torno.largo + config.torno.agarre}. X se programa en diámetro.`
+            ? modoCero === 'cara'
+              ? `Cero del programa: en la cara frontal, sobre el eje. El bruto va de Z${config.torno.sobremetal} a Z${config.torno.sobremetal - config.torno.largo}; las garras llegan hasta Z${config.torno.sobremetal - config.torno.largo + config.torno.agarre}. X se programa en diámetro.`
+              : `Cero del programa como en CNC Simulator Pro: Z0 en la cara de las garras. La cara del bruto queda en Z${config.torno.largo - config.torno.agarre} y las Z negativas entran al plato.${config.torno.agarre !== 23 ? ' (CNC Simulator Pro toma 23 mm en las garras.)' : ''} X se programa en diámetro. Con G92 puedes mover el cero.`
             : 'Cero pieza: esquina delantera izquierda de la cara superior. Z negativo corta hacia abajo.'}{' '}
+          {addRegPart !== null && `El programa pide $AddRegPart ${addRegPart}: se usa el bruto de esta preparación. `}
           Avance orientativo para {materialDe(config.material).nombre.toLowerCase()}: {materialDe(config.material).avance.join('–')} mm/min.
         </p>
       </div>
@@ -714,8 +775,10 @@ function Tablero({
   volumen: number
   volumenInicial: number
 }) {
-  const p = sim.pos
   const act = paso ?? ultimo
+  // Las cotas se muestran como las ve el programa (respecto de su cero).
+  const o = act?.origen ?? sim.programa.pasos[0]?.origen ?? { x: 0, y: 0, z: 0 }
+  const p = { x: sim.pos.x - o.x, y: sim.pos.y - o.y, z: sim.pos.z - o.z }
   const rpm = paso && paso.husillo !== 'off' ? Math.round(paso.rpm) : 0
   const f = (v: number) => v.toFixed(3)
   const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
@@ -768,6 +831,7 @@ function TablaPuntos({
   irA,
   seleccionada,
   casa,
+  origen,
 }: {
   resultado: ResultadoGcode
   torno: boolean
@@ -775,15 +839,17 @@ function TablaPuntos({
   irA: (n: number) => void
   seleccionada: number | null
   casa: { x: number; y: number; z: number }
+  origen: { x: number; y: number; z: number }
 }) {
   const [copiado, setCopiado] = useState(false)
+  const casaProg = { x: casa.x - origen.x, y: casa.y - origen.y, z: casa.z - origen.z }
   const filas = useMemo(() => {
     let previo = casa
     return resultado.puntos.map((p) => {
       const d = { x: p.pos.x - previo.x, y: p.pos.y - previo.y, z: p.pos.z - previo.z }
       previo = p.pos
       const n = /^\s*N(\d+)/i.exec(lineas[p.linea] ?? '')
-      return { ...p, d, n: n ? `N${n[1]}` : `L${p.linea + 1}` }
+      return { ...p, pos: p.prog, d, n: n ? `N${n[1]}` : `L${p.linea + 1}` }
     })
   }, [resultado, lineas, casa])
   const r = (v: number) => String(Math.round(v * 1000) / 1000)
@@ -831,7 +897,7 @@ function TablaPuntos({
           </tbody>
         </table>
       </div>
-      <p style={{ margin: '4px 0 0', fontSize: '0.78rem', color: '#8a97a5' }}>Punto de partida: posición de referencia {textoPunto(casa, torno)}.</p>
+      <p style={{ margin: '4px 0 0', fontSize: '0.78rem', color: '#8a97a5' }}>Punto de partida: posición de referencia {textoPunto(casaProg, torno)}.</p>
     </div>
   )
 }
@@ -850,8 +916,9 @@ function ComoUsar() {
         en rojo con su línea. Pon el cursor en una línea para ver qué hace cada palabra.
       </li>
       <li style={li}>
-        <strong>Simula:</strong> ▶ Ciclo lo ejecuta completo, ⏭ Bloque a bloque avanza de a una línea, ⏩ Al final
-        mecaniza todo de una vez y ⟲ Reiniciar vuelve al bruto entero. Cambia la velocidad para verlo más rápido.
+        <strong>Simula:</strong> ▶ Ciclo lo ejecuta completo, ⏭ Bloque a bloque avanza de a una línea, ⏮ Bloque
+        anterior retrocede una línea, ⏩ Al final mecaniza todo de una vez y ⟲ Reiniciar vuelve al bruto entero. En el
+        torno, «Vista en corte» parte la pieza por la mitad para ver agujeros y roscas. Cambia la velocidad para verlo más rápido.
       </li>
       <li style={li}>
         <strong>Como en la máquina real,</strong> se detiene con una alarma si la herramienta entra al material en rápido
@@ -864,10 +931,14 @@ function ComoUsar() {
         «● Grabar video» graba la vista 3D mientras corre la simulación.
       </li>
       <li style={li}>
-        <strong>Diferencias con CNC Simulator Pro:</strong> las instrucciones propias de ese programa que empiezan con{' '}
-        <code>$</code> (como <code>$Millimeter</code>) se aceptan pero se ignoran, salvo las de unidades; la compensación de
-        radio (G41/G42) no se simula. En el torno, el punto programado de la herramienta de tronzado es su esquina
-        derecha (hacia la cara).
+        <strong>Programas de CNC Simulator Pro:</strong> se abren tal cual. <code>$Millimeter</code>/<code>$Inch</code> fijan
+        las unidades y <code>$AddRegPart 1</code> pone en el plato el bruto de «Preparación». Con <code>$AddRegPart</code> el
+        cero del torno pasa a la cara de las garras, como en ese simulador (con un bruto de 100 mm y 23 mm en las garras,
+        la cara queda en Z77); también puedes elegirlo en «Cero del programa». <code>G92 X… Z…</code> mueve el cero (la
+        posición actual toma esas coordenadas), <code>ET2</code> llama una herramienta igual que <code>T2</code>, y
+        <code>T… M6</code> la monta. En el torno funcionan los ciclos <code>G81</code>/<code>G83</code> (taladrado en el eje)
+        y <code>G76</code> (roscado en dos bloques). Otras instrucciones <code>$</code> se ignoran y la compensación de radio
+        (G41/G42) no se simula. El punto programado de la herramienta de tronzado es su esquina derecha (hacia la cara).
       </li>
     </ol>
   )

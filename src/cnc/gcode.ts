@@ -41,8 +41,10 @@ export interface Paso {
   refrigerante: boolean
   /** M00 / M01: la máquina se detiene hasta que se pulse «Continuar». */
   parada?: boolean
-  /** Roscado (G33): para dibujar el filete. */
+  /** Roscado (G33 / G76): paso de la rosca, para dibujar el filete. */
   paso?: number
+  /** Cero del programa vigente (en coordenadas de la máquina simulada). */
+  origen: Vec3
 }
 
 export type Nivel = 'error' | 'aviso' | 'info'
@@ -66,12 +68,21 @@ export interface EstadoModal {
   husillo: Husillo
   refrigerante: boolean
   pos: Vec3
+  /** Dónde está el cero del programa (lo mueve G92). */
+  origen: Vec3
+  /** Tope de rpm con velocidad de corte constante (G92 S… en el torno). */
+  rpmMax: number
   ciclo: { r: number; z: number; q: number; retorno: 98 | 99; zInicial: number } | null
+  /** Primer bloque del ciclo de roscado G76. */
+  g76: { repasos: number; angulo: number; minimo: number; acabado: number } | null
 }
 
 export interface PuntoPrograma {
   linea: number
+  /** En la máquina simulada. */
   pos: Vec3
+  /** Como se programó (respecto del cero del programa). */
+  prog: Vec3
   codigo: string
 }
 
@@ -89,6 +100,13 @@ export interface ResultadoGcode {
   /** Líneas con código pero sin comentario. */
   sinComentario: number[]
   lineas: number
+  /** Número de bruto pedido con $AddRegPart (CNC Simulator Pro), si lo hay. */
+  addRegPart: number | null
+}
+
+export interface OpcionesInterprete {
+  /** Cero del programa al empezar (por omisión, el de la máquina simulada). */
+  origen?: Vec3
 }
 
 export interface LineaAnalizada {
@@ -119,6 +137,8 @@ export function analizarLinea(texto: string): LineaAnalizada {
   if (t.startsWith('%') || t === '') return { palabras: [], comentario, directiva: null, resto: null, vacia: t === '' || t.startsWith('%') }
   if (t.startsWith('$')) return { palabras: [], comentario, directiva: t.slice(1).trim(), resto: null, vacia: false }
   if (t.startsWith('/')) t = t.slice(1).trim() // salto de bloque opcional: se ejecuta igual
+  // ET: herramienta integrada de CNC Simulator Pro; aquí equivale a T.
+  t = t.replace(/(^|[\s\d.])ET\s*(\d+)/gi, '$1T$2')
   const palabras: LineaAnalizada['palabras'] = []
   let resto: string | null = null
   while (t.length) {
@@ -157,9 +177,11 @@ export const CODIGOS_G: Record<string, string> = {
   G71: 'Unidad de medida en milímetros (DIN)',
   G80: 'Cancelar ciclo fijo de taladrado',
   G81: 'Ciclo de taladrado: baja a Z al avance F y sube en rápido',
+  G76: 'Ciclo de roscado en el torno (dos bloques: parámetros y rosca)',
   G83: 'Ciclo de taladrado por picoteo: baja de a Q mm y sale a botar la viruta',
   G90: 'Coordenadas absolutas: medidas desde el cero pieza',
   G91: 'Coordenadas incrementales: medidas desde la posición actual',
+  G92: 'Mover el cero: la posición actual pasa a tener las coordenadas indicadas (en el torno, G92 S… limita las rpm)',
   G94: 'Avance F en mm/min',
   G95: 'Avance F en mm por vuelta del husillo',
   G96: 'Velocidad de corte constante: S en m/min',
@@ -192,10 +214,10 @@ export function codigo(letra: 'G' | 'M', v: number): string {
 // ---------------------------------------------------------------------------
 const RAPIDO = { torno: 6000, fresadora: 5000 }
 const RPM_MAX = { torno: 4000, fresadora: 12000 }
-const G_CONOCIDOS = new Set([0, 1, 2, 3, 4, 17, 18, 19, 20, 21, 28, 33, 40, 41, 42, 54, 55, 56, 57, 58, 59, 70, 71, 80, 81, 83, 90, 91, 94, 95, 96, 97, 98, 99])
+const G_CONOCIDOS = new Set([0, 1, 2, 3, 4, 17, 18, 19, 20, 21, 28, 33, 40, 41, 42, 54, 55, 56, 57, 58, 59, 70, 71, 76, 80, 81, 83, 90, 91, 92, 94, 95, 96, 97, 98, 99])
 const M_CONOCIDOS = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 30])
 
-export function interpretar(texto: string, maquina: TipoMaquina, casa: Vec3): ResultadoGcode {
+export function interpretar(texto: string, maquina: TipoMaquina, casa: Vec3, opciones: OpcionesInterprete = {}): ResultadoGcode {
   const lineas = texto.replace(/\r/g, '').split('\n')
   const diagnosticos: Diagnostico[] = []
   const pasos: Paso[] = []
@@ -222,8 +244,12 @@ export function interpretar(texto: string, maquina: TipoMaquina, casa: Vec3): Re
     husillo: 'off',
     refrigerante: false,
     pos: { ...casa },
+    origen: { x: 0, y: 0, z: 0, ...opciones.origen },
+    rpmMax: RPM_MAX[maquina],
     ciclo: null,
+    g76: null,
   }
+  let addRegPart: number | null = null
   let unidadesDichas = false
   let fin: number | null = null
   let avisoTrasFin = false
@@ -237,7 +263,7 @@ export function interpretar(texto: string, maquina: TipoMaquina, casa: Vec3): Re
     if (e.husillo === 'off') return 0
     if (e.velocidadConstante && torno) {
       const d = Math.max(Math.abs(xDiam), 1)
-      return Math.min(RPM_MAX.torno, (1000 * e.s) / (Math.PI * d))
+      return Math.min(e.rpmMax, (1000 * e.s) / (Math.PI * d))
     }
     return e.s
   }
@@ -257,6 +283,7 @@ export function interpretar(texto: string, maquina: TipoMaquina, casa: Vec3): Re
       husillo: e.husillo,
       rpm: rpmEn(e.pos.x),
       refrigerante: e.refrigerante,
+      origen: { ...e.origen },
       ...extra,
     })
   }
@@ -289,6 +316,9 @@ export function interpretar(texto: string, maquina: TipoMaquina, casa: Vec3): Re
       } else if (d.startsWith('inch')) {
         e.pulgadas = true
         unidadesDichas = true
+      } else if (d.startsWith('addregpart')) {
+        const m = /addregpart\s*[, ]?\s*(\d+)/i.exec(a.directiva)
+        addRegPart = m ? Number(m[1]) : 1
       }
       continue
     }
@@ -365,7 +395,7 @@ export function interpretar(texto: string, maquina: TipoMaquina, casa: Vec3): Re
       if (val.F < 0) diag(n, 'error', 'El avance F no puede ser negativo.')
       e.avance = val.F * esc
     }
-    if ('S' in val) {
+    if ('S' in val && !(torno && tieneG(92))) {
       if (val.S < 0) diag(n, 'error', 'La velocidad S no puede ser negativa.')
       e.s = val.S
       if (!e.velocidadConstante && val.S > RPM_MAX[maquina]) diag(n, 'aviso', `S${val.S}: la máquina llega a ${RPM_MAX[maquina]} rpm como máximo.`)
@@ -425,13 +455,74 @@ export function interpretar(texto: string, maquina: TipoMaquina, casa: Vec3): Re
         ['z', 'Z', 'W'],
       ]
       for (const [k, abs, inc] of ax) {
-        if (abs in val) d[k] = e.absoluto ? val[abs] * esc : e.pos[k] + val[abs] * esc
+        if (abs in val) d[k] = e.absoluto ? e.origen[k] + val[abs] * esc : e.pos[k] + val[abs] * esc
         if (inc in val) d[k] = e.pos[k] + val[inc] * esc
       }
       return d
     }
 
-    if (tieneG(4)) {
+    if (tieneG(92)) {
+      // G92: la posición actual pasa a tener las coordenadas indicadas.
+      let movio = false
+      for (const [k, l] of [
+        ['x', 'X'],
+        ['y', 'Y'],
+        ['z', 'Z'],
+      ] as Array<[keyof Vec3, string]>) {
+        if (l in val) {
+          e.origen[k] = e.pos[k] - val[l] * esc
+          movio = true
+        }
+      }
+      if (torno && 'S' in val) e.rpmMax = val.S
+      if (movio) diag(n, 'info', `G92: el cero del programa se mueve; desde aquí la posición actual es ${['X', 'Y', 'Z'].filter((l) => l in val).map((l) => `${l}${val[l]}`).join(' ')}.`)
+    } else if (tieneG(76)) {
+      if (!torno) {
+        diag(n, 'error', 'G76 (ciclo de roscado) es propio del torno.')
+        continue
+      }
+      const conDestino = 'X' in val || 'Z' in val || 'U' in val || 'W' in val
+      if (!conDestino) {
+        // Primer bloque: P = repasos, salida y ángulo (010060); Q = pasada mínima (µm); R = acabado (mm).
+        const pp = Math.round(val.P ?? 10060)
+        e.g76 = { repasos: Math.max(0, Math.floor(pp / 10000)), angulo: pp % 100 || 60, minimo: (val.Q ?? 50) / 1000, acabado: val.R ?? 0 }
+      } else {
+        const g = e.g76 ?? { repasos: 1, angulo: 60, minimo: 0.05, acabado: 0 }
+        if (!('P' in val) || !('Q' in val) || !('F' in val)) {
+          diag(n, 'error', 'El segundo bloque de G76 necesita X (diámetro del fondo), Z (fin de la rosca), P (altura del filete en µm), Q (primera pasada en µm) y F (paso).')
+          continue
+        }
+        const rpm = rpmEn(e.pos.x)
+        if (rpm <= 0) {
+          diag(n, 'error', 'Para roscar (G76) el husillo tiene que estar girando.')
+          continue
+        }
+        const d = destino()
+        const pitch = val.F * esc
+        const h = (val.P / 1000) * esc
+        const q1 = (val.Q / 1000) * esc
+        const mayor = d.x + 2 * h
+        const ini = { ...e.pos }
+        if (ini.x < mayor) diag(n, 'aviso', 'G76 empieza bajo el diámetro exterior de la rosca: parte con X mayor que el diámetro nominal.')
+        const prof: number[] = []
+        for (let k = 1; k < 200; k++) {
+          const dk = Math.max(q1 * Math.sqrt(k), (prof[prof.length - 1] ?? 0) + g.minimo)
+          if (dk >= h - g.acabado) break
+          prof.push(dk)
+        }
+        if (g.acabado > 0) prof.push(h - g.acabado)
+        prof.push(h)
+        for (let k = 0; k < g.repasos; k++) prof.push(h)
+        for (const dk of prof) {
+          const xc = mayor - 2 * dk
+          agregar(n, 'rapido', [{ ...ini }, { ...ini, x: xc }], RAPIDO.torno, 'G76')
+          agregar(n, 'corte', [{ ...ini, x: xc }, { ...ini, x: xc, z: d.z }], pitch * rpm, 'G76', { paso: pitch })
+          agregar(n, 'rapido', [{ ...ini, x: xc, z: d.z }, { ...ini, z: d.z }], RAPIDO.torno, 'G76')
+          agregar(n, 'rapido', [{ ...ini, z: d.z }, { ...ini }], RAPIDO.torno, 'G76')
+        }
+        puntos.push({ linea: n, pos: { ...ini }, prog: resta(ini, e.origen), codigo: 'G76' })
+      }
+    } else if (tieneG(4)) {
       const seg = 'X' in val ? val.X : 'U' in val ? val.U : 'P' in val ? (val.P >= 100 ? val.P / 1000 : val.P) : 0
       if (seg <= 0) diag(n, 'aviso', 'G04 sin tiempo: indica los segundos con X (G04 X1.5) o los milisegundos con P (G04 P1500).')
       agregar(n, 'pausa', [{ ...e.pos }], 0, 'G04', { duracion: Math.max(0, seg) })
@@ -445,7 +536,7 @@ export function interpretar(texto: string, maquina: TipoMaquina, casa: Vec3): Re
       if (todos || 'Z' in val || 'W' in val) fin3.z = casa.z
       agregar(n, 'rapido', [{ ...inter }, fin3], RAPIDO[maquina], 'G28')
       e.pos = fin3
-      puntos.push({ linea: n, pos: { ...fin3 }, codigo: 'G28' })
+      puntos.push({ linea: n, pos: { ...fin3 }, prog: resta(fin3, e.origen), codigo: 'G28' })
     } else if (hayEjes || (e.movimiento >= 2 && e.movimiento <= 3 && ('I' in val || 'J' in val || 'K' in val))) {
       const d = destino()
       const m = e.movimiento
@@ -470,14 +561,10 @@ export function interpretar(texto: string, maquina: TipoMaquina, casa: Vec3): Re
         }
         agregar(n, 'corte', arco.puntos, f, codigo('G', m))
       } else if (m === 81 || m === 83) {
-        if (torno) {
-          diag(n, 'error', 'Los ciclos G81/G83 de este simulador son de la fresadora.')
-          continue
-        }
         if (!e.ciclo || 'R' in val || 'Z' in val || 'Q' in val) {
           const zIni = e.ciclo?.zInicial ?? e.pos.z
-          const r = 'R' in val ? (e.absoluto ? val.R * esc : zIni + val.R * esc) : e.ciclo?.r
-          const zc = 'Z' in val ? (e.absoluto ? val.Z * esc : (r ?? zIni) + val.Z * esc) : e.ciclo?.z
+          const r = 'R' in val ? (e.absoluto ? e.origen.z + val.R * esc : zIni + val.R * esc) : e.ciclo?.r
+          const zc = 'Z' in val ? (e.absoluto ? e.origen.z + val.Z * esc : (r ?? zIni) + val.Z * esc) : e.ciclo?.z
           if (r === undefined || zc === undefined) {
             diag(n, 'error', `${codigo('G', m)} necesita el plano de aproximación R y la profundidad Z.`)
             continue
@@ -490,6 +577,7 @@ export function interpretar(texto: string, maquina: TipoMaquina, casa: Vec3): Re
         if (f <= 0) continue
         const c = e.ciclo
         const xy = { x: 'X' in val || 'U' in val ? d.x : e.pos.x, y: 'Y' in val || 'V' in val ? d.y : e.pos.y }
+        if (torno && Math.abs(xy.x - e.origen.x) > 0.2) diag(n, 'aviso', 'En el torno el taladrado se hace en el eje: X0.')
         const p0 = { ...e.pos }
         const sobre = { ...xy, z: e.pos.z }
         agregar(n, 'rapido', [p0, sobre], RAPIDO[maquina], codigo('G', m))
@@ -517,7 +605,7 @@ export function interpretar(texto: string, maquina: TipoMaquina, casa: Vec3): Re
         diag(n, 'aviso', 'X negativo en el torno: la herramienta pasa al otro lado del eje de giro.')
       }
       e.pos = d
-      puntos.push({ linea: n, pos: { ...d }, codigo: codigo('G', e.movimiento) })
+      puntos.push({ linea: n, pos: { ...d }, prog: resta(d, e.origen), codigo: codigo('G', e.movimiento) })
     } else if (('I' in val || 'J' in val || 'K' in val || 'R' in val) && !tieneG(4)) {
       diag(n, 'aviso', 'I, J, K o R sin coordenadas de destino: el bloque no mueve la máquina.')
     }
@@ -556,6 +644,7 @@ export function interpretar(texto: string, maquina: TipoMaquina, casa: Vec3): Re
     tiempoTotal: validos.reduce((s, p) => s + p.duracion, 0),
     sinComentario,
     lineas: lineas.length,
+    addRegPart,
   }
 }
 function orden(n: Nivel) {
@@ -563,7 +652,11 @@ function orden(n: Nivel) {
 }
 
 function clonarEstado(e: EstadoModal): EstadoModal {
-  return { ...e, pos: { ...e.pos }, ciclo: e.ciclo ? { ...e.ciclo } : null }
+  return { ...e, pos: { ...e.pos }, origen: { ...e.origen }, ciclo: e.ciclo ? { ...e.ciclo } : null, g76: e.g76 ? { ...e.g76 } : null }
+}
+
+export function resta(a: Vec3, b: Vec3): Vec3 {
+  return { x: a.x - b.x, y: a.y - b.y, z: a.z - b.z }
 }
 
 export function dist(a: Vec3, b: Vec3): number {

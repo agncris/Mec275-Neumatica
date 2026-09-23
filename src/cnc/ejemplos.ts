@@ -216,6 +216,62 @@ N340 M30                 ( fin )
 `,
   },
   {
+    id: 'torno-simulator',
+    titulo: 'Torno 5 · Formato CNC Simulator Pro (G81 y rosca G76)',
+    maquina: 'torno',
+    resumen: 'Escrito como en CNC Simulator Pro: $AddRegPart, cero en la cara de las garras, T… M6, taladrado con G81 y rosca M30 x 1,5 con G76.',
+    config: { torno: { diametro: 40, largo: 100, agarre: 23, sobremetal: 0, origen: 'auto' }, material: 'laton' },
+    codigo: `%
+( Formato CNC Simulator Pro: el cero Z0 está en la cara de las garras )
+( Bruto Ø40 x 100 mm; las garras toman 23 mm: la cara queda en Z77 )
+$Millimeter              ( unidades del simulador )
+$AddRegPart 1            ( pone en el plato el bruto 1 del registro )
+N10 G21 G90 G94          ( milímetros, absolutas, mm/min )
+N20 T1 M6                ( T1: desbaste izquierda )
+N30 M04 S1500            ( husillo a 1500 rpm )
+N40 G00 X44 Z76          ( frente: se refrenta 1 mm )
+N50 G01 X0 F120          ( refrentado: la cara queda en Z76 )
+N60 G00 X44 Z78          ( salir )
+N70 G00 X35              ( pasada 1: Ø35 )
+N80 G01 Z34 F250         ( cilindrado hasta pasar el tronzado )
+N90 G00 X42              ( retirar )
+N100 G00 Z78             ( volver )
+N110 G00 X30             ( pasada 2: Ø30 )
+N120 G01 Z52             ( zona roscada y resalte )
+N130 G01 X36             ( subir por el resalte )
+N140 G00 X42             ( retirar )
+N150 G00 Z77             ( delante de la cara )
+N160 G00 X26             ( inicio del chaflán )
+N170 G01 X30 Z75 F150    ( chaflán de 1 x 45° )
+N180 G00 X42             ( retirar )
+( --- Taladrado con ciclo fijo, como en el tutorial del simulador --- )
+N190 G28                 ( a la referencia )
+N200 T17 M6              ( T17: broca Ø10 )
+N210 M04 S1200           ( velocidad para taladrar )
+N220 G00 X0 Z80          ( sobre el eje, delante de la cara )
+N230 G81 Z58 R79 F60     ( taladra hasta Z58 y vuelve )
+N240 G80                 ( cancela el ciclo )
+N250 G28                 ( a la referencia )
+( --- Rosca M30 x 1,5 con el ciclo G76 --- )
+N260 T6 M6               ( T6: roscado exterior 60° )
+N270 M04 S800            ( menos velocidad para roscar )
+N280 G00 X32 Z80         ( inicio: fuera del diámetro de la rosca )
+N290 G76 P010060 Q50 R0.02 ( 1 repaso, filete de 60°, pasada mínima 0,05 mm )
+N300 G76 X28.16 Z58 P920 Q300 F1.5 ( fondo Ø28,16, altura 0,92, primera pasada 0,3, paso 1,5 )
+N310 G28                 ( a la referencia )
+( --- Tronzado --- )
+N320 T9 M6               ( T9: tronzado 4 mm )
+N330 M04 S800            ( menos velocidad )
+N340 G00 X42 Z36         ( largo de la pieza: 76 − 36 = 40 mm )
+N350 G01 X0 F80          ( tronzado )
+N360 G00 X44             ( retirar )
+N370 G28                 ( a la referencia )
+N380 M05                 ( parar el husillo )
+N390 M30                 ( fin )
+%
+`,
+  },
+  {
     id: 'fresa-cuadrado',
     titulo: 'Fresadora 1 · Contorno cuadrado',
     maquina: 'fresadora',
