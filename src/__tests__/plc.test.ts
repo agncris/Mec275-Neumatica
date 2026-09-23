@@ -17,6 +17,7 @@ import {
 } from '../plc/ladder'
 import { EJEMPLOS_PLC } from '../plc/ejemplos'
 import { PlantaElevador, PlantaEstanque, crearPlanta, type Planta } from '../plc/plantas'
+import { EJERCICIOS_PLC, programaDeEjercicio } from '../plc/ejercicios'
 
 const NA = (dir: string): Celda => ({ tipo: 'contacto', modo: 'NA', dir })
 const NC = (dir: string): Celda => ({ tipo: 'contacto', modo: 'NC', dir })
@@ -194,39 +195,47 @@ describe('Ejercicio 1 · estanque', () => {
   })
 })
 
-describe('Ejercicio 2 · elevador', () => {
-  it('con una pieza hace Z1+ Z2+ Z2− Z1− y la deja en la banda', () => {
+describe('elevador y ejercicio 2 para resolver', () => {
+  it('la planta hace su ciclo si se accionan las electroválvulas a mano', () => {
     const planta = new PlantaElevador()
-    const run = correr(ejemplo('ej2'), planta, 0.5)
-    expect(run.estado.bits['Q0.0']).toBe(false)
     planta.accion('pieza')
-    run.paso(12)
-    const orden: string[] = []
-    let [y1, y2] = [false, false]
-    for (const q of run.historia) {
-      if (q['Q0.0'] !== y1) orden.push(q['Q0.0'] ? 'Z1+' : 'Z1−')
-      if (q['Q0.1'] !== y2) orden.push(q['Q0.1'] ? 'Z2+' : 'Z2−')
-      y1 = q['Q0.0']
-      y2 = q['Q0.1']
+    const paso = (q: Record<string, boolean>, s: number) => {
+      for (let i = 0; i < s / 0.02; i++) planta.paso(q, 0.02)
     }
-    expect(orden).toEqual(['Z1+', 'Z2+', 'Z2−', 'Z1−'])
+    paso({ 'Q0.0': true }, 2)
+    expect(planta.sensores()['I0.2']).toBe(true)
+    paso({ 'Q0.0': true, 'Q0.1': true }, 2)
+    expect(planta.pieza).toBe('fuera')
+    paso({}, 4)
     expect(planta.transferidas).toBe(1)
     expect(planta.eventos.filter((e) => e.aviso)).toEqual([])
-    expect(planta.z1).toBe(0)
   })
 
-  it('con alimentación automática repite el ciclo con cada pieza', () => {
-    const planta = new PlantaElevador()
-    const run = correr(ejemplo('ej2'), planta, 0.2)
-    planta.accion('auto')
-    run.paso(40)
-    expect(planta.transferidas).toBeGreaterThanOrEqual(3)
+  it('el ejercicio viene sin solución: programa en blanco con la tabla de conexiones', () => {
+    const ej = EJERCICIOS_PLC.find((e) => e.id === 'ejercicio2')!
+    const p = programaDeEjercicio(ej)
+    expect(p.escalones).toHaveLength(1)
+    expect(p.escalones[0].bobinas.every((b) => b === null)).toBe(true)
+    expect(p.simbolos.map((s) => s.nombre)).toEqual(['S0', 'S1', 'S2', 'S3', 'S4', 'Y1', 'Y2'])
+    expect(EJEMPLOS_PLC.some((e) => e.programa.planta === 'elevador')).toBe(false)
   })
 
-  it('sin pieza no arranca', () => {
-    const planta = new PlantaElevador()
-    const run = correr(ejemplo('ej2'), planta, 5)
-    expect(run.historia.some((q) => q['Q0.0'] || q['Q0.1'])).toBe(false)
+  it('verificar: un programa en blanco no pasa y dice en qué paso falla', () => {
+    const ej = EJERCICIOS_PLC.find((e) => e.id === 'ejercicio2')!
+    const r = ej.verificar(programaDeEjercicio(ej))
+    expect(r.ok).toBe(false)
+    expect(r.mensajes[0].ok).toBe(true)
+    expect(r.mensajes.find((m) => !m.ok)?.texto).toMatch(/Paso 2/)
+  })
+
+  it('verificar: si Z1 sube sin esperar la pieza, falla el paso 1', () => {
+    const ej = EJERCICIOS_PLC.find((e) => e.id === 'ejercicio2')!
+    const p = programaDeEjercicio(ej)
+    p.escalones[0].celdas[0][0] = { tipo: 'contacto', modo: 'NA', dir: 'I0.1' }
+    p.escalones[0].bobinas[0] = { tipo: 'normal', dir: 'Q0.0' }
+    const r = ej.verificar(p)
+    expect(r.ok).toBe(false)
+    expect(r.mensajes[0].ok).toBe(false)
   })
 })
 

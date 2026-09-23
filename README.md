@@ -233,8 +233,14 @@ baja con los flotadores, los cilindros que suben y empujan la pieza a la segunda
 los pilotos del tablero. Suenan los relés de salida, las electroválvulas, el agua, los
 topes de los cilindros y el zumbador. Los mandos se pulsan en la escena o en el panel.
 
-**Ejemplos:** los dos ejercicios resueltos del apunte (1 · llenado y vaciado de tanque,
-2 · elevador de piezas) y una serie de programas básicos en el tablero: Y / O / NO,
+**Ejercicios para resolver** (📝 en el menú, sin solución): el **Ejercicio 2 · Elevador
+de piezas** trae el enunciado paso a paso, el esquema de conexiones, el circuito de
+instalación, la planta 3D y el programa en blanco. El botón **Verificar mi programa**
+prueba el programa del alumno contra la planta simulada y le dice qué pasos del
+enunciado cumple y en cuál falla, sin mostrar cómo resolverlo.
+
+**Ejemplos resueltos:** el ejercicio 1 del apunte (llenado y vaciado de tanque) y una
+serie de programas básicos en el tablero: Y / O / NO,
 marcha y paro con autorretención, Set y Reset, temporizador TON, intermitente con dos
 TON, contador CTU, y ONS con comparaciones y RTO; además el semáforo con temporizadores
 encadenados y el portón con enclavamiento y fotocelda. **＋ Nuevo programa** deja el editor en blanco con el cableado de la
@@ -377,7 +383,7 @@ npm run dev        # http://localhost:5173
 ```
 
 ```bash
-npm test           # 242 pruebas: motor, análisis, entregas, plano, símbolos, banco 3D, PLC y utilidades
+npm test           # 243 pruebas: motor, análisis, entregas, plano, símbolos, banco 3D, PLC y utilidades
 npm run typecheck  # comprobación de tipos
 npm run build      # compila a /dist
 ```

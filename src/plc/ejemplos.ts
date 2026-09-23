@@ -1,7 +1,7 @@
 /**
- * Programas de ejemplo de la unidad de PLC: los ejercicios resueltos en clase
- * (apunte, ejercicios 1 y 2) y una serie de programas básicos en el tablero
- * de pruebas para ver cada instrucción funcionando por separado.
+ * Programas de ejemplo de la unidad de PLC: el ejercicio 1 del apunte y una
+ * serie de programas básicos para ver cada instrucción funcionando. El
+ * ejercicio 2 no está aquí: es un ejercicio para resolver (ejercicios.ts).
  */
 import {
   COLUMNAS,
@@ -72,23 +72,6 @@ const EJERCICIO1 = programa(
       [[0, 1], [0, 2]],
       'Vaciado: cuando S2 detecta el estanque lleno, V2 se abre y se autorretiene hasta que S1 deja de detectar líquido.',
     ),
-  ],
-)
-
-// ---------------------------------------------------------------------------
-// Ejercicio 2 · Elevador de piezas
-// ---------------------------------------------------------------------------
-const EJERCICIO2 = programa(
-  'Ejercicio 2 · Elevador de piezas',
-  'elevador',
-  [...PLANTAS.elevador.cableado, { dir: 'M0.1', nombre: 'EXPULSIÓN', descripcion: 'Marca: la pieza ya fue expulsada en este ciclo' }],
-  [
-    escalon([[NA('I0.0'), NA('I0.1'), NA('I0.3')]], [B('set', 'Q0.0')], [], 'Pieza en la plataforma y los dos cilindros en su inicio: Z1 sube (Y1 queda activada).'),
-    escalon([[NA('I0.2'), NA('I0.3'), NC('M0.1')]], [B('set', 'Q0.1')], [], 'Z1 arriba, Z2 en su inicio y la pieza todavía sin expulsar: Z2 sale a empujarla.'),
-    escalon([[NA('I0.4')]], [B('set', 'M0.1')], [], 'Z2 llegó a su final: la pieza ya está expulsada (se recuerda en la marca).'),
-    escalon([[NA('I0.1'), NA('I0.3')]], [B('reset', 'M0.1')], [], 'Los dos cilindros de vuelta en su inicio: se borra la marca para el ciclo siguiente.'),
-    escalon([[NA('M0.1'), NA('I0.4'), NA('I0.2')]], [B('reset', 'Q0.1')], [], 'Pieza expulsada con Z2 fuera: Z2 vuelve.'),
-    escalon([[NA('I0.3'), NA('I0.2'), NA('M0.1')]], [B('reset', 'Q0.0')], [], 'Z2 de vuelta y la pieza expulsada: Z1 baja.'),
   ],
 )
 
@@ -204,7 +187,6 @@ export interface EjemploPLC {
 
 export const EJEMPLOS_PLC: EjemploPLC[] = [
   { id: 'ej1', etiqueta: 'Ejercicio 1 · Llenado y vaciado de tanque', programa: EJERCICIO1 },
-  { id: 'ej2', etiqueta: 'Ejercicio 2 · Elevador de piezas', programa: EJERCICIO2 },
   { id: 'logica', etiqueta: 'Básico · Y, O, NO', programa: LOGICA },
   { id: 'marcha', etiqueta: 'Básico · Marcha y paro con autorretención', programa: MARCHA_PARO },
   { id: 'setreset', etiqueta: 'Básico · Set y Reset', programa: SET_RESET },

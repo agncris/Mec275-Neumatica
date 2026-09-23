@@ -83,6 +83,8 @@ export interface ProgramaPLC {
   version: 1
   tipo: 'programa-plc'
   nombre?: string
+  /** Si es un ejercicio para resolver, su identificador (ver ejercicios.ts). */
+  ejercicio?: string
   planta: IdPlanta
   simbolos: Simbolo[]
   escalones: Escalon[]

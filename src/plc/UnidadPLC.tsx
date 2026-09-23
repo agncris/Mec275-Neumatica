@@ -11,6 +11,8 @@ import { Seccion } from '../components/Seccion'
 import { exportarPng, nombreSeguro } from '../exportar'
 import EditorLadder from './EditorLadder'
 import { EJEMPLOS_PLC } from './ejemplos'
+import { EJERCICIOS_PLC, programaDeEjercicio } from './ejercicios'
+import TarjetaEjercicio from './TarjetaEjercicio'
 import {
   ENTRADAS,
   MARCAS,
@@ -208,6 +210,7 @@ export default function UnidadPLC() {
   }, [aviso])
 
   const avisos = useMemo(() => revisarPrograma(programa), [programa])
+  const ejercicioActual = EJERCICIOS_PLC.find((e) => e.id === programa.ejercicio) ?? null
   const descripcion = PLANTAS[programa.planta]
   const sim = simRef.current
   const estado: EstadoPLC = sim.estado
@@ -224,7 +227,9 @@ export default function UnidadPLC() {
   const nuevo = () => {
     if (!confirmar('¿Empezar un programa nuevo?')) return
     setCorriendo(false)
-    setPrograma(programaVacio(programa.planta, PLANTAS[programa.planta].cableado.map((s) => ({ ...s }))))
+    // En un ejercicio, «nuevo» vuelve a empezarlo (se conserva el enunciado).
+    const ej = EJERCICIOS_PLC.find((e) => e.id === programa.ejercicio)
+    setPrograma(ej ? programaDeEjercicio(ej) : programaVacio(programa.planta, PLANTAS[programa.planta].cableado.map((s) => ({ ...s }))))
   }
 
   const guardar = () => {
@@ -290,8 +295,16 @@ export default function UnidadPLC() {
           <select
             value=""
             onChange={(e) => {
-              const ej = EJEMPLOS_PLC.find((x) => x.id === e.target.value)
+              const valor = e.target.value
               e.target.value = ''
+              const ejercicio = EJERCICIOS_PLC.find((x) => `ejercicio:${x.id}` === valor)
+              if (ejercicio) {
+                if (!confirmar(`¿Empezar «${ejercicio.titulo}»?`)) return
+                setCorriendo(false)
+                setPrograma(programaDeEjercicio(ejercicio))
+                return
+              }
+              const ej = EJEMPLOS_PLC.find((x) => x.id === valor)
               if (!ej || !confirmar(`¿Cargar «${ej.etiqueta}»?`)) return
               setCorriendo(false)
               setPrograma(clonarPrograma(ej.programa))
@@ -299,11 +312,20 @@ export default function UnidadPLC() {
             style={{ padding: '0.3rem 0.4rem', maxWidth: 280 }}
           >
             <option value="">— elige un programa —</option>
-            {EJEMPLOS_PLC.map((e) => (
-              <option key={e.id} value={e.id}>
-                {e.etiqueta}
-              </option>
-            ))}
+            <optgroup label="Ejercicios para resolver (sin solución)">
+              {EJERCICIOS_PLC.map((e) => (
+                <option key={e.id} value={`ejercicio:${e.id}`}>
+                  📝 {e.titulo}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="Ejemplos resueltos">
+              {EJEMPLOS_PLC.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.etiqueta}
+                </option>
+              ))}
+            </optgroup>
           </select>
         </label>
         <label style={rotulo}>
@@ -347,6 +369,8 @@ export default function UnidadPLC() {
       </div>
 
       {aviso && <p role="status" style={avisoOk}>{aviso}</p>}
+
+      {ejercicioActual && <TarjetaEjercicio ejercicio={ejercicioActual} programa={programa} notacion={notacion} />}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 520px), 1fr))', gap: 14, alignItems: 'start' }}>
         <section style={{ ...tarjeta, marginTop: 0 }}>
