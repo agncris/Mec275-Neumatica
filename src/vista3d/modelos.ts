@@ -72,14 +72,14 @@ export const MAT = {
   esfera: new THREE.MeshStandardMaterial({ color: 0xf6f3ea, roughness: 0.6 }),
 }
 
-const caja = (w: number, h: number, d: number, mat: THREE.Material, radio = 0.0025) => {
+export const caja = (w: number, h: number, d: number, mat: THREE.Material, radio = 0.0025) => {
   const m = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 3, Math.min(radio, w / 3, h / 3, d / 3)), mat)
   m.castShadow = true
   m.receiveShadow = true
   return m
 }
 
-const cilindro = (r: number, largo: number, mat: THREE.Material, segmentos = 28) => {
+export const cilindro = (r: number, largo: number, mat: THREE.Material, segmentos = 28) => {
   const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, largo, segmentos), mat)
   m.castShadow = true
   m.receiveShadow = true
@@ -87,7 +87,7 @@ const cilindro = (r: number, largo: number, mat: THREE.Material, segmentos = 28)
 }
 
 /** Pegatina con el nombre de la pieza, como las del laboratorio. */
-function etiqueta(texto: string, ancho = 0.034): THREE.Mesh {
+export function etiqueta(texto: string, ancho = 0.034): THREE.Mesh {
   const plano = new THREE.PlaneGeometry(ancho, ancho * 0.375)
   if (typeof document === 'undefined') return new THREE.Mesh(plano, MAT.esfera)
   const lienzo = document.createElement('canvas')

@@ -22,6 +22,8 @@ export class SonidoBanco {
   private ruido: AudioBuffer | null = null
   private siseo: { gain: GainNode; pan: StereoPannerNode } | null = null
   private silbido: { osc: OscillatorNode; filtro: BiquadFilterNode; gain: GainNode } | null = null
+  private chorro: { gain: GainNode; filtro: BiquadFilterNode } | null = null
+  private pitido: GainNode | null = null
   private volumen = 0.8
 
   /** Crea o reanuda el audio. Hay que llamarlo desde un gesto del usuario. */
@@ -49,6 +51,8 @@ export class SonidoBanco {
       this.ruido = crearRuido(ctx)
       this.siseo = this.crearSiseo()
       this.silbido = this.crearSilbido()
+      this.chorro = this.crearChorro()
+      this.pitido = this.crearPitido()
     }
     if (this.ctx.state === 'suspended') void this.ctx.resume().catch(() => {})
   }
@@ -66,6 +70,8 @@ export class SonidoBanco {
   callar(): void {
     this.continuo(0, 0)
     this.motor(0)
+    this.agua(0)
+    this.zumbador(false)
   }
 
   cerrar(): void {
@@ -73,6 +79,8 @@ export class SonidoBanco {
     this.ctx = null
     this.siseo = null
     this.silbido = null
+    this.chorro = null
+    this.pitido = null
     if (ctx) void ctx.close().catch(() => {})
   }
 
@@ -140,6 +148,22 @@ export class SonidoBanco {
     this.silbido.osc.frequency.setTargetAtTime(f, t, 0.15)
     this.silbido.filtro.frequency.setTargetAtTime(f * 2, t, 0.15)
     this.silbido.gain.gain.setTargetAtTime(velocidad > 0 ? Math.min(0.09, 0.03 + velocidad * 0.1) : 0, t, 0.12)
+  }
+
+  /** Chorro de agua (llenado o vaciado de un estanque); 0 = cerrado. */
+  agua(intensidad: number): void {
+    const ctx = this.ctx
+    if (!ctx || !this.chorro) return
+    const t = ctx.currentTime
+    this.chorro.gain.gain.setTargetAtTime(Math.min(1, intensidad) * 0.35, t, 0.12)
+    this.chorro.filtro.frequency.setTargetAtTime(500 + intensidad * 700, t, 0.2)
+  }
+
+  /** Zumbador del tablero: pitido intermitente mientras esté activado. */
+  zumbador(activo: boolean): void {
+    const ctx = this.ctx
+    if (!ctx || !this.pitido) return
+    this.pitido.gain.setTargetAtTime(activo ? 0.06 : 0, ctx.currentTime, 0.01)
   }
 
   // --- piezas de síntesis -------------------------------------------------------
@@ -216,6 +240,57 @@ export class SonidoBanco {
     fuente.connect(alto).connect(banda).connect(gain).connect(pan).connect(this.master!)
     fuente.start()
     return { gain, pan }
+  }
+
+  private crearChorro() {
+    const ctx = this.ctx!
+    const fuente = ctx.createBufferSource()
+    fuente.buffer = this.ruido
+    fuente.loop = true
+    // Ruido grave y «burbujeante»: el agua suena mucho más abajo que el aire.
+    const filtro = ctx.createBiquadFilter()
+    filtro.type = 'lowpass'
+    filtro.frequency.value = 800
+    filtro.Q.value = 0.7
+    const burbujas = ctx.createBiquadFilter()
+    burbujas.type = 'peaking'
+    burbujas.frequency.value = 420
+    burbujas.Q.value = 2
+    burbujas.gain.value = 8
+    // Un oscilador lento mueve el pico: el chorro no suena a ruido fijo.
+    const lfo = ctx.createOscillator()
+    lfo.frequency.value = 3.3
+    const profundidad = ctx.createGain()
+    profundidad.gain.value = 160
+    lfo.connect(profundidad).connect(burbujas.frequency)
+    lfo.start()
+    const gain = ctx.createGain()
+    gain.gain.value = 0
+    fuente.connect(filtro).connect(burbujas).connect(gain).connect(this.master!)
+    fuente.start()
+    return { gain, filtro }
+  }
+
+  private crearPitido() {
+    const ctx = this.ctx!
+    const osc = ctx.createOscillator()
+    osc.type = 'square'
+    osc.frequency.value = 2300
+    // Modulado a 4 Hz: pi-pi-pi, como un zumbador de tablero.
+    const puerta = ctx.createGain()
+    puerta.gain.value = 0.5
+    const lfo = ctx.createOscillator()
+    lfo.type = 'square'
+    lfo.frequency.value = 4
+    const prof = ctx.createGain()
+    prof.gain.value = 0.5
+    lfo.connect(prof).connect(puerta.gain)
+    lfo.start()
+    const gain = ctx.createGain()
+    gain.gain.value = 0
+    osc.connect(puerta).connect(gain).connect(this.master!)
+    osc.start()
+    return gain
   }
 
   private crearSilbido() {

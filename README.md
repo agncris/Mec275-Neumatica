@@ -1,8 +1,13 @@
-# NeumaLab — Laboratorio virtual de neumática
+# NeumaLab — Laboratorio virtual de neumática y PLC
 
-**MEC275 · Neumática industrial** — Aplicación web para armar, modificar y simular
-circuitos neumáticos con simbología **ISO 1219-1**, pensada como gemelo digital del
-banco de prácticas. Todo el contenido y la interfaz están en español.
+**MEC275** — Aplicación web para el laboratorio del curso, con una pestaña por unidad:
+
+- **Unidad 1 · Neumática**: armar, modificar y simular circuitos neumáticos con
+  simbología **ISO 1219-1**, pensada como gemelo digital del banco de prácticas.
+- **Unidad 2 · PLC**: programar en **Ladder** y probar el programa contra una planta
+  del laboratorio en 3D (ver [Unidad 2 · PLC](#unidad-2--plc)).
+
+Todo el contenido y la interfaz están en español.
 
 ---
 
@@ -164,6 +169,58 @@ mirar lo muestran:
 - No descarga nada: los modelos y los sonidos se generan en el navegador, y three.js sólo se carga
   cuando alguien abre esta vista.
 
+## Unidad 2 · PLC
+
+La pestaña **Unidad 2 · PLC** es un laboratorio de controladores lógicos
+programables: se escribe el programa en Ladder, se pasa el PLC a **RUN** y el
+programa mueve una planta en 3D, con sonido. Los sensores de la planta vuelven a las
+entradas del PLC, así que un programa mal hecho se nota como en el laboratorio: el
+estanque rebalsa, la plataforma choca con el vástago.
+
+**Editor Ladder.** Las dos barras de tensión y los escalones, numerados como en el
+apunte (000, 001…). Se elige una herramienta y se hace clic en la casilla: contacto
+NA ┤ ├, NC ┤/├, cable, rama (une dos filas en un nodo para hacer un paralelo) y, en la
+columna de la derecha, bobinas ( ), (/), Set (S), Reset (R), flancos (P) y (N),
+temporizadores **TON / TOF** y contadores **CTU / CTD**. Cada elemento lleva su
+dirección (`I0.0…I0.7`, `Q0.0…Q0.7`, marcas `M0.0…M1.7`, `T0…T7`, `C0…C7`) y se
+muestra con el nombre de la **tabla de símbolos** (simbología · asignación ·
+descripción). Con el PLC en RUN se ve la corriente: tramos con tensión en verde,
+contactos cerrados rellenos, bobinas activas encendidas y el tiempo o la cuenta de
+cada temporizador y contador. La aplicación avisa de los errores típicos: un contacto
+sin dirección, una bobina sobre una entrada, la misma salida con bobina en dos
+escalones (manda la última).
+
+**Ciclo de scan.** El programa se ejecuta como en un PLC real, ~50 barridos por
+segundo: lee las entradas, resuelve los escalones de arriba abajo (lo que escribe un
+escalón ya lo lee el siguiente) y actualiza las salidas. En STOP las salidas quedan a 0.
+
+**Plantas** (el cableado es fijo, como en el banco; el alumno programa):
+
+| Planta | Entradas | Salidas |
+|---|---|---|
+| Tablero de pruebas | 4 pulsadores y 4 selectores (`I0.0…I0.7`) | 6 pilotos, zumbador y ventilador (`Q0.0…Q0.7`) |
+| Estanque con dos electroválvulas | START, STOP y los flotadores S1 (abajo) y S2 (arriba) | V1 llenado, V2 vaciado |
+| Elevador de piezas | S0 (pieza en la plataforma) y los finales de carrera S1…S4 de Z1 y Z2 | Y1 y Y2 (electroválvulas de Z1 y Z2) |
+
+En 3D se ve el PLC en su riel, con fuente, CPU (memoria y puerto de comunicación) y
+módulos de entradas y salidas con un LED por borne; y la máquina: el agua que sube y
+baja con los flotadores, los cilindros que suben y empujan la pieza a la segunda banda,
+los pilotos del tablero. Suenan los relés de salida, las electroválvulas, el agua, los
+topes de los cilindros y el zumbador. Los mandos se pulsan en la escena o en el panel.
+
+**Ejemplos:** los dos ejercicios resueltos del apunte (1 · llenado y vaciado de tanque,
+2 · elevador de piezas) y una serie de programas básicos en el tablero: Y / O / NO,
+marcha y paro con autorretención, Set y Reset, temporizador TON, intermitente con dos
+TON y contador CTU. **＋ Nuevo programa** deja el editor en blanco con el cableado de la
+planta elegida; el programa se guarda solo en el navegador y se puede descargar,
+abrir y exportar como imagen para el informe.
+
+**Teoría** (secciones plegables): qué es un PLC y para qué se usa, sus componentes,
+entradas / salidas y direcciones, cómo elegirlo, los sensores, los símbolos Ladder
+(contactos, bobinas, temporizadores, contadores) y el ciclo de scan.
+
+La unidad no incluye enunciados ni soluciones de evaluaciones: esas se reparten aparte.
+
 ## Cómo ordena la aplicación el plano
 
 Al abrir un circuito (o cargar un ejemplo) la aplicación lo redibuja como un plano
@@ -279,6 +336,8 @@ queda atrapado el vástago se bloquea; y un cortocircuito presión-escape no hac
   /components    # interfaz React: pizarra, paleta, propiedades, diagrama, cortes
   /symbols       # símbolos ISO 1219-1 animados
   /realistic     # vistas en corte de válvulas y cilindros
+  /vista3d       # banco 3D de neumática: modelos, sonido y oído del banco
+  /plc           # unidad 2: motor Ladder (scan), plantas, editor, planta 3D y teoría
   persistencia.ts# guardar, abrir y compartir circuitos
 /server.js       # servidor Express para producción
 Dockerfile
@@ -292,7 +351,7 @@ npm run dev        # http://localhost:5173
 ```
 
 ```bash
-npm test           # 210 pruebas: motor, análisis, entregas, plano, símbolos, banco 3D y utilidades
+npm test           # 226 pruebas: motor, análisis, entregas, plano, símbolos, banco 3D, PLC y utilidades
 npm run typecheck  # comprobación de tipos
 npm run build      # compila a /dist
 ```
@@ -327,7 +386,8 @@ No hace falta `server.js` ni variables de entorno. Netlify funciona igual public
 
 ## Estado y siguientes pasos
 
-Terminado: motor con tests, editor de pizarra, vistas en corte, banco 3D con sonido, diagrama espacio-fase,
+Terminado: motor con tests, editor de pizarra, vistas en corte, banco 3D con sonido,
+unidad de PLC (Ladder, ciclo de scan, plantas 3D y teoría), diagrama espacio-fase,
 guardado/compartir, despliegue y adaptación a tablet.
 
 Pendiente: modo *Aprender* con lecciones guiadas paso a paso, modo *Desafío* con
