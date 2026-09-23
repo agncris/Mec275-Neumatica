@@ -308,6 +308,21 @@ export default function App() {
           {modo === 'simular' ? '■ Detener' : '▶ Simular'}
         </button>
 
+        <button
+          onClick={() => confirmarDescarte('¿Empezar un diagrama nuevo?') && limpiarPizarra()}
+          title="Deja la pizarra en blanco para armar un circuito desde cero"
+          style={{
+            ...boton,
+            background: '#fff',
+            color: '#1668c7',
+            border: '2px solid #1668c7',
+            padding: '0.5rem 1.1rem',
+            fontSize: '0.98rem',
+          }}
+        >
+          ＋ Nuevo diagrama
+        </button>
+
         {modo === 'simular' && (
           <button onClick={alternarAire} style={{ ...boton, background: aire ? '#1668c7' : '#8a97a5' }}>
             Aire {aire ? 'ON' : 'OFF'}
@@ -365,12 +380,6 @@ export default function App() {
               e.target.value = ''
             }}
           />
-          <button
-            onClick={() => confirmarDescarte('¿Vaciar la pizarra?') && limpiarPizarra()}
-            style={{ ...botonSuave, border: 'none', background: 'transparent', color: '#8a4a45', textDecoration: 'underline' }}
-          >
-            Vaciar
-          </button>
         </span>
       </div>
 

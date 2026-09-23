@@ -20,6 +20,14 @@ export interface EstadoPieza {
   posicion?: number
   accionada?: boolean
   encendida?: boolean
+  /** Válvulas «O» / «Y»: entrada que está pasando a la salida. */
+  lado?: 'X' | 'Y' | null
+  /** Escape rápido: el obturador ha abierto el escape. */
+  purgando?: boolean
+  /** Temporizador: segundos que lleva llenándose el depósito. */
+  acumulado?: number
+  /** Parámetros vigentes de la pieza (apertura, retardo…), por si cambian al simular. */
+  params?: Params
 }
 
 export interface Racor {
@@ -248,7 +256,7 @@ export function modeloGiratorio(id: string, params: Params): Modelo3D & { radioB
   }
 }
 
-export function modeloMotor(id: string): Modelo3D {
+export function modeloMotor(id: string): Modelo3D & { radioLeva: number; frenteEje: number } {
   const grupo = new THREE.Group()
   const fondo = 0.04
   const cuerpo = caja(0.06, 0.05, fondo, MAT.grafito, 0.004)
@@ -258,7 +266,10 @@ export function modeloMotor(id: string): Modelo3D {
   disco.rotation.x = Math.PI / 2
   const marca = caja(0.012, 0.004, 0.002, MAT.rojo, 0.001)
   marca.position.set(0.006, 0, 0.004)
-  eje.add(disco, marca)
+  // Leva que sobresale del disco: es la que pisa el sensor de paso en cada vuelta.
+  const leva = caja(0.008, 0.007, 0.005, MAT.azul, 0.0015)
+  leva.position.set(0.0155, 0, 0)
+  eje.add(disco, marca, leva)
   eje.position.set(0, 0, fondo + 0.003)
   grupo.add(cuerpo, eje)
   const sello = etiqueta(id, 0.024)
@@ -269,6 +280,8 @@ export function modeloMotor(id: string): Modelo3D {
     racores: racoresDesdeFicha('motorNeumatico', grupo, 0.06, 0.05, fondo),
     pulsables: [],
     medio: { x: 0.03, y: 0.025 },
+    radioLeva: 0.0195,
+    frenteEje: fondo + 0.003,
     actualizar: (e) => {
       eje.rotation.z = -(e.posicion ?? 0) * Math.PI * 2
     },
@@ -349,7 +362,11 @@ export function modeloValvula(tipo: string, id: string, params: Params): Modelo3
 }
 
 /** Final de carrera de rodillo: palanca que se inclina cuando la pisa la leva. */
-export function modeloFinalCarrera(id: string, boca: 'abajo' | 'arriba' = 'abajo'): Modelo3D {
+export function modeloFinalCarrera(
+  id: string,
+  boca: 'abajo' | 'arriba' = 'abajo',
+  tipo: 'finalCarrera' | 'sensorGiro' = 'finalCarrera',
+): Modelo3D & { sello: THREE.Object3D } {
   const grupo = new THREE.Group()
   const ancho = 0.05
   const alto = 0.03
@@ -372,7 +389,8 @@ export function modeloFinalCarrera(id: string, boca: 'abajo' | 'arriba' = 'abajo
   grupo.add(sello)
   return {
     grupo,
-    racores: racoresDesdeFicha('finalCarrera', grupo, ancho, alto, fondo),
+    sello,
+    racores: racoresDesdeFicha(tipo, grupo, ancho, alto, fondo),
     pulsables: [],
     medio: { x: ancho / 2, y: alto / 2 + 0.028 },
     actualizar: (e) => {
@@ -486,7 +504,341 @@ export function modeloManometro(id: string): Modelo3D {
   }
 }
 
-/** Bloque genérico para reguladores, lógicas «O»/«Y», escape rápido, temporizador… */
+// ---------------------------------------------------------------------------
+// Regulación, lógica y temporización
+// ---------------------------------------------------------------------------
+/** Escribe un texto centrado, reduciendo la letra hasta que quepa en `ancho` px. */
+function textoAjustado(c: CanvasRenderingContext2D, texto: string, x: number, y: number, ancho: number, tam: number) {
+  let t = tam
+  do {
+    c.font = `bold ${t}px system-ui, sans-serif`
+    t -= 2
+  } while (c.measureText(texto).width > ancho && t > 10)
+  c.fillText(texto, x, y)
+}
+
+/** Lienzo 2D para las serigrafías (escalas, flechas); null fuera del navegador. */
+function serigrafia(
+  ancho: number,
+  alto: number,
+  dibujar: (c: CanvasRenderingContext2D) => void,
+  lado: [number, number],
+): THREE.Mesh | null {
+  if (typeof document === 'undefined') return null
+  const lienzo = document.createElement('canvas')
+  lienzo.width = lado[0]
+  lienzo.height = lado[1]
+  dibujar(lienzo.getContext('2d')!)
+  const tex = new THREE.CanvasTexture(lienzo)
+  tex.colorSpace = THREE.SRGBColorSpace
+  tex.anisotropy = 4
+  return new THREE.Mesh(
+    new THREE.PlaneGeometry(ancho, alto),
+    new THREE.MeshStandardMaterial({ map: tex, roughness: 0.6, transparent: true }),
+  )
+}
+
+/** Ángulo de la perilla del regulador: de cerrado (−135°) a abierto del todo (+135°). */
+export const anguloPerilla = (apertura: number) =>
+  -THREE.MathUtils.degToRad(-135 + THREE.MathUtils.clamp(apertura, 0, 1) * 270)
+
+/**
+ * Regulador de caudal unidireccional: cuerpo de aluminio con la perilla de
+ * ajuste al frente. La raya blanca de la perilla marca la apertura sobre la
+ * escala; la flecha serigrafiada dice en qué sentido estrangula.
+ */
+export function modeloRegulador(id: string, params: Params): Modelo3D & { perilla: THREE.Object3D } {
+  const grupo = new THREE.Group()
+  const ancho = 0.05
+  const alto = 0.03
+  const fondo = 0.026
+  const cuerpo = caja(ancho, alto, fondo, MAT.aluminio, 0.003)
+  cuerpo.position.z = fondo / 2
+  grupo.add(cuerpo)
+  // Escala 0…máx alrededor de la perilla.
+  const escala = serigrafia(0.026, 0.026, (c) => {
+    c.strokeStyle = '#1a1d22'
+    c.fillStyle = '#1a1d22'
+    for (let i = 0; i <= 10; i++) {
+      const a = ((-135 + i * 27) * Math.PI) / 180
+      c.lineWidth = i % 5 === 0 ? 7 : 4
+      c.beginPath()
+      c.moveTo(128 + Math.sin(a) * 124, 128 - Math.cos(a) * 124)
+      c.lineTo(128 + Math.sin(a) * (i % 5 === 0 ? 96 : 106), 128 - Math.cos(a) * (i % 5 === 0 ? 96 : 106))
+      c.stroke()
+    }
+    c.font = 'bold 44px system-ui, sans-serif'
+    c.textAlign = 'center'
+    c.fillText('−', 40, 236)
+    c.fillText('+', 216, 236)
+  }, [256, 256])
+  if (escala) {
+    escala.position.set(-0.008, 0.001, fondo + 0.0008)
+    grupo.add(escala)
+  }
+  const perilla = new THREE.Group()
+  const moleteado = new THREE.Mesh(new THREE.CylinderGeometry(0.0085, 0.0085, 0.008, 18), MAT.negro)
+  moleteado.rotation.x = Math.PI / 2
+  moleteado.castShadow = true
+  const raya = caja(0.0014, 0.0075, 0.001, MAT.esfera, 0.0003)
+  raya.position.set(0, 0.0045, 0.0042)
+  const contratuerca = new THREE.Mesh(new THREE.CylinderGeometry(0.0095, 0.0095, 0.002, 6), MAT.laton)
+  contratuerca.rotation.x = Math.PI / 2
+  contratuerca.position.z = -0.004
+  perilla.add(contratuerca, moleteado, raya)
+  perilla.position.set(-0.008, 0.001, fondo + 0.005)
+  grupo.add(perilla)
+  // Flecha del sentido estrangulado (1→2) y la del antirretorno, más fina.
+  const flecha = serigrafia(0.016, 0.02, (c) => {
+    c.strokeStyle = '#1a1d22'
+    c.fillStyle = '#1a1d22'
+    c.lineWidth = 8
+    c.beginPath()
+    c.moveTo(10, 40)
+    c.lineTo(100, 40)
+    c.stroke()
+    c.beginPath()
+    c.moveTo(118, 40)
+    c.lineTo(92, 24)
+    c.lineTo(92, 56)
+    c.fill()
+    c.lineWidth = 4
+    c.setLineDash([10, 8])
+    c.beginPath()
+    c.moveTo(118, 100)
+    c.lineTo(20, 100)
+    c.stroke()
+    c.font = 'bold 26px system-ui, sans-serif'
+    c.fillText(id, 16, 150)
+  }, [128, 160])
+  if (flecha) {
+    flecha.position.set(0.0155, 0, fondo + 0.0008)
+    grupo.add(flecha)
+  }
+  perilla.rotation.z = anguloPerilla(Number(params.apertura ?? 0.5))
+  return {
+    grupo,
+    racores: racoresDesdeFicha('reguladorCaudal', grupo, ancho, alto, fondo),
+    pulsables: [],
+    medio: { x: ancho / 2, y: alto / 2 },
+    perilla,
+    actualizar: (e) => {
+      const apertura = e.params?.apertura ?? params.apertura
+      perilla.rotation.z = anguloPerilla(Number(apertura ?? 0.5))
+    },
+  }
+}
+
+/**
+ * Temporizador neumático: una 3/2 pilotada con su depósito. El depósito es
+ * transparente y se ve llenarse mientras dura el pilotaje; al llenarse, la
+ * válvula conmuta (el indicador rojo salta).
+ */
+export function modeloTemporizador(
+  id: string,
+  params: Params,
+): Modelo3D & { relleno: THREE.Object3D } {
+  const grupo = new THREE.Group()
+  const ancho = 0.068
+  const alto = 0.036
+  const fondo = 0.03
+  const cuerpo = caja(ancho, alto, fondo, MAT.grafito, 0.003)
+  cuerpo.position.z = fondo / 2
+  grupo.add(cuerpo)
+  // Depósito: cápsula de policarbonato apoyada en el frente, a la izquierda.
+  const largoDep = 0.03
+  const xDep = -ancho / 2 + 0.004 + largoDep / 2
+  const deposito = new THREE.Mesh(new THREE.CapsuleGeometry(0.0075, largoDep - 0.015, 6, 24), MAT.vidrio)
+  deposito.rotation.z = Math.PI / 2
+  deposito.position.set(xDep, 0.004, fondo + 0.008)
+  const relleno = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.0062, 0.0062, largoDep - 0.004, 20),
+    new THREE.MeshStandardMaterial({ color: 0x49a6ff, emissive: 0x0a4fb0, emissiveIntensity: 0.4, roughness: 0.4 }),
+  )
+  // Crece desde la izquierda: el origen de la geometría va a su extremo.
+  relleno.geometry.translate(0, (largoDep - 0.004) / 2, 0)
+  relleno.rotation.z = -Math.PI / 2
+  relleno.position.set(xDep - (largoDep - 0.004) / 2, 0.004, fondo + 0.008)
+  relleno.scale.y = 0.001
+  const abrazadera = caja(0.004, 0.02, 0.012, MAT.aluminioOscuro, 0.001)
+  const abrazadera2 = abrazadera.clone()
+  abrazadera.position.set(xDep - 0.01, 0.004, fondo + 0.004)
+  abrazadera2.position.set(xDep + 0.01, 0.004, fondo + 0.004)
+  grupo.add(relleno, deposito, abrazadera, abrazadera2)
+  // Tornillo de ajuste del tiempo, arriba a la izquierda.
+  const tornillo = cilindro(0.005, 0.008, MAT.laton, 20)
+  tornillo.position.set(xDep, alto / 2 + 0.004, fondo / 2)
+  grupo.add(tornillo)
+  const retardo = Number(params.retardo ?? 2)
+  const rotulo = serigrafia(0.026, 0.009, (c) => {
+    c.fillStyle = '#f7f7f2'
+    c.fillRect(0, 0, 256, 88)
+    c.fillStyle = '#15191e'
+    c.textAlign = 'center'
+    c.textBaseline = 'middle'
+    textoAjustado(c, `${id} · ${retardo.toFixed(1)} s`, 128, 46, 236, 54)
+  }, [256, 88])
+  if (rotulo) {
+    rotulo.position.set(0.017, 0.006, fondo + 0.0012)
+    grupo.add(rotulo)
+  }
+  const indicador = caja(0.01, 0.004, 0.002, MAT.rojo, 0.001)
+  indicador.position.set(0.017, -alto / 2 + 0.007, fondo + 0.0012)
+  grupo.add(indicador)
+  return {
+    grupo,
+    racores: racoresDesdeFicha('temporizador', grupo, ancho, alto, fondo),
+    pulsables: [],
+    medio: { x: ancho / 2, y: alto / 2 },
+    relleno,
+    actualizar: (e) => {
+      const r = Math.max(0.1, Number(e.params?.retardo ?? retardo))
+      const lleno = e.accionada ? 1 : THREE.MathUtils.clamp((e.acumulado ?? 0) / r, 0, 1)
+      relleno.scale.y = Math.max(0.001, lleno)
+      relleno.visible = lleno > 0.002
+      indicador.position.x = e.accionada ? 0.017 - 0.008 : 0.017 + 0.008
+    },
+  }
+}
+
+/**
+ * Válvula de escape rápido: cuerpo redondo con una mirilla por la que se ve
+ * el obturador (disco rojo). Con aire en 1, tapa el escape y deja pasar a 2;
+ * al caer la presión en 1, salta, tapa la entrada y vacía 2 directo por el
+ * escape de arriba, que lleva un silenciador grande.
+ */
+export function modeloEscapeRapido(id: string): Modelo3D & { obturador: THREE.Object3D } {
+  const grupo = new THREE.Group()
+  const ancho = 0.05
+  const alto = 0.03
+  const fondo = 0.028
+  const cuerpo = new THREE.Mesh(new THREE.CylinderGeometry(alto / 2, alto / 2, ancho - 0.008, 32), MAT.aluminio)
+  cuerpo.rotation.z = Math.PI / 2
+  cuerpo.position.z = fondo / 2
+  cuerpo.castShadow = cuerpo.receiveShadow = true
+  grupo.add(cuerpo)
+  for (const sx of [-1, 1]) {
+    const hexagono = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, 0.006, 6), MAT.aluminioOscuro)
+    hexagono.rotation.z = Math.PI / 2
+    hexagono.position.set(sx * (ancho / 2 - 0.003), 0, fondo / 2)
+    hexagono.castShadow = true
+    grupo.add(hexagono)
+  }
+  const cupula = cilindro(0.008, 0.008, MAT.aluminio, 24)
+  cupula.position.set(0, alto / 2 - 0.001, fondo / 2)
+  grupo.add(cupula)
+  // Mirilla con el obturador.
+  const marco = new THREE.Mesh(new THREE.TorusGeometry(0.0075, 0.0012, 10, 32), MAT.cromo)
+  marco.position.set(0, -0.002, fondo / 2 + alto / 2)
+  const fondoMirilla = new THREE.Mesh(new THREE.CircleGeometry(0.0072, 32), MAT.grafito)
+  fondoMirilla.position.set(0, -0.002, fondo / 2 + alto / 2 - 0.0012)
+  const obturador = cilindro(0.0042, 0.0016, MAT.rojo, 24)
+  obturador.rotation.z = Math.PI / 2
+  obturador.position.set(0.003, -0.002, fondo / 2 + alto / 2 - 0.0004)
+  const cristal = new THREE.Mesh(new THREE.CircleGeometry(0.0074, 32), MAT.vidrio)
+  cristal.position.set(0, -0.002, fondo / 2 + alto / 2 + 0.0006)
+  grupo.add(fondoMirilla, obturador, marco, cristal)
+  const sello = etiqueta(id, 0.018)
+  sello.position.set(0, -0.0125, fondo / 2 + alto / 2 - 0.004)
+  sello.rotation.x = -0.5
+  grupo.add(sello)
+  return {
+    grupo,
+    racores: racoresDesdeFicha('escapeRapido', grupo, ancho, alto, fondo),
+    pulsables: [],
+    medio: { x: ancho / 2, y: alto / 2 },
+    obturador,
+    actualizar: (e) => {
+      // Alimentando: el disco está contra el escape (derecha, lado de 2).
+      // Purgando: salta contra la entrada 1 (izquierda) y 2 sale por arriba.
+      const destino = e.purgando ? -0.003 : 0.003
+      obturador.position.x += (destino - obturador.position.x) * 0.5
+    },
+  }
+}
+
+/**
+ * Válvulas lógicas con mirilla: en la «O» se ve la bola de acero, en la «Y»
+ * la corredera, que se va al lado de la entrada que queda cerrada.
+ */
+export function modeloLogica(tipo: string, id: string): Modelo3D & { movil: THREE.Object3D } {
+  const grupo = new THREE.Group()
+  const esY = tipo === 'valvulaY'
+  const ancho = 0.05
+  const alto = 0.042
+  const fondo = 0.026
+  const yCanal = -0.007
+  const cuerpo = caja(ancho, alto, fondo, MAT.aluminio, 0.003)
+  cuerpo.position.z = fondo / 2
+  grupo.add(cuerpo)
+  // Canal X ↔ Y visto por la mirilla, con la salida A hacia arriba.
+  const canal = caja(0.034, 0.008, 0.001, MAT.grafito, 0.0008)
+  canal.position.set(0, yCanal, fondo + 0.0006)
+  const subida = caja(0.004, alto / 2 - yCanal - 0.002, 0.001, MAT.grafito, 0.0008)
+  subida.position.set(0, (alto / 2 + yCanal) / 2, fondo + 0.0006)
+  grupo.add(canal, subida)
+  const movil = esY
+    ? (() => {
+        const g = new THREE.Group()
+        const vastago = cilindro(0.0016, 0.024, MAT.cromo, 12)
+        vastago.rotation.z = Math.PI / 2
+        const platoA = cilindro(0.0036, 0.002, MAT.negro, 20)
+        platoA.rotation.z = Math.PI / 2
+        platoA.position.x = -0.011
+        const platoB = platoA.clone()
+        platoB.position.x = 0.011
+        g.add(vastago, platoA, platoB)
+        return g
+      })()
+    : new THREE.Mesh(new THREE.SphereGeometry(0.0036, 24, 16), MAT.cromo)
+  movil.position.set(0, yCanal, fondo + 0.0035)
+  grupo.add(movil)
+  const cristal = caja(0.04, 0.016, 0.001, MAT.vidrio, 0.0005)
+  cristal.position.set(0, yCanal, fondo + 0.0065)
+  grupo.add(cristal)
+  // Arriba: el nombre a la izquierda de la salida A y la función a la derecha.
+  const sello = etiqueta(id, 0.019)
+  sello.position.set(-0.0125, 0.012, fondo + 0.0012)
+  grupo.add(sello)
+  const funcion = serigrafia(0.016, 0.012, (c) => {
+    c.fillStyle = '#15191e'
+    c.textAlign = 'center'
+    c.textBaseline = 'middle'
+    textoAjustado(c, esY ? '«Y»' : '«O»', 64, 50, 124, 80)
+  }, [128, 96])
+  if (funcion) {
+    funcion.position.set(0.0125, 0.012, fondo + 0.0008)
+    grupo.add(funcion)
+  }
+  // Las entradas, rotuladas junto a sus racores de abajo.
+  const entradas = serigrafia(0.044, 0.006, (c) => {
+    c.fillStyle = '#15191e'
+    c.font = 'bold 44px system-ui, sans-serif'
+    c.textBaseline = 'middle'
+    c.textAlign = 'center'
+    c.fillText('X', 36, 30)
+    c.fillText('Y', 220, 30)
+  }, [256, 60])
+  if (entradas) {
+    entradas.position.set(0, -alto / 2 + 0.003, fondo + 0.0008)
+    grupo.add(entradas)
+  }
+  return {
+    grupo,
+    racores: racoresDesdeFicha(tipo, grupo, ancho, alto, fondo),
+    pulsables: [],
+    medio: { x: ancho / 2, y: alto / 2 },
+    movil,
+    actualizar: (e) => {
+      // Pasa X → el elemento tapa Y (derecha); pasa Y → tapa X (izquierda).
+      const tope = esY ? 0.004 : 0.012
+      const destino = e.lado === 'X' ? tope : e.lado === 'Y' ? -tope : 0
+      movil.position.x += (destino - movil.position.x) * 0.5
+    },
+  }
+}
+
+/** Bloque genérico, por si aparece una ficha sin modelo propio. */
 export function modeloBloque(tipo: string, id: string): Modelo3D {
   const grupo = new THREE.Group()
   const desc = DESCRIPTORES[tipo]
@@ -529,6 +881,17 @@ export function crearModelo(p: Pieza): Modelo3D {
       return modeloValvula(p.tipo, p.id, p.params)
     case 'finalCarrera':
       return modeloFinalCarrera(p.id)
+    case 'sensorGiro':
+      return modeloFinalCarrera(p.id, 'abajo', 'sensorGiro')
+    case 'reguladorCaudal':
+      return modeloRegulador(p.id, p.params)
+    case 'temporizador':
+      return modeloTemporizador(p.id, p.params)
+    case 'escapeRapido':
+      return modeloEscapeRapido(p.id)
+    case 'valvulaO':
+    case 'valvulaY':
+      return modeloLogica(p.tipo, p.id)
     case 'fuente':
       return modeloFRL(p.id)
     case 'manometro':

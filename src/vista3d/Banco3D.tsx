@@ -53,8 +53,9 @@ const CLAVE_SONIDO = 'neumalab.banco3d.sonido'
 const MAT_SILENCIADOR = new THREE.MeshStandardMaterial({ color: 0x8e7448, metalness: 0.55, roughness: 0.9 })
 
 /** Silenciador de bronce sinterizado roscado en un escape libre. */
-function crearSilenciador(punto: THREE.Vector3, dir: THREE.Vector3): THREE.Group {
+function crearSilenciador(punto: THREE.Vector3, dir: THREE.Vector3, escala = 1): THREE.Group {
   const g = new THREE.Group()
+  g.scale.setScalar(escala)
   const tuerca = new THREE.Mesh(new THREE.CylinderGeometry(0.0042, 0.0042, 0.003, 6), MAT.laton)
   tuerca.position.y = 0.0015
   const cuerpo = new THREE.Mesh(new THREE.CylinderGeometry(0.0036, 0.0042, 0.012, 20), MAT_SILENCIADOR)
@@ -248,10 +249,47 @@ function fondoDegradado(): THREE.Texture {
   return t
 }
 
+/**
+ * El sensor de paso se monta frente al eje de su motor, sobre una escuadra,
+ * con el rodillo apuntando al eje: la leva azul del disco lo pisa una vez por
+ * vuelta, en el punto de la vuelta que tiene configurado.
+ */
+function montarSensorGiro(item: PiezaEnEscena, porId: Map<string, PiezaEnEscena>): void {
+  const p = item.pieza
+  const motor = porId.get(typeof p.params.motor === 'string' ? p.params.motor : '')
+  const leva = motor?.modelo as (Modelo3D & { radioLeva?: number; frenteEje?: number }) | undefined
+  if (!motor || !leva?.radioLeva || !leva.frenteEje) return
+  const punto = Number(p.params.puntoDisparo ?? 0)
+  // El eje gira en sentido horario desde las 3 en punto (ver modeloMotor).
+  const angulo = -punto * Math.PI * 2
+  const dir = new THREE.Vector2(Math.cos(angulo), Math.sin(angulo))
+  // Del centro del eje al del sensor: leva + rodillo + medio cuerpo, con holgura.
+  const r = (leva.radioLeva + 0.0275 + 0.015) * TAMANO
+  const base = motor.modelo.grupo.position
+  const g = item.modelo.grupo
+  // A la altura del disco del motor, para que el rodillo toque la leva.
+  const z = (leva.frenteEje - 0.019) * TAMANO
+  g.position.set(base.x + dir.x * r, base.y + dir.y * r, z)
+  g.rotation.z = Math.atan2(dir.y, dir.x) - Math.PI / 2
+  // Que la pegatina no quede cabeza abajo cuando el sensor va bajo el eje.
+  const giro = THREE.MathUtils.euclideanModulo(g.rotation.z + Math.PI, Math.PI * 2) - Math.PI
+  const sello = (item.modelo as Modelo3D & { sello?: THREE.Object3D }).sello
+  if (sello && Math.abs(giro) > Math.PI / 2) sello.rotation.z = Math.PI
+  // Escuadra que lo sujeta a la placa.
+  const escuadra = new THREE.Mesh(
+    new THREE.BoxGeometry(0.036, 0.022, Math.max(0.001, leva.frenteEje - 0.019)),
+    MAT.aluminioOscuro,
+  )
+  escuadra.position.z = -(leva.frenteEje - 0.019) / 2
+  escuadra.castShadow = escuadra.receiveShadow = true
+  g.add(escuadra)
+}
+
 /** Estado de la simulación que necesita cada modelo. */
 function estadoDe(motor: Motor | null, p: Pieza): { estado: EstadoPieza; presion: number } {
   if (!motor) return { estado: {}, presion: 0 }
-  const estado = motor.estadoDe<EstadoPieza>(p.id) ?? {}
+  const params = motor.circuito.componentes.find((c) => c.id === p.id)?.params
+  const estado: EstadoPieza = { ...motor.estadoDe<EstadoPieza>(p.id), params }
   let presion = 0
   if (p.tipo === 'fuente') presion = motor.presionEn(p.id, '1')
   if (p.tipo === 'manometro') {
@@ -376,6 +414,10 @@ export default function Banco3D({ motor }: Props) {
     // Los finales de carrera se montan donde trabajan: junto a su actuador.
     for (const item of enEscena) {
       const p = item.pieza
+      if (p.tipo === 'sensorGiro') {
+        montarSensorGiro(item, porId)
+        continue
+      }
       if (p.tipo !== 'finalCarrera') continue
       const idAct = typeof p.params.cilindro === 'string' ? p.params.cilindro : ''
       const act = porId.get(idAct)
@@ -451,7 +493,8 @@ export default function Banco3D({ motor }: Props) {
         const dir = r.dir.clone().applyQuaternion(g.quaternion)
         const libre = !conManguera.has(clave)
         if (puerto.rol === 'escape' && libre) {
-          const silenciador = crearSilenciador(r.punto, r.dir)
+          // El escape rápido descarga mucho caudal: lleva un silenciador grande.
+          const silenciador = crearSilenciador(r.punto, r.dir, item.pieza.tipo === 'escapeRapido' ? 1.7 : 1)
           g.add(silenciador)
         }
         const salida = r.punto.clone().addScaledVector(r.dir, puerto.rol === 'escape' && libre ? 0.018 : 0.004)
@@ -756,7 +799,11 @@ export default function Banco3D({ motor }: Props) {
               style={botonMando}
               title={`Mantén pulsado para accionar ${p.id}`}
               onPointerDown={(e) => {
-                e.currentTarget.setPointerCapture(e.pointerId)
+                try {
+                  e.currentTarget.setPointerCapture(e.pointerId)
+                } catch {
+                  /* puntero sintético o ya liberado: el mando funciona igual */
+                }
                 pulsar(p.id, true)
               }}
               onPointerUp={() => pulsar(p.id, false)}

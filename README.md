@@ -8,16 +8,18 @@ banco de prácticas. Todo el contenido y la interfaz están en español.
 
 ## Guía rápida para el alumno
 
-1. **Coloca las fichas.** Arrastra los componentes desde la paleta de la izquierda a la
+1. **Empieza.** **＋ Nuevo diagrama** deja la pizarra en blanco (si había un circuito,
+   pregunta antes de borrarlo); también puedes partir de un ejemplo.
+2. **Coloca las fichas.** Arrastra los componentes desde la paleta de la izquierda a la
    pizarra (o haz clic en ellos). Se imantan a la rejilla.
-2. **Cablea.** Haz clic *cerca* de un puerto y luego cerca de otro: los puertos son
+3. **Cablea.** Haz clic *cerca* de un puerto y luego cerca de otro: los puertos son
    magnéticos, no hace falta acertar al punto exacto. La manguera se enruta sola.
-3. **Ajusta.** Selecciona una ficha y usa el panel *Propiedades*: presión del FRL,
+4. **Ajusta.** Selecciona una ficha y usa el panel *Propiedades*: presión del FRL,
    NC/NA, mono/biestable, apertura del regulador, cilindro que pisa cada rodillo…
-4. **Simula.** Pulsa **▶ Simular** (o la barra espaciadora). Mantén pulsadas las
+5. **Simula.** Pulsa **▶ Simular** (o la barra espaciadora). Mantén pulsadas las
    válvulas de pulsador, haz clic en una biestable para conmutarla, y clic en la fuente
    para cortar el aire.
-5. **Observa.** Mientras simula tienes varias lecturas del mismo circuito:
+6. **Observa.** Mientras simula tienes varias lecturas del mismo circuito:
    - la **pizarra**, que se puede ver como **Esquema** (simbología ISO) o como **Taller**
      (cada componente dibujado como es en realidad, con el aire coloreado por dentro).
      El botón **Ver en paralelo** muestra las dos a la vez, sincronizadas, para relacionar
@@ -25,11 +27,11 @@ banco de prácticas. Todo el contenido y la interfaz están en español.
    - la **vista en corte**, que amplía el interior de la pieza que elijas,
    - el **diagrama de fase**, por **pasos** (desplazamiento-paso, como en la guía) o por
      tiempo, con la secuencia A+ / A− de cada actuador.
-6. **Amplía si hace falta.** El botón **Pantalla completa** de la pizarra la abre a
+7. **Amplía si hace falta.** El botón **Pantalla completa** de la pizarra la abre a
    toda la pantalla, con sus mismos controles de zoom; se sale con el mismo botón o
    con `Esc`. Va bien para proyectar el circuito en clase y para trabajar un plano
    grande sin el resto de la página alrededor.
-7. **Guarda o comparte.** *Guardar* descarga un `.json`, *Abrir* lo recupera y
+8. **Guarda o comparte.** *Guardar* descarga un `.json`, *Abrir* lo recupera y
    *Compartir* copia un enlace con el circuito dentro (no necesita servidor ni cuenta).
    Además la pizarra se conserva sola en el navegador entre sesiones.
 
@@ -135,9 +137,25 @@ rápido, y al cerrar la llave del FRL se descarga el FRL. Cada sonido suena a la
 izquierda o a la derecha según dónde esté la pieza en pantalla. Con un regulador de
 caudal el soplido es más débil y dura más, como el movimiento.
 
-- Las piezas se colocan siguiendo el plano ordenado, salvo **los finales de carrera,
-  que se montan donde trabajan**: sobre el vástago de su cilindro, en el punto de la
-  carrera que vigilan.
+**Cada ficha de la paleta tiene su pieza en el banco**, y las que tienen algo que
+mirar lo muestran:
+
+| Pieza | Qué se ve al simular |
+|---|---|
+| Cilindros | el vástago sale y entra, con la leva que pisa los rodillos |
+| Actuador giratorio / motor | la brida gira; el disco del motor lleva la leva del sensor de paso |
+| Válvulas 3/2, 4/2, 5/2 | pulsador o cabezas de pilotaje; el indicador rojo marca hacia dónde conmutó |
+| Final de carrera / sensor de paso | la palanca del rodillo se inclina cuando la pisan |
+| Regulador de caudal | la perilla gira sobre su escala según la apertura; la flecha marca el sentido que estrangula |
+| Temporizador | el depósito transparente se va llenando de aire; al llenarse, la válvula conmuta |
+| Escape rápido | por la mirilla se ve saltar el obturador al purgar; lleva un silenciador grande |
+| Válvulas «O» / «Y» | por la mirilla se ve la bola («O») o la corredera («Y») irse al lado de la entrada que queda cerrada |
+| FRL y manómetro | la aguja marca la presión |
+
+- Las piezas se colocan siguiendo el plano ordenado, salvo las que **se montan donde
+  trabajan**: los finales de carrera sobre el vástago de su cilindro, en el punto de
+  la carrera que vigilan, y el sensor de paso frente al eje de su motor, sobre una
+  escuadra, en el punto de la vuelta en que dispara.
 - Se gira arrastrando, se acerca con la rueda (hacia donde apunta el ratón) y tiene
   pantalla completa.
 - Los pulsadores se accionan manteniendo pulsado su botón del panel **Mandos** o
@@ -274,7 +292,7 @@ npm run dev        # http://localhost:5173
 ```
 
 ```bash
-npm test           # 204 pruebas: motor, análisis, entregas, plano, símbolos, banco 3D y utilidades
+npm test           # 210 pruebas: motor, análisis, entregas, plano, símbolos, banco 3D y utilidades
 npm run typecheck  # comprobación de tipos
 npm run build      # compila a /dist
 ```
