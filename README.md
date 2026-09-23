@@ -1,4 +1,4 @@
-# NeumaLab — Laboratorio virtual de neumática y PLC
+# NeumaLab — Laboratorio virtual de neumática, PLC y CNC
 
 **MEC275** — Aplicación web para el laboratorio del curso, con una pestaña por unidad:
 
@@ -6,6 +6,9 @@
   simbología **ISO 1219-1**, pensada como gemelo digital del banco de prácticas.
 - **Unidad 2 · PLC**: programar en **Ladder** y probar el programa contra una planta
   del laboratorio en 3D (ver [Unidad 2 · PLC](#unidad-2--plc)).
+- **Unidad 3 · CNC**: escribir programas en **código G** y simular el mecanizado en
+  un centro de torneado o una fresadora en 3D, sin instalar CNC Simulator Pro (ver
+  [Unidad 3 · CNC](#unidad-3--cnc)).
 
 Todo el contenido y la interfaz están en español.
 
@@ -253,6 +256,60 @@ entradas / salidas y direcciones, cómo elegirlo, los sensores, los símbolos La
 
 La unidad no incluye soluciones de evaluaciones: el silo viene como planta, sin programa.
 
+## Unidad 3 · CNC
+
+La pestaña **Unidad 3 · CNC** reemplaza a CNC Simulator Pro para el trabajo del curso:
+se escribe el programa en código G, se prepara la máquina y se ve en 3D cómo la
+herramienta arranca el material.
+
+**Máquinas.** *Centro de torneado* (ejes X en diámetro y Z; cero pieza en la cara,
+sobre el eje; plato de tres garras) y *fresadora de 3 ejes* (cero pieza en la esquina
+delantera izquierda de la cara superior; prensa y mesa). En **Preparación** se elige
+el material (latón, aluminio, acero, acrílico, madera) y las medidas del bruto (en el
+torno también lo que toman las garras y el sobremetal de la cara); la lista de
+herramientas muestra la torreta del torno (desbaste y afinado izquierda/derecha,
+perfilado 35°, ranurado, tronzado 4 mm, roscado, brocas) y el almacén de la fresadora
+(fresas planas, de bola, brocas, grabado en V, planeadora).
+
+**Código G.** Bloques con `N`, `G`, `X Y Z`, `U V W` (incrementales), `I J K` / `R`,
+`F`, `S`, `T`, `M` y comentarios `( … )` o `;`. Movimientos G00/G01/G02/G03, G04, G17–G19,
+G20/G21 (y G70/G71 como en el apunte), G28, G33 (roscado), G90/G91, G94/G95, G96/G97,
+ciclos G81/G83 con G98/G99 y G80; M00–M09 y M30. En el torno `T0101` elige la herramienta;
+en la fresadora `T1 M06`. Las instrucciones `$…` de CNC Simulator Pro se aceptan
+(`$Millimeter`/`$Inch` fijan las unidades; el resto se ignora).
+
+**Editor y revisión.** Editor con colores y números de línea; mientras se escribe se
+revisa el programa y los errores salen en rojo con su línea y una explicación (arco
+que no cierra, falta el avance F, eje que la máquina no tiene…). Poniendo el cursor en
+una línea, **Explicar el bloque** dice qué hace cada palabra según el modo vigente.
+
+**Simulación.** ▶ Ciclo, ⏭ Bloque a bloque, ⟲ Reiniciar, ⏩ Al final y velocidad de
+×0,5 a ×60. El material se arranca según la forma de cada herramienta (una herramienta
+mal elegida se come los resaltes, como en la máquina). La simulación se detiene con
+**alarma** si se entra al material en rápido, si se corta con el husillo detenido, si
+se choca con las garras, el plato o la mesa, o si la broca se mueve de lado; los
+consejos (pasadas de más de 5 mm en diámetro, fresado más hondo que el diámetro)
+no la detienen. Al tronzar, la pieza cae a la bandeja. Hay viruta, refrigerante (M08),
+sonido del husillo y del corte, y un visor de cotas (DRO) con herramienta, husillo,
+avance, tiempo de ciclo y material quitado.
+
+**Para el informe.** Vista 2D de la trayectoria (plano Z-X en el torno, vista superior
+en la fresadora) con la silueta y los puntos de cada bloque; **tabla de coordenadas**
+en absolutas e incrementales (se copia con un clic); descarga del programa como
+`.cnc`, de la trayectoria como PNG y **grabación en video** de la vista 3D.
+
+**Ejemplos** (comentados línea a línea): refrentado y cilindrado; eje escalonado con
+ranura y tronzado; pomo con arcos G02/G03; buje taladrado; contorno cuadrado (el de la
+guía); círculo y arcos; agujeros en línea con G91; cajera en dos niveles; ciclos
+G81/G83; grabado de letras.
+
+**Teoría** (secciones plegables): qué es el CNC, ventajas y aplicaciones, cómo
+organizar la programación, coordenadas absolutas e incrementales con una **práctica
+autocorregida**, estructura de un bloque, códigos G y M, arcos, el torno y sus
+operaciones, código de los insertos (ISO 1832) y cómo usar el simulador.
+
+La unidad no incluye enunciados ni soluciones de evaluaciones.
+
 ## Cómo ordena la aplicación el plano
 
 Al abrir un circuito (o cargar un ejemplo) la aplicación lo redibuja como un plano
@@ -370,6 +427,7 @@ queda atrapado el vástago se bloquea; y un cortocircuito presión-escape no hac
   /realistic     # vistas en corte de válvulas y cilindros
   /vista3d       # banco 3D de neumática: modelos, sonido y oído del banco
   /plc           # unidad 2: motor Ladder (scan), plantas, editor, planta 3D y teoría
+  /cnc           # unidad 3: intérprete de código G, simulador de mecanizado, máquina 3D, editor y teoría
   persistencia.ts# guardar, abrir y compartir circuitos
 /server.js       # servidor Express para producción
 Dockerfile
@@ -383,7 +441,7 @@ npm run dev        # http://localhost:5173
 ```
 
 ```bash
-npm test           # 244 pruebas: motor, análisis, entregas, plano, símbolos, banco 3D, PLC y utilidades
+npm test           # 279 pruebas: motor, análisis, entregas, plano, símbolos, banco 3D, PLC, CNC y utilidades
 npm run typecheck  # comprobación de tipos
 npm run build      # compila a /dist
 ```
@@ -419,7 +477,8 @@ No hace falta `server.js` ni variables de entorno. Netlify funciona igual public
 ## Estado y siguientes pasos
 
 Terminado: motor con tests, editor de pizarra, vistas en corte, banco 3D con sonido,
-unidad de PLC (Ladder, ciclo de scan, plantas 3D y teoría), diagrama espacio-fase,
+unidad de PLC (Ladder, ciclo de scan, plantas 3D y teoría), unidad de CNC (código G,
+torno y fresadora en 3D, trayectoria y video), diagrama espacio-fase,
 guardado/compartir, despliegue y adaptación a tablet.
 
 Pendiente: modo *Aprender* con lecciones guiadas paso a paso, modo *Desafío* con

@@ -1,14 +1,16 @@
 /**
  * Portada de NeumaLab: elige la unidad del curso. La unidad 1 (neumática)
- * es el laboratorio de siempre; la unidad 2 (PLC) se carga sólo cuando
- * alguien la abre.
+ * es el laboratorio de siempre; las unidades 2 (PLC) y 3 (CNC) se cargan
+ * sólo cuando alguien las abre.
  */
 import { lazy, Suspense, useEffect, useState } from 'react'
 import App from './App'
 
 const UnidadPLC = lazy(() => import('./plc/UnidadPLC'))
+const UnidadCNC = lazy(() => import('./cnc/UnidadCNC'))
 
-type Unidad = 'neumatica' | 'plc'
+type Unidad = 'neumatica' | 'plc' | 'cnc'
+const UNIDADES: Unidad[] = ['neumatica', 'plc', 'cnc']
 const CLAVE = 'neumalab.unidad'
 
 function unidadInicial(): Unidad {
@@ -16,9 +18,10 @@ function unidadInicial(): Unidad {
   // Un enlace compartido de un circuito abre siempre neumática.
   if (/[#&]c=/.test(window.location.hash)) return 'neumatica'
   const param = new URLSearchParams(window.location.search).get('unidad')
-  if (param === 'plc' || param === 'neumatica') return param
+  if (UNIDADES.includes(param as Unidad)) return param as Unidad
   try {
-    return localStorage.getItem(CLAVE) === 'plc' ? 'plc' : 'neumatica'
+    const guardada = localStorage.getItem(CLAVE)
+    return UNIDADES.includes(guardada as Unidad) ? (guardada as Unidad) : 'neumatica'
   } catch {
     return 'neumatica'
   }
@@ -33,12 +36,17 @@ export default function Raiz() {
       /* sin almacenamiento */
     }
     document.title =
-      unidad === 'plc' ? 'NeumaLab — Laboratorio virtual de PLC' : 'NeumaLab — Laboratorio virtual de neumática'
+      unidad === 'plc'
+        ? 'NeumaLab — Laboratorio virtual de PLC'
+        : unidad === 'cnc'
+          ? 'NeumaLab — Simulador de CNC'
+          : 'NeumaLab — Laboratorio virtual de neumática'
   }, [unidad])
 
   const pestanas: Array<[Unidad, string, string]> = [
     ['neumatica', 'Unidad 1 · Neumática', 'Circuitos neumáticos, método cascada y banco 3D'],
     ['plc', 'Unidad 2 · PLC', 'Programación Ladder y plantas del laboratorio en 3D'],
+    ['cnc', 'Unidad 3 · CNC', 'Código G, torno y fresadora con simulación de mecanizado en 3D'],
   ]
   return (
     <>
@@ -73,8 +81,8 @@ export default function Raiz() {
       {unidad === 'neumatica' ? (
         <App />
       ) : (
-        <Suspense fallback={<p style={{ padding: 24, color: '#5a6b7d', textAlign: 'center' }}>Abriendo la unidad de PLC…</p>}>
-          <UnidadPLC />
+        <Suspense fallback={<p style={{ padding: 24, color: '#5a6b7d', textAlign: 'center' }}>Abriendo la unidad…</p>}>
+          {unidad === 'plc' ? <UnidadPLC /> : <UnidadCNC />}
         </Suspense>
       )}
     </>
