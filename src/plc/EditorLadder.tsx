@@ -834,6 +834,19 @@ function dibujarBobina(
       <text x={cx} y={y + 28} fontSize={10.5} textAnchor="middle" fill="#5a6b7d">
         {b.dir && nombre ? fmt(b.dir) : ''}
       </text>
+      {/* En RUN, el valor que quedó en la salida: con la bobina negada (/)
+          «tener corriente» y «salida a 1» no son lo mismo. */}
+      {estado && b.dir && /^[QM]/.test(b.dir) && (
+        <text
+          x={cx + 24}
+          y={y + 5}
+          fontSize={11}
+          fontWeight={700}
+          fill={estado.bits[b.dir] ? VERDE : '#8a97a5'}
+        >
+          = {estado.bits[b.dir] ? 1 : 0}
+        </text>
+      )}
     </g>
   )
 }
