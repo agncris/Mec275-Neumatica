@@ -2,7 +2,7 @@
  * Tarjeta de un ejercicio para resolver: enunciado, esquema de conexiones,
  * circuito de instalación y el botón que prueba el programa del alumno.
  */
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { ProgramaPLC } from './ladder'
 import type { EjercicioPLC, ResultadoVerificacion } from './ejercicios'
 import { formatear, type Notacion } from './notacion'
@@ -20,6 +20,8 @@ export default function TarjetaEjercicio({
 }) {
   const [resultado, setResultado] = useState<ResultadoVerificacion | null>(null)
   const [abierta, setAbierta] = useState(true)
+  // Si el programa cambia, el resultado anterior ya no vale.
+  useEffect(() => setResultado(null), [programa])
   const celda: React.CSSProperties = { border: '1px solid #d7dde3', padding: '4px 8px', fontSize: '0.86rem' }
   return (
     <section

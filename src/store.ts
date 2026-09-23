@@ -7,6 +7,7 @@ import type { Circuito, Manguera, Params, RefPuerto } from './engine'
 import { RESPUESTAS_VACIAS, type Respuestas } from './entrega'
 import { autoLayout } from './layout'
 import { EJEMPLOS, type NumeroEjemplo } from './circuitos/ejemplos'
+import { Historial } from './historial'
 
 export interface Pieza {
   id: string
@@ -62,7 +63,15 @@ interface EstadoApp {
   limpiarPizarra(): void
   cargarEjemplo(n: NumeroEjemplo): void
   cargarCircuito(datos: { piezas: Pieza[]; mangueras: Manguera[] }): void
+  /** Deshacer / rehacer el último cambio del circuito. */
+  deshacer(): void
+  rehacer(): void
+  puedeDeshacer: boolean
+  puedeRehacer: boolean
 }
+
+type Foto = { piezas: Pieza[]; mangueras: Manguera[] }
+const historial = new Historial<Foto>()
 
 const PREFIJOS: Record<string, string> = {
   fuente: 'F',
@@ -96,8 +105,17 @@ function siguienteIdManguera(mangueras: Manguera[]): string {
 
 const mismaRef = (a: RefPuerto, b: RefPuerto) => a.componente === b.componente && a.puerto === b.puerto
 
-export const useStore = create<EstadoApp>((set, get) => ({
+export const useStore = create<EstadoApp>((set, get) => {
+  /** Guarda el circuito actual en el historial antes de cambiarlo. */
+  const anotar = () => {
+    const { piezas, mangueras } = get()
+    historial.anotar({ piezas, mangueras })
+    set({ puedeDeshacer: historial.puedeDeshacer, puedeRehacer: historial.puedeRehacer })
+  }
+  return {
   piezas: [],
+  puedeDeshacer: false,
+  puedeRehacer: false,
   mangueras: [],
   modo: 'editar',
   aire: true,
@@ -127,6 +145,7 @@ export const useStore = create<EstadoApp>((set, get) => ({
   },
 
   agregarPiezaEn(tipo, params, x, y) {
+    anotar()
     set((s) => {
       const id = siguienteId(s.piezas, tipo)
       return { piezas: [...s.piezas, { id, tipo, x, y, params }], seleccion: { clase: 'pieza', id } }
@@ -142,6 +161,7 @@ export const useStore = create<EstadoApp>((set, get) => ({
   },
 
   moverPieza(id, x, y) {
+    anotar()
     set((s) => ({ piezas: s.piezas.map((p) => (p.id === id ? { ...p, x, y } : p)) }))
   },
 
@@ -152,6 +172,7 @@ export const useStore = create<EstadoApp>((set, get) => ({
   borrarSeleccion() {
     const { seleccion } = get()
     if (!seleccion) return
+    anotar()
     set((s) => {
       if (seleccion.clase === 'manguera') {
         return { mangueras: s.mangueras.filter((m) => m.id !== seleccion.id), seleccion: null }
@@ -190,6 +211,7 @@ export const useStore = create<EstadoApp>((set, get) => ({
       set({ origenCable: null })
       return
     }
+    anotar()
     set((s) => ({
       mangueras: [...s.mangueras, { id: siguienteIdManguera(s.mangueras), a: origenCable, b: ref }],
       origenCable: null,
@@ -205,16 +227,20 @@ export const useStore = create<EstadoApp>((set, get) => ({
   },
 
   setParamPieza(id, clave, valor) {
+    anotar()
     set((s) => ({
       piezas: s.piezas.map((p) => (p.id === id ? { ...p, params: { ...p.params, [clave]: valor } } : p)),
     }))
   },
 
   limpiarPizarra() {
+    anotar()
     set({ piezas: [], mangueras: [], seleccion: null, origenCable: null, modo: 'editar' })
   },
 
   cargarCircuito(datos) {
+    // Abrir sobre una pizarra vacía (p. ej. al cargar la página) no es un paso que deshacer.
+    if (get().piezas.length > 0) anotar()
     const { piezas, area } = autoLayout(datos.piezas, datos.mangueras)
     void area
     set({
@@ -227,6 +253,7 @@ export const useStore = create<EstadoApp>((set, get) => ({
   },
 
   cargarEjemplo(n) {
+    if (get().piezas.length > 0) anotar()
     const ejemplo = EJEMPLOS[n]
     const { piezas } = autoLayout(ejemplo.piezas, ejemplo.mangueras)
     set({
@@ -237,7 +264,22 @@ export const useStore = create<EstadoApp>((set, get) => ({
       modo: 'editar',
     })
   },
-}))
+
+  deshacer() {
+    const { piezas, mangueras } = get()
+    const previo = historial.deshacer({ piezas, mangueras })
+    if (!previo) return
+    set({ ...previo, seleccion: null, origenCable: null, puedeDeshacer: historial.puedeDeshacer, puedeRehacer: historial.puedeRehacer })
+  },
+
+  rehacer() {
+    const { piezas, mangueras } = get()
+    const siguiente = historial.rehacer({ piezas, mangueras })
+    if (!siguiente) return
+    set({ ...siguiente, seleccion: null, origenCable: null, puedeDeshacer: historial.puedeDeshacer, puedeRehacer: historial.puedeRehacer })
+  },
+  }
+})
 
 /** Circuito para el motor a partir del estado del editor (copia profunda de params). */
 export function circuitoDesdeStore(piezas: Pieza[], mangueras: Manguera[]): Circuito {

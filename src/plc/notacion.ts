@@ -34,6 +34,7 @@ export const MNEMONICOS = {
   NA: { siemens: '┤ ├', ab: 'XIC' },
   NC: { siemens: '┤/├', ab: 'XIO' },
   normal: { siemens: '( )', ab: 'OTE' },
-  set: { siemens: '(S)', ab: 'OTL' },
-  reset: { siemens: '(R)', ab: 'OTU' },
+  // Enclavar / desenclavar: (L) y (U), como en las láminas del curso.
+  set: { siemens: '(L)', ab: 'OTL' },
+  reset: { siemens: '(U)', ab: 'OTU' },
 } as const

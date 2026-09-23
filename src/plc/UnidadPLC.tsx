@@ -13,6 +13,7 @@ import EditorLadder from './EditorLadder'
 import { EJEMPLOS_PLC } from './ejemplos'
 import { EJERCICIOS_PLC, programaDeEjercicio } from './ejercicios'
 import TarjetaEjercicio from './TarjetaEjercicio'
+import { Historial } from '../historial'
 import {
   ENTRADAS,
   MARCAS,
@@ -60,7 +61,25 @@ interface Evento {
 }
 
 export default function UnidadPLC() {
-  const [programa, setPrograma] = useState<ProgramaPLC>(leerGuardado)
+  const [programa, setProgramaCrudo] = useState<ProgramaPLC>(leerGuardado)
+  // Deshacer / rehacer: cada cambio del programa pasa por aquí.
+  const historialRef = useRef(new Historial<ProgramaPLC>())
+  const [, setHayHistoria] = useState(0)
+  const setPrograma = useCallback((p: ProgramaPLC) => {
+    historialRef.current.anotar(programaRef.current)
+    setProgramaCrudo(p)
+    setHayHistoria((n) => n + 1)
+  }, [])
+  const deshacer = useCallback(() => {
+    const previo = historialRef.current.deshacer(programaRef.current)
+    if (previo) setProgramaCrudo(previo)
+    setHayHistoria((n) => n + 1)
+  }, [])
+  const rehacer = useCallback(() => {
+    const siguiente = historialRef.current.rehacer(programaRef.current)
+    if (siguiente) setProgramaCrudo(siguiente)
+    setHayHistoria((n) => n + 1)
+  }, [])
   const [corriendo, setCorriendo] = useState(false)
   const [version, setVersion] = useState(0)
   const [, setFotograma] = useState(0)
@@ -88,6 +107,8 @@ export default function UnidadPLC() {
   programaRef.current = programa
   const flujosRef = useRef<FlujoEscalon[] | null>(null)
   const eventosRef = useRef<Evento[]>([])
+  /** Último aviso de la planta, para mostrarlo junto a ella unos segundos. */
+  const avisoPlantaRef = useRef<{ mensaje: string; hasta: number } | null>(null)
 
   const pulsar = useCallback((dir: string, valor: boolean) => {
     simRef.current.mandos = { ...simRef.current.mandos, [dir]: valor }
@@ -179,7 +200,10 @@ export default function UnidadPLC() {
           registrar(`${n} ${estado.bits[d] ? 'se activa (1)' : 'se desactiva (0)'}`)
         }
       }
-      for (const e of sim.planta.eventos.splice(0)) registrar(`🏭 ${e.mensaje}`, e.aviso)
+      for (const e of sim.planta.eventos.splice(0)) {
+        registrar(`🏭 ${e.mensaje}`, e.aviso)
+        if (e.aviso) avisoPlantaRef.current = { mensaje: e.mensaje, hasta: Date.now() + 7000 }
+      }
       tiempo += DT
       if (tiempo >= 0.066) {
         tiempo = 0
@@ -198,10 +222,21 @@ export default function UnidadPLC() {
         e.preventDefault()
         setCorriendo((c) => !c)
       }
+      // Ctrl/Cmd+Z deshace y Ctrl/Cmd+Shift+Z o Ctrl+Y rehace (sólo en STOP).
+      if ((e.ctrlKey || e.metaKey) && !simRef.current.corriendo) {
+        const k = e.key.toLowerCase()
+        if (k === 'z' && !e.shiftKey) {
+          e.preventDefault()
+          deshacer()
+        } else if ((k === 'z' && e.shiftKey) || k === 'y') {
+          e.preventDefault()
+          rehacer()
+        }
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  }, [deshacer, rehacer])
 
   useEffect(() => {
     if (!aviso) return
@@ -377,6 +412,26 @@ export default function UnidadPLC() {
             >
               {corriendo ? '■ STOP' : '▶ RUN'}
             </button>
+            {!corriendo && (
+              <span style={{ display: 'flex', gap: 4 }}>
+                <button
+                  onClick={deshacer}
+                  disabled={!historialRef.current.puedeDeshacer}
+                  title="Deshacer (Ctrl+Z)"
+                  style={{ ...botonSuave, opacity: historialRef.current.puedeDeshacer ? 1 : 0.45 }}
+                >
+                  ↶ Deshacer
+                </button>
+                <button
+                  onClick={rehacer}
+                  disabled={!historialRef.current.puedeRehacer}
+                  title="Rehacer (Ctrl+Shift+Z)"
+                  style={{ ...botonSuave, opacity: historialRef.current.puedeRehacer ? 1 : 0.45 }}
+                >
+                  ↷
+                </button>
+              </span>
+            )}
             <h2 style={{ ...subtitulo, margin: 0 }}>
               Programa Ladder{programa.nombre ? ` · ${programa.nombre}` : ''}
               <span style={{ ...estadoPLC, background: corriendo ? '#12a35a' : '#ffa726' }}>{corriendo ? 'RUN' : 'STOP'}</span>
@@ -413,7 +468,7 @@ export default function UnidadPLC() {
             <Planta3D
               sim={simRef}
               version={version}
-              acciones={sim.planta.acciones()}
+              acciones={[]}
               onAccion={(id) => {
                 sim.planta.accion(id)
                 setFotograma((f) => f + 1)
@@ -421,6 +476,40 @@ export default function UnidadPLC() {
               notacion={notacion}
             />
           </Suspense>
+          {avisoPlantaRef.current && avisoPlantaRef.current.hasta > Date.now() && (
+            <p
+              role="alert"
+              style={{
+                margin: '8px 0 0',
+                padding: '0.45rem 0.7rem',
+                background: '#fff4e5',
+                border: '1px solid #f0c98a',
+                borderRadius: 8,
+                color: '#8a3b00',
+                fontSize: '0.86rem',
+              }}
+            >
+              ⚠ {avisoPlantaRef.current.mensaje}
+            </p>
+          )}
+          {sim.planta.acciones().length > 0 && (
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginTop: 8 }}>
+              <span style={{ fontSize: '0.8rem', color: '#5a6b7d' }}>En la planta:</span>
+              {sim.planta.acciones().map((a) => (
+                <button
+                  key={a.id}
+                  title={a.titulo}
+                  style={{ ...botonSuave, borderColor: '#1668c7', color: '#1668c7', fontWeight: 600 }}
+                  onClick={() => {
+                    sim.planta.accion(a.id)
+                    setFotograma((f) => f + 1)
+                  }}
+                >
+                  {a.etiqueta}
+                </button>
+              ))}
+            </div>
+          )}
           <PanelES
             mandos={descripcion.mandos}
             simbolos={programa.simbolos}

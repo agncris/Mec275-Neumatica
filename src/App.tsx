@@ -77,7 +77,11 @@ export default function App() {
     limpiarPizarra,
     borrarSeleccion,
     cancelarCable,
+    deshacer,
+    rehacer,
   } = useStore()
+  const puedeDeshacer = useStore((s) => s.puedeDeshacer)
+  const puedeRehacer = useStore((s) => s.puedeRehacer)
 
   const [motor, setMotor] = useState<Motor | null>(null)
   const [, setFotograma] = useState(0)
@@ -160,6 +164,17 @@ export default function App() {
       const tag = (e.target as HTMLElement)?.tagName
       const enCampo = tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA'
       if (e.key === 'Escape') cancelarCable()
+      // Ctrl/Cmd+Z deshace; Ctrl/Cmd+Shift+Z o Ctrl+Y rehace.
+      if ((e.ctrlKey || e.metaKey) && !enCampo && modo === 'editar') {
+        const k = e.key.toLowerCase()
+        if (k === 'z' && !e.shiftKey) {
+          e.preventDefault()
+          deshacer()
+        } else if ((k === 'z' && e.shiftKey) || k === 'y') {
+          e.preventDefault()
+          rehacer()
+        }
+      }
       if ((e.key === 'Delete' || e.key === 'Backspace') && modo === 'editar' && !enCampo) {
         borrarSeleccion()
       }
@@ -172,7 +187,7 @@ export default function App() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [modo, borrarSeleccion, cancelarCable, setModo])
+  }, [modo, borrarSeleccion, cancelarCable, setModo, deshacer, rehacer])
 
   useEffect(() => {
     if (!aviso) return
@@ -323,6 +338,17 @@ export default function App() {
         >
           ＋ Nuevo diagrama
         </button>
+
+        {modo === 'editar' && (
+          <span style={{ display: 'flex', gap: 4 }}>
+            <button onClick={deshacer} disabled={!puedeDeshacer} title="Deshacer (Ctrl+Z)" style={{ ...botonSuave, opacity: puedeDeshacer ? 1 : 0.45 }}>
+              ↶ Deshacer
+            </button>
+            <button onClick={rehacer} disabled={!puedeRehacer} title="Rehacer (Ctrl+Shift+Z)" style={{ ...botonSuave, opacity: puedeRehacer ? 1 : 0.45 }}>
+              ↷
+            </button>
+          </span>
+        )}
 
         {modo === 'simular' && (
           <button onClick={alternarAire} style={{ ...boton, background: aire ? '#1668c7' : '#8a97a5' }}>

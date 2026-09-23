@@ -40,7 +40,7 @@ Todo el contenido y la interfaz están en español.
    *Compartir* copia un enlace con el circuito dentro (no necesita servidor ni cuenta).
    Además la pizarra se conserva sola en el navegador entre sesiones.
 
-**Atajos:** `Espacio` simular/detener · `Supr` borrar lo seleccionado · `Esc` cancelar cableado.
+**Atajos:** `Espacio` simular/detener · `Supr` borrar lo seleccionado · `Esc` cancelar cableado · `Ctrl+Z` deshacer · `Ctrl+Shift+Z` (o `Ctrl+Y`) rehacer. En la unidad de PLC: `Espacio` RUN/STOP y los mismos atajos de deshacer en el programa Ladder.
 
 ## La entrega
 
@@ -383,7 +383,7 @@ npm run dev        # http://localhost:5173
 ```
 
 ```bash
-npm test           # 243 pruebas: motor, análisis, entregas, plano, símbolos, banco 3D, PLC y utilidades
+npm test           # 244 pruebas: motor, análisis, entregas, plano, símbolos, banco 3D, PLC y utilidades
 npm run typecheck  # comprobación de tipos
 npm run build      # compila a /dist
 ```

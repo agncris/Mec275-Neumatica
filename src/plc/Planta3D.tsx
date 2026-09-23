@@ -1376,7 +1376,8 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion }:
     escena.background = new THREE.Color(0xdde2e7)
 
     notacionEscena = notacion
-    const planta = crearEscena(sim.current.planta.id)
+    const idPlanta = sim.current.planta.id
+    const planta = crearEscena(idPlanta)
     planta.raiz.traverse((o) => {
       const m = o as THREE.Mesh
       if (m.isMesh) {
@@ -1503,6 +1504,9 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion }:
       const dt = Math.min(0.1, (ahora - antes) / 1000)
       antes = ahora
       controles.update()
+      // Al cambiar de planta, la simulación cambia antes de que se monte la
+      // escena nueva: mientras tanto, esta escena no debe leer la otra planta.
+      if (sim.current.planta.id !== idPlanta) return
       planta.actualizar(sim.current, dt, conSonidoRef.current ? sonidoRef.current : null, pan)
       renderer.render(escena, camara)
     }

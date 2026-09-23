@@ -81,8 +81,8 @@ const NOMBRES_BOBINA: Record<TipoBobina, string> = {
   negada: 'Bobina negada (/)',
   flancoP: 'Flanco positivo (P)',
   flancoN: 'Flanco negativo (N)',
-  set: 'Set (S)',
-  reset: 'Reset (R)',
+  set: 'Enclavar (L / Set)',
+  reset: 'Desenclavar (U / Reset)',
   TON: 'Temporizador TON',
   TOF: 'Temporizador TOF',
   RTO: 'Temporizador retentivo RTO',
@@ -90,26 +90,26 @@ const NOMBRES_BOBINA: Record<TipoBobina, string> = {
   CTD: 'Contador CTD',
 }
 
-const herramientas = (n: Notacion): Array<{ id: Herramienta; icono: string; titulo: string }> => [
-  { id: 'seleccionar', icono: '↖', titulo: 'Seleccionar: clic en un elemento para ver y cambiar su dirección' },
-  { id: 'NA', icono: MNEMONICOS.NA[n], titulo: 'Contacto normalmente abierto (XIC): deja pasar cuando su dirección está a 1' },
-  { id: 'NC', icono: MNEMONICOS.NC[n], titulo: 'Contacto normalmente cerrado (XIO): deja pasar cuando su dirección está a 0' },
-  { id: 'ONS', icono: 'ONS', titulo: 'One shot: deja pasar la corriente un solo barrido, cuando llega' },
-  { id: 'CMP', icono: '≥ =', titulo: 'Comparar: deja pasar si el acumulado de un temporizador o contador cumple la condición (EQU, GRT, LES…)' },
-  { id: 'cable', icono: '──', titulo: 'Cable: une dos tramos de una misma fila' },
-  { id: 'rama', icono: '┃', titulo: 'Rama: une (o separa) dos filas en un nodo para hacer un paralelo' },
-  { id: 'normal', icono: MNEMONICOS.normal[n], titulo: 'Bobina (OTE): vale 1 mientras le llega corriente' },
-  { id: 'negada', icono: '(/)', titulo: 'Bobina negada: vale 1 mientras NO le llega corriente' },
-  { id: 'set', icono: MNEMONICOS.set[n], titulo: 'Set / enclavar (OTL, L): la pone a 1 y ahí queda hasta un Reset' },
-  { id: 'reset', icono: MNEMONICOS.reset[n], titulo: 'Reset / desenclavar (OTU, U; RES en temporizadores y contadores): la pone a 0' },
-  { id: 'flancoP', icono: '(P)', titulo: 'Flanco positivo: vale 1 un solo barrido cuando llega la corriente' },
-  { id: 'flancoN', icono: '(N)', titulo: 'Flanco negativo: vale 1 un solo barrido cuando se va la corriente' },
-  { id: 'TON', icono: 'TON', titulo: 'Temporizador a la conexión: se activa tras el tiempo con corriente' },
-  { id: 'TOF', icono: 'TOF', titulo: 'Temporizador a la desconexión: sigue activo un tiempo tras perder la corriente' },
-  { id: 'RTO', icono: 'RTO', titulo: 'Temporizador retentivo: acumula el tiempo con corriente y lo guarda sin ella; se reinicia con Reset (RES)' },
-  { id: 'CTU', icono: 'CTU', titulo: 'Contador ascendente: suma uno en cada flanco de subida' },
-  { id: 'CTD', icono: 'CTD', titulo: 'Contador descendente: resta uno en cada flanco de subida' },
-  { id: 'borrar', icono: '✕', titulo: 'Borrar el elemento de la casilla' },
+const herramientas = (n: Notacion): Array<{ id: Herramienta; icono: string; texto: string; titulo: string; grupo: number }> => [
+  { id: 'seleccionar', icono: '↖', texto: 'Elegir', grupo: 0, titulo: 'Seleccionar: clic en un elemento para ver y cambiar su dirección' },
+  { id: 'NA', icono: MNEMONICOS.NA[n], texto: 'Contacto NA', grupo: 1, titulo: 'Contacto normalmente abierto (XIC): deja pasar cuando su dirección está a 1' },
+  { id: 'NC', icono: MNEMONICOS.NC[n], texto: 'Contacto NC', grupo: 1, titulo: 'Contacto normalmente cerrado (XIO): deja pasar cuando su dirección está a 0' },
+  { id: 'cable', icono: '──', texto: 'Cable', grupo: 1, titulo: 'Cable: une dos tramos de una misma fila' },
+  { id: 'rama', icono: '┃', texto: 'Rama', grupo: 1, titulo: 'Rama: une (o separa) dos filas en un nodo para hacer un paralelo' },
+  { id: 'ONS', icono: 'ONS', texto: 'Un pulso', grupo: 1, titulo: 'One shot: deja pasar la corriente un solo barrido, cuando llega' },
+  { id: 'CMP', icono: '≥ =', texto: 'Comparar', grupo: 1, titulo: 'Comparar: deja pasar si el acumulado de un temporizador o contador cumple la condición (EQU, GRT, LES…)' },
+  { id: 'normal', icono: MNEMONICOS.normal[n], texto: 'Bobina', grupo: 2, titulo: 'Bobina (OTE): vale 1 mientras le llega corriente' },
+  { id: 'set', icono: MNEMONICOS.set[n], texto: 'Enclavar', grupo: 2, titulo: 'Enclavar, L / Set (OTL): la pone a 1 y ahí queda hasta que la desenclaves' },
+  { id: 'reset', icono: MNEMONICOS.reset[n], texto: 'Desenclavar', grupo: 2, titulo: 'Desenclavar, U / Reset (OTU; RES en temporizadores y contadores): la pone a 0' },
+  { id: 'negada', icono: '(/)', texto: 'Negada', grupo: 2, titulo: 'Bobina negada: vale 1 mientras NO le llega corriente (al revés que la bobina normal)' },
+  { id: 'flancoP', icono: '(P)', texto: 'Flanco ↑', grupo: 2, titulo: 'Flanco positivo: vale 1 un solo barrido cuando llega la corriente' },
+  { id: 'flancoN', icono: '(N)', texto: 'Flanco ↓', grupo: 2, titulo: 'Flanco negativo: vale 1 un solo barrido cuando se va la corriente' },
+  { id: 'TON', icono: 'TON', texto: 'Retardo', grupo: 3, titulo: 'Temporizador a la conexión: se activa tras el tiempo con corriente' },
+  { id: 'TOF', icono: 'TOF', texto: 'Retardo off', grupo: 3, titulo: 'Temporizador a la desconexión: sigue activo un tiempo tras perder la corriente' },
+  { id: 'RTO', icono: 'RTO', texto: 'Retentivo', grupo: 3, titulo: 'Temporizador retentivo: acumula el tiempo con corriente y lo guarda sin ella; se reinicia con Reset (RES)' },
+  { id: 'CTU', icono: 'CTU', texto: 'Cuenta ↑', grupo: 3, titulo: 'Contador ascendente: suma uno en cada flanco de subida' },
+  { id: 'CTD', icono: 'CTD', texto: 'Cuenta ↓', grupo: 3, titulo: 'Contador descendente: resta uno en cada flanco de subida' },
+  { id: 'borrar', icono: '✕', texto: 'Borrar', grupo: 4, titulo: 'Borrar el elemento de la casilla (también con Supr)' },
 ]
 
 const esBobina = (h: Herramienta): h is TipoBobina =>
@@ -122,6 +122,13 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
   const [herramienta, setHerramienta] = useState<Herramienta>('seleccionar')
   const [sel, setSel] = useState<Seleccion | null>(null)
   const [escalonSel, setEscalonSel] = useState<number | null>(null)
+  /** Aviso breve cuando se usa una herramienta en la columna que no le toca. */
+  const [pista, setPista] = useState<string | null>(null)
+  useEffect(() => {
+    if (!pista) return
+    const id = setTimeout(() => setPista(null), 3500)
+    return () => clearTimeout(id)
+  }, [pista])
 
   const fmt = (dir: string) => formatear(dir, notacion)
   /** Nombre del símbolo; en un bit de temporizador o contador, el del T/C más el bit. */
@@ -174,7 +181,10 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
         cambiar((p) => (p.escalones[s.escalon].bobinas[s.fila] = null))
         return
       }
-      if (!esBobina(h)) return
+      if (!esBobina(h)) {
+        setPista('Esa es la columna de las bobinas: los contactos, cables y ramas van en las casillas de la izquierda.')
+        return
+      }
       cambiar((p) => {
         const antes = p.escalones[s.escalon].bobinas[s.fila]
         const nueva: Bobina = { tipo: h, dir: '' }
@@ -188,7 +198,10 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
       return
     }
     const col = s.col
-    if (esBobina(h)) return
+    if (esBobina(h)) {
+      setPista('Las bobinas van en la última columna, a la derecha, pegadas a la barra.')
+      return
+    }
     cambiar((p) => {
       const celdas = p.escalones[s.escalon].celdas[s.fila]
       const antes = celdas[col]
@@ -456,27 +469,32 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
     <div>
       {editable && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 6 }} role="toolbar" aria-label="Herramientas Ladder">
-          {herramientas(notacion).map((h) => (
-            <button
-              key={h.id}
-              title={h.titulo}
-              onClick={() => setHerramienta(h.id)}
-              aria-pressed={herramienta === h.id}
-              style={{
-                fontFamily: 'ui-monospace, Menlo, monospace',
-                fontSize: '0.82rem',
-                minWidth: 40,
-                padding: '0.25rem 0.45rem',
-                borderRadius: 6,
-                cursor: 'pointer',
-                border: `1px solid ${herramienta === h.id ? AZUL : '#c6ced6'}`,
-                background: herramienta === h.id ? AZUL : '#fff',
-                color: herramienta === h.id ? '#fff' : TINTA,
-                fontWeight: 700,
-              }}
-            >
-              {h.icono}
-            </button>
+          {herramientas(notacion).map((h, i, todas) => (
+            <span key={h.id} style={{ display: 'contents' }}>
+              {i > 0 && todas[i - 1].grupo !== h.grupo && <span style={{ width: 6 }} aria-hidden />}
+              <button
+                title={h.titulo}
+                onClick={() => setHerramienta(h.id)}
+                aria-pressed={herramienta === h.id}
+                aria-label={`${h.texto} ${h.icono}`}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 1,
+                  minWidth: 52,
+                  padding: '0.2rem 0.35rem',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  border: `1px solid ${herramienta === h.id ? AZUL : '#c6ced6'}`,
+                  background: herramienta === h.id ? AZUL : '#fff',
+                  color: herramienta === h.id ? '#fff' : TINTA,
+                }}
+              >
+                <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: '0.84rem', fontWeight: 700 }}>{h.icono}</span>
+                <span style={{ fontSize: '0.64rem', lineHeight: 1.1, whiteSpace: 'nowrap' }}>{h.texto}</span>
+              </button>
+            </span>
           ))}
         </div>
       )}
@@ -502,8 +520,8 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
           >
             ＋ Escalón
           </button>
-          <span style={{ fontSize: '0.8rem', color: '#5a6b7d' }}>
-            {herramienta === 'rama'
+          <span style={{ fontSize: '0.8rem', color: pista ? '#8a5b00' : '#5a6b7d', fontWeight: pista ? 700 : 400 }} role={pista ? 'status' : undefined}>
+            {pista ? `⚠ ${pista}` : herramienta === 'rama'
               ? 'Haz clic en las franjas azules para unir dos filas en ese punto (así se arma un paralelo).'
               : herramienta === 'seleccionar'
                 ? 'Elige una herramienta y haz clic en una casilla. Las bobinas van en la última columna.'
@@ -775,7 +793,7 @@ function dibujarBobina(
   estado: EstadoPLC | null,
   nombre: string,
   fmt: (d: string) => string,
-  notacion: Notacion,
+  _notacion: Notacion,
 ) {
   const color = activa ? VERDE : TINTA
   const etiqueta = b.dir ? recortar(nombre || fmt(b.dir), 14) : '???'
@@ -810,15 +828,14 @@ function dibujarBobina(
       </g>
     )
   }
-  const ab = notacion === 'ab'
   const esTC = /^[TC]/.test(b.dir)
   const letra: Record<string, string> = {
     normal: '',
     negada: '/',
     flancoP: 'P',
     flancoN: 'N',
-    set: ab ? 'L' : 'S',
-    reset: ab ? (esTC ? 'RES' : 'U') : 'R',
+    set: 'L',
+    reset: esTC ? 'RES' : 'U',
   }
   return (
     <g>

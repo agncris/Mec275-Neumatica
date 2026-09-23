@@ -220,6 +220,27 @@ describe('elevador y ejercicio 2 para resolver', () => {
     expect(EJEMPLOS_PLC.some((e) => e.programa.planta === 'elevador')).toBe(false)
   })
 
+  it('primer escalón S0·S1·S3 → (L) Y1: Z1 sube al poner la pieza; con la bobina negada, al revés', () => {
+    const ej = EJERCICIOS_PLC.find((e) => e.id === 'ejercicio2')!
+    const conBobina = (tipo: 'set' | 'negada') => {
+      const p = programaDeEjercicio(ej)
+      p.escalones[0].celdas[0].splice(0, 3, NA('I0.0'), NA('I0.1'), NA('I0.3'))
+      p.escalones[0].bobinas[0] = { tipo, dir: 'Q0.0' }
+      return p
+    }
+    // Con enclavar (L): quieto sin pieza, sube con pieza.
+    const planta = new PlantaElevador()
+    const run = correr(conBobina('set'), planta, 1)
+    expect(planta.z1).toBe(0)
+    planta.accion('pieza')
+    run.paso(2)
+    expect(planta.z1).toBeGreaterThan(0.9)
+    // Con la bobina negada (/): sube sin pieza (el escalón no tiene corriente).
+    const planta2 = new PlantaElevador()
+    correr(conBobina('negada'), planta2, 2)
+    expect(planta2.z1).toBeGreaterThan(0.9)
+  })
+
   it('verificar: un programa en blanco no pasa y dice en qué paso falla', () => {
     const ej = EJERCICIOS_PLC.find((e) => e.id === 'ejercicio2')!
     const r = ej.verificar(programaDeEjercicio(ej))
