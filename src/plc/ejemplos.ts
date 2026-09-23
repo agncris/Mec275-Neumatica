@@ -119,20 +119,81 @@ const SET_RESET = programa('Básico · Set y Reset', 'tablero', T, [
 
 const TEMPORIZADOR = programa('Básico · Temporizador TON', 'tablero', T, [
   escalon([[NA('I0.4')]], [B('TON', 'T0', 3)], [], 'Con SEL1 activado, T0 cuenta 3 s (retardo a la conexión). Si lo sueltas antes, vuelve a cero.'),
-  escalon([[NA('T0')]], [B('normal', 'Q0.0')], [], 'Cuando T0 termina, su contacto se cierra y enciende H1.'),
+  escalon([[NA('T0.DN')]], [B('normal', 'Q0.0')], [], 'Cuando T0 termina, su contacto se cierra y enciende H1.'),
 ])
 
 const INTERMITENTE = programa('Básico · Intermitente con dos TON', 'tablero', T, [
-  escalon([[NA('I0.4'), NC('T1')]], [B('TON', 'T0', 0.5)], [], 'T0 cuenta medio segundo mientras SEL1 está activado y T1 no ha terminado.'),
-  escalon([[NA('T0')]], [B('TON', 'T1', 0.5)], [], 'Cuando T0 termina, T1 cuenta otro medio segundo; al terminar corta a T0 y los dos vuelven a empezar.'),
-  escalon([[NA('T0')]], [B('normal', 'Q0.2')], [], 'H3 se enciende mientras T0 está terminado: parpadea una vez por segundo.'),
+  escalon([[NA('I0.4'), NC('T1.DN')]], [B('TON', 'T0', 0.5)], [], 'T0 cuenta medio segundo mientras SEL1 está activado y T1 no ha terminado.'),
+  escalon([[NA('T0.DN')]], [B('TON', 'T1', 0.5)], [], 'Cuando T0 termina, T1 cuenta otro medio segundo; al terminar corta a T0 y los dos vuelven a empezar.'),
+  escalon([[NA('T0.DN')]], [B('normal', 'Q0.2')], [], 'H3 se enciende mientras T0 está terminado: parpadea una vez por segundo.'),
 ])
 
 const CONTADOR = programa('Básico · Contador CTU', 'tablero', T, [
   escalon([[NA('I0.2')]], [B('CTU', 'C0', 5)], [], 'Cada pulsación de P3 suma uno (cuenta el flanco de subida, no el tiempo pulsado).'),
-  escalon([[NA('C0')]], [B('normal', 'Q0.3')], [], 'Al llegar a 5, C0 se activa y enciende H4.'),
-  escalon([[NA('C0')], [NA('I0.0')]], [B('normal', 'Q0.6')], [[0, 1]], 'El zumbador suena con el contador lleno (o mientras pulsas MARCHA, para probarlo).'),
+  escalon([[NA('C0.DN')]], [B('normal', 'Q0.3')], [], 'Al llegar a 5, C0 se activa y enciende H4.'),
+  escalon([[NA('C0.DN')], [NA('I0.0')]], [B('normal', 'Q0.6')], [[0, 1]], 'El zumbador suena con el contador lleno (o mientras pulsas MARCHA, para probarlo).'),
   escalon([[NA('I0.3')]], [B('reset', 'C0')], [], 'P4 pone el contador a cero.'),
+])
+
+// ---------------------------------------------------------------------------
+// Semáforo y portón
+// ---------------------------------------------------------------------------
+const SEMAFORO = programa(
+  'Semáforo con temporizadores encadenados',
+  'semaforo',
+  [
+    ...PLANTAS.semaforo.cableado,
+    { dir: 'M0.0', nombre: 'EN_MARCHA', descripcion: 'Marca: el cruce está funcionando' },
+    { dir: 'T0', nombre: 'T_VERDE_NS', descripcion: 'Tiempo de verde Norte-Sur' },
+    { dir: 'T1', nombre: 'T_AMAR_NS', descripcion: 'Tiempo de amarillo Norte-Sur' },
+    { dir: 'T2', nombre: 'T_VERDE_EO', descripcion: 'Tiempo de verde Este-Oeste' },
+    { dir: 'T3', nombre: 'T_AMAR_EO', descripcion: 'Tiempo de amarillo Este-Oeste' },
+  ],
+  [
+    escalon([[NA('I0.0'), NC('I0.1')], [NA('M0.0')]], [B('normal', 'M0.0')], [[0, 1]], 'Marcha y paro con autorretención.'),
+    escalon([[NA('M0.0'), NC('T3.DN')]], [B('TON', 'T0', 5)], [], 'Primer tiempo: verde Norte-Sur. Cuando termina el último temporizador, T0 se reinicia y el ciclo vuelve a empezar.'),
+    escalon([[NA('T0.DN')]], [B('TON', 'T1', 2)], [], 'Al terminar T0 empieza el amarillo Norte-Sur.'),
+    escalon([[NA('T1.DN')]], [B('TON', 'T2', 5)], [], 'Luego el verde Este-Oeste…'),
+    escalon([[NA('T2.DN')]], [B('TON', 'T3', 2)], [], '…y el amarillo Este-Oeste.'),
+    escalon([[NA('M0.0'), NC('T0.DN')]], [B('normal', 'Q0.2')], [], 'Verde NS mientras corre T0.'),
+    escalon([[NA('T0.DN'), NC('T1.DN')]], [B('normal', 'Q0.1')], [], 'Amarillo NS mientras corre T1.'),
+    escalon([[NA('T1.DN')], [NC('M0.0')]], [B('normal', 'Q0.0')], [[0, 1]], 'Rojo NS mientras la otra calle tiene paso, o con el cruce detenido.'),
+    escalon([[NA('T1.DN'), NC('T2.DN')]], [B('normal', 'Q0.5')], [], 'Verde EO mientras corre T2.'),
+    escalon([[NA('T2.DN'), NC('T3.DN')]], [B('normal', 'Q0.4')], [], 'Amarillo EO mientras corre T3.'),
+    escalon([[NC('T1.DN')]], [B('normal', 'Q0.3')], [], 'Rojo EO mientras Norte-Sur tiene verde o amarillo (y con el cruce detenido).'),
+  ],
+)
+
+const PORTON = programa(
+  'Portón con enclavamiento y fotocelda',
+  'porton',
+  PLANTAS.porton.cableado,
+  [
+    escalon(
+      [[NA('I0.0'), NC('I0.2'), NC('I0.3'), NC('Q0.1')], [NA('Q0.0')]],
+      [B('normal', 'Q0.0')],
+      [[0, 1]],
+      'Subir: ABRIR arranca y se autorretiene; se corta con PARO, al llegar arriba o si ya está bajando (enclavamiento).',
+    ),
+    escalon(
+      [[NA('I0.1'), NC('I0.2'), NC('I0.4'), NC('Q0.0'), NC('I0.5')], [NA('Q0.1')]],
+      [B('normal', 'Q0.1')],
+      [[0, 1]],
+      'Bajar: igual, y además la fotocelda lo detiene si hay algo bajo el portón.',
+    ),
+    escalon([[NA('I0.3')]], [B('normal', 'Q0.2')], [], 'Piloto de portón abierto.'),
+    escalon([[NA('I0.4')]], [B('normal', 'Q0.3')], [], 'Piloto de portón cerrado.'),
+    escalon([[NA('Q0.0')], [NA('Q0.1')]], [B('normal', 'Q0.4')], [[0, 1]], 'Piloto de movimiento: sube o baja.'),
+  ],
+)
+
+const COMPARAR = programa('Básico · ONS, contador y comparaciones', 'tablero', T, [
+  escalon([[NA('I0.2'), { tipo: 'ons' }]], [B('CTU', 'C0', 10)], [], 'Cada pulsación de P3 suma uno; el ONS asegura un solo pulso por pulsación.'),
+  escalon([[{ tipo: 'comparar', op: 'GEQ', fuente: 'C0.ACC', valor: 3 }]], [B('normal', 'Q0.0')], [], 'H1 se enciende cuando la cuenta es mayor o igual a 3 (GEQ).'),
+  escalon([[{ tipo: 'comparar', op: 'EQU', fuente: 'C0.ACC', valor: 5 }]], [B('normal', 'Q0.1')], [], 'H2 sólo mientras la cuenta vale exactamente 5 (EQU).'),
+  escalon([[NA('I0.4')]], [B('RTO', 'T0', 4)], [], 'RTO: SEL1 acumula tiempo; si lo apagas guarda lo contado.'),
+  escalon([[NA('T0.DN')]], [B('normal', 'Q0.2')], [], 'H3 al completar 4 s de SEL1 activado, sumando todas las veces.'),
+  escalon([[NA('I0.3')], [NA('I0.3')]], [B('reset', 'C0'), B('reset', 'T0')], [], 'P4 reinicia el contador y el temporizador (RES).'),
 ])
 
 export interface EjemploPLC {
@@ -150,4 +211,7 @@ export const EJEMPLOS_PLC: EjemploPLC[] = [
   { id: 'ton', etiqueta: 'Básico · Temporizador TON', programa: TEMPORIZADOR },
   { id: 'intermitente', etiqueta: 'Básico · Intermitente con dos TON', programa: INTERMITENTE },
   { id: 'contador', etiqueta: 'Básico · Contador CTU', programa: CONTADOR },
+  { id: 'comparar', etiqueta: 'Básico · ONS, contador y comparaciones (RTO)', programa: COMPARAR },
+  { id: 'semaforo', etiqueta: 'Semáforo con temporizadores encadenados', programa: SEMAFORO },
+  { id: 'porton', etiqueta: 'Portón con enclavamiento y fotocelda', programa: PORTON },
 ]

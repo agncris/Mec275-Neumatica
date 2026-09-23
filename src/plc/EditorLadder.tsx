@@ -13,7 +13,11 @@ import {
   MARCAS,
   SALIDAS,
   TEMPORIZADORES,
+  BITS_TC,
+  SIMBOLO_COMPARADOR,
+  VALORES,
   areaDe,
+  baseDe,
   clonarPrograma,
   colaCableada,
   escalonVacio,
@@ -21,11 +25,13 @@ import {
   esTemporizador,
   type Bobina,
   type Celda,
+  type Comparador,
   type EstadoPLC,
   type FlujoEscalon,
   type ProgramaPLC,
   type TipoBobina,
 } from './ladder'
+import { MNEMONICOS, formatear, type Notacion } from './notacion'
 
 type Herramienta =
   | 'seleccionar'
@@ -34,6 +40,8 @@ type Herramienta =
   | 'cable'
   | 'rama'
   | 'borrar'
+  | 'ONS'
+  | 'CMP'
   | TipoBobina
 
 interface Seleccion {
@@ -50,6 +58,7 @@ interface Props {
   flujos: FlujoEscalon[] | null
   estado: EstadoPLC | null
   editable: boolean
+  notacion: Notacion
 }
 
 // Geometría del dibujo.
@@ -76,40 +85,53 @@ const NOMBRES_BOBINA: Record<TipoBobina, string> = {
   reset: 'Reset (R)',
   TON: 'Temporizador TON',
   TOF: 'Temporizador TOF',
+  RTO: 'Temporizador retentivo RTO',
   CTU: 'Contador CTU',
   CTD: 'Contador CTD',
 }
 
-const HERRAMIENTAS: Array<{ id: Herramienta; icono: string; titulo: string }> = [
+const herramientas = (n: Notacion): Array<{ id: Herramienta; icono: string; titulo: string }> => [
   { id: 'seleccionar', icono: '↖', titulo: 'Seleccionar: clic en un elemento para ver y cambiar su dirección' },
-  { id: 'NA', icono: '┤ ├', titulo: 'Contacto normalmente abierto: deja pasar cuando su dirección está a 1' },
-  { id: 'NC', icono: '┤/├', titulo: 'Contacto normalmente cerrado: deja pasar cuando su dirección está a 0' },
+  { id: 'NA', icono: MNEMONICOS.NA[n], titulo: 'Contacto normalmente abierto (XIC): deja pasar cuando su dirección está a 1' },
+  { id: 'NC', icono: MNEMONICOS.NC[n], titulo: 'Contacto normalmente cerrado (XIO): deja pasar cuando su dirección está a 0' },
+  { id: 'ONS', icono: 'ONS', titulo: 'One shot: deja pasar la corriente un solo barrido, cuando llega' },
+  { id: 'CMP', icono: '≥ =', titulo: 'Comparar: deja pasar si el acumulado de un temporizador o contador cumple la condición (EQU, GRT, LES…)' },
   { id: 'cable', icono: '──', titulo: 'Cable: une dos tramos de una misma fila' },
   { id: 'rama', icono: '┃', titulo: 'Rama: une (o separa) dos filas en un nodo para hacer un paralelo' },
-  { id: 'normal', icono: '( )', titulo: 'Bobina: vale 1 mientras le llega corriente' },
+  { id: 'normal', icono: MNEMONICOS.normal[n], titulo: 'Bobina (OTE): vale 1 mientras le llega corriente' },
   { id: 'negada', icono: '(/)', titulo: 'Bobina negada: vale 1 mientras NO le llega corriente' },
-  { id: 'set', icono: '(S)', titulo: 'Set: la pone a 1 y ahí queda hasta un Reset' },
-  { id: 'reset', icono: '(R)', titulo: 'Reset: la pone a 0 (también reinicia temporizadores y contadores)' },
+  { id: 'set', icono: MNEMONICOS.set[n], titulo: 'Set / enclavar (OTL, L): la pone a 1 y ahí queda hasta un Reset' },
+  { id: 'reset', icono: MNEMONICOS.reset[n], titulo: 'Reset / desenclavar (OTU, U; RES en temporizadores y contadores): la pone a 0' },
   { id: 'flancoP', icono: '(P)', titulo: 'Flanco positivo: vale 1 un solo barrido cuando llega la corriente' },
   { id: 'flancoN', icono: '(N)', titulo: 'Flanco negativo: vale 1 un solo barrido cuando se va la corriente' },
   { id: 'TON', icono: 'TON', titulo: 'Temporizador a la conexión: se activa tras el tiempo con corriente' },
   { id: 'TOF', icono: 'TOF', titulo: 'Temporizador a la desconexión: sigue activo un tiempo tras perder la corriente' },
+  { id: 'RTO', icono: 'RTO', titulo: 'Temporizador retentivo: acumula el tiempo con corriente y lo guarda sin ella; se reinicia con Reset (RES)' },
   { id: 'CTU', icono: 'CTU', titulo: 'Contador ascendente: suma uno en cada flanco de subida' },
   { id: 'CTD', icono: 'CTD', titulo: 'Contador descendente: resta uno en cada flanco de subida' },
   { id: 'borrar', icono: '✕', titulo: 'Borrar el elemento de la casilla' },
 ]
 
-const esBobina = (h: Herramienta): h is TipoBobina => !['seleccionar', 'NA', 'NC', 'cable', 'rama', 'borrar'].includes(h)
+const esBobina = (h: Herramienta): h is TipoBobina =>
+  !['seleccionar', 'NA', 'NC', 'cable', 'rama', 'borrar', 'ONS', 'CMP'].includes(h)
 
 /** Alto de un escalón en el dibujo. */
 const altoEscalon = (filas: number) => CAB + filas * FH
 
-export default function EditorLadder({ programa, onCambiar, flujos, estado, editable }: Props) {
+export default function EditorLadder({ programa, onCambiar, flujos, estado, editable, notacion }: Props) {
   const [herramienta, setHerramienta] = useState<Herramienta>('seleccionar')
   const [sel, setSel] = useState<Seleccion | null>(null)
   const [escalonSel, setEscalonSel] = useState<number | null>(null)
 
-  const nombre = (dir: string) => programa.simbolos.find((s) => s.dir === dir)?.nombre ?? ''
+  const fmt = (dir: string) => formatear(dir, notacion)
+  /** Nombre del símbolo; en un bit de temporizador o contador, el del T/C más el bit. */
+  const nombre = (dir: string) => {
+    const propio = programa.simbolos.find((s) => s.dir === dir)?.nombre
+    if (propio) return propio
+    const base = baseDe(dir)
+    const deBase = base !== dir ? programa.simbolos.find((s) => s.dir === base)?.nombre : ''
+    return deBase ? `${deBase}.${dir.split('.')[1]}` : ''
+  }
 
   // Si el programa cambia por fuera (ejemplo, nuevo…), la selección ya no vale.
   useEffect(() => {
@@ -172,11 +194,13 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
       const antes = celdas[col]
       let nueva: Celda
       if (h === 'NA' || h === 'NC') nueva = { tipo: 'contacto', modo: h, dir: antes.tipo === 'contacto' ? antes.dir : '' }
+      else if (h === 'ONS') nueva = { tipo: 'ons' }
+      else if (h === 'CMP') nueva = antes.tipo === 'comparar' ? antes : { tipo: 'comparar', op: 'GEQ', fuente: '', valor: 1 }
       else if (h === 'cable') nueva = { tipo: 'cable' }
       else nueva = { tipo: 'vacio' }
       celdas[col] = nueva
     })
-    if (h === 'NA' || h === 'NC') setSel(s)
+    if (h === 'NA' || h === 'NC' || h === 'CMP') setSel(s)
   }
 
   const alternarEnlace = (escalon: number, fila: number, nodo: number) =>
@@ -301,11 +325,41 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
               <line x1={cx + 9} y1={yf - 14} x2={cx + 9} y2={yf + 14} stroke={colorBarra} strokeWidth={2.6} />
               {celda.modo === 'NC' && <line x1={cx - 12} y1={yf + 13} x2={cx + 12} y2={yf - 13} stroke={colorBarra} strokeWidth={2} />}
               <text x={cx} y={yf - 20} fontSize={12} fontWeight={700} textAnchor="middle" fill={celda.dir ? TINTA : '#b3261e'}>
-                {celda.dir ? recortar(nombre(celda.dir) || celda.dir, 11) : '???'}
+                {celda.dir ? recortar(nombre(celda.dir) || fmt(celda.dir), 12) : '???'}
               </text>
               <text x={cx} y={yf + 28} fontSize={10.5} textAnchor="middle" fill="#5a6b7d">
-                {celda.dir && nombre(celda.dir) ? celda.dir : ''}
+                {celda.dir && nombre(celda.dir) ? fmt(celda.dir) : ''}
               </text>
+            </g>,
+          )
+        } else if (celda.tipo === 'ons' || celda.tipo === 'comparar') {
+          const cx = x + CW / 2
+          const ancho = celda.tipo === 'ons' ? 40 : 70
+          const on = conduce && !!flujos
+          elementos.push(
+            <g key={`k${clave}`}>
+              <line x1={x} y1={yf} x2={cx - ancho / 2} y2={yf} {...trazo(entra)} />
+              <line x1={cx + ancho / 2} y1={yf} x2={x + CW} y2={yf} {...trazo(sale)} />
+              <rect x={cx - ancho / 2} y={yf - 16} width={ancho} height={32} rx={4} fill={on ? '#d8f3e5' : '#fff'} stroke={on ? VERDE : TINTA} strokeWidth={2} />
+              {celda.tipo === 'ons' ? (
+                <text x={cx} y={yf + 4.5} fontSize={12} fontWeight={700} textAnchor="middle" fill={TINTA}>
+                  ONS
+                </text>
+              ) : (
+                <>
+                  <text x={cx} y={yf - 3} fontSize={10.5} fontWeight={700} textAnchor="middle" fill={TINTA}>
+                    {celda.op}
+                  </text>
+                  <text x={cx} y={yf + 11} fontSize={10} textAnchor="middle" fill={celda.fuente ? TINTA : '#b3261e'}>
+                    {celda.fuente ? `${recortar(nombre(celda.fuente) || fmt(celda.fuente), 9)} ${SIMBOLO_COMPARADOR[celda.op]} ${celda.valor}` : '???'}
+                  </text>
+                  {estado && celda.fuente && (
+                    <text x={cx} y={yf + 28} fontSize={10} fontWeight={700} textAnchor="middle" fill={VERDE}>
+                      = {formatoValor(celda.fuente, estado)}
+                    </text>
+                  )}
+                </>
+              )}
             </g>,
           )
         }
@@ -338,7 +392,7 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
         elementos.push(
           <g key={`bob${i}-${f}`}>
             <line x1={XB} y1={yf} x2={cx - (esTemporizador(b.tipo) || esContador(b.tipo) ? 34 : 14)} y2={yf} {...trazo(activa)} />
-            {dibujarBobina(b, cx, yf, activa && !!flujos, estado, nombre(b.dir))}
+            {dibujarBobina(b, cx, yf, activa && !!flujos, estado, nombre(b.dir), fmt, notacion)}
             <line x1={cx + (esTemporizador(b.tipo) || esContador(b.tipo) ? 34 : 14)} y1={yf} x2={XR} y2={yf} stroke={TINTA} strokeWidth={2} />
           </g>,
         )
@@ -402,7 +456,7 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
     <div>
       {editable && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 6 }} role="toolbar" aria-label="Herramientas Ladder">
-          {HERRAMIENTAS.map((h) => (
+          {herramientas(notacion).map((h) => (
             <button
               key={h.id}
               title={h.titulo}
@@ -461,6 +515,7 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
       )}
       {sel && elementoSel !== undefined && (
         <Propiedades
+          fmt={fmt}
           programa={programa}
           sel={sel}
           editable={editable}
@@ -491,12 +546,14 @@ function direccionesPara(tipo: TipoBobina): string[] {
 }
 
 function Propiedades({
+  fmt,
   programa,
   sel,
   editable,
   onCambiar,
   onCerrar,
 }: {
+  fmt: (d: string) => string
   programa: ProgramaPLC
   sel: Seleccion
   editable: boolean
@@ -509,7 +566,7 @@ function Propiedades({
       const s = programa.simbolos.find((x) => x.dir === d)
       return (
         <option key={d} value={d}>
-          {d}
+          {fmt(d)}
           {s?.nombre ? ` · ${s.nombre}` : ''}
           {s?.descripcion ? ` — ${recortar(s.descripcion, 40)}` : ''}
         </option>
@@ -526,8 +583,8 @@ function Propiedades({
         {por('I', 'Entradas (I)')}
         {por('Q', 'Salidas (Q)')}
         {por('M', 'Marcas internas (M)')}
-        {por('T', 'Temporizadores (T)')}
-        {por('C', 'Contadores (C)')}
+        {por('T', 'Temporizadores (T) · DN terminó, TT contando, EN con corriente')}
+        {por('C', 'Contadores (C) · DN llegó a la cuenta, CU con corriente')}
       </>
     )
   }
@@ -584,6 +641,54 @@ function Propiedades({
     )
   }
   const celda = e.celdas[sel.fila][sel.col]
+  if (celda.tipo === 'comparar') {
+    const poner = (m: (c: Extract<Celda, { tipo: 'comparar' }>) => void) =>
+      onCambiar((p) => {
+        const c = p.escalones[sel.escalon].celdas[sel.fila][sel.col as number]
+        if (c.tipo === 'comparar') m(c)
+      })
+    return (
+      <div style={caja}>
+        <strong>Comparar</strong>
+        <select disabled={!editable} value={celda.fuente} onChange={(ev) => poner((c) => (c.fuente = ev.target.value))}>
+          <option value="">— elige qué comparar —</option>
+          <optgroup label="Acumulado de temporizador (segundos)">
+            {VALORES.filter((v) => v.startsWith('T')).map((v) => (
+              <option key={v} value={v}>
+                {fmt(v)}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="Cuenta de contador">
+            {VALORES.filter((v) => v.startsWith('C')).map((v) => (
+              <option key={v} value={v}>
+                {fmt(v)}
+              </option>
+            ))}
+          </optgroup>
+        </select>
+        <select disabled={!editable} value={celda.op} onChange={(ev) => poner((c) => (c.op = ev.target.value as Comparador))}>
+          {(Object.keys(SIMBOLO_COMPARADOR) as Comparador[]).map((op) => (
+            <option key={op} value={op}>
+              {op} ({SIMBOLO_COMPARADOR[op]})
+            </option>
+          ))}
+        </select>
+        <input
+          type="number"
+          step="any"
+          disabled={!editable}
+          value={celda.valor}
+          onChange={(ev) => poner((c) => (c.valor = Number(ev.target.value) || 0))}
+          style={{ width: 70 }}
+        />
+        <span style={{ color: '#5a6b7d' }}>Deja pasar la corriente mientras la comparación sea verdadera.</span>
+        <button onClick={onCerrar} style={{ marginLeft: 'auto', border: 'none', background: 'transparent', cursor: 'pointer', color: '#5a6b7d' }}>
+          ✕
+        </button>
+      </div>
+    )
+  }
   if (celda.tipo !== 'contacto') return null
   return (
     <div style={caja}>
@@ -615,7 +720,14 @@ function Propiedades({
             })
           }
         >
-          {grupos([...ENTRADAS, ...SALIDAS, ...MARCAS, ...TEMPORIZADORES, ...CONTADORES])}
+          {grupos([
+            ...ENTRADAS,
+            ...SALIDAS,
+            ...MARCAS,
+            ...BITS_TC,
+            // Un programa antiguo puede tener «T0» a secas (equivale a T0.DN).
+            ...(celda.dir && !BITS_TC.includes(celda.dir) && /^[TC]\d$/.test(celda.dir) ? [celda.dir] : []),
+          ])}
         </select>
       </label>
       <span style={{ color: '#5a6b7d' }}>
@@ -646,6 +758,8 @@ function explicarBobina(b: Bobina): string {
       return 'Con corriente cuenta el tiempo; al llegar, su contacto se cierra. Sin corriente vuelve a cero.'
     case 'TOF':
       return 'Con corriente su contacto está cerrado; al perderla, sigue cerrado el tiempo indicado.'
+    case 'RTO':
+      return 'Acumula el tiempo con corriente y lo guarda sin ella; al llegar se cierra su contacto. Se reinicia con Reset (RES).'
     case 'CTU':
       return 'Suma uno en cada flanco de subida; al llegar a la cuenta, su contacto se cierra.'
     case 'CTD':
@@ -653,9 +767,18 @@ function explicarBobina(b: Bobina): string {
   }
 }
 
-function dibujarBobina(b: Bobina, cx: number, y: number, activa: boolean, estado: EstadoPLC | null, nombre: string) {
+function dibujarBobina(
+  b: Bobina,
+  cx: number,
+  y: number,
+  activa: boolean,
+  estado: EstadoPLC | null,
+  nombre: string,
+  fmt: (d: string) => string,
+  notacion: Notacion,
+) {
   const color = activa ? VERDE : TINTA
-  const etiqueta = b.dir ? recortar(nombre || b.dir, 14) : '???'
+  const etiqueta = b.dir ? recortar(nombre || fmt(b.dir), 14) : '???'
   if (esTemporizador(b.tipo) || esContador(b.tipo)) {
     let valor = ''
     if (estado && b.dir) {
@@ -671,7 +794,7 @@ function dibujarBobina(b: Bobina, cx: number, y: number, activa: boolean, estado
       <g>
         <rect x={cx - 34} y={y - 22} width={68} height={44} rx={4} fill={hecho ? '#d8f3e5' : activa ? '#eefaf3' : '#fff'} stroke={color} strokeWidth={2} />
         <text x={cx} y={y - 8} fontSize={11} fontWeight={700} textAnchor="middle" fill={TINTA}>
-          {b.tipo} {b.dir || '???'}
+          {b.tipo} {b.dir ? fmt(b.dir) : '???'}
         </text>
         <text x={cx} y={y + 6} fontSize={10.5} textAnchor="middle" fill="#5a6b7d">
           {esTemporizador(b.tipo) ? `PT ${(b.preset ?? 0).toFixed(1)} s` : `PV ${b.preset ?? 0}`}
@@ -687,23 +810,38 @@ function dibujarBobina(b: Bobina, cx: number, y: number, activa: boolean, estado
       </g>
     )
   }
-  const letra: Record<string, string> = { normal: '', negada: '/', flancoP: 'P', flancoN: 'N', set: 'S', reset: 'R' }
+  const ab = notacion === 'ab'
+  const esTC = /^[TC]/.test(b.dir)
+  const letra: Record<string, string> = {
+    normal: '',
+    negada: '/',
+    flancoP: 'P',
+    flancoN: 'N',
+    set: ab ? 'L' : 'S',
+    reset: ab ? (esTC ? 'RES' : 'U') : 'R',
+  }
   return (
     <g>
       {activa && <circle cx={cx} cy={y} r={13} fill="#d8f3e5" />}
       <path d={`M ${cx - 8} ${y - 14} A 18 18 0 0 0 ${cx - 8} ${y + 14}`} fill="none" stroke={color} strokeWidth={2.6} />
       <path d={`M ${cx + 8} ${y - 14} A 18 18 0 0 1 ${cx + 8} ${y + 14}`} fill="none" stroke={color} strokeWidth={2.6} />
-      <text x={cx} y={y + 4.5} fontSize={13} fontWeight={700} textAnchor="middle" fill={color}>
+      <text x={cx} y={y + 4} fontSize={letra[b.tipo].length > 1 ? 8.5 : 13} fontWeight={700} textAnchor="middle" fill={color}>
         {letra[b.tipo]}
       </text>
       <text x={cx} y={y - 20} fontSize={12} fontWeight={700} textAnchor="middle" fill={b.dir ? TINTA : '#b3261e'}>
         {etiqueta}
       </text>
       <text x={cx} y={y + 28} fontSize={10.5} textAnchor="middle" fill="#5a6b7d">
-        {b.dir && nombre ? b.dir : ''}
+        {b.dir && nombre ? fmt(b.dir) : ''}
       </text>
     </g>
   )
+}
+
+function formatoValor(fuente: string, estado: EstadoPLC): string {
+  const base = baseDe(fuente)
+  if (base.startsWith('T')) return `${(estado.temporizadores[base]?.acumulado ?? 0).toFixed(1)} s`
+  return String(estado.contadores[base]?.valor ?? 0)
 }
 
 const recortar = (t: string, n: number) => (t.length > n ? `${t.slice(0, n - 1)}…` : t)

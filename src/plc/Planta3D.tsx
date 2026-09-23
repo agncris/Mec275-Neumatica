@@ -16,7 +16,20 @@ import { MAT, caja, cilindro, modeloCilindro, modeloValvula } from '../vista3d/m
 import { SonidoBanco } from '../vista3d/sonido'
 import type { EstadoPLC } from './ladder'
 import { ENTRADAS, SALIDAS } from './ladder'
-import { NIVEL_S1, NIVEL_S2, PLANTAS, type Planta, type PlantaElevador, type PlantaEstanque, type PlantaTablero } from './plantas'
+import { formatear, type Notacion } from './notacion'
+import {
+  NIVEL_S1,
+  NIVEL_S2,
+  PLANTAS,
+  X_SILO,
+  type Planta,
+  type PlantaElevador,
+  type PlantaEstanque,
+  type PlantaPorton,
+  type PlantaSemaforo,
+  type PlantaSilo,
+  type PlantaTablero,
+} from './plantas'
 
 export interface SimPLC {
   planta: Planta
@@ -32,9 +45,15 @@ interface Props {
   version: number
   acciones: Array<{ id: string; etiqueta: string; titulo: string }>
   onAccion: (id: string) => void
+  notacion: Notacion
 }
 
 const CLAVE_SONIDO = 'neumalab.plc.sonido'
+
+/** Notación con la que se rotulan las placas de la escena que se está montando. */
+let notacionEscena: Notacion = 'siemens'
+/** Rotula una dirección (o texto con direcciones) en la notación elegida. */
+const rotular = (t: string) => t.replace(/\b([IQ]0\.[0-7]|M[01]\.[0-7])\b/g, (d) => formatear(d, notacionEscena))
 
 // ---------------------------------------------------------------------------
 // Piezas comunes
@@ -57,6 +76,7 @@ function lienzo(ancho: number, alto: number, dibujar: (c: CanvasRenderingContext
 
 /** Placa de rótulo blanca con una o dos líneas. */
 function placa(linea1: string, linea2 = '', ancho = 0.05) {
+  linea2 = rotular(linea2)
   const alto = linea2 ? ancho * 0.42 : ancho * 0.3
   return lienzo(ancho, alto, (c, w, h) => {
     c.fillStyle = '#f7f7f2'
@@ -257,14 +277,14 @@ function crearPLC() {
       c.fillStyle = '#15191e'
       c.font = `bold ${h * 0.085}px ui-monospace, monospace`
       c.textBaseline = 'middle'
-      dirs.forEach((d, i) => c.fillText(d, 6, ((i + 0.5) / 8) * h))
+      dirs.forEach((d, i) => c.fillText(rotular(d), 6, ((i + 0.5) / 8) * h))
     })
     rot.position.set(x0 + 0.034, 0.022 - 3.5 * 0.0088, fondo + 0.0085)
     g.add(rot)
   }
-  const xi = modulo(0.055, gris, 'ENTRADAS', 'I0.0 … I0.7')
+  const xi = modulo(0.055, gris, 'ENTRADAS', notacionEscena === 'ab' ? 'I:1 · 00…07' : 'I0.0 … I0.7')
   columnaLeds(xi, ENTRADAS, 0x2ee06d)
-  const xs = modulo(0.055, gris, 'SALIDAS', 'Q0.0 … Q0.7 · relé')
+  const xs = modulo(0.055, gris, 'SALIDAS', notacionEscena === 'ab' ? 'O:2 · 00…07 · relé' : 'Q0.0 … Q0.7 · relé')
   columnaLeds(xs, SALIDAS, 0xffa726)
   // Canaleta con cables hacia la máquina.
   const canaleta = caja(x + 0.02, 0.03, 0.04, MAT.grafito, 0.002)
@@ -297,6 +317,8 @@ interface Escena {
   pulsables: THREE.Object3D[]
   /** Pone la escena al día; `dt` en segundos. Devuelve la posición del sonido, si hubo. */
   actualizar: (sim: SimPLC, dt: number, sonido: SonidoBanco | null, pan: (v: THREE.Vector3) => number) => void
+  /** La maqueta está en horizontal (un cruce): la cámara la mira desde arriba. */
+  vistaAlta?: boolean
 }
 
 /** Pulsadores y selectores con su placa, según la descripción de la planta. */
@@ -814,16 +836,482 @@ function escenaElevador(): Escena {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Silo, semáforo y portón
+// ---------------------------------------------------------------------------
+const CARTON = new THREE.MeshStandardMaterial({ color: 0xb98a55, roughness: 0.85 })
+const GRANO = new THREE.MeshStandardMaterial({ color: 0xe0a33a, roughness: 0.95 })
+
+/** Una caja de cartón abierta por arriba, con su contenido. */
+function crearCajaCarton() {
+  const g = new THREE.Group()
+  const a = 0.075
+  const h = 0.06
+  const e = 0.003
+  const fondo = caja(a, e, a, CARTON, 0.001)
+  fondo.position.y = e / 2
+  g.add(fondo)
+  for (const [x, z, w, d] of [
+    [0, a / 2 - e / 2, a, e],
+    [0, -a / 2 + e / 2, a, e],
+    [a / 2 - e / 2, 0, e, a],
+    [-a / 2 + e / 2, 0, e, a],
+  ]) {
+    const pared = caja(w, h, d, CARTON, 0.0008)
+    pared.position.set(x, h / 2, z)
+    g.add(pared)
+  }
+  const contenido = new THREE.Mesh(new THREE.BoxGeometry(a - 2 * e - 0.001, 1, a - 2 * e - 0.001), GRANO)
+  contenido.geometry.translate(0, 0.5, 0)
+  contenido.position.y = e
+  contenido.scale.y = 0.0001
+  g.add(contenido)
+  return {
+    grupo: g,
+    llenar: (f: number) => {
+      contenido.scale.y = Math.max(0.0001, Math.min(1.05, f) * (h - e))
+      contenido.visible = f > 0.005
+    },
+  }
+}
+
+function escenaSilo(): Escena {
+  const raiz = new THREE.Group()
+  const pulsables: THREE.Object3D[] = []
+  const plc = crearPLC()
+  plc.grupo.position.set(-0.86, 0.22, 0)
+  raiz.add(plc.grupo)
+
+  // Cinta transportadora: de x0 a x0 + L.
+  const x0 = -0.36
+  const L = 0.8
+  const yCinta = 0.08
+  const zC = 0.1
+  const aX = (u: number) => x0 + u * L
+  const perfil = new THREE.MeshStandardMaterial({ color: 0xb9c0c8, metalness: 0.8, roughness: 0.4 })
+  const banda = caja(L + 0.06, 0.008, 0.11, new THREE.MeshStandardMaterial({ color: 0xa32a22, roughness: 0.7 }), 0.003)
+  banda.position.set(aX(0.5), yCinta - 0.004, zC)
+  raiz.add(banda)
+  const bastidor = caja(L + 0.08, 0.03, 0.12, perfil, 0.003)
+  bastidor.position.set(aX(0.5), yCinta - 0.024, zC)
+  raiz.add(bastidor)
+  for (const u of [0.05, 0.95]) {
+    const pata = caja(0.02, 0.1, 0.1, perfil, 0.002)
+    pata.position.set(aX(u), yCinta - 0.09, zC)
+    raiz.add(pata)
+  }
+  const rodillos: THREE.Mesh[] = []
+  for (let i = 0; i <= 10; i++) {
+    const r = cilindro(0.009, 0.115, MAT.cromo, 14)
+    r.rotation.x = Math.PI / 2
+    r.position.set(aX(i / 10) - 0.0, yCinta - 0.018, zC)
+    raiz.add(r)
+    rodillos.push(r)
+  }
+  // Motor de la cinta.
+  const motor = cilindro(0.028, 0.07, new THREE.MeshStandardMaterial({ color: 0x1f3fa8, metalness: 0.3, roughness: 0.4 }), 28)
+  motor.rotation.x = Math.PI / 2
+  motor.position.set(aX(1) + 0.03, yCinta - 0.04, zC + 0.1)
+  raiz.add(motor)
+  const ventilador = new THREE.Group()
+  for (let i = 0; i < 4; i++) {
+    const aspa = caja(0.03, 0.006, 0.002, MAT.grafito, 0.001)
+    aspa.rotation.z = (i * Math.PI) / 2
+    aspa.position.set(Math.cos((i * Math.PI) / 2) * 0.012, Math.sin((i * Math.PI) / 2) * 0.012, 0)
+    ventilador.add(aspa)
+  }
+  ventilador.position.set(aX(1) + 0.03, yCinta - 0.04, zC + 0.137)
+  raiz.add(ventilador)
+  const rMotor = placa('MOTOR', 'Q0.0', 0.04)
+  rMotor.position.set(aX(1) + 0.03, yCinta - 0.085, zC + 0.1)
+  raiz.add(rMotor)
+
+  // Silo.
+  const xs = aX(X_SILO)
+  const chapa = new THREE.MeshStandardMaterial({ color: 0xd9dde2, metalness: 0.75, roughness: 0.35 })
+  const cuerpo = cilindro(0.1, 0.16, chapa, 40)
+  cuerpo.position.set(xs, 0.4, zC)
+  const cono = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.016, 0.11, 40), chapa)
+  cono.position.set(xs, 0.265, zC)
+  cono.castShadow = true
+  const boca = cilindro(0.016, 0.04, chapa, 20)
+  boca.position.set(xs, 0.19, zC)
+  raiz.add(cuerpo, cono, boca)
+  for (const sx of [-1, 1]) {
+    const pata = caja(0.012, 0.4, 0.012, perfil, 0.002)
+    pata.position.set(xs + sx * 0.12, 0.22, zC - 0.06)
+    raiz.add(pata)
+  }
+  const rSilo = placa('SILO', '', 0.06)
+  rSilo.position.set(xs, 0.42, zC + 0.1005)
+  raiz.add(rSilo)
+  // Electroválvula de descarga.
+  const valv = caja(0.03, 0.02, 0.03, MAT.laton, 0.003)
+  valv.position.set(xs, 0.165, zC)
+  const bobina = caja(0.026, 0.022, 0.02, MAT.negro, 0.003)
+  bobina.position.set(xs - 0.03, 0.165, zC)
+  const ledSol = led(0xffa726, 0.0028)
+  ledSol.malla.position.set(xs - 0.03, 0.165, zC + 0.011)
+  raiz.add(valv, bobina, ledSol.malla)
+  const rSol = placa('SOLENOID', 'Q0.1', 0.05)
+  rSol.position.set(xs - 0.075, 0.165, zC + 0.012)
+  raiz.add(rSol)
+  const chorro = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.01, 1, 14), GRANO)
+  raiz.add(chorro)
+  // Sensor de nivel, junto a la boca, mirando la caja.
+  const nivel = cilindro(0.006, 0.03, MAT.grafito, 14)
+  nivel.position.set(xs + 0.03, 0.155, zC + 0.02)
+  const ledNivel = led(0x2ee06d, 0.0026)
+  ledNivel.malla.position.set(xs + 0.03, 0.172, zC + 0.028)
+  const rNivel = placa('LEVEL', 'I0.4', 0.04)
+  rNivel.position.set(xs + 0.08, 0.16, zC + 0.02)
+  raiz.add(nivel, ledNivel.malla, rNivel)
+  // Sensor de proximidad, al costado de la cinta.
+  const prox = cilindro(0.006, 0.03, MAT.grafito, 14)
+  prox.rotation.x = Math.PI / 2
+  prox.position.set(xs, yCinta + 0.02, zC + 0.075)
+  const ledProx = led(0x2ee06d, 0.0026)
+  ledProx.malla.position.set(xs, yCinta + 0.02, zC + 0.092)
+  const rProx = placa('PROX', 'I0.3', 0.04)
+  rProx.position.set(xs, yCinta - 0.01, zC + 0.092)
+  raiz.add(prox, ledProx.malla, rProx)
+  // Material derramado sobre la cinta.
+  const derrame = new THREE.Mesh(new THREE.SphereGeometry(0.05, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), GRANO)
+  derrame.scale.set(1, 0.001, 1)
+  derrame.position.set(xs, yCinta, zC)
+  raiz.add(derrame)
+
+  // Tablero de mando: pilotos RUN / FILL / FULL y START / STOP.
+  const tablero = caja(0.13, 0.16, 0.04, new THREE.MeshStandardMaterial({ color: 0xe9ddd0, roughness: 0.5 }), 0.004)
+  tablero.position.set(-0.52, 0.3, 0.02)
+  raiz.add(tablero)
+  const pilotos = ['Q0.2', 'Q0.3', 'Q0.4'].map((d, i) => {
+    const pl = piloto(0xffd21f)
+    pl.grupo.position.set(-0.55, 0.355 - i * 0.034, 0.041)
+    raiz.add(pl.grupo)
+    const r = placa(['RUN', 'FILL', 'FULL'][i], d, 0.04)
+    r.position.set(-0.5, 0.355 - i * 0.034, 0.0405)
+    raiz.add(r)
+    return { d, pl }
+  })
+  const ponerMandos = montarMandos(raiz, pulsables, PLANTAS.silo.mandos, new THREE.Vector3(-0.55, 0.26, 0.041), 0.05)
+
+  // Cajas: se crean y se quitan según las lleve la cinta.
+  const cajas = new Map<number, ReturnType<typeof crearCajaCarton>>()
+  let q = { ...ZERO }
+  return {
+    raiz,
+    pulsables,
+    actualizar: (sim, _dt, sonido, pan) => {
+      const bits = sim.estado.bits
+      plc.actualizar(bits, sim.corriendo)
+      ponerMandos(sim.mandos)
+      const p = sim.planta as PlantaSilo
+      const vivas = new Set<number>()
+      for (const c of p.cajas) {
+        vivas.add(c.id)
+        let m = cajas.get(c.id)
+        if (!m) {
+          m = crearCajaCarton()
+          m.grupo.traverse((o) => ((o as THREE.Mesh).castShadow = true))
+          cajas.set(c.id, m)
+          raiz.add(m.grupo)
+        }
+        m.grupo.position.set(aX(c.x), yCinta, zC)
+        m.grupo.visible = c.x > -0.08
+        m.llenar(c.llenado)
+      }
+      for (const [id, m] of cajas) {
+        if (vivas.has(id)) continue
+        raiz.remove(m.grupo)
+        cajas.delete(id)
+      }
+      for (const r of rodillos) r.rotation.y = -p.avance * 40
+      ventilador.rotation.z = -p.avance * 120
+      chorro.visible = p.cayendo
+      if (p.cayendo) {
+        const bajo = p.cajas.find((c) => Math.abs(c.x - X_SILO) < 0.035)
+        const fin = bajo ? yCinta + 0.003 + Math.min(1, bajo.llenado) * 0.057 : yCinta
+        const largo = 0.155 - fin
+        chorro.scale.set(1, largo, 1)
+        chorro.position.set(xs, fin + largo / 2, zC)
+      }
+      derrame.scale.set(0.3 + p.derrame, Math.max(0.001, p.derrame * 0.4), 0.3 + p.derrame * 0.6)
+      derrame.visible = p.derrame > 0.001
+      ledSol.poner(!!bits['Q0.1'])
+      const sens = p.sensores()
+      ledNivel.poner(!!sens['I0.4'])
+      ledProx.poner(!!sens['I0.3'])
+      for (const { d, pl } of pilotos) pl.poner(!!bits[d])
+      sonido?.motor(p.cintaEnMarcha ? 0.25 : 0)
+      sonido?.agua(p.cayendo ? 0.45 : 0)
+      const antes = { ...q }
+      q = clicsDeRele(q, bits, sonido, pan(plc.grupo.position))
+      if (antes['Q0.1'] !== undefined && antes['Q0.1'] !== q['Q0.1']) sonido?.golpe('valvula', 0.8, pan(valv.position))
+    },
+  }
+}
+
+function escenaSemaforo(): Escena {
+  const raiz = new THREE.Group()
+  const pulsables: THREE.Object3D[] = []
+  const plc = crearPLC()
+  plc.grupo.position.set(-0.55, 0.16, 0)
+  raiz.add(plc.grupo)
+  // Maqueta del cruce sobre una base.
+  const c = new THREE.Vector3(0.2, 0.02, 0.42)
+  const R = 0.4
+  const base = caja(0.9, 0.02, 0.86, new THREE.MeshStandardMaterial({ color: 0x6d8f5a, roughness: 0.95 }), 0.004)
+  base.position.set(c.x, 0.01, c.z)
+  raiz.add(base)
+  const asfalto = new THREE.MeshStandardMaterial({ color: 0x3a3d42, roughness: 0.9 })
+  const calleNS = caja(0.15, 0.004, 0.86, asfalto, 0.001)
+  calleNS.position.set(c.x, 0.022, c.z)
+  const calleEO = caja(0.9, 0.004, 0.15, asfalto, 0.001)
+  calleEO.position.set(c.x, 0.0225, c.z)
+  raiz.add(calleNS, calleEO)
+  // Líneas de detención.
+  const blanco = new THREE.MeshStandardMaterial({ color: 0xf2f2f2, roughness: 0.6 })
+  const pareNS = caja(0.075, 0.001, 0.008, blanco, 0.0003)
+  pareNS.position.set(c.x - 0.037, 0.0248, c.z - 0.22 * R - 0.005)
+  const pareEO = caja(0.008, 0.001, 0.075, blanco, 0.0003)
+  pareEO.position.set(c.x - 0.22 * R - 0.005, 0.0248, c.z + 0.037)
+  raiz.add(pareNS, pareEO)
+  // Semáforos: uno por calle, en la esquina de su línea de detención.
+  const semaforo = (pos: THREE.Vector3, rotY: number, dirs: [string, string, string], nombre: string) => {
+    const poste = cilindro(0.005, 0.16, MAT.grafito, 12)
+    poste.position.copy(pos).add(new THREE.Vector3(0, 0.08, 0))
+    const cabeza = caja(0.035, 0.09, 0.03, MAT.negro, 0.004)
+    cabeza.position.copy(pos).add(new THREE.Vector3(0, 0.19, 0))
+    cabeza.rotation.y = rotY
+    raiz.add(poste, cabeza)
+    const colores = [0xff2d20, 0xffb300, 0x22d65a]
+    const luces = dirs.map((d, i) => {
+      const l = piloto(colores[i])
+      l.grupo.scale.setScalar(0.9)
+      const off = new THREE.Vector3(0, 0.025 - i * 0.025, 0.016).applyAxisAngle(new THREE.Vector3(0, 1, 0), rotY)
+      l.grupo.position.copy(cabeza.position).add(off)
+      l.grupo.rotation.y = rotY
+      raiz.add(l.grupo)
+      return { d, l }
+    })
+    const r = placa(nombre, '', 0.05)
+    r.position.copy(pos).add(new THREE.Vector3(0, 0.25, 0))
+    r.rotation.y = rotY
+    raiz.add(r)
+    return luces
+  }
+  const lucesNS = semaforo(new THREE.Vector3(c.x - 0.1, 0.022, c.z - 0.13), 0, ['Q0.0', 'Q0.1', 'Q0.2'], 'NORTE-SUR')
+  const lucesEO = semaforo(new THREE.Vector3(c.x - 0.13, 0.022, c.z + 0.1), Math.PI / 2, ['Q0.3', 'Q0.4', 'Q0.5'], 'ESTE-OESTE')
+  // Botonera.
+  const botonera = caja(0.18, 0.06, 0.04, new THREE.MeshStandardMaterial({ color: 0xe9e6de, roughness: 0.5 }), 0.004)
+  botonera.position.set(-0.25, 0.05, 0.02)
+  raiz.add(botonera)
+  const ponerMandos = montarMandos(raiz, pulsables, PLANTAS.semaforo.mandos, new THREE.Vector3(-0.305, 0.058, 0.041), 0.055)
+
+  const coloresAuto = [0xd23b3b, 0x2f6fd0, 0xf2f2f2, 0x2f9e5a, 0xf0b400, 0x6b4bb8]
+  const autos = new Map<number, THREE.Group>()
+  const crearAuto = (id: number) => {
+    const g = new THREE.Group()
+    const mat = new THREE.MeshPhysicalMaterial({ color: coloresAuto[id % coloresAuto.length], roughness: 0.3, clearcoat: 1 })
+    const carro = caja(0.05, 0.016, 0.028, mat, 0.004)
+    carro.position.y = 0.014
+    const techo = caja(0.026, 0.012, 0.024, mat, 0.004)
+    techo.position.set(-0.003, 0.027, 0)
+    const vidrios = caja(0.027, 0.008, 0.025, new THREE.MeshStandardMaterial({ color: 0x1b2430, roughness: 0.1 }), 0.003)
+    vidrios.position.set(-0.003, 0.026, 0)
+    g.add(carro, vidrios, techo)
+    for (const [x, z] of [[0.016, 0.014], [-0.016, 0.014], [0.016, -0.014], [-0.016, -0.014]]) {
+      const rueda = cilindro(0.006, 0.005, MAT.negro, 12)
+      rueda.rotation.x = Math.PI / 2
+      rueda.position.set(x, 0.006, z)
+      g.add(rueda)
+    }
+    g.traverse((o) => ((o as THREE.Mesh).castShadow = true))
+    return g
+  }
+  let q = { ...ZERO }
+  return {
+    raiz,
+    pulsables,
+    vistaAlta: true,
+    actualizar: (sim, _dt, sonido, pan) => {
+      const bits = sim.estado.bits
+      plc.actualizar(bits, sim.corriendo)
+      ponerMandos(sim.mandos)
+      for (const { d, l } of [...lucesNS, ...lucesEO]) l.poner(!!bits[d])
+      const p = sim.planta as PlantaSemaforo
+      const vivos = new Set<number>()
+      for (const a of p.autos) {
+        vivos.add(a.id)
+        let g = autos.get(a.id)
+        if (!g) {
+          g = crearAuto(a.id)
+          autos.set(a.id, g)
+          raiz.add(g)
+        }
+        if (a.eje === 'NS') {
+          g.position.set(c.x - 0.037, 0.024, c.z + a.s * R)
+          g.rotation.y = -Math.PI / 2
+        } else {
+          g.position.set(c.x + a.s * R, 0.024, c.z + 0.037)
+          g.rotation.y = 0
+        }
+        g.visible = Math.abs(a.s) <= 1.02
+      }
+      for (const [id, g] of autos) {
+        if (vivos.has(id)) continue
+        raiz.remove(g)
+        autos.delete(id)
+      }
+      q = clicsDeRele(q, bits, sonido, pan(plc.grupo.position))
+    },
+  }
+}
+
+function escenaPorton(): Escena {
+  const raiz = new THREE.Group()
+  const pulsables: THREE.Object3D[] = []
+  const plc = crearPLC()
+  plc.grupo.position.set(-0.7, 0.2, 0)
+  raiz.add(plc.grupo)
+  const ANCHO = 0.42
+  const ALTO = 0.3
+  const xc = 0.05
+  const hormigon = new THREE.MeshStandardMaterial({ color: 0xcfc8bd, roughness: 0.9 })
+  for (const sx of [-1, 1]) {
+    const pilar = caja(0.06, ALTO + 0.08, 0.08, hormigon, 0.004)
+    pilar.position.set(xc + sx * (ANCHO / 2 + 0.03), (ALTO + 0.08) / 2, 0.06)
+    raiz.add(pilar)
+  }
+  const dintel = caja(ANCHO + 0.12, 0.08, 0.08, hormigon, 0.004)
+  dintel.position.set(xc, ALTO + 0.04, 0.06)
+  const piso = caja(ANCHO + 0.3, 0.01, 0.3, new THREE.MeshStandardMaterial({ color: 0x8f8f8f, roughness: 0.95 }), 0.002)
+  piso.position.set(xc, -0.005, 0.15)
+  raiz.add(dintel, piso)
+  // Portón seccional. Al subir entra al techo del garaje: lo que pasa por
+  // encima del dintel no se dibuja (plano de recorte).
+  const recorte = [new THREE.Plane(new THREE.Vector3(0, -1, 0), ALTO + 0.075)]
+  const chapa = new THREE.MeshStandardMaterial({ color: 0xe7ebef, metalness: 0.4, roughness: 0.45, clippingPlanes: recorte, clipShadows: true })
+  const matJunta = new THREE.MeshStandardMaterial({ color: 0x8d949c, metalness: 0.8, roughness: 0.45, clippingPlanes: recorte, clipShadows: true })
+  const matTirador = new THREE.MeshStandardMaterial({ color: 0x3a4048, metalness: 0.3, roughness: 0.5, clippingPlanes: recorte, clipShadows: true })
+  const porton = new THREE.Group()
+  const hoja = caja(ANCHO, ALTO, 0.012, chapa, 0.002)
+  hoja.position.y = ALTO / 2
+  porton.add(hoja)
+  for (let i = 1; i < 5; i++) {
+    const junta = caja(ANCHO - 0.004, 0.003, 0.002, matJunta, 0.0005)
+    junta.position.set(0, (i * ALTO) / 5, 0.007)
+    porton.add(junta)
+  }
+  const tirador = caja(0.06, 0.008, 0.01, matTirador, 0.002)
+  tirador.position.set(0, 0.03, 0.011)
+  porton.add(tirador)
+  // Va por dentro, detrás de los pilares y el dintel: al subir se esconde tras él.
+  porton.position.set(xc, 0, 0.012)
+  raiz.add(porton)
+  // Motor en el dintel.
+  const motor = caja(0.1, 0.05, 0.06, new THREE.MeshStandardMaterial({ color: 0x1f3fa8, metalness: 0.3, roughness: 0.4 }), 0.006)
+  motor.position.set(xc, ALTO + 0.11, 0.08)
+  raiz.add(motor)
+  const rMotor = placa('MOTOR', 'Q0.0 sube · Q0.1 baja', 0.1)
+  rMotor.position.set(xc, ALTO + 0.155, 0.1105)
+  raiz.add(rMotor)
+  // Finales de carrera arriba y abajo.
+  const fc = (y: number, nombre: string, dir: string) => {
+    const cuerpo = caja(0.025, 0.02, 0.02, MAT.aluminio, 0.002)
+    cuerpo.position.set(xc + ANCHO / 2 - 0.015, y, 0.13)
+    const l = led(0x2ee06d, 0.0026)
+    l.malla.position.set(xc + ANCHO / 2 - 0.015, y, 0.141)
+    const r = placa(nombre, dir, 0.05)
+    r.position.set(xc + ANCHO / 2 + 0.03, y, 0.1005)
+    raiz.add(cuerpo, l.malla, r)
+    return l
+  }
+  const ledArriba = fc(ALTO - 0.02, 'FC_ABIERTO', 'I0.3')
+  const ledAbajo = fc(0.02, 'FC_CERRADO', 'I0.4')
+  // Fotocelda.
+  const postes = [-1, 1].map((sx) => {
+    const p = caja(0.014, 0.05, 0.014, MAT.grafito, 0.002)
+    p.position.set(xc + sx * (ANCHO / 2 - 0.02), 0.025, 0.2)
+    raiz.add(p)
+    return p
+  })
+  void postes
+  const haz = new THREE.Mesh(new THREE.CylinderGeometry(0.001, 0.001, ANCHO - 0.04, 8), new THREE.MeshBasicMaterial({ color: 0xff2020, transparent: true, opacity: 0.7 }))
+  haz.rotation.z = Math.PI / 2
+  haz.position.set(xc, 0.04, 0.2)
+  const ledFoto = led(0x2ee06d, 0.0026)
+  ledFoto.malla.position.set(xc - ANCHO / 2 + 0.02, 0.055, 0.2)
+  const rFoto = placa('FOTOCELDA', 'I0.5', 0.06)
+  rFoto.position.set(xc - ANCHO / 2 - 0.02, 0.03, 0.21)
+  raiz.add(haz, ledFoto.malla, rFoto)
+  // Obstáculo.
+  const obstaculo = caja(0.08, 0.1, 0.08, CARTON, 0.003)
+  obstaculo.position.set(xc, 0.05, 0.13)
+  raiz.add(obstaculo)
+  // Botonera con pilotos.
+  const botonera = caja(0.14, 0.12, 0.04, new THREE.MeshStandardMaterial({ color: 0xe9e6de, roughness: 0.5 }), 0.004)
+  botonera.position.set(-0.36, 0.2, 0.02)
+  raiz.add(botonera)
+  const ponerMandos = montarMandos(raiz, pulsables, PLANTAS.porton.mandos, new THREE.Vector3(-0.405, 0.18, 0.041), 0.045)
+  const pilotos = [
+    { d: 'Q0.2', color: 0x22d65a, n: 'ABIERTO' },
+    { d: 'Q0.3', color: 0xff2d20, n: 'CERRADO' },
+    { d: 'Q0.4', color: 0xffb300, n: 'MOVIENDO' },
+  ].map((x, i) => {
+    const pl = piloto(x.color)
+    pl.grupo.scale.setScalar(0.8)
+    pl.grupo.position.set(-0.405 + i * 0.045, 0.24, 0.041)
+    raiz.add(pl.grupo)
+    const r = placa(x.n, x.d, 0.04)
+    r.position.set(-0.405 + i * 0.045, 0.218, 0.0405)
+    raiz.add(r)
+    return { ...x, pl }
+  })
+  let q = { ...ZERO }
+  let extremo: number | null = null
+  return {
+    raiz,
+    pulsables,
+    actualizar: (sim, _dt, sonido, pan) => {
+      const bits = sim.estado.bits
+      plc.actualizar(bits, sim.corriendo)
+      ponerMandos(sim.mandos)
+      const p = sim.planta as PlantaPorton
+      porton.position.y = p.apertura * (ALTO - 0.02)
+      // Al subir, la hoja se esconde tras el dintel.
+      hoja.scale.y = 1
+      obstaculo.visible = p.obstaculo
+      const sens = p.sensores()
+      ledArriba.poner(!!sens['I0.3'])
+      ledAbajo.poner(!!sens['I0.4'])
+      ledFoto.poner(!!sens['I0.5'])
+      haz.material.opacity = p.obstaculo ? 0.2 : 0.7
+      for (const x of pilotos) x.pl.poner(!!bits[x.d])
+      const moviendo = (p.sube || p.baja) && !(p.sube && p.baja)
+      sonido?.motor(moviendo ? 0.15 : 0)
+      const ahora = sens['I0.3'] ? 1 : sens['I0.4'] ? -1 : 0
+      if (extremo === 0 && ahora !== 0) sonido?.golpe('tope', 0.6, pan(porton.position))
+      extremo = ahora
+      q = clicsDeRele(q, bits, sonido, pan(plc.grupo.position))
+    },
+  }
+}
+
 function crearEscena(id: string): Escena {
   if (id === 'estanque') return escenaEstanque()
   if (id === 'elevador') return escenaElevador()
+  if (id === 'silo') return escenaSilo()
+  if (id === 'semaforo') return escenaSemaforo()
+  if (id === 'porton') return escenaPorton()
   return escenaTablero()
 }
 
 // ---------------------------------------------------------------------------
 // Componente
 // ---------------------------------------------------------------------------
-export default function Planta3D({ sim, version, acciones, onAccion }: Props) {
+export default function Planta3D({ sim, version, acciones, onAccion, notacion }: Props) {
   const contRef = useRef<HTMLDivElement>(null)
   const [sinWebGL, setSinWebGL] = useState(false)
   const [pantallaCompleta, setPantallaCompleta] = useState(false)
@@ -875,6 +1363,7 @@ export default function Planta3D({ sim, version, acciones, onAccion }: Props) {
     renderer.toneMappingExposure = 1.05
     renderer.shadowMap.enabled = true
     renderer.shadowMap.type = THREE.PCFSoftShadowMap
+    renderer.localClippingEnabled = true
     renderer.domElement.style.display = 'block'
     renderer.domElement.dataset.planta3d = 'si'
     cont.appendChild(renderer.domElement)
@@ -886,6 +1375,7 @@ export default function Planta3D({ sim, version, acciones, onAccion }: Props) {
     escena.environmentIntensity = 1.1
     escena.background = new THREE.Color(0xdde2e7)
 
+    notacionEscena = notacion
     const planta = crearEscena(sim.current.planta.id)
     planta.raiz.traverse((o) => {
       const m = o as THREE.Mesh
@@ -949,8 +1439,15 @@ export default function Planta3D({ sim, version, acciones, onAccion }: Props) {
       const distV = ((tam.y + 0.06) * 0.52) / Math.tan(vfov / 2)
       const distH = ((tam.x + 0.06) * 0.52) / Math.tan(vfov / 2) / aspecto
       const dist = Math.max(distV, distH, 0.3)
-      camara.position.set(centro.x + dist * 0.12, centro.y + dist * 0.14, dist + 0.05)
-      controles.target.set(centro.x, centro.y, 0.04)
+      if (planta.vistaAlta) {
+        // Maqueta horizontal: se mira desde arriba y por delante.
+        const d = Math.max(dist, ((tam.z + 0.1) * 0.6) / Math.tan(vfov / 2))
+        camara.position.set(centro.x, centro.y + d * 0.8, centro.z + d * 0.75)
+        controles.target.set(centro.x, centro.y, centro.z * 0.8)
+      } else {
+        camara.position.set(centro.x + dist * 0.12, centro.y + dist * 0.14, dist + 0.05)
+        controles.target.set(centro.x, centro.y, 0.04)
+      }
       controles.update()
     }
     encuadrar()
@@ -1029,7 +1526,7 @@ export default function Planta3D({ sim, version, acciones, onAccion }: Props) {
       sonidoRef.current?.callar()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [version])
+  }, [version, notacion])
 
   useEffect(() => {
     const alCambiar = () => {

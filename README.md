@@ -181,15 +181,31 @@ estanque rebalsa, la plataforma choca con el vástago.
 **Editor Ladder.** Las dos barras de tensión y los escalones, numerados como en el
 apunte (000, 001…). Se elige una herramienta y se hace clic en la casilla: contacto
 NA ┤ ├, NC ┤/├, cable, rama (une dos filas en un nodo para hacer un paralelo) y, en la
-columna de la derecha, bobinas ( ), (/), Set (S), Reset (R), flancos (P) y (N),
-temporizadores **TON / TOF** y contadores **CTU / CTD**. Cada elemento lleva su
-dirección (`I0.0…I0.7`, `Q0.0…Q0.7`, marcas `M0.0…M1.7`, `T0…T7`, `C0…C7`) y se
+columna de la derecha, bobinas ( ), (/), Set (S / OTL), Reset (R / OTU / RES),
+flancos (P) y (N), temporizadores **TON / TOF / RTO** y contadores **CTU / CTD**;
+además **ONS** (un solo pulso) y **comparaciones** EQU, NEQ, GRT, LES, GEQ, LEQ sobre
+el acumulado de un temporizador o contador. Los temporizadores y contadores tienen
+sus bits como en LogixPro (`.EN`, `.TT`, `.DN`, `.CU`), que se usan como contactos.
+Cada elemento lleva su dirección (`I0.0…I0.7`, `Q0.0…Q0.7`, marcas `M0.0…M1.7`,
+`T0…T7`, `C0…C7`) y se
 muestra con el nombre de la **tabla de símbolos** (simbología · asignación ·
 descripción). Con el PLC en RUN se ve la corriente: tramos con tensión en verde,
 contactos cerrados rellenos, bobinas activas encendidas y el tiempo o la cuenta de
 cada temporizador y contador. La aplicación avisa de los errores típicos: un contacto
 sin dirección, una bobina sobre una entrada, la misma salida con bobina en dos
 escalones (manda la última).
+
+**Notación de direcciones.** Se elige en la barra: la del apunte (`I0.3`, `Q0.1`,
+`M0.1`, `T0`) o la de **LogixPro / RSLogix** (`I:1/03`, `O:2/01`, `B3:0/1`,
+`T4:0/DN`, `C5:0.ACC`); en esa notación las bobinas se rotulan L / U y RES. Cambia
+todo a la vez: el diagrama, la tabla de símbolos, el simulador de E/S, la tabla de
+datos y los rótulos de la planta 3D.
+
+**Simulador de E/S y tabla de datos** (como en LogixPro). Siempre están las 8
+entradas y las 8 salidas: las que no usa la planta quedan libres, cada una con un
+interruptor o un pulsador NA / NC para probar cualquier programa. La **tabla de
+datos** muestra la memoria del PLC en vivo: los bits de E/S y marcas, y cada
+temporizador (PRE, ACC, EN, TT, DN) y contador (PRE, ACC, CU, DN).
 
 **Ciclo de scan.** El programa se ejecuta como en un PLC real, ~50 barridos por
 segundo: lee las entradas, resuelve los escalones de arriba abajo (lo que escribe un
@@ -202,6 +218,14 @@ escalón ya lo lee el siguiente) y actualiza las salidas. En STOP las salidas qu
 | Tablero de pruebas | 4 pulsadores y 4 selectores (`I0.0…I0.7`) | 6 pilotos, zumbador y ventilador (`Q0.0…Q0.7`) |
 | Estanque con dos electroválvulas | START, STOP y los flotadores S1 (abajo) y S2 (arriba) | V1 llenado, V2 vaciado |
 | Elevador de piezas | S0 (pieza en la plataforma) y los finales de carrera S1…S4 de Z1 y Z2 | Y1 y Y2 (electroválvulas de Z1 y Z2) |
+| Silo que llena cajas (como el *Silo Simulator* de LogixPro) | START, STOP (NC), PROX, LEVEL | MOTOR de la cinta, SOLENOID, pilotos RUN / FILL / FULL |
+| Semáforos de un cruce | MARCHA, PARO, botón de peatón | rojo / amarillo / verde Norte-Sur y Este-Oeste |
+| Portón automático (como el *Door Simulator* de LogixPro) | ABRIR, CERRAR, PARO, finales de carrera arriba y abajo, fotocelda | SUBIR, BAJAR, pilotos abierto / cerrado / moviendo |
+
+El silo no trae programa: es la planta para que la programes tú. Las plantas avisan
+de los errores típicos: la caja que rebalsa o pasa sin llenar, el material que cae
+sobre la cinta, las dos calles con paso a la vez, el motor del portón con las dos
+órdenes, forzando contra el tope o bajando sobre un obstáculo.
 
 En 3D se ve el PLC en su riel, con fuente, CPU (memoria y puerto de comunicación) y
 módulos de entradas y salidas con un LED por borne; y la máquina: el agua que sube y
@@ -212,7 +236,8 @@ topes de los cilindros y el zumbador. Los mandos se pulsan en la escena o en el 
 **Ejemplos:** los dos ejercicios resueltos del apunte (1 · llenado y vaciado de tanque,
 2 · elevador de piezas) y una serie de programas básicos en el tablero: Y / O / NO,
 marcha y paro con autorretención, Set y Reset, temporizador TON, intermitente con dos
-TON y contador CTU. **＋ Nuevo programa** deja el editor en blanco con el cableado de la
+TON, contador CTU, y ONS con comparaciones y RTO; además el semáforo con temporizadores
+encadenados y el portón con enclavamiento y fotocelda. **＋ Nuevo programa** deja el editor en blanco con el cableado de la
 planta elegida; el programa se guarda solo en el navegador y se puede descargar,
 abrir y exportar como imagen para el informe.
 
@@ -220,7 +245,7 @@ abrir y exportar como imagen para el informe.
 entradas / salidas y direcciones, cómo elegirlo, los sensores, los símbolos Ladder
 (contactos, bobinas, temporizadores, contadores) y el ciclo de scan.
 
-La unidad no incluye enunciados ni soluciones de evaluaciones: esas se reparten aparte.
+La unidad no incluye soluciones de evaluaciones: el silo viene como planta, sin programa.
 
 ## Cómo ordena la aplicación el plano
 
@@ -352,7 +377,7 @@ npm run dev        # http://localhost:5173
 ```
 
 ```bash
-npm test           # 232 pruebas: motor, análisis, entregas, plano, símbolos, banco 3D, PLC y utilidades
+npm test           # 242 pruebas: motor, análisis, entregas, plano, símbolos, banco 3D, PLC y utilidades
 npm run typecheck  # comprobación de tipos
 npm run build      # compila a /dist
 ```

@@ -13,6 +13,7 @@ import EditorLadder from './EditorLadder'
 import { EJEMPLOS_PLC } from './ejemplos'
 import {
   ENTRADAS,
+  MARCAS,
   SALIDAS,
   areaDe,
   clonarPrograma,
@@ -28,6 +29,7 @@ import {
   type ProgramaPLC,
 } from './ladder'
 import { PLANTAS, crearPlanta, type Mando } from './plantas'
+import { formatear, type Notacion } from './notacion'
 import type { SimPLC } from './Planta3D'
 import { CicloScan, ComponentesPLC, ElegirPLC, EntradasSalidas, QueEsPLC, Sensores, SimbolosLadder } from './TeoriaPLC'
 
@@ -61,6 +63,24 @@ export default function UnidadPLC() {
   const [version, setVersion] = useState(0)
   const [, setFotograma] = useState(0)
   const [aviso, setAviso] = useState<string | null>(null)
+  const [notacion, setNotacion] = useState<Notacion>(() => {
+    try {
+      return localStorage.getItem('neumalab.plc.notacion') === 'ab' ? 'ab' : 'siemens'
+    } catch {
+      return 'siemens'
+    }
+  })
+  const notacionRef = useRef(notacion)
+  notacionRef.current = notacion
+  useEffect(() => {
+    try {
+      localStorage.setItem('neumalab.plc.notacion', notacion)
+    } catch {
+      /* sin almacenamiento */
+    }
+  }, [notacion])
+  /** Tipo de cada entrada libre del simulador de E/S (las que la planta no usa). */
+  const [tiposLibres, setTiposLibres] = useState<Record<string, TipoLibre>>({})
   const inputArchivo = useRef<HTMLInputElement>(null)
   const programaRef = useRef(programa)
   programaRef.current = programa
@@ -95,6 +115,7 @@ export default function UnidadPLC() {
     simRef.current.mandos = {}
     simRef.current.estado = estadoInicial()
     eventosRef.current = []
+    setTiposLibres({})
     setVersion((v) => v + 1)
   }, [programa.planta])
 
@@ -115,7 +136,8 @@ export default function UnidadPLC() {
   const nombre = useCallback(
     (dir: string) => {
       const s = programaRef.current.simbolos.find((x) => x.dir === dir)
-      return s?.nombre ? `${s.nombre} (${dir})` : dir
+      const d = formatear(dir, notacionRef.current)
+      return s?.nombre ? `${s.nombre} (${d})` : d
     },
     [],
   )
@@ -134,6 +156,8 @@ export default function UnidadPLC() {
       const estado = sim.estado
       const antes = { ...estado.bits }
       const entradas = { ...sim.mandos, ...sim.planta.sensores() }
+      // Los pulsadores NC de la planta dan 1 en reposo y 0 al pulsarlos.
+      for (const m of PLANTAS[sim.planta.id].mandos) if (m.nc) entradas[m.dir] = !sim.mandos[m.dir]
       if (sim.corriendo) {
         const r = scan(programaRef.current, estado, entradas, DT)
         flujosRef.current = r.flujos
@@ -292,6 +316,13 @@ export default function UnidadPLC() {
             ))}
           </select>
         </label>
+        <label style={rotulo} title="Cómo se escriben las direcciones: como en el apunte o como en LogixPro / RSLogix">
+          Direcciones:
+          <select value={notacion} onChange={(e) => setNotacion(e.target.value as Notacion)} style={{ padding: '0.3rem 0.4rem' }}>
+            <option value="siemens">Apunte (I0.3, Q0.1)</option>
+            <option value="ab">LogixPro (I:1/03, O:2/01)</option>
+          </select>
+        </label>
         <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           <button onClick={guardar} style={botonSuave} title="Descarga el programa para volver a abrirlo">
             Guardar
@@ -334,6 +365,7 @@ export default function UnidadPLC() {
             flujos={corriendo ? flujosRef.current : null}
             estado={corriendo ? estado : null}
             editable={!corriendo}
+            notacion={notacion}
           />
           {avisos.length > 0 && (
             <div style={{ marginTop: 8 }}>
@@ -358,16 +390,31 @@ export default function UnidadPLC() {
                 sim.planta.accion(id)
                 setFotograma((f) => f + 1)
               }}
+              notacion={notacion}
             />
           </Suspense>
-          <PanelES mandos={descripcion.mandos} simbolos={programa.simbolos} cableado={descripcion.cableado.map((c) => c.dir)} estado={estado} mandosActivos={sim.mandos} pulsar={pulsar} />
+          <PanelES
+            mandos={descripcion.mandos}
+            simbolos={programa.simbolos}
+            cableado={descripcion.cableado.map((c) => c.dir)}
+            estado={estado}
+            mandosActivos={sim.mandos}
+            pulsar={pulsar}
+            notacion={notacion}
+            tiposLibres={tiposLibres}
+            onTipoLibre={(dir, tipo) => {
+              setTiposLibres((t) => ({ ...t, [dir]: tipo }))
+              // Un pulsador NC da 1 en reposo.
+              pulsar(dir, tipo === 'NC')
+            }}
+          />
         </section>
       </div>
 
       <div style={{ display: 'flex', gap: 14, alignItems: 'stretch', flexWrap: 'wrap' }}>
         <section style={{ ...tarjeta, flex: '2 1 460px', minWidth: 0 }}>
           <h2 style={subtitulo}>Tabla de símbolos · asignación de entradas y salidas</h2>
-          <TablaSimbolos programa={programa} onCambiar={setPrograma} editable={!corriendo} />
+          <TablaSimbolos programa={programa} onCambiar={setPrograma} editable={!corriendo} notacion={notacion} />
         </section>
         <section style={{ ...tarjeta, flex: '1 1 320px', minWidth: 0 }}>
           <h2 style={subtitulo}>¿Qué está pasando?</h2>
@@ -385,6 +432,12 @@ export default function UnidadPLC() {
           )}
         </section>
       </div>
+
+      <section style={tarjeta}>
+        <Seccion titulo="Tabla de datos · la memoria del PLC por dentro">
+          <TablaDatos estado={estado} programa={programa} notacion={notacion} />
+        </Seccion>
+      </section>
 
       <section style={tarjeta}>
         <Seccion titulo="¿Qué es un PLC y para qué se usa?">
@@ -429,7 +482,14 @@ export default function UnidadPLC() {
   )
 }
 
-/** Mandos de la planta y el estado de cada entrada y salida cableada. */
+type TipoLibre = 'interruptor' | 'NA' | 'NC'
+
+/**
+ * Simulador de E/S, como el de LogixPro: las 8 entradas y las 8 salidas del
+ * PLC. Las entradas que usa la planta las mueve la planta (sus sensores) o sus
+ * mandos; las demás quedan libres, con un interruptor o un pulsador NA / NC
+ * para probar cualquier programa.
+ */
 function PanelES({
   mandos,
   simbolos,
@@ -437,6 +497,9 @@ function PanelES({
   estado,
   mandosActivos,
   pulsar,
+  notacion,
+  tiposLibres,
+  onTipoLibre,
 }: {
   mandos: Mando[]
   simbolos: ProgramaPLC['simbolos']
@@ -444,83 +507,266 @@ function PanelES({
   estado: EstadoPLC
   mandosActivos: Record<string, boolean>
   pulsar: (dir: string, v: boolean) => void
+  notacion: Notacion
+  tiposLibres: Record<string, TipoLibre>
+  onTipoLibre: (dir: string, tipo: TipoLibre) => void
 }) {
   const colores: Record<string, string> = { verde: '#19a34e', rojo: '#c62828', negro: '#2b3036', amarillo: '#d4a017' }
   const nombre = (d: string) => simbolos.find((s) => s.dir === d)?.nombre ?? ''
-  const dirs = DIRECCIONES.filter((d) => cableado.includes(d))
+  const fmt = (d: string) => formatear(d, notacion)
+  const botonMando = (dir: string, texto: string, tipo: 'pulsador' | 'interruptor' | 'NC', color: string) => {
+    const on = !!mandosActivos[dir]
+    const pulsado = tipo === 'NC' ? !on : on
+    return (
+      <button
+        key={dir}
+        data-mando={dir}
+        title={tipo === 'interruptor' ? `Cambia ${texto} (${fmt(dir)})` : `Mantén pulsado ${texto} (${fmt(dir)})`}
+        style={{
+          border: `2px solid ${color}`,
+          background: pulsado ? color : '#fff',
+          color: pulsado ? '#fff' : color,
+          borderRadius: tipo === 'interruptor' ? 6 : 999,
+          padding: '0.25rem 0.7rem',
+          fontWeight: 700,
+          cursor: 'pointer',
+          userSelect: 'none',
+          touchAction: 'none',
+          fontSize: '0.82rem',
+        }}
+        onPointerDown={(e) => {
+          if (tipo === 'interruptor') {
+            pulsar(dir, !on)
+            return
+          }
+          try {
+            e.currentTarget.setPointerCapture(e.pointerId)
+          } catch {
+            /* puntero sintético */
+          }
+          pulsar(dir, tipo !== 'NC')
+        }}
+        onPointerUp={() => tipo !== 'interruptor' && pulsar(dir, tipo === 'NC')}
+        onPointerCancel={() => tipo !== 'interruptor' && pulsar(dir, tipo === 'NC')}
+      >
+        {tipo === 'interruptor' ? (on ? '◉ ' : '○ ') : '● '}
+        {texto}
+      </button>
+    )
+  }
+  const led = (d: string) => {
+    const on = !!estado.bits[d]
+    const esEntrada = d.startsWith('I')
+    const color = esEntrada ? '#2ee06d' : '#ffa726'
+    return (
+      <span
+        style={{
+          width: 11,
+          height: 11,
+          borderRadius: 999,
+          background: on ? color : '#c9ced4',
+          boxShadow: on ? `0 0 6px ${color}` : 'none',
+          flexShrink: 0,
+          display: 'inline-block',
+        }}
+      />
+    )
+  }
+  const deMandos = new Set(mandos.map((m) => m.dir))
   return (
     <div style={{ marginTop: 10 }}>
       {mandos.length > 0 && (
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 8 }}>
-          <span style={{ fontSize: '0.8rem', color: '#5a6b7d' }}>Mandos:</span>
-          {mandos.map((m) => {
-            const on = !!mandosActivos[m.dir]
-            const color = colores[m.color]
+          <span style={{ fontSize: '0.8rem', color: '#5a6b7d' }}>Mandos de la planta:</span>
+          {mandos.map((m) => botonMando(m.dir, m.nombre, m.tipo, colores[m.color]))}
+        </div>
+      )}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10 }}>
+        <div>
+          <p style={subRotulo}>Entradas</p>
+          {ENTRADAS.map((d) => {
+            const libre = !cableado.includes(d)
+            const tipo = tiposLibres[d] ?? 'interruptor'
             return (
-              <button
-                key={m.dir}
-                title={m.tipo === 'pulsador' ? `Mantén pulsado ${m.nombre} (${m.dir})` : `Cambia el selector ${m.nombre} (${m.dir})`}
-                style={{
-                  border: `2px solid ${color}`,
-                  background: on ? color : '#fff',
-                  color: on ? '#fff' : color,
-                  borderRadius: m.tipo === 'pulsador' ? 999 : 6,
-                  padding: '0.3rem 0.8rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  userSelect: 'none',
-                  touchAction: 'none',
-                  fontSize: '0.84rem',
-                }}
-                onPointerDown={(e) => {
-                  if (m.tipo === 'interruptor') {
-                    pulsar(m.dir, !on)
-                    return
-                  }
-                  try {
-                    e.currentTarget.setPointerCapture(e.pointerId)
-                  } catch {
-                    /* puntero sintético */
-                  }
-                  pulsar(m.dir, true)
-                }}
-                onPointerUp={() => m.tipo === 'pulsador' && pulsar(m.dir, false)}
-                onPointerCancel={() => m.tipo === 'pulsador' && pulsar(m.dir, false)}
-              >
-                {m.tipo === 'interruptor' ? (on ? '◉ ' : '○ ') : '● '}
-                {m.nombre}
-              </button>
+              <div key={d} style={filaES} data-es={d} data-valor={estado.bits[d] ? 1 : 0}>
+                {led(d)}
+                <code style={{ minWidth: 48 }}>{fmt(d)}</code>
+                {libre ? (
+                  <>
+                    {botonMando(d, nombre(d) || 'libre', tipo === 'interruptor' ? 'interruptor' : tipo === 'NC' ? 'NC' : 'pulsador', '#1d5ea8')}
+                    <select
+                      value={tipo}
+                      title="Qué elemento hay en esta entrada libre"
+                      onChange={(e) => onTipoLibre(d, e.target.value as TipoLibre)}
+                      style={{ fontSize: '0.76rem', padding: '0.1rem' }}
+                    >
+                      <option value="interruptor">interruptor</option>
+                      <option value="NA">pulsador NA</option>
+                      <option value="NC">pulsador NC</option>
+                    </select>
+                  </>
+                ) : (
+                  <span>
+                    <strong>{nombre(d)}</strong>
+                    <span style={{ color: '#8a97a5', fontSize: '0.76rem' }}>{deMandos.has(d) ? ' · mando' : ' · sensor de la planta'}</span>
+                  </span>
+                )}
+              </div>
             )
           })}
         </div>
-      )}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 4 }}>
-        {dirs.map((d) => {
-          const on = !!estado.bits[d]
-          const esEntrada = d.startsWith('I')
-          return (
-            <div key={d} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.82rem', color: '#33475c' }} data-es={d} data-valor={on ? 1 : 0}>
-              <span
-                style={{
-                  width: 11,
-                  height: 11,
-                  borderRadius: 999,
-                  background: on ? (esEntrada ? '#2ee06d' : '#ffa726') : '#c9ced4',
-                  boxShadow: on ? `0 0 6px ${esEntrada ? '#2ee06d' : '#ffa726'}` : 'none',
-                  flexShrink: 0,
-                }}
-              />
-              <code>{d}</code>
+        <div>
+          <p style={subRotulo}>Salidas</p>
+          {SALIDAS.map((d) => (
+            <div key={d} style={filaES} data-es={d} data-valor={estado.bits[d] ? 1 : 0}>
+              {led(d)}
+              <code style={{ minWidth: 48 }}>{fmt(d)}</code>
               <strong>{nombre(d)}</strong>
+              {!cableado.includes(d) && <span style={{ color: '#8a97a5', fontSize: '0.76rem' }}>· piloto libre</span>}
             </div>
-          )
-        })}
+          ))}
+        </div>
       </div>
     </div>
   )
 }
 
-function TablaSimbolos({ programa, onCambiar, editable }: { programa: ProgramaPLC; onCambiar: (p: ProgramaPLC) => void; editable: boolean }) {
+const subRotulo: React.CSSProperties = { margin: '0 0 4px', fontSize: '0.8rem', color: '#5a6b7d', fontWeight: 700 }
+const filaES: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.82rem', color: '#33475c', minHeight: 28 }
+
+/**
+ * Tabla de datos, como la de LogixPro: los bits de entradas, salidas y
+ * marcas, y cada temporizador y contador con su preset, acumulado y bits.
+ */
+function TablaDatos({ estado, programa, notacion }: { estado: EstadoPLC; programa: ProgramaPLC; notacion: Notacion }) {
+  const fmt = (d: string) => formatear(d, notacion)
+  const nombre = (d: string) => programa.simbolos.find((s) => s.dir === d)?.nombre ?? ''
+  const celda: React.CSSProperties = { border: '1px solid #e0e5eb', padding: '3px 6px', textAlign: 'center', fontFamily: 'ui-monospace, monospace', fontSize: '0.82rem' }
+  const bit = (v: boolean | undefined) => (
+    <td style={{ ...celda, background: v ? '#d8f3e5' : '#fff', color: v ? '#0a6b3c' : '#8a97a5', fontWeight: 700 }}>{v ? 1 : 0}</td>
+  )
+  const filaBits = (titulo: string, dirs: string[]) => (
+    <tr>
+      <th style={{ ...celda, textAlign: 'left', background: '#f4f7fb' }}>{titulo}</th>
+      {dirs.map((d) => (
+        <td key={d} style={{ ...celda, padding: 0 }} title={`${fmt(d)}${nombre(d) ? ` · ${nombre(d)}` : ''}`}>
+          <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+            <tbody>
+              <tr>
+                <td style={{ fontSize: '0.66rem', color: '#8a97a5', textAlign: 'center' }}>{fmt(d).replace(/^.*[./]/, '')}</td>
+              </tr>
+              <tr>{bit(estado.bits[d])}</tr>
+            </tbody>
+          </table>
+        </td>
+      ))}
+    </tr>
+  )
+  const usados = (letra: 'T' | 'C') => {
+    const s = new Set<string>()
+    for (const e of programa.escalones) for (const b of e.bobinas) if (b?.dir.startsWith(letra)) s.add(b.dir)
+    return [...s].sort()
+  }
+  const temporizadores = usados('T')
+  const contadores = usados('C')
+  return (
+    <div style={{ display: 'grid', gap: 12 }}>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ borderCollapse: 'collapse' }}>
+          <tbody>
+            {filaBits(notacion === 'ab' ? 'I:1' : 'I0', ENTRADAS)}
+            {filaBits(notacion === 'ab' ? 'O:2' : 'Q0', SALIDAS)}
+            {filaBits(notacion === 'ab' ? 'B3:0' : 'M0', MARCAS.slice(0, 8))}
+            {filaBits(notacion === 'ab' ? 'B3:0 (8–15)' : 'M1', MARCAS.slice(8))}
+          </tbody>
+        </table>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 12 }}>
+        <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+          <thead>
+            <tr style={{ background: '#33475c', color: '#fff' }}>
+              {['Temporizador', 'Tipo', 'PRE (s)', 'ACC (s)', 'EN', 'TT', 'DN'].map((h) => (
+                <th key={h} style={{ ...celda, color: '#fff' }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {temporizadores.length === 0 && (
+              <tr>
+                <td colSpan={7} style={{ ...celda, fontFamily: 'inherit', color: '#8a97a5' }}>El programa no usa temporizadores.</td>
+              </tr>
+            )}
+            {temporizadores.map((d) => {
+              const tm = estado.temporizadores[d]
+              const b = programa.escalones.flatMap((e) => e.bobinas).find((x) => x?.dir === d && /TON|TOF|RTO/.test(x.tipo))
+              return (
+                <tr key={d}>
+                  <td style={{ ...celda, textAlign: 'left' }}>
+                    {fmt(d)} {nombre(d) && <span style={{ fontFamily: 'inherit', color: '#5a6b7d' }}>· {nombre(d)}</span>}
+                  </td>
+                  <td style={celda}>{b?.tipo ?? '—'}</td>
+                  <td style={celda}>{(tm?.preset ?? b?.preset ?? 0).toFixed(1)}</td>
+                  <td style={celda}>{(tm?.acumulado ?? 0).toFixed(2)}</td>
+                  {bit(tm?.activo)}
+                  {bit(tm?.contando)}
+                  {bit(tm?.hecho)}
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+        <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+          <thead>
+            <tr style={{ background: '#33475c', color: '#fff' }}>
+              {['Contador', 'Tipo', 'PRE', 'ACC', 'CU', 'DN'].map((h) => (
+                <th key={h} style={{ ...celda, color: '#fff' }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {contadores.length === 0 && (
+              <tr>
+                <td colSpan={6} style={{ ...celda, fontFamily: 'inherit', color: '#8a97a5' }}>El programa no usa contadores.</td>
+              </tr>
+            )}
+            {contadores.map((d) => {
+              const ct = estado.contadores[d]
+              const b = programa.escalones.flatMap((e) => e.bobinas).find((x) => x?.dir === d && /CTU|CTD/.test(x.tipo))
+              return (
+                <tr key={d}>
+                  <td style={{ ...celda, textAlign: 'left' }}>
+                    {fmt(d)} {nombre(d) && <span style={{ fontFamily: 'inherit', color: '#5a6b7d' }}>· {nombre(d)}</span>}
+                  </td>
+                  <td style={celda}>{b?.tipo ?? '—'}</td>
+                  <td style={celda}>{ct?.preset ?? b?.preset ?? 0}</td>
+                  <td style={celda}>{ct?.valor ?? (b?.tipo === 'CTD' ? b.preset ?? 0 : 0)}</td>
+                  {bit(ct?.anterior)}
+                  {bit(ct?.hecho)}
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+      <p style={{ margin: 0, fontSize: '0.8rem', color: '#5a6b7d' }}>
+        EN: la instrucción tiene corriente · TT: el temporizador está contando · DN: terminó (su contacto se cierra) · CU:
+        el contador tiene corriente. Estos bits se pueden usar como contactos (por ejemplo {fmt('T0.DN')} o {fmt('T0.TT')}).
+      </p>
+    </div>
+  )
+}
+
+function TablaSimbolos({
+  programa,
+  onCambiar,
+  editable,
+  notacion,
+}: {
+  programa: ProgramaPLC
+  onCambiar: (p: ProgramaPLC) => void
+  editable: boolean
+  notacion: Notacion
+}) {
   const cambiar = (m: (p: ProgramaPLC) => void) => {
     const p = clonarPrograma(programa)
     m(p)
@@ -561,7 +807,7 @@ function TablaSimbolos({ programa, onCambiar, editable }: { programa: ProgramaPL
                 >
                   {DIRECCIONES.map((d) => (
                     <option key={d} value={d}>
-                      {d}
+                      {formatear(d, notacion)}
                     </option>
                   ))}
                 </select>

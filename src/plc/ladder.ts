@@ -21,10 +21,25 @@ export const COLUMNAS = 7
 
 export type ModoContacto = 'NA' | 'NC'
 
+export type Comparador = 'EQU' | 'NEQ' | 'GRT' | 'LES' | 'GEQ' | 'LEQ'
+
 export type Celda =
   | { tipo: 'vacio' }
   | { tipo: 'cable' }
   | { tipo: 'contacto'; modo: ModoContacto; dir: string }
+  /** ONS (one shot): deja pasar la corriente un solo barrido cuando llega. */
+  | { tipo: 'ons' }
+  /** Comparación: pasa corriente si «fuente op valor» es verdadero (T0.ACC, C0.ACC). */
+  | { tipo: 'comparar'; op: Comparador; fuente: string; valor: number }
+
+export const SIMBOLO_COMPARADOR: Record<Comparador, string> = {
+  EQU: '=',
+  NEQ: '≠',
+  GRT: '>',
+  LES: '<',
+  GEQ: '≥',
+  LEQ: '≤',
+}
 
 export type TipoBobina =
   | 'normal'
@@ -35,6 +50,7 @@ export type TipoBobina =
   | 'reset'
   | 'TON'
   | 'TOF'
+  | 'RTO'
   | 'CTU'
   | 'CTD'
 
@@ -61,7 +77,7 @@ export interface Simbolo {
   descripcion: string
 }
 
-export type IdPlanta = 'tablero' | 'estanque' | 'elevador'
+export type IdPlanta = 'tablero' | 'estanque' | 'elevador' | 'silo' | 'semaforo' | 'porton'
 
 export interface ProgramaPLC {
   version: 1
@@ -87,12 +103,28 @@ export const areaDe = (dir: string): Area | null => {
   if (/^I0\.[0-7]$/.test(dir)) return 'I'
   if (/^Q0\.[0-7]$/.test(dir)) return 'Q'
   if (/^M[01]\.[0-7]$/.test(dir)) return 'M'
-  if (/^T[0-7]$/.test(dir)) return 'T'
-  if (/^C[0-7]$/.test(dir)) return 'C'
+  if (/^T[0-7](\.(DN|TT|EN|ACC))?$/.test(dir)) return 'T'
+  if (/^C[0-7](\.(DN|CU|ACC))?$/.test(dir)) return 'C'
   return null
 }
 
-export const esTemporizador = (t: TipoBobina) => t === 'TON' || t === 'TOF'
+/** Bits de estado que se pueden leer de un temporizador y de un contador. */
+export const BITS_TEMPORIZADOR = ['DN', 'TT', 'EN'] as const
+export const BITS_CONTADOR = ['DN', 'CU'] as const
+/** Contactos posibles sobre temporizadores y contadores (T0.DN, T0.TT…). */
+export const BITS_TC = [
+  ...Array.from({ length: 8 }, (_, i) => BITS_TEMPORIZADOR.map((b) => `T${i}.${b}`)).flat(),
+  ...Array.from({ length: 8 }, (_, i) => BITS_CONTADOR.map((b) => `C${i}.${b}`)).flat(),
+]
+/** Valores numéricos que se pueden comparar: el acumulado de cada T y C. */
+export const VALORES = [
+  ...Array.from({ length: 8 }, (_, i) => `T${i}.ACC`),
+  ...Array.from({ length: 8 }, (_, i) => `C${i}.ACC`),
+]
+/** La palabra base de una dirección: «T0.DN» → «T0». */
+export const baseDe = (dir: string) => (/^[TC]\d/.test(dir) ? dir.split('.')[0] : dir)
+
+export const esTemporizador = (t: TipoBobina) => t === 'TON' || t === 'TOF' || t === 'RTO'
 export const esContador = (t: TipoBobina) => t === 'CTU' || t === 'CTD'
 
 // ---------------------------------------------------------------------------
@@ -116,9 +148,15 @@ export function programaVacio(planta: IdPlanta = 'tablero', simbolos: Simbolo[] 
 // Estado del PLC
 // ---------------------------------------------------------------------------
 export interface Temporizador {
+  tipo?: 'TON' | 'TOF' | 'RTO'
   acumulado: number
+  preset?: number
+  /** DN: terminó. */
   hecho: boolean
+  /** EN: la instrucción tiene corriente. */
   activo: boolean
+  /** TT: está contando el tiempo. */
+  contando?: boolean
 }
 
 export interface Contador {
@@ -150,9 +188,47 @@ export function estadoInicial(): EstadoPLC {
 /** Valor lógico de una dirección tal como la lee un contacto. */
 export function leer(estado: EstadoPLC, dir: string): boolean {
   const area = areaDe(dir)
-  if (area === 'T') return estado.temporizadores[dir]?.hecho ?? false
-  if (area === 'C') return estado.contadores[dir]?.hecho ?? false
+  const [base, bit = 'DN'] = dir.split('.')
+  if (area === 'T') {
+    const tm = estado.temporizadores[base]
+    if (!tm) return false
+    if (bit === 'EN') return tm.activo
+    if (bit === 'TT') return !!tm.contando
+    return tm.hecho
+  }
+  if (area === 'C') {
+    const ct = estado.contadores[base]
+    if (!ct) return false
+    if (bit === 'CU') return ct.anterior
+    return ct.hecho
+  }
   return estado.bits[dir] ?? false
+}
+
+/** Valor numérico de T0.ACC (segundos) o C0.ACC (cuenta). */
+export function valorDe(estado: EstadoPLC, fuente: string): number {
+  const base = baseDe(fuente)
+  if (areaDe(base) === 'T') return estado.temporizadores[base]?.acumulado ?? 0
+  if (areaDe(base) === 'C') return estado.contadores[base]?.valor ?? 0
+  return 0
+}
+
+export function comparar(op: Comparador, a: number, b: number): boolean {
+  const eps = 1e-9
+  switch (op) {
+    case 'EQU':
+      return Math.abs(a - b) < eps
+    case 'NEQ':
+      return Math.abs(a - b) >= eps
+    case 'GRT':
+      return a > b + eps
+    case 'LES':
+      return a < b - eps
+    case 'GEQ':
+      return a >= b - eps
+    case 'LEQ':
+      return a <= b + eps
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -191,7 +267,16 @@ export function colaCableada(escalon: Escalon, fila: number): number {
   return Math.max(ultimo + 1, entrada)
 }
 
-export function conduce(escalon: Escalon, fila: number, col: number, lee: (dir: string) => boolean): boolean {
+/** Lo que un escalón necesita saber de la memoria para resolverse. */
+export interface Lector {
+  (dir: string): boolean
+  /** Valor numérico para las comparaciones (T0.ACC, C0.ACC). */
+  valor?: (fuente: string) => number
+  /** ONS: si su entrada tenía corriente en el barrido anterior. */
+  onsPrevio?: (fila: number, col: number) => boolean
+}
+
+export function conduce(escalon: Escalon, fila: number, col: number, lee: Lector): boolean {
   const celda = escalon.celdas[fila][col]
   if (celda.tipo === 'cable') return true
   if (celda.tipo === 'contacto') {
@@ -199,10 +284,16 @@ export function conduce(escalon: Escalon, fila: number, col: number, lee: (dir: 
     const v = lee(celda.dir)
     return celda.modo === 'NA' ? v : !v
   }
+  if (celda.tipo === 'comparar') {
+    if (!celda.fuente) return false
+    return comparar(celda.op, lee.valor?.(celda.fuente) ?? 0, celda.valor)
+  }
+  // El ONS depende de su propia entrada: se resuelve durante el flujo.
+  if (celda.tipo === 'ons') return !(lee.onsPrevio?.(fila, col) ?? false)
   return col >= colaCableada(escalon, fila)
 }
 
-export function resolverEscalon(escalon: Escalon, lee: (dir: string) => boolean): FlujoEscalon {
+export function resolverEscalon(escalon: Escalon, lee: Lector): FlujoEscalon {
   const filas = escalon.celdas.length
   const nodos = Array.from({ length: filas }, () => Array(COLUMNAS + 1).fill(false) as boolean[])
   const conducen = Array.from({ length: filas }, (_, f) =>
@@ -233,6 +324,12 @@ export function resolverEscalon(escalon: Escalon, lee: (dir: string) => boolean)
       }
     }
   }
+  // Un ONS sólo «conduce» (en el dibujo) si de verdad pasó el pulso.
+  for (let f = 0; f < filas; f++) {
+    for (let c = 0; c < COLUMNAS; c++) {
+      if (escalon.celdas[f][c].tipo === 'ons') conducen[f][c] = conducen[f][c] && nodos[f][c]
+    }
+  }
   return { nodos, conducen, bobinas: nodos.map((fila, f) => !!escalon.bobinas[f] && fila[COLUMNAS]) }
 }
 
@@ -255,11 +352,20 @@ export function scan(
 ): ResultadoScan {
   for (const d of ENTRADAS) estado.bits[d] = !!entradas[d]
   estado.t += dt
-  const lee = (dir: string) => leer(estado, dir)
   const flujos: FlujoEscalon[] = []
   programa.escalones.forEach((escalon, i) => {
+    const lee: Lector = Object.assign((dir: string) => leer(estado, dir), {
+      valor: (fuente: string) => valorDe(estado, fuente),
+      onsPrevio: (f: number, c: number) => estado.previo[`ons:${i}.${f}.${c}`] ?? false,
+    })
     const flujo = resolverEscalon(escalon, lee)
     flujos.push(flujo)
+    // Cada ONS recuerda si su entrada tenía corriente en este barrido.
+    escalon.celdas.forEach((fila, f) =>
+      fila.forEach((celda, c) => {
+        if (celda.tipo === 'ons') estado.previo[`ons:${i}.${f}.${c}`] = flujo.nodos[f][c]
+      }),
+    )
     escalon.bobinas.forEach((bobina, f) => {
       if (!bobina?.dir) return
       ejecutarBobina(estado, bobina, flujo.bobinas[f], `${i}.${f}`, dt)
@@ -279,6 +385,8 @@ function ejecutarBobina(estado: EstadoPLC, b: Bobina, corriente: boolean, clave:
     if (area !== 'T') return
     const preset = Math.max(0, b.preset ?? 1)
     const tm = (estado.temporizadores[b.dir] ??= { acumulado: 0, hecho: false, activo: false })
+    tm.tipo = b.tipo as Temporizador['tipo']
+    tm.preset = preset
     tm.activo = corriente
     if (b.tipo === 'TON') {
       // Retardo a la conexión: cuenta mientras hay corriente; al soltar se reinicia.
@@ -289,6 +397,13 @@ function ejecutarBobina(estado: EstadoPLC, b: Bobina, corriente: boolean, clave:
         tm.acumulado = 0
         tm.hecho = false
       }
+      tm.contando = corriente && !tm.hecho
+    } else if (b.tipo === 'RTO') {
+      // Retentivo: acumula mientras hay corriente y guarda lo contado al
+      // perderla; sólo un Reset (RES) lo vuelve a cero.
+      if (corriente) tm.acumulado = Math.min(preset, tm.acumulado + dt)
+      tm.hecho = tm.acumulado >= preset
+      tm.contando = corriente && !tm.hecho
     } else {
       // Retardo a la desconexión: sigue activo un tiempo después de perder la corriente.
       if (corriente) {
@@ -298,6 +413,7 @@ function ejecutarBobina(estado: EstadoPLC, b: Bobina, corriente: boolean, clave:
         tm.acumulado = Math.min(preset, tm.acumulado + dt)
         if (tm.acumulado >= preset) tm.hecho = false
       }
+      tm.contando = !corriente && tm.hecho
     }
     return
   }
@@ -341,7 +457,7 @@ function ejecutarBobina(estado: EstadoPLC, b: Bobina, corriente: boolean, clave:
       if (!corriente) break
       if (area === 'T') {
         const tm = estado.temporizadores[b.dir]
-        if (tm) Object.assign(tm, { acumulado: 0, hecho: false })
+        if (tm) Object.assign(tm, { acumulado: 0, hecho: false, contando: false })
       } else if (area === 'C') {
         const ct = estado.contadores[b.dir]
         if (ct) {
@@ -374,6 +490,7 @@ export function revisarPrograma(programa: ProgramaPLC): string[] {
     e.celdas.forEach((fila) =>
       fila.forEach((c) => {
         if (c.tipo === 'contacto' && !c.dir) avisos.push(`Escalón ${n}: hay un contacto sin dirección asignada.`)
+        if (c.tipo === 'comparar' && !c.fuente) avisos.push(`Escalón ${n}: hay una comparación sin elegir qué comparar.`)
       }),
     )
     e.bobinas.forEach((b) => {

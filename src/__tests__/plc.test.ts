@@ -229,3 +229,59 @@ describe('Ejercicio 2 · elevador', () => {
     expect(run.historia.some((q) => q['Q0.0'] || q['Q0.1'])).toBe(false)
   })
 })
+
+describe('plantas nuevas', () => {
+  it('semáforo: el ejemplo alterna las calles sin dar paso a las dos a la vez', async () => {
+    const { PlantaSemaforo } = await import('../plc/plantas')
+    const planta = new PlantaSemaforo()
+    const run = correr(ejemplo('semaforo'), planta, 0.2, { 'I0.0': true })
+    run.paso(30)
+    const pasoNS = (q: Record<string, boolean>) => q['Q0.2'] || q['Q0.1']
+    const pasoEO = (q: Record<string, boolean>) => q['Q0.5'] || q['Q0.4']
+    expect(run.historia.some((q) => pasoNS(q) && pasoEO(q))).toBe(false)
+    expect(run.historia.some((q) => q['Q0.2'])).toBe(true)
+    expect(run.historia.some((q) => q['Q0.5'])).toBe(true)
+    expect(planta.eventos.filter((e) => e.aviso)).toEqual([])
+    expect(planta.cruces).toBeGreaterThan(0)
+  })
+
+  it('portón: abre hasta arriba, cierra hasta abajo y la fotocelda detiene el cierre', async () => {
+    const { PlantaPorton } = await import('../plc/plantas')
+    const planta = new PlantaPorton()
+    const run = correr(ejemplo('porton'), planta, 0.2, { 'I0.0': true })
+    run.paso(6)
+    expect(planta.apertura).toBeGreaterThan(0.99)
+    expect(run.estado.bits['Q0.0']).toBe(false)
+    planta.accion('obstaculo')
+    run.paso(0.2, { 'I0.1': true })
+    run.paso(3)
+    expect(planta.apertura).toBeGreaterThan(0.99)
+    planta.accion('obstaculo')
+    run.paso(0.2, { 'I0.1': true })
+    run.paso(6)
+    expect(planta.apertura).toBeLessThan(0.01)
+    expect(planta.eventos.filter((e) => e.aviso)).toEqual([])
+  })
+
+  it('portón: sin enclavamiento la planta avisa de SUBIR y BAJAR a la vez', async () => {
+    const { PlantaPorton } = await import('../plc/plantas')
+    const planta = new PlantaPorton()
+    planta.paso({ 'Q0.0': true, 'Q0.1': true }, 0.02)
+    expect(planta.eventos.some((e) => e.aviso && /a la vez/.test(e.mensaje))).toBe(true)
+  })
+
+  it('silo: la cinta lleva la caja al sensor, la válvula la llena y LEVEL avisa', async () => {
+    const { PlantaSilo } = await import('../plc/plantas')
+    const planta = new PlantaSilo()
+    // Sin programa: se accionan las salidas a mano para probar la planta.
+    let n = 0
+    while (!planta.sensores()['I0.3'] && n++ < 1000) planta.paso({ 'Q0.0': true }, 0.02)
+    expect(planta.sensores()['I0.3']).toBe(true)
+    n = 0
+    while (!planta.sensores()['I0.4'] && n++ < 1000) planta.paso({ 'Q0.1': true }, 0.02)
+    expect(planta.sensores()['I0.4']).toBe(true)
+    expect(planta.eventos.filter((e) => e.aviso)).toEqual([])
+    planta.paso({ 'Q0.1': true, 'Q0.0': true }, 0.02)
+    expect(planta.eventos.some((e) => e.aviso)).toBe(true)
+  })
+})

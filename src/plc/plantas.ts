@@ -16,6 +16,8 @@ export interface Mando {
   /** Pulsador: vuelve solo al soltarlo. Interruptor: se queda donde lo dejas. */
   tipo: 'pulsador' | 'interruptor'
   color: 'verde' | 'rojo' | 'negro' | 'amarillo'
+  /** Pulsador normalmente cerrado: la entrada vale 1 en reposo y 0 al pulsarlo. */
+  nc?: boolean
 }
 
 export interface Accion {
@@ -349,14 +351,362 @@ export class PlantaElevador implements Planta {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Silo que llena cajas en una cinta (como el «Silo Simulator» de LogixPro)
+// ---------------------------------------------------------------------------
+export const SILO: DescripcionPlanta = {
+  id: 'silo',
+  nombre: 'Silo que llena cajas en una cinta',
+  resumen:
+    'La cinta trae cajas vacías bajo el silo. El sensor de proximidad detecta la caja en posición; la electroválvula deja caer el material y el sensor de nivel avisa cuando la caja está llena. Pilotos RUN, FILL y FULL. El cableado es el del simulador LogixPro; STOP es un pulsador normalmente cerrado.',
+  cableado: [
+    { dir: 'I0.0', nombre: 'START', descripcion: 'Pulsador de marcha (NA)' },
+    { dir: 'I0.1', nombre: 'STOP', descripcion: 'Pulsador de paro (NC: vale 1 en reposo, 0 al pulsarlo)' },
+    { dir: 'I0.3', nombre: 'PROX', descripcion: 'Sensor de proximidad: hay una caja bajo el silo' },
+    { dir: 'I0.4', nombre: 'LEVEL', descripcion: 'Sensor de nivel: la caja bajo el silo está llena' },
+    { dir: 'Q0.0', nombre: 'MOTOR', descripcion: 'Motor de la cinta transportadora' },
+    { dir: 'Q0.1', nombre: 'SOLENOID', descripcion: 'Electroválvula de descarga del silo' },
+    { dir: 'Q0.2', nombre: 'RUN', descripcion: 'Piloto: sistema en marcha' },
+    { dir: 'Q0.3', nombre: 'FILL', descripcion: 'Piloto: llenando' },
+    { dir: 'Q0.4', nombre: 'FULL', descripcion: 'Piloto: caja llena' },
+  ],
+  mandos: [
+    { dir: 'I0.0', nombre: 'START', tipo: 'pulsador', color: 'verde' },
+    { dir: 'I0.1', nombre: 'STOP', tipo: 'pulsador', color: 'rojo', nc: true },
+  ],
+}
+
+/** Posición (0..1 a lo largo de la cinta) del silo y su tolerancia. */
+export const X_SILO = 0.5
+const VENTANA_PROX = 0.012
+const ANCHO_CAJA = 0.1
+
+export interface Caja {
+  x: number
+  llenado: number
+  id: number
+}
+
+export class PlantaSilo implements Planta {
+  readonly id = 'silo' as const
+  eventos: EventoPlanta[] = []
+  cajas: Caja[] = [{ x: 0.2, llenado: 0, id: 1 }]
+  /** Material derramado fuera de las cajas (0..1, para dibujarlo). */
+  derrame = 0
+  cayendo = false
+  cintaEnMarcha = false
+  /** Recorrido de la cinta, para animar rodillos. */
+  avance = 0
+  llenas = 0
+  t = 0
+  velocidad = 0.09
+  caudal = 0.28
+  private siguiente = 2
+  private avisoDerrame = false
+  private avisoRebalse = false
+
+  private bajoSilo() {
+    return this.cajas.find((c) => Math.abs(c.x - X_SILO) < ANCHO_CAJA * 0.35)
+  }
+
+  sensores() {
+    const c = this.cajas.find((k) => Math.abs(k.x - X_SILO) <= VENTANA_PROX)
+    const b = this.bajoSilo()
+    return { 'I0.3': !!c, 'I0.4': !!b && b.llenado >= 1 }
+  }
+
+  paso(salidas: Record<string, boolean>, dt: number) {
+    this.t += dt
+    const antes = this.sensores()
+    this.cintaEnMarcha = !!salidas['Q0.0']
+    if (this.cintaEnMarcha) {
+      const d = this.velocidad * dt
+      this.avance += d
+      for (const c of this.cajas) c.x += d
+      // Sale la caja por el final de la cinta.
+      const fuera = this.cajas.filter((c) => c.x > 1.08)
+      for (const c of fuera) {
+        if (c.llenado >= 0.98) this.llenas++
+        this.contar(c.llenado >= 0.98 ? `sale una caja llena (${this.llenas})` : 'sale una caja sin llenar')
+        if (c.llenado < 0.98) this.avisar('Pasó una caja sin llenar: la cinta no se detuvo bajo el silo el tiempo necesario.')
+      }
+      this.cajas = this.cajas.filter((c) => c.x <= 1.08)
+      // Entra una caja vacía cuando hay hueco al principio.
+      const primera = Math.min(...this.cajas.map((c) => c.x), 2)
+      if (primera > 0.3) this.cajas.unshift({ x: primera - 0.3, llenado: 0, id: this.siguiente++ })
+    }
+    this.cayendo = !!salidas['Q0.1']
+    if (this.cayendo) {
+      const b = this.bajoSilo()
+      if (b) {
+        b.llenado += this.caudal * dt
+        if (b.llenado > 1.05 && !this.avisoRebalse) {
+          this.avisar('¡La caja rebalsa! La válvula sigue abierta con la caja llena.')
+          this.avisoRebalse = true
+        }
+        b.llenado = Math.min(1.1, b.llenado)
+      } else {
+        this.derrame = Math.min(1, this.derrame + dt * 0.2)
+        if (!this.avisoDerrame) {
+          this.avisar('El material cae sobre la cinta: la válvula se abrió sin una caja debajo.')
+          this.avisoDerrame = true
+        }
+      }
+      if (this.cintaEnMarcha && b && !this.avisoDerrame) {
+        this.avisar('La válvula está abierta con la cinta en marcha: el material se desparrama.')
+        this.avisoDerrame = true
+      }
+    } else {
+      this.avisoRebalse = false
+      this.avisoDerrame = false
+    }
+    const ahora = this.sensores()
+    if (ahora['I0.3'] !== antes['I0.3']) this.contar(ahora['I0.3'] ? 'una caja llega bajo el silo: PROX se activa' : 'la caja deja la posición de llenado')
+    if (ahora['I0.4'] !== antes['I0.4']) this.contar(ahora['I0.4'] ? 'la caja está llena: LEVEL se activa' : 'LEVEL se desactiva')
+  }
+
+  acciones(): Accion[] {
+    return [{ id: 'limpiar', etiqueta: 'Limpiar la cinta', titulo: 'Quita el material derramado y deja cajas vacías' }]
+  }
+
+  accion(id: string) {
+    if (id === 'limpiar') {
+      this.derrame = 0
+      this.cajas = [{ x: 0.2, llenado: 0, id: this.siguiente++ }]
+      this.contar('se limpia la cinta')
+    }
+  }
+
+  private contar(mensaje: string) {
+    this.eventos.push({ t: this.t, mensaje })
+  }
+  private avisar(mensaje: string) {
+    this.eventos.push({ t: this.t, mensaje, aviso: true })
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Semáforo de un cruce
+// ---------------------------------------------------------------------------
+export const SEMAFORO: DescripcionPlanta = {
+  id: 'semaforo',
+  nombre: 'Semáforos de un cruce',
+  resumen:
+    'Un cruce con semáforo Norte-Sur y Este-Oeste (rojo, amarillo y verde). Los autos avanzan con verde y esperan con rojo; la planta avisa si las dos calles tienen paso a la vez.',
+  cableado: [
+    { dir: 'I0.0', nombre: 'MARCHA', descripcion: 'Pulsador de marcha (NA)' },
+    { dir: 'I0.1', nombre: 'PARO', descripcion: 'Pulsador de paro (NA)' },
+    { dir: 'I0.2', nombre: 'PEATON', descripcion: 'Botón de peatón (NA)' },
+    { dir: 'Q0.0', nombre: 'ROJO_NS', descripcion: 'Rojo Norte-Sur' },
+    { dir: 'Q0.1', nombre: 'AMAR_NS', descripcion: 'Amarillo Norte-Sur' },
+    { dir: 'Q0.2', nombre: 'VERDE_NS', descripcion: 'Verde Norte-Sur' },
+    { dir: 'Q0.3', nombre: 'ROJO_EO', descripcion: 'Rojo Este-Oeste' },
+    { dir: 'Q0.4', nombre: 'AMAR_EO', descripcion: 'Amarillo Este-Oeste' },
+    { dir: 'Q0.5', nombre: 'VERDE_EO', descripcion: 'Verde Este-Oeste' },
+  ],
+  mandos: [
+    { dir: 'I0.0', nombre: 'MARCHA', tipo: 'pulsador', color: 'verde' },
+    { dir: 'I0.1', nombre: 'PARO', tipo: 'pulsador', color: 'rojo' },
+    { dir: 'I0.2', nombre: 'PEATÓN', tipo: 'pulsador', color: 'amarillo' },
+  ],
+}
+
+export interface Auto {
+  /** Posición a lo largo de su calle (−1..1; el cruce está en 0). */
+  s: number
+  eje: 'NS' | 'EO'
+  id: number
+}
+
+/** Línea de detención antes del cruce. */
+const PARE = -0.22
+
+export class PlantaSemaforo implements Planta {
+  readonly id = 'semaforo' as const
+  eventos: EventoPlanta[] = []
+  autos: Auto[] = [
+    { s: -0.9, eje: 'NS', id: 1 },
+    { s: -0.55, eje: 'NS', id: 2 },
+    { s: -0.8, eje: 'EO', id: 3 },
+    { s: -0.45, eje: 'EO', id: 4 },
+  ]
+  t = 0
+  cruces = 0
+  private siguiente = 5
+  private conflicto = false
+
+  sensores() {
+    return {}
+  }
+
+  paso(salidas: Record<string, boolean>, dt: number) {
+    this.t += dt
+    const pasa = {
+      NS: !!(salidas['Q0.2'] || salidas['Q0.1']),
+      EO: !!(salidas['Q0.5'] || salidas['Q0.4']),
+    }
+    const ambos = (salidas['Q0.2'] || salidas['Q0.1']) && (salidas['Q0.5'] || salidas['Q0.4'])
+    const verdeYRojo = (salidas['Q0.2'] && salidas['Q0.0']) || (salidas['Q0.5'] && salidas['Q0.3'])
+    if ((ambos || verdeYRojo) && !this.conflicto) {
+      this.avisar(ambos ? '¡Las dos calles tienen paso a la vez! En un cruce real chocarían.' : 'Un semáforo muestra verde y rojo a la vez.')
+    }
+    this.conflicto = !!(ambos || verdeYRojo)
+    const v = 0.3 * dt
+    for (const eje of ['NS', 'EO'] as const) {
+      const fila = this.autos.filter((a) => a.eje === eje).sort((a, b) => b.s - a.s)
+      let delante = Infinity
+      for (const a of fila) {
+        let limite = delante - 0.22
+        // Sin paso, se detiene en la línea (si todavía no la cruzó).
+        if (!pasa[eje] && a.s <= PARE + 0.001) limite = Math.min(limite, PARE)
+        a.s = Math.min(a.s + v, Math.max(a.s, limite))
+        delante = a.s
+      }
+    }
+    const salen = this.autos.filter((a) => a.s > 1.05)
+    this.cruces += salen.length
+    this.autos = this.autos.filter((a) => a.s <= 1.05)
+    for (const eje of ['NS', 'EO'] as const) {
+      const ultimo = Math.min(...this.autos.filter((a) => a.eje === eje).map((a) => a.s), 2)
+      if (ultimo > -0.7) this.autos.push({ s: -1.05, eje, id: this.siguiente++ })
+    }
+  }
+
+  acciones(): Accion[] {
+    return []
+  }
+  accion() {}
+
+  private avisar(mensaje: string) {
+    this.eventos.push({ t: this.t, mensaje, aviso: true })
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Portón automático (como el «Door Simulator» de LogixPro)
+// ---------------------------------------------------------------------------
+export const PORTON: DescripcionPlanta = {
+  id: 'porton',
+  nombre: 'Portón automático',
+  resumen:
+    'Un portón que sube y baja con un motor de dos sentidos. Finales de carrera arriba y abajo, fotocelda de seguridad, botonera ABRIR / CERRAR / PARO y pilotos de estado.',
+  cableado: [
+    { dir: 'I0.0', nombre: 'ABRIR', descripcion: 'Pulsador abrir (NA)' },
+    { dir: 'I0.1', nombre: 'CERRAR', descripcion: 'Pulsador cerrar (NA)' },
+    { dir: 'I0.2', nombre: 'PARO', descripcion: 'Pulsador de paro (NA)' },
+    { dir: 'I0.3', nombre: 'FC_ABIERTO', descripcion: 'Final de carrera: portón arriba (abierto)' },
+    { dir: 'I0.4', nombre: 'FC_CERRADO', descripcion: 'Final de carrera: portón abajo (cerrado)' },
+    { dir: 'I0.5', nombre: 'FOTOCELDA', descripcion: 'Fotocelda: 1 si hay algo bajo el portón' },
+    { dir: 'Q0.0', nombre: 'SUBIR', descripcion: 'Motor en sentido de apertura' },
+    { dir: 'Q0.1', nombre: 'BAJAR', descripcion: 'Motor en sentido de cierre' },
+    { dir: 'Q0.2', nombre: 'L_ABIERTO', descripcion: 'Piloto: abierto' },
+    { dir: 'Q0.3', nombre: 'L_CERRADO', descripcion: 'Piloto: cerrado' },
+    { dir: 'Q0.4', nombre: 'L_MOVIENDO', descripcion: 'Piloto: en movimiento' },
+  ],
+  mandos: [
+    { dir: 'I0.0', nombre: 'ABRIR', tipo: 'pulsador', color: 'verde' },
+    { dir: 'I0.1', nombre: 'CERRAR', tipo: 'pulsador', color: 'negro' },
+    { dir: 'I0.2', nombre: 'PARO', tipo: 'pulsador', color: 'rojo' },
+  ],
+}
+
+export class PlantaPorton implements Planta {
+  readonly id = 'porton' as const
+  eventos: EventoPlanta[] = []
+  /** 0 = cerrado (abajo), 1 = abierto (arriba). */
+  apertura = 0
+  obstaculo = false
+  sube = false
+  baja = false
+  t = 0
+  recorrido = 5
+  private avisos = new Set<string>()
+
+  sensores() {
+    return {
+      'I0.3': this.apertura >= 0.995,
+      'I0.4': this.apertura <= 0.005,
+      'I0.5': this.obstaculo,
+    }
+  }
+
+  paso(salidas: Record<string, boolean>, dt: number) {
+    this.t += dt
+    const antes = this.sensores()
+    this.sube = !!salidas['Q0.0']
+    this.baja = !!salidas['Q0.1']
+    if (this.sube && this.baja) {
+      this.avisoUnaVez('dos', '¡SUBIR y BAJAR a la vez! El motor recibe las dos órdenes: falta el enclavamiento entre ellas.')
+    } else if (this.sube) {
+      if (this.apertura >= 1) this.avisoUnaVez('tope-arriba', 'El motor sigue subiendo con el portón arriba: usa el final de carrera FC_ABIERTO para cortarlo.')
+      this.apertura = Math.min(1, this.apertura + dt / this.recorrido)
+    } else if (this.baja) {
+      if (this.apertura <= 0) this.avisoUnaVez('tope-abajo', 'El motor sigue bajando con el portón cerrado: usa FC_CERRADO para cortarlo.')
+      // Con algo bajo el portón, no puede bajar más que hasta el obstáculo.
+      const minimo = this.obstaculo ? 0.35 : 0
+      if (this.obstaculo && this.apertura <= minimo + 0.001) {
+        this.avisoUnaVez('aplasta', '¡El portón baja sobre el obstáculo! La fotocelda debe detenerlo (y conviene que vuelva a subir).')
+      }
+      this.apertura = Math.max(minimo, this.apertura - dt / this.recorrido)
+    }
+    if (!this.sube) this.avisos.delete('tope-arriba')
+    if (!this.baja) {
+      this.avisos.delete('tope-abajo')
+      this.avisos.delete('aplasta')
+    }
+    if (!(this.sube && this.baja)) this.avisos.delete('dos')
+    const ahora = this.sensores()
+    if (ahora['I0.3'] !== antes['I0.3'] && ahora['I0.3']) this.contar('el portón llega arriba: FC_ABIERTO se activa')
+    if (ahora['I0.4'] !== antes['I0.4'] && ahora['I0.4']) this.contar('el portón llega abajo: FC_CERRADO se activa')
+  }
+
+  acciones(): Accion[] {
+    return [
+      {
+        id: 'obstaculo',
+        etiqueta: this.obstaculo ? '✓ Hay un obstáculo' : 'Poner un obstáculo',
+        titulo: 'Pone (o quita) una caja bajo el portón: corta el haz de la fotocelda',
+      },
+    ]
+  }
+
+  accion(id: string) {
+    if (id !== 'obstaculo') return
+    if (!this.obstaculo && this.apertura < 0.4) {
+      this.avisar('No cabe nada bajo el portón: ábrelo primero.')
+      return
+    }
+    this.obstaculo = !this.obstaculo
+    this.contar(this.obstaculo ? 'se pone una caja bajo el portón: la fotocelda la detecta' : 'se quita la caja')
+  }
+
+  private avisoUnaVez(clave: string, mensaje: string) {
+    if (this.avisos.has(clave)) return
+    this.avisos.add(clave)
+    this.avisar(mensaje)
+  }
+  private contar(mensaje: string) {
+    this.eventos.push({ t: this.t, mensaje })
+  }
+  private avisar(mensaje: string) {
+    this.eventos.push({ t: this.t, mensaje, aviso: true })
+  }
+}
+
 export const PLANTAS: Record<IdPlanta, DescripcionPlanta> = {
   tablero: TABLERO,
   estanque: ESTANQUE,
   elevador: ELEVADOR,
+  silo: SILO,
+  semaforo: SEMAFORO,
+  porton: PORTON,
 }
 
 export function crearPlanta(id: IdPlanta): Planta {
   if (id === 'estanque') return new PlantaEstanque()
   if (id === 'elevador') return new PlantaElevador()
+  if (id === 'silo') return new PlantaSilo()
+  if (id === 'semaforo') return new PlantaSemaforo()
+  if (id === 'porton') return new PlantaPorton()
   return new PlantaTablero()
 }
