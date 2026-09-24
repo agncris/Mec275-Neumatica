@@ -406,7 +406,7 @@ export default function UnidadPLC() {
               onClick={() => setCorriendo((c) => !c)}
               title="Atajo: barra espaciadora"
               aria-pressed={corriendo}
-              style={{ ...boton, background: corriendo ? '#33475c' : '#12a35a', padding: '0.5rem 1.2rem', fontSize: '0.98rem' }}
+              style={{ ...boton, background: corriendo ? '#33475c' : '#0e7a43', padding: '0.5rem 1.2rem', fontSize: '0.98rem' }}
             >
               {corriendo ? '■ STOP' : '▶ RUN'}
             </button>
@@ -432,7 +432,7 @@ export default function UnidadPLC() {
             )}
             <h2 style={{ ...subtitulo, margin: 0 }}>
               Programa Ladder{programa.nombre ? ` · ${programa.nombre}` : ''}
-              <span style={{ ...estadoPLC, background: corriendo ? '#12a35a' : '#ffa726' }}>{corriendo ? 'RUN' : 'STOP'}</span>
+              <span style={{ ...estadoPLC, background: corriendo ? '#0e7a43' : '#a35200' }}>{corriendo ? 'RUN' : 'STOP'}</span>
             </h2>
           </div>
           {corriendo && (

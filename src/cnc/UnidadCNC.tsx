@@ -333,10 +333,10 @@ export default function UnidadCNC() {
 
   const textoEstado: Record<Estado, [string, string]> = {
     listo: ['LISTO', '#5a6b7d'],
-    corriendo: ['EN CICLO', '#12a35a'],
+    corriendo: ['EN CICLO', '#0e7a43'],
     bloque: ['BLOQUE A BLOQUE', '#1668c7'],
-    pausa: ['EN PAUSA', '#ffa726'],
-    parada: ['PARADA M00', '#ffa726'],
+    pausa: ['EN PAUSA', '#a35200'],
+    parada: ['PARADA M00', '#a35200'],
     alarma: ['ALARMA', '#c62828'],
     fin: ['FIN DE PROGRAMA', '#33475c'],
   }
@@ -435,7 +435,7 @@ export default function UnidadCNC() {
         <section style={{ ...tarjeta, marginTop: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
             {estado === 'corriendo' ? (
-              <button onClick={() => setEstado('pausa')} style={{ ...boton, background: '#ffa726', padding: '0.5rem 1rem' }} data-control="pausa">
+              <button onClick={() => setEstado('pausa')} style={{ ...boton, background: '#ffa726', color: '#1c2733', padding: '0.5rem 1rem' }} data-control="pausa">
                 ❚❚ Pausa
               </button>
             ) : (
@@ -443,7 +443,7 @@ export default function UnidadCNC() {
                 onClick={() => correr('corriendo')}
                 disabled={!resultado.pasos.length}
                 title={hayErrores ? 'Hay errores: la máquina corre hasta la línea anterior al primer error' : 'Ejecuta el programa completo'}
-                style={{ ...boton, background: '#12a35a', padding: '0.5rem 1rem', opacity: resultado.pasos.length ? 1 : 0.5 }}
+                style={{ ...boton, background: '#0e7a43', padding: '0.5rem 1rem', opacity: resultado.pasos.length ? 1 : 0.5 }}
                 data-control="ciclo"
               >
                 {estado === 'parada' ? '▶ Continuar' : '▶ Ciclo'}

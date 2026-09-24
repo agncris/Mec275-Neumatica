@@ -111,10 +111,20 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
   const contenedorRef = useRef<HTMLDivElement>(null)
   // Ancho del tablero: al medirlo se vuelve a dibujar el porcentaje de zoom.
   const [anchoCont, setAnchoCont] = useState(0)
+  const ajustarRef = useRef<() => void>()
   useEffect(() => {
     const cont = contenedorRef.current
     if (!cont || typeof ResizeObserver === 'undefined') return
-    const ro = new ResizeObserver(() => setAnchoCont(cont.clientWidth))
+    const ro = new ResizeObserver(() => {
+      setAnchoCont(cont.clientWidth)
+      // Si el alumno no ha movido la vista a mano, el circuito se sigue viendo
+      // entero; si la movió, se conserva su zoom.
+      if (!manualRef.current) ajustarRef.current?.()
+      else {
+        const esc = escalaRef.current
+        setView((v) => ({ ...v, w: cont.clientWidth / esc, h: cont.clientHeight / esc }))
+      }
+    })
     ro.observe(cont)
     return () => ro.disconnect()
   }, [])
@@ -139,6 +149,8 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
     movido: boolean
   } | null>(null)
   const panRef = useRef<{ x: number; y: number; px: number; py: number } | null>(null)
+  /** El alumno movió o acercó la vista a mano: no se reajusta sola al simular. */
+  const manualRef = useRef(false)
   // Zoom con dos dedos (pantallas táctiles).
   const dedosRef = useRef(new Map<number, { x: number; y: number }>())
   const pinzaRef = useRef<{ d0: number; esc0: number; mundo: Punto } | null>(null)
@@ -435,6 +447,7 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
     const w = r.width / esc
     const h = r.height / esc
     escalaRef.current = esc
+    manualRef.current = true
     setView({ x: pz.mundo.x - ((mx - r.left) / r.width) * w, y: pz.mundo.y - ((my - r.top) / r.height) * h, w, h })
   }
   const onDedoArriba = (e: React.PointerEvent) => {
@@ -447,6 +460,7 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
 
   /** Aplica un factor de zoom manteniendo bajo el cursor el punto dado (si existe). */
   const aplicarZoom = (factor: number, cxMundo: Punto | null) => {
+    manualRef.current = true
     setView((v) => {
       const cont = contenedorRef.current
       const cw = cont?.clientWidth || v.w
@@ -521,6 +535,7 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
       // Pan en el espacio del circuito
       const dx = pos.x - pan.px
       const dy = pos.y - pan.py
+      if (Math.abs(dx) + Math.abs(dy) > 1) manualRef.current = true
       setView((v) => ({ ...v, x: pan.x - dx, y: pan.y - dy }))
       return
     }
@@ -619,6 +634,7 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
 
   // --- controles de navegación ---------------------------------------------
   const zoomAbsoluto = (esc: number) => {
+    manualRef.current = true
     setView((v) => {
       const cont = contenedorRef.current
       const cw = cont?.clientWidth || v.w
@@ -628,15 +644,23 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
     })
   }
 
+  /** Encaja todo el circuito (ancho y alto) con margen. */
   const ajustar = () => {
+    manualRef.current = false
     const cont = contenedorRef.current
     const cw = cont?.clientWidth || VW_BASE
     const ch = cont?.clientHeight || VH_BASE
     const area = calcularAreaConMargen(piezas, 60)
-    if (area.ancho <= 0) return zoomAbsoluto(1)
+    if (area.ancho <= 0) {
+      // Tablero vacío: a tamaño real (un poco menos en el celular).
+      const e0 = cw < 600 ? 0.7 : 1
+      escalaRef.current = e0
+      setView({ x: 0, y: 0, w: cw / e0, h: ch / e0 })
+      return
+    }
     const escX = cw / area.ancho
     const escY = ch / area.alto
-    const esc = Math.max(ESC_MIN, Math.min(escX, escY))
+    const esc = Math.max(ESC_MIN, Math.min(1.25, escX, escY))
     const w = cw / esc
     const h = ch / esc
     setView({
@@ -649,8 +673,22 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
   }
 
   // El listener de pantalla completa necesita la versión vigente de `ajustar`.
-  const ajustarRef = useRef<() => void>()
   ajustarRef.current = ajustar
+
+  // Al abrir un circuito (ejemplo, archivo, enlace) se muestra entero.
+  const solicitudAjuste = useStore((s) => s.solicitudAjuste)
+  useEffect(() => {
+    if (!solicitudAjuste) return
+    manualRef.current = false
+    const id = requestAnimationFrame(() => ajustarRef.current?.())
+    return () => cancelAnimationFrame(id)
+  }, [solicitudAjuste])
+  // Al empezar a simular también, salvo que el alumno haya movido la vista.
+  useEffect(() => {
+    if (modo !== 'simular' || manualRef.current) return
+    const id = requestAnimationFrame(() => ajustarRef.current?.())
+    return () => cancelAnimationFrame(id)
+  }, [modo])
 
   const escPorcentaje = () => {
     const cw = contenedorRef.current?.clientWidth || anchoCont
@@ -915,7 +953,7 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
               pieza.tipo === 'valvula52' ||
               pieza.tipo === 'fuente')
           return (
-            <g key={pieza.id} transform={`translate(${pieza.x} ${pieza.y})`}>
+            <g key={pieza.id} data-pieza={pieza.id} transform={`translate(${pieza.x} ${pieza.y})`}>
               <rect
                 x={-4}
                 y={-4}

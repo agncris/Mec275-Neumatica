@@ -25,6 +25,7 @@ import SimbologiaVDI from './components/SimbologiaVDI'
 import SimbologiaISO from './components/SimbologiaISO'
 import PanelEntrega from './components/PanelEntrega'
 import { circuitoDesdeStore, useStore, type NumeroEjemplo } from './store'
+import { NOMBRES_EJEMPLO } from './circuitos/ejemplos'
 import {
   descargarJson,
   enlaceCompartir,
@@ -36,15 +37,9 @@ import {
 import { exportarPng, exportarSvg, nombreSeguro } from './exportar'
 import { esEntrega, normalizarRespuestas } from './entrega'
 
-const EJEMPLOS: Array<{ n: NumeroEjemplo; etiqueta: string }> = [
-  { n: 1, etiqueta: '1 · Simple efecto con 3/2' },
-  { n: 2, etiqueta: '2 · Control de velocidad' },
-  { n: 3, etiqueta: '3 · Biestable con memoria' },
-  { n: 4, etiqueta: '4 · Ciclo automático (finales de carrera)' },
-  { n: 5, etiqueta: '5 · Mando bimanual (válvula Y)' },
-  { n: 6, etiqueta: '6 · Encadenar dos cilindros (rodillo)' },
-  { n: 7, etiqueta: '7 · Cascada de 3 grupos: A+ B+ | B− A− C+ | C−' },
-]
+const EJEMPLOS: Array<{ n: NumeroEjemplo; etiqueta: string }> = ([1, 2, 3, 4, 5, 6, 7] as NumeroEjemplo[]).map((n) => ({ n, etiqueta: NOMBRES_EJEMPLO[n] }))
+
+const CLAVE_CIRCUITO = 'neumalab.circuito-abierto'
 
 /** Detecta pantallas estrechas para reordenar la interfaz en tablet/móvil. */
 function useEsEstrecha(): boolean {
@@ -82,6 +77,7 @@ export default function App() {
     rehacer,
   } = useStore()
   const puedeDeshacer = useStore((s) => s.puedeDeshacer)
+  const circuito = useStore((s) => s.circuito)
   const puedeRehacer = useStore((s) => s.puedeRehacer)
 
   const [motor, setMotor] = useState<Motor | null>(null)
@@ -97,12 +93,21 @@ export default function App() {
   useEffect(() => {
     const deUrl = leerDeUrl()
     if (deUrl) {
-      cargarCircuito(deUrl)
+      cargarCircuito(deUrl, 'Circuito compartido')
       setAviso('Circuito abierto desde un enlace compartido.')
       return
     }
     const local = leerLocal()
-    if (local && local.piezas.length > 0) cargarCircuito(local)
+    if (local && local.piezas.length > 0) {
+      cargarCircuito(local)
+      // Nombre del circuito que estaba abierto (ejemplo o archivo), si se guardó.
+      try {
+        const c = JSON.parse(localStorage.getItem(CLAVE_CIRCUITO) ?? 'null')
+        if (c && typeof c.nombre === 'string') useStore.setState({ circuito: { nombre: c.nombre, ejemplo: c.ejemplo, modificado: !!c.modificado } })
+      } catch {
+        /* sin almacenamiento */
+      }
+    }
     if (local?.trabajo) {
       if (local.trabajo.alumno) setAlumno(local.trabajo.alumno)
       if (local.trabajo.ejercicio) setEjercicio(local.trabajo.ejercicio)
@@ -117,13 +122,21 @@ export default function App() {
     const alCambiarHash = () => {
       const deUrl = leerDeUrl()
       if (deUrl) {
-        cargarCircuito(deUrl)
+        cargarCircuito(deUrl, 'Circuito compartido')
         setAviso('Circuito abierto desde un enlace compartido.')
       }
     }
     window.addEventListener('hashchange', alCambiarHash)
     return () => window.removeEventListener('hashchange', alCambiarHash)
   }, [cargarCircuito])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(CLAVE_CIRCUITO, JSON.stringify(circuito))
+    } catch {
+      /* sin almacenamiento */
+    }
+  }, [circuito])
 
   // --- copia de trabajo automática (circuito y respuestas) -------------------
   const respuestas = useStore((s) => s.respuestas)
@@ -249,7 +262,7 @@ export default function App() {
       // Puede ser una entrega completa del alumno o un circuito suelto
       const crudo = JSON.parse(await archivo.text())
       if (esEntrega(crudo)) {
-        cargarCircuito(crudo.circuito)
+        cargarCircuito(crudo.circuito, `Entrega de ${crudo.alumno.nombre || 'sin nombre'}`)
         setAlumno(crudo.alumno)
         setEjercicio(crudo.ejercicio)
         setRespuestas(normalizarRespuestas(crudo.respuestas))
@@ -261,7 +274,7 @@ export default function App() {
         return
       }
       const datos = await leerArchivo(archivo)
-      cargarCircuito(datos)
+      cargarCircuito(datos, archivo.name.replace(/\.json$/i, ''))
       setAviso(`Circuito «${archivo.name}» abierto.`)
     } catch (error) {
       setAviso(error instanceof Error ? error.message : 'No se pudo leer el archivo.')
@@ -349,7 +362,9 @@ export default function App() {
 
         <Etiquetado texto="Ejemplos">
           <select
-            value=""
+            value={circuito ? 'actual' : ''}
+            title={circuito ? `Abierto: ${circuito.nombre}${circuito.modificado ? ' (modificado)' : ''}` : undefined}
+            data-selector-ejemplos="si"
             onChange={(e) => {
               const n = Number(e.target.value) as NumeroEjemplo
               if (!n) return
@@ -360,6 +375,12 @@ export default function App() {
             style={{ padding: '0.35rem 0.4rem', maxWidth: 'min(260px, calc(100vw - 120px))', minHeight: 36 }}
           >
             <option value="">— elige un circuito —</option>
+            {circuito && (
+              <option value="actual" disabled>
+                {circuito.nombre}
+                {circuito.modificado ? ' (modificado)' : ''}
+              </option>
+            )}
             {EJEMPLOS.map((ej) => (
               <option key={ej.n} value={ej.n}>
                 {ej.etiqueta}
@@ -448,7 +469,7 @@ export default function App() {
                 ...botonSuave,
                 padding: '0.15rem 0.5rem',
                 fontSize: '0.78rem',
-                background: paralela ? '#12a35a' : '#fff',
+                background: paralela ? '#0e7a43' : '#fff',
                 color: paralela ? '#fff' : '#33475c',
               }}
             >

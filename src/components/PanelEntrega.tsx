@@ -244,7 +244,7 @@ export default function PanelEntrega() {
         lo que hace tu circuito al simularlo, para que no entregues nada que no funcione.
       </p>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
-        <button onClick={comprobar} style={{ ...boton, background: '#12a35a' }}>
+        <button onClick={comprobar} style={{ ...boton, background: '#0e7a43' }}>
           Comprobar mi trabajo
         </button>
         <button onClick={descargar} style={{ ...boton, background: '#33475c' }}>

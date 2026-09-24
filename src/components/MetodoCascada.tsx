@@ -27,7 +27,7 @@ export default function MetodoCascada() {
   const [secuencia, setSecuencia] = useState('A+ B+ B- A-')
   const analisis = analizarSecuencia(secuencia)
 
-  const cargar = (circuito: CircuitoPreparado) => {
+  const cargar = (circuito: CircuitoPreparado, nombre: string) => {
     const { piezas } = useStore.getState()
     if (
       piezas.length > 0 &&
@@ -37,7 +37,7 @@ export default function MetodoCascada() {
     ) {
       return
     }
-    cargarCircuito(circuito)
+    cargarCircuito(circuito, nombre)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -66,10 +66,10 @@ export default function MetodoCascada() {
         <strong>▶ Simular</strong> y mantén la válvula <strong>M</strong>.
       </p>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <button onClick={() => cargar(CIRCUITO_BLOQUEADO)} style={{ ...boton, background: '#b3261e' }}>
+        <button onClick={() => cargar(CIRCUITO_BLOQUEADO, 'Método cascada · circuito bloqueado')} style={{ ...boton, background: '#b3261e' }}>
           Cargar el montaje que se bloquea
         </button>
-        <button onClick={() => cargar(CIRCUITO_CASCADA)} style={{ ...boton, background: '#12a35a' }}>
+        <button onClick={() => cargar(CIRCUITO_CASCADA, 'Método cascada · con grupos')} style={{ ...boton, background: '#0e7a43' }}>
           Cargar el circuito en cascada
         </button>
       </div>

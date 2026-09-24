@@ -529,7 +529,7 @@ export default function TiposRobot() {
               <span>
                 <span
                   title={j.clase === 'R' ? 'Rotacional: gira' : 'Prismática: se desliza'}
-                  style={{ display: 'inline-block', width: 18, textAlign: 'center', borderRadius: 4, background: j.clase === 'R' ? '#1668c7' : '#12a35a', color: '#fff', fontWeight: 700, marginRight: 5 }}
+                  style={{ display: 'inline-block', width: 18, textAlign: 'center', borderRadius: 4, background: j.clase === 'R' ? '#1668c7' : '#0e7a43', color: '#fff', fontWeight: 700, marginRight: 5 }}
                 >
                   {j.clase}
                 </span>
@@ -550,7 +550,7 @@ export default function TiposRobot() {
           ))}
           <p style={{ margin: '8px 0 0', fontSize: '0.8rem', color: '#5a6b7d' }}>
             <span style={{ background: '#1668c7', color: '#fff', borderRadius: 4, padding: '0 4px', fontWeight: 700 }}>R</span> rotacional (gira) ·{' '}
-            <span style={{ background: '#12a35a', color: '#fff', borderRadius: 4, padding: '0 4px', fontWeight: 700 }}>P</span> prismática (se desliza)
+            <span style={{ background: '#0e7a43', color: '#fff', borderRadius: 4, padding: '0 4px', fontWeight: 700 }}>P</span> prismática (se desliza)
             {tipo === 'delta' ? ' · en el delta los deslizadores mueven la plataforma; los brazos se calculan solos.' : ''}
           </p>
         </div>

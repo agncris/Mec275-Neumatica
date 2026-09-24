@@ -6,7 +6,7 @@ import { create } from 'zustand'
 import type { Circuito, Manguera, Params, RefPuerto } from './engine'
 import { RESPUESTAS_VACIAS, type Respuestas } from './entrega'
 import { autoLayout } from './layout'
-import { EJEMPLOS, type NumeroEjemplo } from './circuitos/ejemplos'
+import { EJEMPLOS, NOMBRES_EJEMPLO, type NumeroEjemplo } from './circuitos/ejemplos'
 import { Historial } from './historial'
 
 export interface Pieza {
@@ -62,7 +62,11 @@ interface EstadoApp {
   setParamPieza(id: string, clave: string, valor: Params[string]): void
   limpiarPizarra(): void
   cargarEjemplo(n: NumeroEjemplo): void
-  cargarCircuito(datos: { piezas: Pieza[]; mangueras: Manguera[] }): void
+  cargarCircuito(datos: { piezas: Pieza[]; mangueras: Manguera[] }, nombre?: string): void
+  /** Circuito abierto (ejemplo o archivo) y si se cambió después de abrirlo. */
+  circuito: { nombre: string; ejemplo?: NumeroEjemplo; modificado: boolean } | null
+  /** Sube cada vez que se abre un circuito: el lienzo se ajusta para mostrarlo entero. */
+  solicitudAjuste: number
   /** Deshacer / rehacer el último cambio del circuito. */
   deshacer(): void
   rehacer(): void
@@ -108,9 +112,14 @@ const mismaRef = (a: RefPuerto, b: RefPuerto) => a.componente === b.componente &
 export const useStore = create<EstadoApp>((set, get) => {
   /** Guarda el circuito actual en el historial antes de cambiarlo. */
   const anotar = () => {
-    const { piezas, mangueras } = get()
+    const { piezas, mangueras, circuito } = get()
     historial.anotar({ piezas, mangueras })
-    set({ puedeDeshacer: historial.puedeDeshacer, puedeRehacer: historial.puedeRehacer })
+    set({
+      puedeDeshacer: historial.puedeDeshacer,
+      puedeRehacer: historial.puedeRehacer,
+      // Cualquier cambio marca el circuito abierto como modificado.
+      circuito: circuito && !circuito.modificado ? { ...circuito, modificado: true } : circuito,
+    })
   }
   return {
   piezas: [],
@@ -122,6 +131,8 @@ export const useStore = create<EstadoApp>((set, get) => {
   seleccion: null,
   origenCable: null,
   colocando: null,
+  circuito: null,
+  solicitudAjuste: 0,
   alumno: { nombre: '', rol: '' },
   ejercicio: '',
   respuestas: { ...RESPUESTAS_VACIAS },
@@ -235,10 +246,10 @@ export const useStore = create<EstadoApp>((set, get) => {
 
   limpiarPizarra() {
     anotar()
-    set({ piezas: [], mangueras: [], seleccion: null, origenCable: null, modo: 'editar' })
+    set({ piezas: [], mangueras: [], seleccion: null, origenCable: null, modo: 'editar', circuito: null })
   },
 
-  cargarCircuito(datos) {
+  cargarCircuito(datos, nombre) {
     // Abrir sobre una pizarra vacía (p. ej. al cargar la página) no es un paso que deshacer.
     if (get().piezas.length > 0) anotar()
     const { piezas, area } = autoLayout(datos.piezas, datos.mangueras)
@@ -249,6 +260,8 @@ export const useStore = create<EstadoApp>((set, get) => {
       seleccion: null,
       origenCable: null,
       modo: 'editar',
+      circuito: nombre ? { nombre, modificado: false } : null,
+      solicitudAjuste: get().solicitudAjuste + 1,
     })
   },
 
@@ -262,6 +275,8 @@ export const useStore = create<EstadoApp>((set, get) => {
       seleccion: null,
       origenCable: null,
       modo: 'editar',
+      circuito: { nombre: NOMBRES_EJEMPLO[n], ejemplo: n, modificado: false },
+      solicitudAjuste: get().solicitudAjuste + 1,
     })
   },
 

@@ -233,7 +233,7 @@ export default function SimbologiaISO() {
             setElegida(null)
             setRonda((r) => r + 1)
           }}
-          style={{ ...boton, background: practicando ? '#33475c' : '#12a35a' }}
+          style={{ ...boton, background: practicando ? '#33475c' : '#0e7a43' }}
         >
           {practicando ? 'Ver la tabla completa' : '▶ Practicar para el control'}
         </button>

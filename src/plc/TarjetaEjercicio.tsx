@@ -37,7 +37,7 @@ export default function TarjetaEjercicio({
         <h2 style={{ margin: 0, fontSize: '1.02rem', color: '#5c4b1f' }}>📝 Ejercicio para resolver · {ejercicio.titulo}</h2>
         <button
           onClick={() => setResultado(ejercicio.verificar(programa))}
-          style={{ border: 'none', background: '#12a35a', color: '#fff', borderRadius: 8, padding: '0.4rem 0.9rem', fontWeight: 700, cursor: 'pointer' }}
+          style={{ border: 'none', background: '#0e7a43', color: '#fff', borderRadius: 8, padding: '0.4rem 0.9rem', fontWeight: 700, cursor: 'pointer' }}
           title="Prueba tu programa contra la planta simulada, paso por paso"
         >
           ✓ Verificar mi programa

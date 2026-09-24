@@ -13,6 +13,17 @@ export interface CircuitoEjemplo {
   mangueras: Manguera[]
 }
 
+/** Nombre de cada ejemplo, como aparece en el selector. */
+export const NOMBRES_EJEMPLO: Record<NumeroEjemplo, string> = {
+  1: '1 · Simple efecto con 3/2',
+  2: '2 · Control de velocidad',
+  3: '3 · Biestable con memoria',
+  4: '4 · Ciclo automático (finales de carrera)',
+  5: '5 · Mando bimanual (válvula Y)',
+  6: '6 · Encadenar dos cilindros (rodillo)',
+  7: '7 · Cascada de 3 grupos: A+ B+ | B− A− C+ | C−',
+}
+
 export const EJEMPLOS: Record<NumeroEjemplo, CircuitoEjemplo> = {
   // Cilindro de simple efecto con 3/2 de pulsador
   1: {

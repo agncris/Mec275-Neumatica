@@ -186,7 +186,7 @@ export default function VistaCorte({ motor }: { motor: Motor | null }) {
         </strong>
 
         {enVivo ? (
-          <span style={{ fontSize: '0.8rem', color: '#12a35a', fontWeight: 600 }}>
+          <span style={{ fontSize: '0.8rem', color: '#0e7a43', fontWeight: 600 }}>
             ● sincronizada con la simulación
           </span>
         ) : esValvula(tipo) ? (
@@ -196,7 +196,7 @@ export default function VistaCorte({ motor }: { motor: Motor | null }) {
               // Escuchador global: así se suelta aunque el puntero salga del botón
               window.addEventListener('pointerup', () => setAccionadaDemo(false), { once: true })
             }}
-            style={{ ...botonDemo, background: accionadaDemo ? '#0a8a4a' : '#12a35a' }}
+            style={{ ...botonDemo, background: accionadaDemo ? '#0a5c33' : '#0e7a43' }}
           >
             Accionar (mantener)
           </button>

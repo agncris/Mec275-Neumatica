@@ -176,7 +176,7 @@ export default function ExplicadorCascada() {
           </button>
         </div>
 
-        <button onClick={() => setReproduciendo((r) => !r)} style={{ ...boton, background: '#33475c' }}>
+        <button onClick={() => setReproduciendo((r) => !r)} style={{ ...boton, background: '#33475c', borderColor: '#33475c', color: '#fff' }}>
           {reproduciendo ? '⏸ Pausa' : '▶ Reproducir'}
         </button>
         <button

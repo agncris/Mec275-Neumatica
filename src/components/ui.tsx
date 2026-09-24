@@ -14,7 +14,7 @@ export const COLOR = {
   texto2: '#51606f', // texto secundario: 6,3:1 sobre blanco
   borde: '#c6ced6',
   azul: '#1668c7',
-  verde: '#12a35a',
+  verde: '#0e7a43',
   pizarra: '#33475c',
 }
 

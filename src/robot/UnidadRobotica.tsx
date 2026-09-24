@@ -627,7 +627,7 @@ export default function UnidadRobotica() {
           <h2 style={subtitulo}>
             Simulación · {modeloVista.nombre}
             {simActiva && (
-              <span style={{ ...estadoChip, background: errores.length ? '#c62828' : avisosSim.length ? '#e08a00' : '#12a35a' }} data-analisis={errores.length ? 'error' : avisosSim.length ? 'aviso' : 'ok'}>
+              <span style={{ ...estadoChip, background: errores.length ? '#c62828' : avisosSim.length ? '#e08a00' : '#0e7a43' }} data-analisis={errores.length ? 'error' : avisosSim.length ? 'aviso' : 'ok'}>
                 {errores.length ? `${errores.length} error(es)` : avisosSim.length ? `${avisosSim.length} aviso(s)` : 'sin problemas'}
               </span>
             )}
@@ -642,7 +642,7 @@ export default function UnidadRobotica() {
                   if (!reproduciendo && tRef.current >= simActiva.tiempo - 1e-6) tRef.current = 0
                   setReproduciendo((r) => !r)
                 }}
-                style={{ ...boton, background: reproduciendo ? '#ffa726' : '#12a35a' }}
+                style={{ ...boton, background: reproduciendo ? '#ffa726' : '#0e7a43', color: reproduciendo ? '#1c2733' : '#fff' }}
                 data-play="si"
               >
                 {reproduciendo ? '❚❚' : '▶'}
