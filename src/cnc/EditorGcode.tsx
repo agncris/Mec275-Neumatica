@@ -46,7 +46,7 @@ function colorear(linea: string): ReactNode[] {
     if (!t) break
     let estilo: React.CSSProperties | undefined
     if (t.startsWith('(') || t.startsWith(';') || t.startsWith('//')) estilo = { color: '#7b8794', fontStyle: 'italic' }
-    else if (/^\s*[%$]/.test(t)) estilo = { color: '#8a97a5' }
+    else if (/^\s*[%$]/.test(t)) estilo = { color: '#5f6b78' }
     else if (/^[A-Za-z]/.test(t)) {
       const c = COLORES[t[0].toUpperCase()]
       estilo = { color: c ?? '#1c2733', fontWeight: t[0].toUpperCase() === 'G' || t[0].toUpperCase() === 'M' ? 700 : 500 }
@@ -144,7 +144,7 @@ const EditorGcode = forwardRef<EditorGcodeRef, Props>(function EditorGcode(
       data-editor-gcode="si"
     >
       <div style={{ width: 44, flex: '0 0 44px', background: '#f1f4f7', borderRight: '1px solid #e0e5eb', overflow: 'hidden', position: 'relative' }}>
-        <div ref={margen} style={{ ...fuente, paddingTop: PAD, textAlign: 'right', color: '#8a97a5', fontSize: 11 }}>
+        <div ref={margen} style={{ ...fuente, paddingTop: PAD, textAlign: 'right', color: '#5f6b78', fontSize: 11 }}>
           {lineas.map((_, i) => {
             const nivel = nivelDe.get(i)
             return (

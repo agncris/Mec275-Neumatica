@@ -36,6 +36,16 @@ export default function Raiz() {
     } catch {
       /* sin almacenamiento */
     }
+    try {
+      const url = new URL(window.location.href)
+      if (url.searchParams.get('unidad') !== unidad) {
+        url.searchParams.set('unidad', unidad)
+        window.history.replaceState(null, '', url)
+      }
+    } catch {
+      /* sin historial */
+    }
+    window.scrollTo({ top: 0 })
     document.title =
       unidad === 'plc'
         ? 'NeumaLab — Laboratorio virtual de PLC'
@@ -46,42 +56,41 @@ export default function Raiz() {
             : 'NeumaLab — Laboratorio virtual de neumática'
   }, [unidad])
 
-  const pestanas: Array<[Unidad, string, string]> = [
-    ['neumatica', 'Unidad 1 · Neumática', 'Circuitos neumáticos, método cascada y banco 3D'],
-    ['plc', 'Unidad 2 · PLC', 'Programación Ladder y plantas del laboratorio en 3D'],
-    ['cnc', 'Unidad 3 · CNC', 'Código G, torno y fresadora con simulación de mecanizado en 3D'],
-    ['robotica', 'Unidad 4 · Robótica', 'Robots KUKA: programación por nodos (como Grasshopper + KUKA|prc), mando y simulación 3D'],
+  const pestanas: Array<[Unidad, string, string, string]> = [
+    ['neumatica', '1', 'Neumática', 'Circuitos neumáticos, método cascada y banco 3D'],
+    ['plc', '2', 'PLC', 'Programación Ladder y plantas del laboratorio en 3D'],
+    ['cnc', '3', 'CNC', 'Código G, torno y fresadora con simulación de mecanizado en 3D'],
+    ['robotica', '4', 'Robótica', 'Robots KUKA: programación por nodos (como Grasshopper + KUKA|prc), mando y simulación 3D'],
   ]
   return (
     <>
-      <nav
-        aria-label="Unidades del curso"
-        style={{ maxWidth: 1320, margin: '0 auto', padding: '0.7rem 1.5rem 0', display: 'flex', gap: 6, flexWrap: 'wrap' }}
-      >
-        {pestanas.map(([id, texto, titulo]) => {
-          const activa = unidad === id
-          return (
-            <button
-              key={id}
-              title={titulo}
-              aria-current={activa ? 'page' : undefined}
-              onClick={() => setUnidad(id)}
-              style={{
-                border: `2px solid ${activa ? '#33475c' : '#c6ced6'}`,
-                background: activa ? '#33475c' : '#fff',
-                color: activa ? '#fff' : '#33475c',
-                borderRadius: 999,
-                padding: '0.35rem 1rem',
-                fontWeight: 700,
-                fontSize: '0.9rem',
-                cursor: 'pointer',
-              }}
-            >
-              {texto}
-            </button>
-          )
-        })}
-      </nav>
+      <div className="barra-superior">
+        <div className="barra-superior__fila">
+          <a
+            href="?"
+            onClick={(e) => {
+              e.preventDefault()
+              setUnidad('neumatica')
+            }}
+            style={{ display: 'flex', alignItems: 'baseline', gap: 8, textDecoration: 'none', color: '#1c2733', flexShrink: 0 }}
+            title="NeumaLab · laboratorio virtual del curso MEC275"
+            className="barra-superior__marca"
+          >
+            <strong style={{ fontSize: '1.08rem', letterSpacing: '-0.01em' }}>NeumaLab</strong>
+            <span className="barra-superior__curso" style={{ fontSize: '0.78rem', fontWeight: 700, color: '#51606f' }}>
+              MEC275
+            </span>
+          </a>
+          <nav aria-label="Unidades del curso" className="pestanas-unidad">
+            {pestanas.map(([id, n, texto, titulo]) => (
+              <button key={id} title={titulo} aria-current={unidad === id ? 'page' : undefined} onClick={() => setUnidad(id)} className="pestana-unidad">
+                <span className="pestana-unidad__n">{n}</span>
+                {texto}
+              </button>
+            ))}
+          </nav>
+        </div>
+      </div>
       {unidad === 'neumatica' ? (
         <App />
       ) : (

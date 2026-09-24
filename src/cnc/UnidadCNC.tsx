@@ -6,6 +6,7 @@
  * sus coordenadas, explicación de cada bloque y exportación del .cnc y del
  * video de la simulación.
  */
+import { BarraHerramientas, botonSecundario, CabeceraUnidad, estiloAviso, Etiquetado, Menu } from '../components/ui'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Seccion } from '../components/Seccion'
 import { exportarPng, nombreSeguro } from '../exportar'
@@ -339,26 +340,58 @@ export default function UnidadCNC() {
   }
 
   return (
-    <main style={{ maxWidth: 1320, margin: '0 auto', padding: '0.4rem 1.5rem 1.25rem' }}>
-      <header style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: '0.8rem', flexWrap: 'wrap' }}>
-        <h1 style={{ margin: 0, fontSize: '1.45rem' }}>NeumaLab · CNC</h1>
-        <span style={chip}>MEC275</span>
-        <p style={{ margin: 0, color: '#5a6b7d', fontSize: '0.9rem' }}>Escribe tu programa en código G y mira cómo la máquina mecaniza la pieza</p>
-      </header>
+    <main style={{ maxWidth: 1320, margin: '0 auto', padding: '0.8rem clamp(0.75rem, 3vw, 1.5rem) 1.25rem' }}>
+      <CabeceraUnidad titulo="Unidad 3 · CNC" descripcion="Escribe tu programa en código G y mira cómo la máquina mecaniza la pieza" />
 
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
-        <label style={rotulo}>
-          Máquina:
-          <select value={maquina} onChange={(e) => cambiarMaquina(e.target.value as TipoMaquina)} style={selector} data-selector-maquina="si">
+      <BarraHerramientas
+        derecha={
+          <>
+            {grabando && (
+              <button onClick={alternarGrabacion} style={{ ...botonSecundario, color: '#fff', background: '#c62828', borderColor: '#c62828' }}>
+                ■ Detener grabación
+              </button>
+            )}
+            <Menu
+              etiqueta="Archivo"
+              items={[
+                { texto: 'Nuevo programa', ayuda: 'Un programa en blanco para esta máquina', onClick: nuevo },
+                { texto: 'Abrir…', ayuda: '.cnc, .nc, .gcode o .txt (también de CNC Simulator Pro)', onClick: () => inputArchivo.current?.click() },
+                { texto: 'Guardar .cnc', ayuda: 'El archivo de texto que se entrega', onClick: guardarCnc },
+              ]}
+            />
+            <Menu
+              etiqueta="Exportar"
+              items={[
+                { texto: 'Trayectoria (PNG)', ayuda: 'La trayectoria 2D con sus puntos, para el informe', onClick: () => void exportarPlano() },
+                {
+                  texto: 'Grabar video de la simulación',
+                  ayuda: 'Graba la vista 3D; se descarga al detener',
+                  onClick: alternarGrabacion,
+                  deshabilitado: !puedeGrabar || grabando,
+                  porque: grabando ? 'Ya está grabando' : 'Tu navegador no permite grabar video',
+                },
+              ]}
+            />
+            <input
+              ref={inputArchivo}
+              type="file"
+              accept=".cnc,.nc,.gcode,.ngc,.tap,.txt,text/plain"
+              style={{ display: 'none' }}
+              onChange={(e) => {
+                void abrir(e.target.files?.[0])
+                e.target.value = ''
+              }}
+            />
+          </>
+        }
+      >
+        <Etiquetado texto="Máquina">
+          <select value={maquina} onChange={(e) => cambiarMaquina(e.target.value as TipoMaquina)} style={{ ...selector, minHeight: 36 }} data-selector-maquina="si">
             <option value="torno">Centro de torneado (torno)</option>
             <option value="fresadora">Fresadora de 3 ejes</option>
           </select>
-        </label>
-        <button onClick={nuevo} style={{ ...boton, background: '#fff', color: '#1668c7', border: '2px solid #1668c7', padding: '0.45rem 1rem' }}>
-          ＋ Nuevo programa
-        </button>
-        <label style={rotulo}>
-          Ejemplos:
+        </Etiquetado>
+        <Etiquetado texto="Ejemplos">
           <select
             value=""
             onChange={(e) => {
@@ -385,37 +418,8 @@ export default function UnidadCNC() {
               ))}
             </optgroup>
           </select>
-        </label>
-        <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          <button onClick={guardarCnc} style={botonSuave} title="Descarga el programa como archivo .cnc (texto), el que se entrega">
-            Guardar .cnc
-          </button>
-          <button onClick={() => inputArchivo.current?.click()} style={botonSuave} title="Abre un .cnc, .nc, .gcode o .txt">
-            Abrir
-          </button>
-          <button onClick={() => void exportarPlano()} style={botonSuave} title="Imagen de la trayectoria 2D con sus puntos, para el informe">
-            Trayectoria (PNG)
-          </button>
-          <button
-            onClick={alternarGrabacion}
-            disabled={!puedeGrabar}
-            style={{ ...botonSuave, color: grabando ? '#fff' : '#c62828', background: grabando ? '#c62828' : '#fff', borderColor: '#c62828', opacity: puedeGrabar ? 1 : 0.5 }}
-            title="Graba la vista 3D en video (para entregar la simulación)"
-          >
-            {grabando ? '■ Detener grabación' : '● Grabar video'}
-          </button>
-          <input
-            ref={inputArchivo}
-            type="file"
-            accept=".cnc,.nc,.gcode,.ngc,.tap,.txt,text/plain"
-            style={{ display: 'none' }}
-            onChange={(e) => {
-              void abrir(e.target.files?.[0])
-              e.target.value = ''
-            }}
-          />
-        </span>
-      </div>
+        </Etiquetado>
+      </BarraHerramientas>
 
       {aviso && (
         <p role="status" style={avisoOk}>
@@ -555,7 +559,7 @@ export default function UnidadCNC() {
               </tbody>
             </table>
           ) : (
-            <p style={{ color: '#8a97a5', fontSize: '0.86rem' }}>Línea vacía.</p>
+            <p style={{ color: '#5f6b78', fontSize: '0.86rem' }}>Línea vacía.</p>
           )}
           <h2 style={{ ...subtitulo, marginTop: 14 }}>Tabla de coordenadas</h2>
           <TablaPuntos resultado={resultado} torno={torno} lineas={lineas} irA={irA} seleccionada={cursor} casa={casa} origen={cero.origen} />
@@ -854,7 +858,7 @@ function TablaPuntos({
       setTimeout(() => setCopiado(false), 2000)
     })
   }
-  if (!filas.length) return <p style={{ color: '#8a97a5', fontSize: '0.86rem' }}>El programa todavía no mueve la máquina.</p>
+  if (!filas.length) return <p style={{ color: '#5f6b78', fontSize: '0.86rem' }}>El programa todavía no mueve la máquina.</p>
   return (
     <div>
       <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: '#5a6b7d' }}>
@@ -890,7 +894,7 @@ function TablaPuntos({
           </tbody>
         </table>
       </div>
-      <p style={{ margin: '4px 0 0', fontSize: '0.78rem', color: '#8a97a5' }}>Punto de partida: posición de referencia {textoPunto(casaProg, torno)}.</p>
+      <p style={{ margin: '4px 0 0', fontSize: '0.78rem', color: '#5f6b78' }}>Punto de partida: posición de referencia {textoPunto(casaProg, torno)}.</p>
     </div>
   )
 }
@@ -1098,17 +1102,8 @@ const botonSuave: React.CSSProperties = {
 }
 const selector: React.CSSProperties = { padding: '0.3rem 0.4rem' }
 const rotulo: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.85rem', color: '#5a6b7d' }
-const chip: React.CSSProperties = { background: '#33475c', color: '#fff', borderRadius: 999, padding: '0.15rem 0.6rem', fontSize: '0.78rem', fontWeight: 700, letterSpacing: '0.03em' }
 const estadoChip: React.CSSProperties = { color: '#fff', borderRadius: 6, padding: '1px 8px', fontSize: '0.75rem', fontWeight: 700 }
-const avisoOk: React.CSSProperties = {
-  margin: '0 0 10px',
-  padding: '0.5rem 0.8rem',
-  background: '#e7f7ef',
-  border: '1px solid #a9dcc4',
-  borderRadius: 8,
-  color: '#0a6b3c',
-  fontSize: '0.88rem',
-}
+const avisoOk = estiloAviso
 const alarma: React.CSSProperties = {
   margin: '0 0 8px',
   padding: '0.5rem 0.8rem',

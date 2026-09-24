@@ -183,7 +183,7 @@ export default function SimbologiaVDI() {
                     <div style={{ width: 62, height: 62, margin: '0 auto' }}>
                       <SimboloVDI n={f.n} />
                     </div>
-                    <div style={{ fontSize: '0.66rem', color: '#8a97a5', marginTop: 4 }}>{f.n}</div>
+                    <div style={{ fontSize: '0.66rem', color: '#5f6b78', marginTop: 4 }}>{f.n}</div>
                     <div style={{ fontSize: '0.74rem', color: '#33475c', lineHeight: 1.35 }}>
                       {f.nombre}
                     </div>

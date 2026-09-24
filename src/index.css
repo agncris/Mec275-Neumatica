@@ -45,3 +45,106 @@ input:focus-visible,
     stroke-dashoffset: -14;
   }
 }
+
+/* Menús desplegables */
+.item-menu:hover:not(:disabled),
+.item-menu:focus-visible {
+  background: #eef2f6 !important;
+  outline: none;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+button:disabled:hover {
+  filter: none;
+}
+
+/* Barra superior: marca y unidades */
+.barra-superior {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid #e0e5eb;
+}
+.barra-superior__fila {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 52px;
+}
+.pestanas-unidad {
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  align-self: stretch;
+}
+.pestanas-unidad::-webkit-scrollbar {
+  display: none;
+}
+.pestana-unidad {
+  border: none;
+  background: transparent;
+  color: #51606f;
+  font-weight: 600;
+  font-size: 0.92rem;
+  padding: 0 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+  border-bottom: 3px solid transparent;
+  border-top: 3px solid transparent;
+  min-height: 44px;
+}
+.pestana-unidad:hover {
+  color: #1c2733;
+  filter: none;
+  background: #f3f5f8;
+}
+.pestana-unidad[aria-current='page'] {
+  color: #1c2733;
+  border-bottom-color: #1668c7;
+}
+.pestana-unidad__n {
+  color: #8b96a1;
+  font-weight: 700;
+  margin-right: 5px;
+}
+@media (max-width: 640px) {
+  .barra-superior__fila {
+    padding: 0 0.5rem;
+    gap: 8px;
+  }
+  .barra-superior__curso {
+    display: none;
+  }
+  .pestana-unidad {
+    padding: 0 0.55rem;
+    font-size: 0.88rem;
+  }
+}
+
+/* Menos movimiento para quien lo pide */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+@media (max-width: 440px) {
+  .barra-superior__marca {
+    display: none !important;
+  }
+  .pestana-unidad {
+    padding: 0 0.45rem;
+  }
+}

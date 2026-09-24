@@ -120,7 +120,7 @@ export default function DiagramaEspacioFase({ motor }: { motor: Motor | null }) 
               <g key={`g${k}`}>
                 <line x1={xPaso(k)} y1={8} x2={xPaso(k)} y2={altoP - 22} stroke="#dbe1e8" strokeWidth={1} />
                 {k > 0 && (
-                  <text x={xPaso(k) - anchoPaso / 2} y={altoP - 6} fontSize={10} fill="#8a97a5" textAnchor="middle">
+                  <text x={xPaso(k) - anchoPaso / 2} y={altoP - 6} fontSize={10} fill="#5f6b78" textAnchor="middle">
                     {k}
                   </text>
                 )}
@@ -138,8 +138,8 @@ export default function DiagramaEspacioFase({ motor }: { motor: Motor | null }) 
               return (
                 <g key={id}>
                   <text x={4} y={yBase - 10} fontSize={12} fontWeight={700} fill="#33475c">{letra} · {id}</text>
-                  <text x={MARGEN_IZQ - 8} y={y(1) + 4} fontSize={10} fill="#8a97a5" textAnchor="end">1</text>
-                  <text x={MARGEN_IZQ - 8} y={y(0) + 4} fontSize={10} fill="#8a97a5" textAnchor="end">0</text>
+                  <text x={MARGEN_IZQ - 8} y={y(1) + 4} fontSize={10} fill="#5f6b78" textAnchor="end">1</text>
+                  <text x={MARGEN_IZQ - 8} y={y(0) + 4} fontSize={10} fill="#5f6b78" textAnchor="end">0</text>
                   <polyline points={puntos.join(' ')} fill="none" stroke="#1668c7" strokeWidth={2.4} strokeLinejoin="round" />
                 </g>
               )
@@ -188,8 +188,8 @@ export default function DiagramaEspacioFase({ motor }: { motor: Motor | null }) 
               {/* carriles 0 y 1 */}
               <line x1={MARGEN_IZQ} y1={y(1)} x2={ANCHO - 12} y2={y(1)} stroke="#dbe1e8" strokeWidth={1} />
               <line x1={MARGEN_IZQ} y1={y(0)} x2={ANCHO - 12} y2={y(0)} stroke="#dbe1e8" strokeWidth={1} />
-              <text x={MARGEN_IZQ - 8} y={y(1) + 4} fontSize={10} fill="#8a97a5" textAnchor="end">1</text>
-              <text x={MARGEN_IZQ - 8} y={y(0) + 4} fontSize={10} fill="#8a97a5" textAnchor="end">0</text>
+              <text x={MARGEN_IZQ - 8} y={y(1) + 4} fontSize={10} fill="#5f6b78" textAnchor="end">1</text>
+              <text x={MARGEN_IZQ - 8} y={y(0) + 4} fontSize={10} fill="#5f6b78" textAnchor="end">0</text>
               <text x={4} y={yBase - 10} fontSize={12} fontWeight={700} fill="#33475c">
                 {letra} · {id}
               </text>
@@ -230,7 +230,7 @@ export default function DiagramaEspacioFase({ motor }: { motor: Motor | null }) 
           return (
             <g key={i}>
               <line x1={x(t)} y1={alto - 18} x2={x(t)} y2={alto - 14} stroke="#8a97a5" strokeWidth={1} />
-              <text x={x(t)} y={alto - 4} fontSize={10} fill="#8a97a5" textAnchor="middle">
+              <text x={x(t)} y={alto - 4} fontSize={10} fill="#5f6b78" textAnchor="middle">
                 {t.toFixed(0)} s
               </text>
             </g>

@@ -6,6 +6,7 @@
  *  - Simular: el motor corre a 30 Hz; se accionan las válvulas y se ve el aire
  *    circular, las correderas conmutar y los vástagos moverse.
  */
+import { BarraHerramientas, botonPrimario, botonSecundario, botonTerciario, CabeceraUnidad, COLOR, estiloAviso, Etiquetado, Menu } from './components/ui'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { DT_POR_DEFECTO, Motor, validarCircuito } from './engine'
 import Paleta from './components/Paleta'
@@ -228,7 +229,7 @@ export default function App() {
   const exportarLamina = async (id: string, sufijo: string, formato: 'png' | 'svg') => {
     const svg = document.getElementById(id) as SVGSVGElement | null
     if (!svg) {
-      setAviso('No hay nada que exportar todavía.')
+      setAviso(id === 'diagrama-fase-svg' ? 'Todavía no hay diagrama: acciona el circuito hasta que un cilindro complete una carrera.' : 'No hay nada que exportar todavía.')
       return
     }
     const archivo = nombreSeguro(`${baseArchivo()}_${sufijo}`, formato)
@@ -274,90 +275,78 @@ export default function App() {
 
   return (
     <main style={{ maxWidth: 1320, margin: '0 auto', padding: estrecha ? '0.8rem' : '1.25rem 1.5rem' }}>
-      <header
-        style={{
-          display: 'flex',
-          alignItems: 'baseline',
-          gap: 12,
-          marginBottom: '0.8rem',
-          flexWrap: 'wrap',
-        }}
-      >
-        <h1 style={{ margin: 0, fontSize: estrecha ? '1.25rem' : '1.45rem' }}>NeumaLab</h1>
-        <span
-          style={{
-            background: '#33475c',
-            color: '#fff',
-            borderRadius: 999,
-            padding: '0.15rem 0.6rem',
-            fontSize: '0.78rem',
-            fontWeight: 700,
-            letterSpacing: '0.03em',
-          }}
-        >
-          MEC275
-        </span>
-        <p style={{ margin: 0, color: '#5a6b7d', fontSize: '0.9rem' }}>
-          Laboratorio virtual de neumática — arma el circuito y simúlalo
-        </p>
-      </header>
+      <CabeceraUnidad titulo="Unidad 1 · Neumática" descripcion="Arma el circuito con la simbología ISO y simúlalo" />
 
-      {/* barra de herramientas */}
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
+      <BarraHerramientas
+        derecha={
+          <>
+            <Menu
+              etiqueta="Archivo"
+              items={[
+                { texto: 'Nuevo diagrama', ayuda: 'Deja el tablero en blanco', onClick: () => confirmarDescarte('¿Empezar un diagrama nuevo?') && limpiarPizarra() },
+                { texto: 'Abrir…', ayuda: 'Un circuito o una entrega (.json)', onClick: () => inputArchivo.current?.click() },
+                {
+                  texto: 'Guardar',
+                  ayuda: 'Descarga el circuito para seguir editándolo',
+                  onClick: () => descargarJson({ version: 1, nombre: ejercicio || undefined, piezas, mangueras }, nombreSeguro(`${baseArchivo()}_circuito`, 'json')),
+                },
+                { texto: 'Copiar enlace para compartir', ayuda: 'El circuito viaja dentro del enlace', onClick: () => void compartir(), separar: true },
+              ]}
+            />
+            <Menu
+              etiqueta="Exportar"
+              items={[
+                { texto: 'Circuito (PNG)', ayuda: 'Imagen para pegar en el informe', onClick: () => void exportarLamina('pizarra-svg', 'circuito', 'png'), deshabilitado: bancoVacio, porque: 'Primero coloca fichas en el tablero' },
+                { texto: 'Circuito (SVG)', ayuda: 'Dibujo vectorial, se amplía sin perder calidad', onClick: () => void exportarLamina('pizarra-svg', 'circuito', 'svg'), deshabilitado: bancoVacio, porque: 'Primero coloca fichas en el tablero' },
+                {
+                  texto: 'Diagrama de fase (PNG)',
+                  ayuda: 'El diagrama espacio-fase de la simulación',
+                  onClick: () => void exportarLamina('diagrama-fase-svg', 'diagrama-fase', 'png'),
+                  deshabilitado: modo !== 'simular',
+                  porque: 'Disponible mientras simulas (▶ Simular)',
+                },
+              ]}
+            />
+            <input
+              ref={inputArchivo}
+              type="file"
+              accept="application/json,.json"
+              style={{ display: 'none' }}
+              onChange={(e) => {
+                void abrirArchivo(e.target.files?.[0])
+                e.target.value = ''
+              }}
+            />
+          </>
+        }
+      >
         <button
           onClick={() => setModo(modo === 'simular' ? 'editar' : 'simular')}
           disabled={bancoVacio}
-          title={
-            bancoVacio
-              ? 'Coloca al menos una ficha en el banco para poder simular'
-              : 'Atajo: barra espaciadora'
-          }
-          style={{
-            ...boton,
-            background: bancoVacio ? '#c6ced6' : modo === 'simular' ? '#33475c' : '#12a35a',
-            color: bancoVacio ? '#7d8894' : '#fff',
-            cursor: bancoVacio ? 'not-allowed' : 'pointer',
-            padding: '0.55rem 1.3rem',
-            fontSize: '0.98rem',
-          }}
+          title={bancoVacio ? 'Coloca al menos una ficha en el banco para poder simular' : 'Atajo: barra espaciadora'}
+          style={{ ...botonPrimario(modo === 'simular'), ...(bancoVacio ? { background: '#dfe4ea', color: '#51606f' } : {}) }}
         >
           {modo === 'simular' ? '■ Detener' : '▶ Simular'}
         </button>
 
-        <button
-          onClick={() => confirmarDescarte('¿Empezar un diagrama nuevo?') && limpiarPizarra()}
-          title="Deja la pizarra en blanco para armar un circuito desde cero"
-          style={{
-            ...boton,
-            background: '#fff',
-            color: '#1668c7',
-            border: '2px solid #1668c7',
-            padding: '0.5rem 1.1rem',
-            fontSize: '0.98rem',
-          }}
-        >
-          ＋ Nuevo diagrama
-        </button>
-
         {modo === 'editar' && (
-          <span style={{ display: 'flex', gap: 4 }}>
-            <button onClick={deshacer} disabled={!puedeDeshacer} title="Deshacer (Ctrl+Z)" style={{ ...botonSuave, opacity: puedeDeshacer ? 1 : 0.45 }}>
+          <span style={{ display: 'flex', gap: 2 }}>
+            <button onClick={deshacer} disabled={!puedeDeshacer} title="Deshacer (Ctrl+Z)" aria-label="Deshacer" style={{ ...botonTerciario, opacity: puedeDeshacer ? 1 : 0.4 }}>
               ↶ Deshacer
             </button>
-            <button onClick={rehacer} disabled={!puedeRehacer} title="Rehacer (Ctrl+Shift+Z)" style={{ ...botonSuave, opacity: puedeRehacer ? 1 : 0.45 }}>
+            <button onClick={rehacer} disabled={!puedeRehacer} title="Rehacer (Ctrl+Shift+Z)" aria-label="Rehacer" style={{ ...botonTerciario, opacity: puedeRehacer ? 1 : 0.4 }}>
               ↷
             </button>
           </span>
         )}
 
         {modo === 'simular' && (
-          <button onClick={alternarAire} style={{ ...boton, background: aire ? '#1668c7' : '#8a97a5' }}>
+          <button onClick={alternarAire} aria-pressed={aire} style={{ ...botonSecundario, color: aire ? '#fff' : COLOR.pizarra, background: aire ? COLOR.azul : '#fff' }}>
             Aire {aire ? 'ON' : 'OFF'}
           </button>
         )}
 
-        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.85rem', color: '#5a6b7d' }}>
-          Ejemplos:
+        <Etiquetado texto="Ejemplos">
           <select
             value=""
             onChange={(e) => {
@@ -367,7 +356,7 @@ export default function App() {
               if (confirmarDescarte(`¿Cargar el ejemplo «${etiqueta}»?`)) cargarEjemplo(n)
               e.target.value = ''
             }}
-            style={{ padding: '0.3rem 0.4rem', maxWidth: 260 }}
+            style={{ padding: '0.35rem 0.4rem', maxWidth: 'min(260px, calc(100vw - 120px))', minHeight: 36 }}
           >
             <option value="">— elige un circuito —</option>
             {EJEMPLOS.map((ej) => (
@@ -376,83 +365,11 @@ export default function App() {
               </option>
             ))}
           </select>
-        </label>
-
-        <span style={{ marginLeft: estrecha ? 0 : 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          <button onClick={compartir} style={botonSuave} title="Copia un enlace con el circuito dentro">
-            Compartir
-          </button>
-          <button
-            onClick={() =>
-              descargarJson(
-                { version: 1, nombre: ejercicio || undefined, piezas, mangueras },
-                nombreSeguro(`${baseArchivo()}_circuito`, 'json'),
-              )
-            }
-            style={botonSuave}
-            title="Descarga el circuito para volver a abrirlo y seguir editándolo"
-          >
-            Guardar
-          </button>
-          <button onClick={() => inputArchivo.current?.click()} style={botonSuave}>
-            Abrir
-          </button>
-          <input
-            ref={inputArchivo}
-            type="file"
-            accept="application/json,.json"
-            style={{ display: 'none' }}
-            onChange={(e) => {
-              void abrirArchivo(e.target.files?.[0])
-              e.target.value = ''
-            }}
-          />
-        </span>
-      </div>
-
-      {/* fila de entrega: nombre del trabajo y láminas para el informe */}
-      <div
-        style={{
-          display: 'flex',
-          gap: 8,
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          marginBottom: 10,
-          padding: '0.5rem 0.7rem',
-          background: '#fff',
-          border: '1px solid #e0e5eb',
-          borderRadius: 8,
-        }}
-      >
-        <span style={{ fontSize: '0.85rem', color: '#5a6b7d' }}>Imágenes para tu informe:</span>
-        <button onClick={() => void exportarLamina('pizarra-svg', 'circuito', 'png')} style={botonSuave}>
-          Circuito (PNG)
-        </button>
-        <button onClick={() => void exportarLamina('pizarra-svg', 'circuito', 'svg')} style={botonSuave}>
-          Circuito (SVG)
-        </button>
-        <button
-          onClick={() => void exportarLamina('diagrama-fase-svg', 'diagrama-fase', 'png')}
-          style={botonSuave}
-          title="Disponible mientras la simulación está corriendo"
-        >
-          Diagrama de fase (PNG)
-        </button>
-      </div>
+        </Etiquetado>
+      </BarraHerramientas>
 
       {aviso && (
-        <p
-          role="status"
-          style={{
-            margin: '0 0 10px',
-            padding: '0.5rem 0.8rem',
-            background: '#e7f7ef',
-            border: '1px solid #a9dcc4',
-            borderRadius: 8,
-            color: '#0a6b3c',
-            fontSize: '0.88rem',
-          }}
-        >
+        <p role="status" style={estiloAviso}>
           {aviso}
         </p>
       )}
@@ -636,7 +553,7 @@ export default function App() {
         </Seccion>
       </section>
 
-      <footer style={{ margin: '1.5rem 0 0.5rem', color: '#8a97a5', fontSize: '0.8rem', textAlign: 'center' }}>
+      <footer style={{ margin: '1.5rem 0 0.5rem', color: '#5f6b78', fontSize: '0.8rem', textAlign: 'center' }}>
         NeumaLab · MEC275 — Neumática industrial · Simbología ISO 1219-1
       </footer>
     </main>
@@ -656,16 +573,6 @@ const subtitulo: React.CSSProperties = {
   margin: '0 0 0.6rem',
   fontSize: '1rem',
   color: '#33475c',
-}
-
-const boton: React.CSSProperties = {
-  border: 'none',
-  color: '#fff',
-  padding: '0.45rem 0.9rem',
-  borderRadius: 8,
-  fontSize: '0.9rem',
-  fontWeight: 600,
-  cursor: 'pointer',
 }
 
 const rotuloVista: React.CSSProperties = {

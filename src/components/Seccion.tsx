@@ -38,7 +38,7 @@ function SeccionBase({ titulo, children }: Props) {
           fontFamily: 'inherit',
         }}
       >
-        <span style={{ fontSize: '0.8rem', color: '#8a97a5' }}>{abierta ? '▼' : '▶'}</span>
+        <span style={{ fontSize: '0.8rem', color: '#5f6b78' }}>{abierta ? '▼' : '▶'}</span>
         {titulo}
       </button>
       {abierta && <div style={{ marginTop: 10 }}>{children}</div>}

@@ -230,7 +230,7 @@ function Grilla({
     const a = v + desfase
     lineas.push(<line key={`v${v}`} x1={tx(a)} x2={tx(a)} y1={0} y2={ty(caja.y0)} stroke={v === 0 ? '#9aa6b2' : '#eef1f4'} strokeWidth={v === 0 ? esc * 0.12 : esc * 0.06} />)
     lineas.push(
-      <text key={`tv${v}`} x={tx(a) + esc * 0.2} y={ty(caja.y0) - esc * 0.3} fontSize={esc * 0.9} fill="#8a97a5">
+      <text key={`tv${v}`} x={tx(a) + esc * 0.2} y={ty(caja.y0) - esc * 0.3} fontSize={esc * 0.9} fill="#66737f">
         {v}
       </text>,
     )
@@ -238,7 +238,7 @@ function Grilla({
   for (let b = Math.ceil(caja.y0 / paso) * paso; b <= caja.y1; b += paso) {
     lineas.push(<line key={`h${b}`} x1={0} x2={tx(caja.x1)} y1={ty(b)} y2={ty(b)} stroke={b === 0 ? '#9aa6b2' : '#eef1f4'} strokeWidth={b === 0 ? esc * 0.12 : esc * 0.06} strokeDasharray={b === 0 && torno ? `${esc} ${esc * 0.5}` : undefined} />)
     lineas.push(
-      <text key={`th${b}`} x={esc * 0.3} y={ty(b) - esc * 0.25} fontSize={esc * 0.9} fill="#8a97a5">
+      <text key={`th${b}`} x={esc * 0.3} y={ty(b) - esc * 0.25} fontSize={esc * 0.9} fill="#66737f">
         {torno ? `Ø${Math.abs(b * 2)}` : b}
       </text>,
     )

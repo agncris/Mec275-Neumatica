@@ -4,6 +4,7 @@
  * de alcance, límites y singularidades, y exportar el código KRL. Funciona en
  * el navegador: no hace falta Windows ni licencias.
  */
+import { BarraHerramientas, botonSecundario, botonTerciario, CabeceraUnidad, estiloAviso, Etiquetado, Menu } from '../components/ui'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Seccion } from '../components/Seccion'
 import { exportarPng, nombreSeguro } from '../exportar'
@@ -441,30 +442,72 @@ export default function UnidadRobotica() {
   const qVista = vista.current.q
 
   return (
-    <main style={{ maxWidth: 1400, margin: '0 auto', padding: '0.4rem 1.5rem 1.25rem' }}>
-      <header style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: '0.8rem', flexWrap: 'wrap' }}>
-        <h1 style={{ margin: 0, fontSize: '1.45rem' }}>NeumaLab · Robótica</h1>
-        <span style={chip}>MEC275</span>
-        <p style={{ margin: 0, color: '#5a6b7d', fontSize: '0.9rem' }}>Programa un robot KUKA con nodos (como Grasshopper + KUKA|prc) o con el mando, y simúlalo en 3D</p>
-      </header>
+    <main style={{ maxWidth: 1320, margin: '0 auto', padding: '0.8rem clamp(0.75rem, 3vw, 1.5rem) 1.25rem' }}>
+      <CabeceraUnidad titulo="Unidad 4 · Robótica" descripcion="Programa un robot KUKA con nodos (como Grasshopper + KUKA|prc) o con el mando, y simúlalo en 3D" />
 
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
-        <span style={{ display: 'flex', gap: 2 }}>
+      <BarraHerramientas
+        derecha={
+          <>
+            {grabando && (
+              <button onClick={alternarGrabacion} style={{ ...botonSecundario, color: '#fff', background: '#c62828', borderColor: '#c62828' }}>
+                ■ Detener grabación
+              </button>
+            )}
+            {modo === 'visual' && (
+              <Menu
+                etiqueta="Archivo"
+                items={[
+                  { texto: 'Nueva definición', ayuda: 'Empieza con el lienzo vacío', onClick: () => cargarEjemplo('vacio') },
+                  { texto: 'Abrir definición…', ayuda: 'Una definición guardada (.json), con su plano', onClick: () => inputDef.current?.click() },
+                  { texto: 'Guardar definición', ayuda: 'Descarga la definición y el plano DXF', onClick: () => descargar(JSON.stringify(def, null, 2), nombreSeguro(def.nombre || 'definicion', 'json'), 'application/json') },
+                  { texto: 'Abrir plano DXF…', ayuda: 'Trae las curvas de tu plano', onClick: () => inputDXF.current?.click(), separar: true },
+                ]}
+              />
+            )}
+            <Menu
+              etiqueta="Exportar"
+              ancho={300}
+              items={[
+                { texto: 'Programa KRL (.src)', ayuda: 'Para el controlador KUKA', onClick: exportarKRL },
+                ...(modo === 'visual'
+                  ? [
+                      { texto: 'Croquis de la pieza (PNG)', ayuda: 'La pieza acotada, con el cero de la pieza', onClick: () => void exportarCroquis('pieza-png'), separar: true },
+                      { texto: 'Croquis de la pieza (SVG)', onClick: () => void exportarCroquis('pieza-svg') },
+                      { texto: 'Posicionamiento del robot (PNG)', ayuda: 'Planta y elevación: robot, mesón y alcance', onClick: () => void exportarCroquis('posicion-png') },
+                      { texto: 'Posicionamiento del robot (SVG)', onClick: () => void exportarCroquis('posicion-svg') },
+                    ]
+                  : []),
+                {
+                  texto: 'Grabar video de la simulación',
+                  ayuda: 'Graba la vista 3D; se descarga al detener',
+                  onClick: alternarGrabacion,
+                  deshabilitado: !puedeGrabar || grabando,
+                  porque: grabando ? 'Ya está grabando' : 'Tu navegador no permite grabar video',
+                  separar: true,
+                },
+              ]}
+            />
+          </>
+        }
+      >
+        <span role="tablist" aria-label="Forma de programar" style={{ display: 'inline-flex', border: '1px solid #c6ced6', borderRadius: 9, padding: 2, background: '#fff' }}>
           {(
             [
               ['visual', 'Programación visual'],
-              ['mando', 'Mando manual (teach-in)'],
+              ['mando', 'Mando manual'],
             ] as Array<[Modo, string]>
           ).map(([m, t]) => (
             <button
               key={m}
+              role="tab"
+              aria-selected={modo === m}
               onClick={() => {
                 setReproduciendo(false)
                 setModo(m)
               }}
-              aria-pressed={modo === m}
               data-modo={m}
-              style={{ ...botonSuave, background: modo === m ? '#33475c' : '#fff', color: modo === m ? '#fff' : '#33475c', fontWeight: 600 }}
+              title={m === 'mando' ? 'Mover el robot a mano y grabar puntos (teach-in)' : 'Armar el programa con nodos, como Grasshopper + KUKA|prc'}
+              style={{ border: 'none', borderRadius: 7, padding: '0.4rem 0.8rem', minHeight: 34, fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer', background: modo === m ? '#33475c' : 'transparent', color: modo === m ? '#fff' : '#33475c' }}
             >
               {t}
             </button>
@@ -472,8 +515,7 @@ export default function UnidadRobotica() {
         </span>
         {modo === 'visual' && (
           <>
-            <label style={rotulo}>
-              Ejemplos:
+            <Etiquetado texto="Ejemplos">
               <select
                 value=""
                 onChange={(e) => {
@@ -481,7 +523,7 @@ export default function UnidadRobotica() {
                   e.target.value = ''
                   cargarEjemplo(x)
                 }}
-                style={{ padding: '0.3rem 0.4rem', maxWidth: 'min(320px, calc(100vw - 130px))' }}
+                style={{ padding: '0.35rem 0.4rem', minHeight: 36, maxWidth: 'min(320px, calc(100vw - 120px))' }}
                 data-ejemplos-robot="si"
               >
                 <option value="">— elige una definición —</option>
@@ -491,58 +533,22 @@ export default function UnidadRobotica() {
                   </option>
                 ))}
               </select>
-            </label>
-            <button onClick={() => inputDXF.current?.click()} style={{ ...botonSuave, borderColor: '#1668c7', color: '#1668c7', fontWeight: 600 }} title="Traer un plano DXF (como el de la tarea) para usar sus curvas">
+            </Etiquetado>
+            <button onClick={() => inputDXF.current?.click()} style={botonSecundario} title="Traer un plano DXF para usar sus curvas">
               Abrir DXF
             </button>
-            <button onClick={deshacer} disabled={!historial.current.puedeDeshacer} style={{ ...botonSuave, opacity: historial.current.puedeDeshacer ? 1 : 0.45 }} title="Deshacer (Ctrl+Z)">
-              ↶
-            </button>
-            <button onClick={rehacer} disabled={!historial.current.puedeRehacer} style={{ ...botonSuave, opacity: historial.current.puedeRehacer ? 1 : 0.45 }} title="Rehacer (Ctrl+Shift+Z)">
-              ↷
-            </button>
+            <span style={{ display: 'flex', gap: 2 }}>
+              <button onClick={deshacer} disabled={!historial.current.puedeDeshacer} aria-label="Deshacer" style={{ ...botonTerciario, opacity: historial.current.puedeDeshacer ? 1 : 0.4 }} title="Deshacer (Ctrl+Z)">
+                ↶ Deshacer
+              </button>
+              <button onClick={rehacer} disabled={!historial.current.puedeRehacer} aria-label="Rehacer" style={{ ...botonTerciario, opacity: historial.current.puedeRehacer ? 1 : 0.4 }} title="Rehacer (Ctrl+Shift+Z)">
+                ↷
+              </button>
+            </span>
           </>
         )}
-        <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {modo === 'visual' && (
-            <>
-              <button onClick={() => descargar(JSON.stringify(def, null, 2), nombreSeguro(def.nombre || 'definicion', 'json'), 'application/json')} style={botonSuave}>
-                Guardar definición
-              </button>
-              <button onClick={() => inputDef.current?.click()} style={botonSuave}>
-                Abrir definición
-              </button>
-            </>
-          )}
-          <button onClick={exportarKRL} style={botonSuave} title="Programa para el controlador KUKA (.src, lenguaje KRL)">
-            Exportar KRL
-          </button>
-          {modo === 'visual' && (
-            <select
-              value=""
-              onChange={(e) => {
-                if (e.target.value) void exportarCroquis(e.target.value)
-                e.target.value = ''
-              }}
-              style={{ ...botonSuave, padding: '0.35rem 0.4rem' }}
-              title="Croquis para el informe: la pieza acotada y la posición del robot respecto del mesón"
-              data-croquis="si"
-            >
-              <option value="">Croquis…</option>
-              <option value="pieza-png">Pieza acotada (PNG)</option>
-              <option value="pieza-svg">Pieza acotada (SVG)</option>
-              <option value="posicion-png">Posicionamiento del robot (PNG)</option>
-              <option value="posicion-svg">Posicionamiento del robot (SVG)</option>
-            </select>
-          )}
-          <button
-            onClick={alternarGrabacion}
-            disabled={!puedeGrabar}
-            style={{ ...botonSuave, color: grabando ? '#fff' : '#c62828', background: grabando ? '#c62828' : '#fff', borderColor: '#c62828' }}
-          >
-            {grabando ? '■ Detener grabación' : '● Grabar video'}
-          </button>
-        </span>
+      </BarraHerramientas>
+      <div>
         <input ref={inputDXF} type="file" accept=".dxf" style={{ display: 'none' }} onChange={(e) => (void abrirDXF(e.target.files?.[0]), (e.target.value = ''))} />
         <input ref={inputDef} type="file" accept=".json,application/json" style={{ display: 'none' }} onChange={(e) => (void abrirDef(e.target.files?.[0]), (e.target.value = ''))} />
       </div>
@@ -707,7 +713,7 @@ export default function UnidadRobotica() {
                 ))}
               </tbody>
             </table>
-            <p style={{ fontSize: '0.78rem', color: '#8a97a5' }}>Valores orientativos: para un trabajo formal, confírmalos en la ficha oficial de KUKA.</p>
+            <p style={{ fontSize: '0.78rem', color: '#5f6b78' }}>Datos de las fichas técnicas publicadas de cada modelo. Para un trabajo formal, cita la ficha oficial de KUKA.</p>
           </details>
           {modo === 'visual' && sim && (
             <details style={{ marginTop: 8 }}>
@@ -817,7 +823,7 @@ function Propiedades({
         <strong style={{ color: '#33475c' }}>
           {comp.nombre} ({comp.corto})
         </strong>
-        <span style={{ fontSize: '0.78rem', color: '#8a97a5' }}>
+        <span style={{ fontSize: '0.78rem', color: '#5f6b78' }}>
           {comp.pestana} › {comp.grupo}
         </span>
         <span style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
@@ -938,7 +944,7 @@ function Ejes({ modelo, q, uso }: { modelo: ReturnType<typeof robotPorId>; q: nu
           </div>
         )
       })}
-      <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: '#8a97a5' }}>Cada barra es el rango del eje; en azul, lo que usa el programa; la marca, la posición actual (roja cerca del límite).</p>
+      <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: '#5f6b78' }}>Cada barra es el rango del eje; en azul, lo que usa el programa; la marca, la posición actual (roja cerca del límite).</p>
     </div>
   )
 }
@@ -1017,22 +1023,6 @@ const subtitulo: React.CSSProperties = { margin: '0 0 0.6rem', fontSize: '1.05re
 const boton: React.CSSProperties = { border: 'none', color: '#fff', padding: '0.4rem 0.9rem', borderRadius: 8, fontSize: '0.95rem', fontWeight: 700, cursor: 'pointer' }
 const botonSuave: React.CSSProperties = { border: '1px solid #c6ced6', background: '#fff', color: '#33475c', padding: '0.35rem 0.75rem', borderRadius: 7, fontSize: '0.85rem', cursor: 'pointer' }
 const rotulo: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.85rem', color: '#5a6b7d' }
-const chip: React.CSSProperties = { background: '#33475c', color: '#fff', borderRadius: 999, padding: '0.15rem 0.6rem', fontSize: '0.78rem', fontWeight: 700, letterSpacing: '0.03em' }
 const estadoChip: React.CSSProperties = { color: '#fff', borderRadius: 6, padding: '1px 8px', fontSize: '0.75rem', fontWeight: 700 }
 /** Aviso flotante: aparece y desaparece sin mover el resto de la página. */
-const avisoOk: React.CSSProperties = {
-  position: 'fixed',
-  left: '50%',
-  bottom: 18,
-  transform: 'translateX(-50%)',
-  zIndex: 50,
-  maxWidth: 'min(720px, calc(100vw - 32px))',
-  margin: 0,
-  padding: '0.6rem 0.9rem',
-  background: '#e7f7ef',
-  border: '1px solid #a9dcc4',
-  borderRadius: 8,
-  color: '#0a6b3c',
-  fontSize: '0.88rem',
-  boxShadow: '0 6px 18px rgba(0,0,0,0.15)',
-}
+const avisoOk = estiloAviso

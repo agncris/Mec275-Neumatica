@@ -263,14 +263,14 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
             {p}
           </button>
         ))}
-        <span style={{ marginLeft: 'auto', fontSize: '0.76rem', color: '#8a97a5', alignSelf: 'center' }}>
+        <span style={{ marginLeft: 'auto', fontSize: '0.76rem', color: '#5f6b78', alignSelf: 'center' }}>
           Doble clic en el fondo: buscar componente · Supr: borrar
         </span>
       </div>
       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 6, minHeight: 30 }}>
         {agrupar(COMPONENTES.filter((c) => c.pestana === pestana)).map(([grupo, cs]) => (
           <span key={grupo} style={{ display: 'flex', gap: 3, alignItems: 'center', border: '1px solid #e0e5eb', borderRadius: 6, padding: '2px 4px', background: '#fafbfc' }}>
-            <span style={{ fontSize: '0.66rem', color: '#8a97a5', marginRight: 2 }}>{grupo}</span>
+            <span style={{ fontSize: '0.66rem', color: '#5f6b78', marginRight: 2 }}>{grupo}</span>
             {cs.map((c) => (
               <button
                 key={c.tipo}
@@ -416,7 +416,7 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
                 }}
                 style={{ display: 'block', width: '100%', textAlign: 'left', border: 'none', background: '#fff', padding: '4px 8px', cursor: 'pointer', fontSize: '0.82rem' }}
               >
-                <strong>{c.nombre}</strong> <span style={{ color: '#8a97a5' }}>({c.corto}) · {c.pestana}</span>
+                <strong>{c.nombre}</strong> <span style={{ color: '#5f6b78' }}>({c.corto}) · {c.pestana}</span>
               </button>
             ))}
           </div>

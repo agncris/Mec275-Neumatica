@@ -6,6 +6,7 @@
  * ejecuta en ciclos de scan contra la planta, las salidas mueven la máquina
  * y los sensores de la máquina vuelven a las entradas.
  */
+import { BarraHerramientas, CabeceraUnidad, estiloAviso, Etiquetado, Menu } from '../components/ui'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Seccion } from '../components/Seccion'
 import { exportarPng, nombreSeguro } from '../exportar'
@@ -311,21 +312,35 @@ export default function UnidadPLC() {
   const eventos = eventosRef.current.slice(-8).reverse()
 
   return (
-    <main style={{ maxWidth: 1320, margin: '0 auto', padding: '0.4rem 1.5rem 1.25rem' }}>
-      <header style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: '0.8rem', flexWrap: 'wrap' }}>
-        <h1 style={{ margin: 0, fontSize: '1.45rem' }}>NeumaLab · PLC</h1>
-        <span style={chip}>MEC275</span>
-        <p style={{ margin: 0, color: '#5a6b7d', fontSize: '0.9rem' }}>
-          Programa en Ladder y pruébalo en la planta del laboratorio
-        </p>
-      </header>
+    <main style={{ maxWidth: 1320, margin: '0 auto', padding: '0.8rem clamp(0.75rem, 3vw, 1.5rem) 1.25rem' }}>
+      <CabeceraUnidad titulo="Unidad 2 · PLC" descripcion="Programa en Ladder y pruébalo en la planta del laboratorio" />
 
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
-        <button onClick={nuevo} style={{ ...boton, background: '#fff', color: '#1668c7', border: '2px solid #1668c7', padding: '0.5rem 1.1rem' }}>
-          ＋ Nuevo programa
-        </button>
-        <label style={rotulo}>
-          Ejemplos:
+      <BarraHerramientas
+        derecha={
+          <>
+            <Menu
+              etiqueta="Archivo"
+              items={[
+                { texto: 'Nuevo programa', ayuda: 'Empieza con el diagrama vacío', onClick: nuevo },
+                { texto: 'Abrir…', ayuda: 'Un programa guardado (.json)', onClick: () => inputArchivo.current?.click() },
+                { texto: 'Guardar', ayuda: 'Descarga el programa para volver a abrirlo', onClick: guardar },
+              ]}
+            />
+            <Menu etiqueta="Exportar" items={[{ texto: 'Diagrama Ladder (PNG)', ayuda: 'Imagen del programa para tu informe', onClick: () => void exportarLadder() }]} />
+            <input
+              ref={inputArchivo}
+              type="file"
+              accept="application/json,.json"
+              style={{ display: 'none' }}
+              onChange={(e) => {
+                void abrir(e.target.files?.[0])
+                e.target.value = ''
+              }}
+            />
+          </>
+        }
+      >
+        <Etiquetado texto="Ejemplos">
           <select
             value=""
             onChange={(e) => {
@@ -343,7 +358,7 @@ export default function UnidadPLC() {
               setCorriendo(false)
               setPrograma(clonarPrograma(ej.programa))
             }}
-            style={{ padding: '0.3rem 0.4rem', maxWidth: 280 }}
+            style={{ padding: '0.35rem 0.4rem', maxWidth: 'min(280px, calc(100vw - 120px))', minHeight: 36 }}
           >
             <option value="">— elige un programa —</option>
             <optgroup label="Ejercicios para resolver (sin solución)">
@@ -361,46 +376,23 @@ export default function UnidadPLC() {
               ))}
             </optgroup>
           </select>
-        </label>
-        <label style={rotulo}>
-          Planta:
-          <select value={programa.planta} onChange={(e) => cambiarPlanta(e.target.value as IdPlanta)} style={{ padding: '0.3rem 0.4rem' }}>
+        </Etiquetado>
+        <Etiquetado texto="Planta">
+          <select value={programa.planta} onChange={(e) => cambiarPlanta(e.target.value as IdPlanta)} style={{ padding: '0.35rem 0.4rem', minHeight: 36, maxWidth: 'min(260px, calc(100vw - 120px))' }}>
             {Object.values(PLANTAS).map((p) => (
               <option key={p.id} value={p.id}>
                 {p.nombre}
               </option>
             ))}
           </select>
-        </label>
-        <label style={rotulo} title="Cómo se escriben las direcciones: como en el apunte o como en LogixPro / RSLogix">
-          Direcciones:
-          <select value={notacion} onChange={(e) => setNotacion(e.target.value as Notacion)} style={{ padding: '0.3rem 0.4rem' }}>
+        </Etiquetado>
+        <Etiquetado texto="Direcciones" titulo="Cómo se escriben las direcciones: como en el apunte o como en LogixPro / RSLogix">
+          <select value={notacion} onChange={(e) => setNotacion(e.target.value as Notacion)} style={{ padding: '0.35rem 0.4rem', minHeight: 36, maxWidth: 'min(260px, calc(100vw - 120px))' }}>
             <option value="siemens">Apunte (I0.3, Q0.1)</option>
             <option value="ab">LogixPro (I:1/03, O:2/01)</option>
           </select>
-        </label>
-        <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          <button onClick={guardar} style={botonSuave} title="Descarga el programa para volver a abrirlo">
-            Guardar
-          </button>
-          <button onClick={() => inputArchivo.current?.click()} style={botonSuave}>
-            Abrir
-          </button>
-          <button onClick={() => void exportarLadder()} style={botonSuave} title="Imagen del diagrama para tu informe">
-            Ladder (PNG)
-          </button>
-          <input
-            ref={inputArchivo}
-            type="file"
-            accept="application/json,.json"
-            style={{ display: 'none' }}
-            onChange={(e) => {
-              void abrir(e.target.files?.[0])
-              e.target.value = ''
-            }}
-          />
-        </span>
-      </div>
+        </Etiquetado>
+      </BarraHerramientas>
 
       {aviso && <p role="status" style={avisoOk}>{aviso}</p>}
 
@@ -615,7 +607,7 @@ export default function UnidadPLC() {
         </Seccion>
       </section>
 
-      <footer style={{ margin: '1.5rem 0 0.5rem', color: '#8a97a5', fontSize: '0.8rem', textAlign: 'center' }}>
+      <footer style={{ margin: '1.5rem 0 0.5rem', color: '#5f6b78', fontSize: '0.8rem', textAlign: 'center' }}>
         NeumaLab · MEC275 — Unidad 2: Controlador Lógico Programable · Ladder
       </footer>
     </main>
@@ -785,7 +777,7 @@ function PanelES({
                 ) : (
                   <span>
                     <strong>{nombre(d)}</strong>
-                    <span style={{ color: '#8a97a5', fontSize: '0.76rem' }}>{deMandos.has(d) ? ' · mando' : ' · sensor de la planta'}</span>
+                    <span style={{ color: '#5f6b78', fontSize: '0.76rem' }}>{deMandos.has(d) ? ' · mando' : ' · sensor de la planta'}</span>
                   </span>
                 )}
                 {forzar(d)}
@@ -800,7 +792,7 @@ function PanelES({
               {led(d)}
               <code style={{ minWidth: 48 }}>{fmt(d)}</code>
               <strong>{nombre(d)}</strong>
-              {!cableado.includes(d) && <span style={{ color: '#8a97a5', fontSize: '0.76rem' }}>· piloto libre</span>}
+              {!cableado.includes(d) && <span style={{ color: '#5f6b78', fontSize: '0.76rem' }}>· piloto libre</span>}
               {forzar(d)}
             </div>
           ))}
@@ -842,7 +834,7 @@ function TablaDatos({
           <table style={{ borderCollapse: 'collapse', width: '100%' }}>
             <tbody>
               <tr>
-                <td style={{ fontSize: '0.66rem', color: '#8a97a5', textAlign: 'center' }}>{fmt(d).replace(/^.*[./]/, '')}</td>
+                <td style={{ fontSize: '0.66rem', color: '#5f6b78', textAlign: 'center' }}>{fmt(d).replace(/^.*[./]/, '')}</td>
               </tr>
               <tr>{bit(estado.bits[d])}</tr>
             </tbody>
@@ -882,7 +874,7 @@ function TablaDatos({
           <tbody>
             {temporizadores.length === 0 && (
               <tr>
-                <td colSpan={7} style={{ ...celda, fontFamily: 'inherit', color: '#8a97a5' }}>El programa no usa temporizadores.</td>
+                <td colSpan={7} style={{ ...celda, fontFamily: 'inherit', color: '#5f6b78' }}>El programa no usa temporizadores.</td>
               </tr>
             )}
             {temporizadores.map((d) => {
@@ -915,7 +907,7 @@ function TablaDatos({
           <tbody>
             {contadores.length === 0 && (
               <tr>
-                <td colSpan={6} style={{ ...celda, fontFamily: 'inherit', color: '#8a97a5' }}>El programa no usa contadores.</td>
+                <td colSpan={6} style={{ ...celda, fontFamily: 'inherit', color: '#5f6b78' }}>El programa no usa contadores.</td>
               </tr>
             )}
             {contadores.map((d) => {
@@ -944,7 +936,7 @@ function TablaDatos({
               <th style={{ ...celda, textAlign: 'left', background: '#f4f7fb' }}>{notacion === 'ab' ? 'N7 (enteros)' : 'MW (enteros)'}</th>
               {PALABRAS.map((d) => (
                 <td key={d} style={{ ...celda, padding: 2 }} title={`${fmt(d)}${nombre(d) ? ` · ${nombre(d)}` : ''} — puedes escribir un valor`}>
-                  <div style={{ fontSize: '0.66rem', color: '#8a97a5' }}>{fmt(d).replace(/^.*[:W]/, '')}</div>
+                  <div style={{ fontSize: '0.66rem', color: '#5f6b78' }}>{fmt(d).replace(/^.*[:W]/, '')}</div>
                   <input
                     type="number"
                     value={estado.palabras?.[d] ?? 0}
@@ -1096,23 +1088,5 @@ const botonSuave: React.CSSProperties = {
   fontSize: '0.85rem',
   cursor: 'pointer',
 }
-const rotulo: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.85rem', color: '#5a6b7d' }
-const chip: React.CSSProperties = {
-  background: '#33475c',
-  color: '#fff',
-  borderRadius: 999,
-  padding: '0.15rem 0.6rem',
-  fontSize: '0.78rem',
-  fontWeight: 700,
-  letterSpacing: '0.03em',
-}
 const estadoPLC: React.CSSProperties = { color: '#fff', borderRadius: 6, padding: '1px 8px', fontSize: '0.75rem', fontWeight: 700 }
-const avisoOk: React.CSSProperties = {
-  margin: '0 0 10px',
-  padding: '0.5rem 0.8rem',
-  background: '#e7f7ef',
-  border: '1px solid #a9dcc4',
-  borderRadius: 8,
-  color: '#0a6b3c',
-  fontSize: '0.88rem',
-}
+const avisoOk = estiloAviso

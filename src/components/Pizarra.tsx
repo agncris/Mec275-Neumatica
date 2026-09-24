@@ -109,6 +109,15 @@ function puertoMundo(pieza: Pieza, idPuerto: string): Punto | null {
 export default function Pizarra({ motor, vista = 'esquema', soloLectura = false, id = 'pizarra-svg' }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
   const contenedorRef = useRef<HTMLDivElement>(null)
+  // Ancho del tablero: al medirlo se vuelve a dibujar el porcentaje de zoom.
+  const [anchoCont, setAnchoCont] = useState(0)
+  useEffect(() => {
+    const cont = contenedorRef.current
+    if (!cont || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => setAnchoCont(cont.clientWidth))
+    ro.observe(cont)
+    return () => ro.disconnect()
+  }, [])
   const piezas = useStore((s) => s.piezas)
   const mangueras = useStore((s) => s.mangueras)
   const modo = useStore((s) => s.modo)
@@ -567,9 +576,8 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
   ajustarRef.current = ajustar
 
   const escPorcentaje = () => {
-    const cont = contenedorRef.current
-    const cw = cont?.clientWidth || 1
-    return Math.round((cw / view.w) * 100)
+    const cw = contenedorRef.current?.clientWidth || anchoCont
+    return cw ? Math.round((cw / view.w) * 100) : 100
   }
 
   const escActual = () => {
@@ -668,31 +676,39 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
         <rect x={view.x - 5000} y={view.y - 5000} width={view.w + 10000} height={view.h + 10000} fill="url(#rejilla)" pointerEvents="none" />
 
         {/* estado vacío */}
-        {bancoVacio && modo === 'editar' && (
-          <g>
-            <text x={view.x + view.w / 2} y={view.y + view.h / 2 - 60} textAnchor="middle" fontSize={24} fontWeight={700} fill="#33475c" pointerEvents="none">
-              Tu banco está vacío
-            </text>
-            <text x={view.x + view.w / 2} y={view.y + view.h / 2 - 26} textAnchor="middle" fontSize={16} fill="#5a6b7d" pointerEvents="none">
-              1 · Arrastra una ficha desde la paleta&nbsp;&nbsp;2 · Cablea los puertos
-            </text>
-            <text x={view.x + view.w / 2} y={view.y + view.h / 2 + 2} textAnchor="middle" fontSize={16} fill="#5a6b7d" pointerEvents="none">
-              3 · Pulsa ▶ Simular y acciona las válvulas
-            </text>
-            <g
-              style={{ cursor: 'pointer' }}
-              onPointerDown={(e) => {
-                e.stopPropagation()
-                useStore.getState().cargarEjemplo(1)
-              }}
-            >
-              <rect x={view.x + view.w / 2 - 90} y={view.y + view.h / 2 + 26} width={180} height={38} rx={8} fill="#fff" stroke="#c6ced6" strokeWidth={1.5} />
-              <text x={view.x + view.w / 2} y={view.y + view.h / 2 + 50} textAnchor="middle" fontSize={15} fontWeight={600} fill="#33475c">
-                …o carga un ejemplo
+        {bancoVacio && modo === 'editar' && (() => {
+          // Tamaños en píxeles de pantalla, sin importar el zoom del tablero.
+          const cont = contenedorRef.current
+          const k = Math.max(view.w / (anchoCont || cont?.clientWidth || 800), view.h / (cont?.clientHeight || 520))
+          const cx = view.x + view.w / 2
+          const cy = view.y + view.h / 2
+          return (
+            <g>
+              <text x={cx} y={cy - 78 * k} textAnchor="middle" fontSize={22 * k} fontWeight={700} fill="#33475c" pointerEvents="none">
+                Tu banco está vacío
               </text>
+              {['1 · Arrastra una ficha desde la paleta', '2 · Une los puertos con mangueras', '3 · Pulsa ▶ Simular y acciona las válvulas'].map((t, i) => (
+                <text key={i} x={cx} y={cy + (i * 22 - 40) * k} textAnchor="middle" fontSize={15 * k} fill="#51606f" pointerEvents="none">
+                  {t}
+                </text>
+              ))}
+              <g
+                role="button"
+                aria-label="Cargar un circuito de ejemplo"
+                style={{ cursor: 'pointer' }}
+                onPointerDown={(e) => {
+                  e.stopPropagation()
+                  useStore.getState().cargarEjemplo(1)
+                }}
+              >
+                <rect x={cx - 110 * k} y={cy + 24 * k} width={220 * k} height={44 * k} rx={8 * k} fill="#1668c7" />
+                <text x={cx} y={cy + 52 * k} textAnchor="middle" fontSize={15 * k} fontWeight={600} fill="#fff">
+                  Cargar un ejemplo
+                </text>
+              </g>
             </g>
-          </g>
-        )}
+          )
+        })()}
 
         {/* líneas de grupo (G1, G2… y P): barra continua con su rótulo */}
         {barras.map((b) => {
