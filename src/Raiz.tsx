@@ -1,16 +1,17 @@
 /**
  * Portada de NeumaLab: elige la unidad del curso. La unidad 1 (neumática)
- * es el laboratorio de siempre; las unidades 2 (PLC) y 3 (CNC) se cargan
- * sólo cuando alguien las abre.
+ * es el laboratorio de siempre; las unidades 2 (PLC), 3 (CNC) y 4 (robótica)
+ * se cargan sólo cuando alguien las abre.
  */
 import { lazy, Suspense, useEffect, useState } from 'react'
 import App from './App'
 
 const UnidadPLC = lazy(() => import('./plc/UnidadPLC'))
 const UnidadCNC = lazy(() => import('./cnc/UnidadCNC'))
+const UnidadRobotica = lazy(() => import('./robot/UnidadRobotica'))
 
-type Unidad = 'neumatica' | 'plc' | 'cnc'
-const UNIDADES: Unidad[] = ['neumatica', 'plc', 'cnc']
+type Unidad = 'neumatica' | 'plc' | 'cnc' | 'robotica'
+const UNIDADES: Unidad[] = ['neumatica', 'plc', 'cnc', 'robotica']
 const CLAVE = 'neumalab.unidad'
 
 function unidadInicial(): Unidad {
@@ -40,13 +41,16 @@ export default function Raiz() {
         ? 'NeumaLab — Laboratorio virtual de PLC'
         : unidad === 'cnc'
           ? 'NeumaLab — Simulador de CNC'
-          : 'NeumaLab — Laboratorio virtual de neumática'
+          : unidad === 'robotica'
+            ? 'NeumaLab — Robótica paramétrica'
+            : 'NeumaLab — Laboratorio virtual de neumática'
   }, [unidad])
 
   const pestanas: Array<[Unidad, string, string]> = [
     ['neumatica', 'Unidad 1 · Neumática', 'Circuitos neumáticos, método cascada y banco 3D'],
     ['plc', 'Unidad 2 · PLC', 'Programación Ladder y plantas del laboratorio en 3D'],
     ['cnc', 'Unidad 3 · CNC', 'Código G, torno y fresadora con simulación de mecanizado en 3D'],
+    ['robotica', 'Unidad 4 · Robótica', 'Robots KUKA: programación por nodos (como Grasshopper + KUKA|prc), mando y simulación 3D'],
   ]
   return (
     <>
@@ -82,7 +86,7 @@ export default function Raiz() {
         <App />
       ) : (
         <Suspense fallback={<p style={{ padding: 24, color: '#5a6b7d', textAlign: 'center' }}>Abriendo la unidad…</p>}>
-          {unidad === 'plc' ? <UnidadPLC /> : <UnidadCNC />}
+          {unidad === 'plc' ? <UnidadPLC /> : unidad === 'cnc' ? <UnidadCNC /> : <UnidadRobotica />}
         </Suspense>
       )}
     </>

@@ -1,4 +1,4 @@
-# NeumaLab — Laboratorio virtual de neumática, PLC y CNC
+# NeumaLab — Laboratorio virtual de neumática, PLC, CNC y robótica
 
 **MEC275** — Aplicación web para el laboratorio del curso, con una pestaña por unidad:
 
@@ -9,6 +9,9 @@
 - **Unidad 3 · CNC**: escribir programas en **código G** y simular el mecanizado en
   un centro de torneado o una fresadora en 3D, sin instalar CNC Simulator Pro (ver
   [Unidad 3 · CNC](#unidad-3--cnc)).
+- **Unidad 4 · Robótica**: programar un robot KUKA con nodos, como Grasshopper +
+  KUKA|prc, o con un mando manual, y simularlo en 3D con análisis y código KRL, sin
+  Windows ni licencias (ver [Unidad 4 · Robótica](#unidad-4--robótica)).
 
 Todo el contenido y la interfaz están en español.
 
@@ -319,6 +322,60 @@ operaciones, código de los insertos (ISO 1832) y cómo usar el simulador.
 
 La unidad no incluye enunciados ni soluciones de evaluaciones.
 
+## Unidad 4 · Robótica
+
+La pestaña **Unidad 4 · Robótica** reemplaza, para estudiar y practicar, a Rhino 8 +
+Grasshopper + KUKA|prc: corre en el navegador (Windows, Mac, Linux o tablet) y no
+necesita licencias.
+
+**Programación visual.** Un lienzo de nodos como el de Grasshopper: componentes con
+entradas a la izquierda y salidas a la derecha, cables arrastrando de una salida a una
+entrada (Mayús agrega un cable más; clic derecho desconecta), buscador con doble clic,
+deslizadores (Number Slider), paneles que muestran los datos y los colores de estado de
+Grasshopper (gris bien, naranjo faltan datos, rojo error, verde seleccionado). Las
+pestañas y los nombres siguen a Grasshopper y KUKA|prc:
+
+- *Params*: Curve (del plano DXF, por capa), Number Slider, Point, Panel.
+- *Curve*: Rectangle, Circle, Polygon, Divide Length, Divide Curve, Discontinuity, Area,
+  Offset Curve (para compensar el radio de la fresa).
+- *Vector*: XY Plane, Rotate Plane, Move. *Sets*: Merge, List Item, Reverse List.
+- *KUKA|prc*: LIN, PTP, CIR y AXIS Movement, Custom KRL, **Core**, Robot (KR 6 R900,
+  KR 10 R1100, KR 16-2, KR 50 R2100 y KR 120 R2700), Tool (husillo, taladro, ventosa,
+  portalápiz, personalizada), Divide Curve (planos orientados), Set Digital Out, Wait y
+  Command Weaver (en secuencia o intercalado).
+
+**Plano DXF.** «Abrir DXF» lee líneas, arcos, círculos, polilíneas (con arcos) y splines
+aproximadas, une los tramos sueltos en curvas continuas y respeta las unidades y las
+capas del archivo. La definición guarda el plano, así que viaja completa en el .json.
+
+**Simulación y análisis.** Brazos KUKA de 6 ejes con cinemática directa e inversa real
+(muñeca esférica, codo arriba, la solución más cercana), mesón y plancha en la base que
+se fija en el Core (X, Y, altura del mesón, giro, espesor), herramienta montada y
+reproductor como KUKA|play. La trayectoria se pinta verde, naranja o roja según el
+análisis: fuera de alcance, eje fuera de su rango, cerca de un límite, singularidad de
+muñeca (A5 ≈ 0 con A4/A6 girando) o salto brusco de configuración; cada problema se
+puede cliquear para ir a ese momento. Barras con el rango usado por cada eje, ficha
+técnica del robot, esfera de alcance, huella de la herramienta sobre la plancha y
+husillo que gira con la salida digital. **Exportar KRL** descarga el programa .src
+($BASE, $TOOL, PTP con ejes, LIN/CIR con X Y Z A B C, $OUT, WAIT); también se graba video.
+
+**Mando manual (teach-in).** Como el smartPAD: mover eje por eje o en X/Y/Z/A/B/C,
+dejar la herramienta vertical, grabar puntos PTP o LIN (con la salida de la pinza) y
+reproducirlos: el *teach-in/playback* de Devol. También exporta KRL.
+
+**Tipos de robots en 3D.** SCARA, cilíndrico, esférico, cartesiano, angular y delta,
+cada uno con sus articulaciones R/P movibles, grados de libertad y usos.
+
+**Ejemplos** (de estudio): estructura básica de KUKA|prc; acercarse y alejarse con PTP;
+fresado de una placa desde un DXF de práctica (contorno compensado, taladrado de
+agujeros con Command Weaver intercalado y husillo). **Teoría**: robot industrial (Devol,
+teach-in/playback), fabricación en serie frente a robótica, tipos, componentes,
+grados de libertad y singularidades, ficha técnica, programación paramétrica
+(Rhino → Grasshopper → KUKA|prc → KRL) y cómo instalar el software del curso de forma
+legal (evaluación de Rhino 8, KUKA|prc educativo).
+
+La unidad no incluye enunciados, planos ni soluciones de evaluaciones.
+
 ## Cómo ordena la aplicación el plano
 
 Al abrir un circuito (o cargar un ejemplo) la aplicación lo redibuja como un plano
@@ -437,6 +494,7 @@ queda atrapado el vástago se bloquea; y un cortocircuito presión-escape no hac
   /vista3d       # banco 3D de neumática: modelos, sonido y oído del banco
   /plc           # unidad 2: motor Ladder (scan), plantas, editor, planta 3D y teoría
   /cnc           # unidad 3: intérprete de código G, simulador de mecanizado, máquina 3D, editor y teoría
+  /robot         # unidad 4: cinemática KUKA, nodos tipo Grasshopper/KUKA|prc, DXF, simulación, KRL, mando y teoría
   persistencia.ts# guardar, abrir y compartir circuitos
 /server.js       # servidor Express para producción
 Dockerfile
@@ -450,7 +508,7 @@ npm run dev        # http://localhost:5173
 ```
 
 ```bash
-npm test           # 287 pruebas: motor, análisis, entregas, plano, símbolos, banco 3D, PLC, CNC y utilidades
+npm test           # 303 pruebas: motor, análisis, entregas, plano, símbolos, banco 3D, PLC, CNC, robótica y utilidades
 npm run typecheck  # comprobación de tipos
 npm run build      # compila a /dist
 ```
@@ -487,7 +545,8 @@ No hace falta `server.js` ni variables de entorno. Netlify funciona igual public
 
 Terminado: motor con tests, editor de pizarra, vistas en corte, banco 3D con sonido,
 unidad de PLC (Ladder, ciclo de scan, plantas 3D y teoría), unidad de CNC (código G,
-torno y fresadora en 3D, trayectoria y video), diagrama espacio-fase,
+torno y fresadora en 3D, trayectoria y video), unidad de robótica (nodos tipo
+Grasshopper/KUKA|prc, robots KUKA en 3D, KRL y mando), diagrama espacio-fase,
 guardado/compartir, despliegue y adaptación a tablet.
 
 Pendiente: modo *Aprender* con lecciones guiadas paso a paso, modo *Desafío* con
