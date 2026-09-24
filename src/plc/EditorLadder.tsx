@@ -22,7 +22,9 @@ import {
   colaCableada,
   escalonVacio,
   esContador,
+  esDatos,
   esTemporizador,
+  PALABRAS,
   type Bobina,
   type Celda,
   type Comparador,
@@ -88,7 +90,18 @@ const NOMBRES_BOBINA: Record<TipoBobina, string> = {
   RTO: 'Temporizador retentivo RTO',
   CTU: 'Contador CTU',
   CTD: 'Contador CTD',
+  MOV: 'Mover MOV',
+  ADD: 'Sumar ADD',
+  SUB: 'Restar SUB',
+  MUL: 'Multiplicar MUL',
+  DIV: 'Dividir DIV',
 }
+
+/** Signo de cada operación, para dibujarla y explicarla. */
+const SIGNO: Partial<Record<TipoBobina, string>> = { ADD: '+', SUB: '−', MUL: '×', DIV: '÷' }
+
+/** Las instrucciones que se dibujan como caja (no como bobina redonda). */
+const esCaja = (t: TipoBobina) => esTemporizador(t) || esContador(t) || esDatos(t)
 
 const herramientas = (n: Notacion): Array<{ id: Herramienta; icono: string; texto: string; titulo: string; grupo: number }> => [
   { id: 'seleccionar', icono: '↖', texto: 'Elegir', grupo: 0, titulo: 'Seleccionar: clic en un elemento para ver y cambiar su dirección' },
@@ -109,7 +122,12 @@ const herramientas = (n: Notacion): Array<{ id: Herramienta; icono: string; text
   { id: 'RTO', icono: 'RTO', texto: 'Retentivo', grupo: 3, titulo: 'Temporizador retentivo: acumula el tiempo con corriente y lo guarda sin ella; se reinicia con Reset (RES)' },
   { id: 'CTU', icono: 'CTU', texto: 'Cuenta ↑', grupo: 3, titulo: 'Contador ascendente: suma uno en cada flanco de subida' },
   { id: 'CTD', icono: 'CTD', texto: 'Cuenta ↓', grupo: 3, titulo: 'Contador descendente: resta uno en cada flanco de subida' },
-  { id: 'borrar', icono: '✕', texto: 'Borrar', grupo: 4, titulo: 'Borrar el elemento de la casilla (también con Supr)' },
+  { id: 'MOV', icono: 'MOV', texto: 'Mover', grupo: 4, titulo: 'MOV: copia un valor (constante, registro o acumulado) a un registro N mientras tiene corriente' },
+  { id: 'ADD', icono: 'ADD', texto: 'Sumar', grupo: 4, titulo: 'ADD: guarda A + B en un registro N mientras tiene corriente' },
+  { id: 'SUB', icono: 'SUB', texto: 'Restar', grupo: 4, titulo: 'SUB: guarda A − B en un registro N' },
+  { id: 'MUL', icono: 'MUL', texto: 'Multiplicar', grupo: 4, titulo: 'MUL: guarda A × B en un registro N' },
+  { id: 'DIV', icono: 'DIV', texto: 'Dividir', grupo: 4, titulo: 'DIV: guarda A ÷ B (entero) en un registro N' },
+  { id: 'borrar', icono: '✕', texto: 'Borrar', grupo: 5, titulo: 'Borrar el elemento de la casilla (también con Supr)' },
 ]
 
 const esBobina = (h: Herramienta): h is TipoBobina =>
@@ -192,6 +210,10 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
         if (antes?.dir && direccionesPara(h).includes(antes.dir)) nueva.dir = antes.dir
         if (esTemporizador(h)) nueva.preset = antes?.preset && esTemporizador(antes.tipo) ? antes.preset : 2
         if (esContador(h)) nueva.preset = antes?.preset && esContador(antes.tipo) ? antes.preset : 3
+        if (esDatos(h)) {
+          nueva.a = antes && esDatos(antes.tipo) ? antes.a : h === 'MOV' ? '0' : 'N0'
+          if (h !== 'MOV') nueva.b = antes && esDatos(antes.tipo) && antes.b ? antes.b : '1'
+        }
         p.escalones[s.escalon].bobinas[s.fila] = nueva
       })
       setSel(s)
@@ -364,7 +386,9 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
                     {celda.op}
                   </text>
                   <text x={cx} y={yf + 11} fontSize={10} textAnchor="middle" fill={celda.fuente ? TINTA : '#b3261e'}>
-                    {celda.fuente ? `${recortar(nombre(celda.fuente) || fmt(celda.fuente), 9)} ${SIMBOLO_COMPARADOR[celda.op]} ${celda.valor}` : '???'}
+                    {celda.fuente
+                      ? `${recortar(nombre(celda.fuente) || fmt(celda.fuente), 9)} ${SIMBOLO_COMPARADOR[celda.op]} ${celda.fuenteB ? recortar(fmt(celda.fuenteB), 7) : celda.valor}`
+                      : '???'}
                   </text>
                   {estado && celda.fuente && (
                     <text x={cx} y={yf + 28} fontSize={10} fontWeight={700} textAnchor="middle" fill={VERDE}>
@@ -404,9 +428,9 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
       if (b) {
         elementos.push(
           <g key={`bob${i}-${f}`}>
-            <line x1={XB} y1={yf} x2={cx - (esTemporizador(b.tipo) || esContador(b.tipo) ? 34 : 14)} y2={yf} {...trazo(activa)} />
+            <line x1={XB} y1={yf} x2={cx - (esCaja(b.tipo) ? 34 : 14)} y2={yf} {...trazo(activa)} />
             {dibujarBobina(b, cx, yf, activa && !!flujos, estado, nombre(b.dir), fmt, notacion)}
-            <line x1={cx + (esTemporizador(b.tipo) || esContador(b.tipo) ? 34 : 14)} y1={yf} x2={XR} y2={yf} stroke={TINTA} strokeWidth={2} />
+            <line x1={cx + (esCaja(b.tipo) ? 34 : 14)} y1={yf} x2={XR} y2={yf} stroke={TINTA} strokeWidth={2} />
           </g>,
         )
       }
@@ -559,7 +583,8 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
 function direccionesPara(tipo: TipoBobina): string[] {
   if (esTemporizador(tipo)) return TEMPORIZADORES
   if (esContador(tipo)) return CONTADORES
-  if (tipo === 'reset') return [...SALIDAS, ...MARCAS, ...TEMPORIZADORES, ...CONTADORES]
+  if (tipo === 'reset') return [...SALIDAS, ...MARCAS, ...TEMPORIZADORES, ...CONTADORES, ...PALABRAS]
+  if (esDatos(tipo)) return PALABRAS
   return [...SALIDAS, ...MARCAS]
 }
 
@@ -603,6 +628,7 @@ function Propiedades({
         {por('M', 'Marcas internas (M)')}
         {por('T', 'Temporizadores (T) · DN terminó, TT contando, EN con corriente')}
         {por('C', 'Contadores (C) · DN llegó a la cuenta, CU con corriente')}
+        {por('N', 'Registros enteros (N)')}
       </>
     )
   }
@@ -635,6 +661,19 @@ function Propiedades({
             {grupos(direccionesPara(b.tipo))}
           </select>
         </label>
+        {esDatos(b.tipo) && (
+          <>
+            <label>
+              A <Operando fmt={fmt} valor={b.a ?? ''} disabled={!editable} onCambiar={(x) => onCambiar((p) => ((p.escalones[sel.escalon].bobinas[sel.fila] as Bobina).a = x))} />
+            </label>
+            {b.tipo !== 'MOV' && (
+              <label>
+                {SIGNO[b.tipo]} B{' '}
+                <Operando fmt={fmt} valor={b.b ?? ''} disabled={!editable} onCambiar={(x) => onCambiar((p) => ((p.escalones[sel.escalon].bobinas[sel.fila] as Bobina).b = x))} />
+              </label>
+            )}
+          </>
+        )}
         {(esTemporizador(b.tipo) || esContador(b.tipo)) && (
           <label>
             {esTemporizador(b.tipo) ? 'Tiempo (s)' : 'Cuenta'}{' '}
@@ -684,6 +723,13 @@ function Propiedades({
               </option>
             ))}
           </optgroup>
+          <optgroup label="Registro entero">
+            {PALABRAS.map((v) => (
+              <option key={v} value={v}>
+                {fmt(v)}
+              </option>
+            ))}
+          </optgroup>
         </select>
         <select disabled={!editable} value={celda.op} onChange={(ev) => poner((c) => (c.op = ev.target.value as Comparador))}>
           {(Object.keys(SIMBOLO_COMPARADOR) as Comparador[]).map((op) => (
@@ -692,13 +738,18 @@ function Propiedades({
             </option>
           ))}
         </select>
-        <input
-          type="number"
-          step="any"
+        <Operando
+          fmt={fmt}
           disabled={!editable}
-          value={celda.valor}
-          onChange={(ev) => poner((c) => (c.valor = Number(ev.target.value) || 0))}
-          style={{ width: 70 }}
+          valor={celda.fuenteB ?? String(celda.valor)}
+          onCambiar={(x) =>
+            poner((c) => {
+              if (/^[+-]?\d+(\.\d+)?$/.test(x.trim()) || x.trim() === '') {
+                c.valor = Number(x) || 0
+                delete c.fuenteB
+              } else c.fuenteB = x
+            })
+          }
         />
         <span style={{ color: '#5a6b7d' }}>Deja pasar la corriente mientras la comparación sea verdadera.</span>
         <button onClick={onCerrar} style={{ marginLeft: 'auto', border: 'none', background: 'transparent', cursor: 'pointer', color: '#5a6b7d' }}>
@@ -758,8 +809,42 @@ function Propiedades({
   )
 }
 
+/** Un operando: una constante o una dirección con valor (registro, acumulado). */
+function Operando({ fmt, valor, onCambiar, disabled }: { fmt: (d: string) => string; valor: string; onCambiar: (x: string) => void; disabled: boolean }) {
+  const esConst = valor.trim() === '' || /^[+-]?\d+(\.\d+)?$/.test(valor.trim())
+  return (
+    <span style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
+      <select disabled={disabled} value={esConst ? '#' : valor} onChange={(e) => onCambiar(e.target.value === '#' ? '0' : e.target.value)}>
+        <option value="#">constante</option>
+        <optgroup label="Registros">
+          {PALABRAS.map((v) => (
+            <option key={v} value={v}>
+              {fmt(v)}
+            </option>
+          ))}
+        </optgroup>
+        <optgroup label="Acumulados">
+          {VALORES.filter((v) => !v.startsWith('N')).map((v) => (
+            <option key={v} value={v}>
+              {fmt(v)}
+            </option>
+          ))}
+        </optgroup>
+      </select>
+      {esConst && <input type="number" step="any" disabled={disabled} value={valor} onChange={(e) => onCambiar(e.target.value)} style={{ width: 70 }} />}
+    </span>
+  )
+}
+
 function explicarBobina(b: Bobina): string {
   switch (b.tipo) {
+    case 'MOV':
+      return 'Mientras tiene corriente, copia A en el registro de destino.'
+    case 'ADD':
+    case 'SUB':
+    case 'MUL':
+    case 'DIV':
+      return `Mientras tiene corriente, guarda A ${SIGNO[b.tipo]} B en el registro de destino (entero de 16 bits${b.tipo === 'DIV' ? ', sin decimales' : ''}). Ojo: se ejecuta en cada barrido; para hacerlo una sola vez, antepón un ONS.`
     case 'normal':
       return 'Vale 1 mientras le llega corriente.'
     case 'negada':
@@ -797,6 +882,29 @@ function dibujarBobina(
 ) {
   const color = activa ? VERDE : TINTA
   const etiqueta = b.dir ? recortar(nombre || fmt(b.dir), 14) : '???'
+  if (esDatos(b.tipo)) {
+    const op = (x?: string) => (x && /^[A-Z]/.test(x) ? fmt(x) : x ?? '?')
+    const expr = b.tipo === 'MOV' ? op(b.a) : `${op(b.a)} ${SIGNO[b.tipo]} ${op(b.b)}`
+    return (
+      <g>
+        <rect x={cx - 34} y={y - 22} width={68} height={44} rx={4} fill={activa ? '#eefaf3' : '#fff'} stroke={color} strokeWidth={2} />
+        <text x={cx} y={y - 8} fontSize={11} fontWeight={700} textAnchor="middle" fill={TINTA}>
+          {b.tipo} → {b.dir ? fmt(b.dir) : '???'}
+        </text>
+        <text x={cx} y={y + 6} fontSize={10} textAnchor="middle" fill="#5a6b7d">
+          {recortar(expr, 16)}
+        </text>
+        {estado && b.dir && (
+          <text x={cx} y={y + 18} fontSize={10.5} fontWeight={700} textAnchor="middle" fill={VERDE}>
+            = {estado.palabras?.[b.dir] ?? 0}
+          </text>
+        )}
+        <text x={cx} y={y - 27} fontSize={11.5} fontWeight={700} textAnchor="middle" fill={b.dir ? TINTA : '#b3261e'}>
+          {nombre ? recortar(nombre, 14) : ''}
+        </text>
+      </g>
+    )
+  }
   if (esTemporizador(b.tipo) || esContador(b.tipo)) {
     let valor = ''
     if (estado && b.dir) {
@@ -828,7 +936,7 @@ function dibujarBobina(
       </g>
     )
   }
-  const esTC = /^[TC]/.test(b.dir)
+  const esTC = /^[TCN]/.test(b.dir)
   const letra: Record<string, string> = {
     normal: '',
     negada: '/',
@@ -870,6 +978,7 @@ function dibujarBobina(
 
 function formatoValor(fuente: string, estado: EstadoPLC): string {
   const base = baseDe(fuente)
+  if (base.startsWith('N')) return String(estado.palabras?.[base] ?? 0)
   if (base.startsWith('T')) return `${(estado.temporizadores[base]?.acumulado ?? 0).toFixed(1)} s`
   return String(estado.contadores[base]?.valor ?? 0)
 }

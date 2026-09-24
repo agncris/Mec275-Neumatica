@@ -17,6 +17,7 @@ import { Historial } from '../historial'
 import {
   ENTRADAS,
   MARCAS,
+  PALABRAS,
   SALIDAS,
   areaDe,
   clonarPrograma,
@@ -103,6 +104,10 @@ export default function UnidadPLC() {
   /** Tipo de cada entrada libre del simulador de E/S (las que la planta no usa). */
   const [tiposLibres, setTiposLibres] = useState<Record<string, TipoLibre>>({})
   const inputArchivo = useRef<HTMLInputElement>(null)
+  /** Entradas y salidas forzadas (como «Force» en LogixPro). */
+  const [forzados, setForzados] = useState<Record<string, boolean>>({})
+  const forzadosRef = useRef(forzados)
+  forzadosRef.current = forzados
   const programaRef = useRef(programa)
   programaRef.current = programa
   const flujosRef = useRef<FlujoEscalon[] | null>(null)
@@ -182,12 +187,13 @@ export default function UnidadPLC() {
       // Los pulsadores NC de la planta dan 1 en reposo y 0 al pulsarlos.
       for (const m of PLANTAS[sim.planta.id].mandos) if (m.nc) entradas[m.dir] = !sim.mandos[m.dir]
       if (sim.corriendo) {
-        const r = scan(programaRef.current, estado, entradas, DT)
+        const r = scan(programaRef.current, estado, entradas, DT, forzadosRef.current)
         flujosRef.current = r.flujos
       } else {
         // En STOP las entradas se siguen viendo, pero las salidas están a 0.
-        for (const d of ENTRADAS) estado.bits[d] = !!entradas[d]
-        for (const d of SALIDAS) estado.bits[d] = false
+        const fz = forzadosRef.current
+        for (const d of ENTRADAS) estado.bits[d] = d in fz ? fz[d] : !!entradas[d]
+        for (const d of SALIDAS) estado.bits[d] = d in fz ? fz[d] : false
         estado.t += DT
       }
       const salidas: Record<string, boolean> = {}
@@ -524,6 +530,15 @@ export default function UnidadPLC() {
               // Un pulsador NC da 1 en reposo.
               pulsar(dir, tipo === 'NC')
             }}
+            forzados={forzados}
+            onForzar={(dir, v) =>
+              setForzados((f) => {
+                const n = { ...f }
+                if (v === null) delete n[dir]
+                else n[dir] = v
+                return n
+              })
+            }
           />
         </section>
       </div>
@@ -552,7 +567,15 @@ export default function UnidadPLC() {
 
       <section style={tarjeta}>
         <Seccion titulo="Tabla de datos · la memoria del PLC por dentro">
-          <TablaDatos estado={estado} programa={programa} notacion={notacion} />
+          <TablaDatos
+            estado={estado}
+            programa={programa}
+            notacion={notacion}
+            onPalabra={(d, v) => {
+              simRef.current.estado.palabras[d] = v
+              setFotograma((f) => f + 1)
+            }}
+          />
         </Seccion>
       </section>
 
@@ -617,6 +640,8 @@ function PanelES({
   notacion,
   tiposLibres,
   onTipoLibre,
+  forzados,
+  onForzar,
 }: {
   mandos: Mando[]
   simbolos: ProgramaPLC['simbolos']
@@ -627,7 +652,34 @@ function PanelES({
   notacion: Notacion
   tiposLibres: Record<string, TipoLibre>
   onTipoLibre: (dir: string, tipo: TipoLibre) => void
+  forzados: Record<string, boolean>
+  onForzar: (dir: string, v: boolean | null) => void
 }) {
+  /** Botón de forzado: sin forzar → forzar 1 → forzar 0 → sin forzar. */
+  const forzar = (d: string) => {
+    const f = forzados[d]
+    const texto = f === undefined ? 'F' : f ? 'F1' : 'F0'
+    return (
+      <button
+        onClick={() => onForzar(d, f === undefined ? true : f ? false : null)}
+        title={f === undefined ? `Forzar ${formatear(d, notacion)} a 1 (y otra vez, a 0)` : `Forzada a ${f ? 1 : 0}: clic para ${f ? 'forzar a 0' : 'quitar el forzado'}`}
+        data-forzar={d}
+        style={{
+          marginLeft: 'auto',
+          border: `1px solid ${f === undefined ? '#c6ced6' : '#c62828'}`,
+          background: f === undefined ? '#fff' : '#fdecea',
+          color: f === undefined ? '#8a97a5' : '#c62828',
+          borderRadius: 4,
+          padding: '0 5px',
+          fontSize: '0.72rem',
+          fontWeight: 700,
+          cursor: 'pointer',
+        }}
+      >
+        {texto}
+      </button>
+    )
+  }
   const colores: Record<string, string> = { verde: '#19a34e', rojo: '#c62828', negro: '#2b3036', amarillo: '#d4a017' }
   const nombre = (d: string) => simbolos.find((s) => s.dir === d)?.nombre ?? ''
   const fmt = (d: string) => formatear(d, notacion)
@@ -698,6 +750,14 @@ function PanelES({
           {mandos.map((m) => botonMando(m.dir, m.nombre, m.tipo, colores[m.color]))}
         </div>
       )}
+      {Object.keys(forzados).length > 0 && (
+        <p style={{ margin: '0 0 8px', padding: '4px 8px', background: '#fdecea', border: '1px solid #f1b0ab', borderRadius: 6, color: '#8e1c1c', fontSize: '0.8rem' }} data-aviso-forzado="si">
+          ⚠ Hay E/S forzadas ({Object.entries(forzados).map(([d, v]) => `${formatear(d, notacion)}=${v ? 1 : 0}`).join(', ')}): valen eso sin importar el programa ni la planta. Úsalo sólo para probar y quítalo después.{' '}
+          <button onClick={() => Object.keys(forzados).forEach((d) => onForzar(d, null))} style={{ border: '1px solid #c62828', background: '#fff', color: '#c62828', borderRadius: 4, cursor: 'pointer', fontSize: '0.76rem' }}>
+            Quitar todos
+          </button>
+        </p>
+      )}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10 }}>
         <div>
           <p style={subRotulo}>Entradas</p>
@@ -728,6 +788,7 @@ function PanelES({
                     <span style={{ color: '#8a97a5', fontSize: '0.76rem' }}>{deMandos.has(d) ? ' · mando' : ' · sensor de la planta'}</span>
                   </span>
                 )}
+                {forzar(d)}
               </div>
             )
           })}
@@ -740,6 +801,7 @@ function PanelES({
               <code style={{ minWidth: 48 }}>{fmt(d)}</code>
               <strong>{nombre(d)}</strong>
               {!cableado.includes(d) && <span style={{ color: '#8a97a5', fontSize: '0.76rem' }}>· piloto libre</span>}
+              {forzar(d)}
             </div>
           ))}
         </div>
@@ -755,7 +817,17 @@ const filaES: React.CSSProperties = { display: 'flex', alignItems: 'center', gap
  * Tabla de datos, como la de LogixPro: los bits de entradas, salidas y
  * marcas, y cada temporizador y contador con su preset, acumulado y bits.
  */
-function TablaDatos({ estado, programa, notacion }: { estado: EstadoPLC; programa: ProgramaPLC; notacion: Notacion }) {
+function TablaDatos({
+  estado,
+  programa,
+  notacion,
+  onPalabra,
+}: {
+  estado: EstadoPLC
+  programa: ProgramaPLC
+  notacion: Notacion
+  onPalabra: (d: string, v: number) => void
+}) {
   const fmt = (d: string) => formatear(d, notacion)
   const nombre = (d: string) => programa.simbolos.find((s) => s.dir === d)?.nombre ?? ''
   const celda: React.CSSProperties = { border: '1px solid #e0e5eb', padding: '3px 6px', textAlign: 'center', fontFamily: 'ui-monospace, monospace', fontSize: '0.82rem' }
@@ -865,6 +937,29 @@ function TablaDatos({ estado, programa, notacion }: { estado: EstadoPLC; program
           </tbody>
         </table>
       </div>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ borderCollapse: 'collapse' }} data-tabla-registros="si">
+          <tbody>
+            <tr>
+              <th style={{ ...celda, textAlign: 'left', background: '#f4f7fb' }}>{notacion === 'ab' ? 'N7 (enteros)' : 'MW (enteros)'}</th>
+              {PALABRAS.map((d) => (
+                <td key={d} style={{ ...celda, padding: 2 }} title={`${fmt(d)}${nombre(d) ? ` · ${nombre(d)}` : ''} — puedes escribir un valor`}>
+                  <div style={{ fontSize: '0.66rem', color: '#8a97a5' }}>{fmt(d).replace(/^.*[:W]/, '')}</div>
+                  <input
+                    type="number"
+                    value={estado.palabras?.[d] ?? 0}
+                    onChange={(e) => onPalabra(d, Math.max(-32767, Math.min(32767, Math.round(Number(e.target.value) || 0))))}
+                    style={{ width: 52, fontFamily: 'ui-monospace, monospace', fontSize: '0.8rem', textAlign: 'center', border: '1px solid #e0e5eb' }}
+                  />
+                </td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      {Object.values(estado.fallas ?? {}).length > 0 && (
+        <p style={{ margin: 0, color: '#c62828', fontSize: '0.82rem' }}>⚠ {Object.values(estado.fallas).join(' · ')}</p>
+      )}
       <p style={{ margin: 0, fontSize: '0.8rem', color: '#5a6b7d' }}>
         EN: la instrucción tiene corriente · TT: el temporizador está contando · DN: terminó (su contacto se cierra) · CU:
         el contador tiene corriente. Estos bits se pueden usar como contactos (por ejemplo {fmt('T0.DN')} o {fmt('T0.TT')}).

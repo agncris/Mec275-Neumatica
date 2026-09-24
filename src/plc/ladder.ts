@@ -29,8 +29,12 @@ export type Celda =
   | { tipo: 'contacto'; modo: ModoContacto; dir: string }
   /** ONS (one shot): deja pasar la corriente un solo barrido cuando llega. */
   | { tipo: 'ons' }
-  /** Comparación: pasa corriente si «fuente op valor» es verdadero (T0.ACC, C0.ACC). */
-  | { tipo: 'comparar'; op: Comparador; fuente: string; valor: number }
+  /**
+   * Comparación: pasa corriente si «fuente op valor» es verdadero. La fuente
+   * es un acumulado (T0.ACC, C0.ACC) o un registro (N0); si `fuenteB` está
+   * puesto, se compara con ese registro en vez de con la constante.
+   */
+  | { tipo: 'comparar'; op: Comparador; fuente: string; valor: number; fuenteB?: string }
 
 export const SIMBOLO_COMPARADOR: Record<Comparador, string> = {
   EQU: '=',
@@ -53,12 +57,24 @@ export type TipoBobina =
   | 'RTO'
   | 'CTU'
   | 'CTD'
+  | 'MOV'
+  | 'ADD'
+  | 'SUB'
+  | 'MUL'
+  | 'DIV'
 
 export interface Bobina {
   tipo: TipoBobina
   dir: string
   /** Temporizadores: segundos. Contadores: cuentas. */
   preset?: number
+  /**
+   * Instrucciones de datos: operandos A y B. Cada uno es una constante
+   * («25») o una dirección que tiene valor (N0, T0.ACC, C0.ACC). El resultado
+   * va a `dir` (un registro N).
+   */
+  a?: string
+  b?: string
 }
 
 export interface Escalon {
@@ -99,14 +115,17 @@ export const MARCAS = [...Array.from({ length: 8 }, (_, i) => `M0.${i}`), ...Arr
 export const TEMPORIZADORES = Array.from({ length: 8 }, (_, i) => `T${i}`)
 export const CONTADORES = Array.from({ length: 8 }, (_, i) => `C${i}`)
 export const DIRECCIONES = [...ENTRADAS, ...SALIDAS, ...MARCAS, ...TEMPORIZADORES, ...CONTADORES]
+/** Registros enteros (N7:0… en LogixPro, MW0… en Siemens). */
+export const PALABRAS = Array.from({ length: 16 }, (_, i) => `N${i}`)
 
-export type Area = 'I' | 'Q' | 'M' | 'T' | 'C'
+export type Area = 'I' | 'Q' | 'M' | 'T' | 'C' | 'N'
 export const areaDe = (dir: string): Area | null => {
   if (/^I0\.[0-7]$/.test(dir)) return 'I'
   if (/^Q0\.[0-7]$/.test(dir)) return 'Q'
   if (/^M[01]\.[0-7]$/.test(dir)) return 'M'
   if (/^T[0-7](\.(DN|TT|EN|ACC))?$/.test(dir)) return 'T'
   if (/^C[0-7](\.(DN|CU|ACC))?$/.test(dir)) return 'C'
+  if (/^N(1[0-5]|[0-9])$/.test(dir)) return 'N'
   return null
 }
 
@@ -118,16 +137,20 @@ export const BITS_TC = [
   ...Array.from({ length: 8 }, (_, i) => BITS_TEMPORIZADOR.map((b) => `T${i}.${b}`)).flat(),
   ...Array.from({ length: 8 }, (_, i) => BITS_CONTADOR.map((b) => `C${i}.${b}`)).flat(),
 ]
-/** Valores numéricos que se pueden comparar: el acumulado de cada T y C. */
+/** Valores numéricos que se pueden comparar: el acumulado de cada T y C, y los registros N. */
 export const VALORES = [
   ...Array.from({ length: 8 }, (_, i) => `T${i}.ACC`),
   ...Array.from({ length: 8 }, (_, i) => `C${i}.ACC`),
+  ...PALABRAS,
 ]
 /** La palabra base de una dirección: «T0.DN» → «T0». */
 export const baseDe = (dir: string) => (/^[TC]\d/.test(dir) ? dir.split('.')[0] : dir)
 
 export const esTemporizador = (t: TipoBobina) => t === 'TON' || t === 'TOF' || t === 'RTO'
 export const esContador = (t: TipoBobina) => t === 'CTU' || t === 'CTD'
+export const esDatos = (t: TipoBobina) => t === 'MOV' || t === 'ADD' || t === 'SUB' || t === 'MUL' || t === 'DIV'
+/** Rango de un entero de 16 bits, como los registros N de LogixPro. */
+export const ENTERO_MAX = 32767
 
 // ---------------------------------------------------------------------------
 // Construcción
@@ -177,6 +200,10 @@ export interface EstadoPLC {
   contadores: Record<string, Contador>
   /** Para los flancos: si la bobina tenía corriente en el barrido anterior. */
   previo: Record<string, boolean>
+  /** Registros enteros N0…N15. */
+  palabras: Record<string, number>
+  /** Avisos de ejecución (división por cero, desborde), por escalón. */
+  fallas: Record<string, string>
   /** Segundos de funcionamiento (suma de los dt de cada scan). */
   t: number
 }
@@ -184,7 +211,9 @@ export interface EstadoPLC {
 export function estadoInicial(): EstadoPLC {
   const bits: Record<string, boolean> = {}
   for (const d of [...ENTRADAS, ...SALIDAS, ...MARCAS]) bits[d] = false
-  return { bits, temporizadores: {}, contadores: {}, previo: {}, t: 0 }
+  const palabras: Record<string, number> = {}
+  for (const d of PALABRAS) palabras[d] = 0
+  return { bits, temporizadores: {}, contadores: {}, previo: {}, palabras, fallas: {}, t: 0 }
 }
 
 /** Valor lógico de una dirección tal como la lee un contacto. */
@@ -212,7 +241,16 @@ export function valorDe(estado: EstadoPLC, fuente: string): number {
   const base = baseDe(fuente)
   if (areaDe(base) === 'T') return estado.temporizadores[base]?.acumulado ?? 0
   if (areaDe(base) === 'C') return estado.contadores[base]?.valor ?? 0
+  if (areaDe(base) === 'N') return estado.palabras?.[base] ?? 0
   return 0
+}
+
+/** Valor de un operando: una constante («25», «-3») o una dirección con valor. */
+export function operando(estado: EstadoPLC, x: string | undefined): number {
+  const t = (x ?? '').trim()
+  if (t === '') return 0
+  if (/^[+-]?\d+(\.\d+)?$/.test(t)) return Number(t)
+  return valorDe(estado, t)
 }
 
 export function comparar(op: Comparador, a: number, b: number): boolean {
@@ -288,7 +326,8 @@ export function conduce(escalon: Escalon, fila: number, col: number, lee: Lector
   }
   if (celda.tipo === 'comparar') {
     if (!celda.fuente) return false
-    return comparar(celda.op, lee.valor?.(celda.fuente) ?? 0, celda.valor)
+    const b = celda.fuenteB ? lee.valor?.(celda.fuenteB) ?? 0 : celda.valor
+    return comparar(celda.op, lee.valor?.(celda.fuente) ?? 0, b)
   }
   // El ONS depende de su propia entrada: se resuelve durante el flujo.
   if (celda.tipo === 'ons') return !(lee.onsPrevio?.(fila, col) ?? false)
@@ -351,8 +390,12 @@ export function scan(
   estado: EstadoPLC,
   entradas: Record<string, boolean>,
   dt: number,
+  /** Entradas y salidas forzadas (como «Force» en LogixPro): valen lo indicado pase lo que pase. */
+  forzados: Record<string, boolean> = {},
 ): ResultadoScan {
-  for (const d of ENTRADAS) estado.bits[d] = !!entradas[d]
+  estado.palabras ??= Object.fromEntries(PALABRAS.map((d) => [d, 0]))
+  estado.fallas ??= {}
+  for (const d of ENTRADAS) estado.bits[d] = d in forzados ? forzados[d] : !!entradas[d]
   estado.t += dt
   const flujos: FlujoEscalon[] = []
   programa.escalones.forEach((escalon, i) => {
@@ -373,6 +416,8 @@ export function scan(
       ejecutarBobina(estado, bobina, flujo.bobinas[f], `${i}.${f}`, dt)
     })
   })
+  // Las salidas forzadas mandan sobre lo que haya resuelto el programa.
+  for (const [d, v] of Object.entries(forzados)) if (areaDe(d) === 'Q') estado.bits[d] = v
   return { flujos }
 }
 
@@ -382,6 +427,41 @@ function ejecutarBobina(estado: EstadoPLC, b: Bobina, corriente: boolean, clave:
   estado.previo[clave] = corriente
   // Una entrada no se puede escribir: la impone el mundo exterior.
   if (area === 'I') return
+
+  if (esDatos(b.tipo)) {
+    // Como en LogixPro: con corriente, la instrucción se ejecuta en cada barrido.
+    if (!corriente || area !== 'N') return
+    const a = operando(estado, b.a)
+    const c = operando(estado, b.b)
+    let r: number
+    switch (b.tipo) {
+      case 'MOV':
+        r = a
+        break
+      case 'ADD':
+        r = a + c
+        break
+      case 'SUB':
+        r = a - c
+        break
+      case 'MUL':
+        r = a * c
+        break
+      default:
+        if (c === 0) {
+          estado.fallas[clave] = `DIV entre cero en ${b.dir}: el resultado no cambia.`
+          return
+        }
+        r = Math.trunc(a / c)
+    }
+    r = Math.round(r)
+    if (Math.abs(r) > ENTERO_MAX) {
+      estado.fallas[clave] = `Desborde en ${b.dir}: ${r} no cabe en un entero de 16 bits (±${ENTERO_MAX}).`
+      r = Math.max(-ENTERO_MAX, Math.min(ENTERO_MAX, r))
+    } else delete estado.fallas[clave]
+    estado.palabras[b.dir] = r
+    return
+  }
 
   if (esTemporizador(b.tipo)) {
     if (area !== 'T') return
@@ -467,6 +547,8 @@ function ejecutarBobina(estado: EstadoPLC, b: Bobina, corriente: boolean, clave:
           ct.valor = ct.tipo === 'CTD' ? ct.preset : 0
           ct.hecho = ct.tipo === 'CTD' ? ct.preset <= 0 : false
         }
+      } else if (area === 'N') {
+        estado.palabras[b.dir] = 0
       } else {
         estado.bits[b.dir] = false
       }
@@ -505,6 +587,11 @@ export function revisarPrograma(programa: ProgramaPLC): string[] {
       if (area === 'I') avisos.push(`Escalón ${n}: ${nombre(b.dir)} es una entrada; una bobina no puede escribirla.`)
       if (esTemporizador(b.tipo) && area !== 'T') avisos.push(`Escalón ${n}: un ${b.tipo} necesita una dirección de temporizador (T0…T7).`)
       if (esContador(b.tipo) && area !== 'C') avisos.push(`Escalón ${n}: un ${b.tipo} necesita una dirección de contador (C0…C7).`)
+      if (esDatos(b.tipo)) {
+        if (area !== 'N') avisos.push(`Escalón ${n}: ${b.tipo} guarda su resultado en un registro N (N0…N15).`)
+        if (!(b.a ?? '').trim()) avisos.push(`Escalón ${n}: a ${b.tipo} le falta el operando A (una constante o un registro).`)
+        if (b.tipo !== 'MOV' && !(b.b ?? '').trim()) avisos.push(`Escalón ${n}: a ${b.tipo} le falta el operando B.`)
+      }
       if (b.tipo === 'normal' || b.tipo === 'negada') {
         normales.set(b.dir, [...(normales.get(b.dir) ?? []), n])
       }

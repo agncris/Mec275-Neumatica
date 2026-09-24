@@ -78,3 +78,65 @@ describe('instrucciones', () => {
     expect(leer(e, 'C0.CU')).toBe(true)
   })
 })
+
+describe('instrucciones de datos y forzado', () => {
+  it('ADD con ONS cuenta pulsaciones; MUL, DIV y comparaciones entre registros', async () => {
+    const { EJEMPLOS_PLC } = await import('../plc/ejemplos')
+    const { estadoInicial, scan, revisarPrograma } = await import('../plc/ladder')
+    const p = EJEMPLOS_PLC.find((e) => e.id === 'datos')!.programa
+    expect(revisarPrograma(p)).toEqual([])
+    const e = estadoInicial()
+    const pulso = (dir: string) => {
+      scan(p, e, { [dir]: true }, 0.02)
+      scan(p, e, { [dir]: true }, 0.02)
+      scan(p, e, {}, 0.02)
+    }
+    for (let i = 0; i < 6; i++) pulso('I0.0')
+    expect(e.palabras.N0).toBe(6)
+    expect(e.palabras.N1).toBe(60)
+    expect(e.palabras.N2).toBe(3)
+    expect(e.bits['Q0.0']).toBe(true)
+    expect(e.bits['Q0.1']).toBe(true)
+    pulso('I0.1')
+    expect(e.palabras.N0).toBe(5)
+    pulso('I0.3')
+    expect(e.palabras.N0).toBe(0)
+    expect(e.bits['Q0.0']).toBe(false)
+  })
+  it('DIV entre cero no cambia el resultado y avisa; desborde se recorta', async () => {
+    const { estadoInicial, scan, programaVacio, escalonVacio } = await import('../plc/ladder')
+    const p = programaVacio()
+    const e1 = escalonVacio()
+    e1.celdas[0][0] = { tipo: 'cable' }
+    e1.bobinas[0] = { tipo: 'DIV', dir: 'N3', a: '10', b: '0' }
+    const e2 = escalonVacio()
+    e2.celdas[0][0] = { tipo: 'cable' }
+    e2.bobinas[0] = { tipo: 'MUL', dir: 'N4', a: '30000', b: '3' }
+    p.escalones = [e1, e2]
+    const e = estadoInicial()
+    e.palabras.N3 = 7
+    scan(p, e, {}, 0.02)
+    expect(e.palabras.N3).toBe(7)
+    expect(Object.values(e.fallas).join(' ')).toMatch(/DIV entre cero/)
+    expect(e.palabras.N4).toBe(32767)
+    expect(Object.values(e.fallas).join(' ')).toMatch(/Desborde/)
+  })
+  it('forzar: una entrada forzada vale lo forzado y una salida forzada manda sobre el programa', async () => {
+    const { estadoInicial, scan, programaVacio, escalonVacio } = await import('../plc/ladder')
+    const p = programaVacio()
+    const e1 = escalonVacio()
+    e1.celdas[0][0] = { tipo: 'contacto', modo: 'NA', dir: 'I0.0' }
+    e1.bobinas[0] = { tipo: 'normal', dir: 'Q0.0' }
+    p.escalones = [e1]
+    const e = estadoInicial()
+    scan(p, e, { 'I0.0': false }, 0.02, { 'I0.0': true })
+    expect(e.bits['Q0.0']).toBe(true)
+    scan(p, e, { 'I0.0': true }, 0.02, { 'Q0.0': false })
+    expect(e.bits['Q0.0']).toBe(false)
+  })
+  it('notación de los registros', async () => {
+    const { formatear } = await import('../plc/notacion')
+    expect(formatear('N3', 'ab')).toBe('N7:3')
+    expect(formatear('N3', 'siemens')).toBe('MW6')
+  })
+})
