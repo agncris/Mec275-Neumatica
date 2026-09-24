@@ -403,6 +403,7 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
         elementos.push(
           <rect
             key={`h${clave}`}
+            data-celda={`${i}-${f}-${c}`}
             x={x + 2}
             y={yf - FH / 2 + 2}
             width={CW - 4}

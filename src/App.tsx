@@ -6,7 +6,7 @@
  *  - Simular: el motor corre a 30 Hz; se accionan las válvulas y se ve el aire
  *    circular, las correderas conmutar y los vástagos moverse.
  */
-import { BarraHerramientas, botonPrimario, botonSecundario, botonTerciario, CabeceraUnidad, COLOR, estiloAviso, Etiquetado, Menu } from './components/ui'
+import { BarraHerramientas, botonPrimario, botonSecundario, botonTerciario, CabeceraUnidad, COLOR, estiloAviso, Etiquetado, Menu, useTactil } from './components/ui'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { DT_POR_DEFECTO, Motor, validarCircuito } from './engine'
 import Paleta from './components/Paleta'
@@ -90,6 +90,7 @@ export default function App() {
   const [vista, setVista] = useState<VistaApp>('esquema')
   const [paralela, setParalela] = useState(false)
   const estrecha = useEsEstrecha()
+  const tactil = useTactil()
   const inputArchivo = useRef<HTMLInputElement>(null)
 
   // --- carga inicial: primero la URL compartida, si no la copia local -------
@@ -455,13 +456,19 @@ export default function App() {
             </button>
             <span style={{ width: 10 }} />
             <span style={{ fontSize: '0.8rem', color: '#5a6b7d' }}>
-              Rueda para zoom · arrastra el fondo para moverte · los botones del panel ajustan la vista y la abren a pantalla completa
+              {tactil
+                ? 'Dos dedos para acercar o alejar · arrastra el fondo para moverte · «Ajustar» encuadra todo el circuito'
+                : 'Rueda para zoom · arrastra el fondo para moverte · los botones del panel ajustan la vista y la abren a pantalla completa'}
             </span>
           </div>
           <p style={{ margin: '6px 2px', fontSize: '0.82rem', color: '#5a6b7d' }}>
             {modo === 'editar'
-              ? 'Clic cerca de un puerto para cablear (son magnéticos) · Supr borra la selección · Esc cancela · Espacio simula'
-              : 'Mantén pulsadas las válvulas de pulsador · clic en una biestable la conmuta a mano · clic en la fuente corta el aire'}
+              ? tactil
+                ? 'Toca una ficha de la paleta para agregarla (o arrástrala) · toca un puerto y luego el de destino para unirlos · toca una ficha para ver sus propiedades'
+                : 'Clic cerca de un puerto para cablear (son magnéticos) · Supr borra la selección · Esc cancela · Espacio simula'
+              : tactil
+                ? 'Mantén el dedo sobre las válvulas de pulsador · toca una biestable para conmutarla · toca la fuente para cortar el aire'
+                : 'Mantén pulsadas las válvulas de pulsador · clic en una biestable la conmuta a mano · clic en la fuente corta el aire'}
           </p>
         </div>
       </div>

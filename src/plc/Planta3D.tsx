@@ -8,6 +8,7 @@
  * (`sim.current`) y se pone al día. Los botones de la máquina se pulsan con
  * el ratón o el dedo, igual que en el banco.
  */
+import { acercar, useTactil } from '../components/ui'
 import { useEffect, useRef, useState, type MutableRefObject } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
@@ -1312,6 +1313,7 @@ function crearEscena(id: string): Escena {
 // Componente
 // ---------------------------------------------------------------------------
 export default function Planta3D({ sim, version, acciones, onAccion, notacion }: Props) {
+  const tactil = useTactil()
   const contRef = useRef<HTMLDivElement>(null)
   const [sinWebGL, setSinWebGL] = useState(false)
   const [pantallaCompleta, setPantallaCompleta] = useState(false)
@@ -1598,7 +1600,7 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion }:
           ))}
         </div>
       )}
-      <p style={pista}>Arrastra para girar · rueda para acercarte · pulsa los botones de la máquina</p>
+      <p style={pista}>Arrastra para girar · {acercar(tactil)} · {tactil ? 'toca' : 'pulsa'} los botones de la máquina</p>
     </div>
   )
 }

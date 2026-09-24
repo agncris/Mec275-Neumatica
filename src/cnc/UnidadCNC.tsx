@@ -6,6 +6,7 @@
  * sus coordenadas, explicación de cada bloque y exportación del .cnc y del
  * video de la simulación.
  */
+import { acercar, useTactil } from '../components/ui'
 import { BarraHerramientas, botonSecundario, CabeceraUnidad, estiloAviso, Etiquetado, Menu } from '../components/ui'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Seccion } from '../components/Seccion'
@@ -76,6 +77,7 @@ function leerGuardado(): Guardado {
 const VELOCIDADES = [0.5, 1, 2, 5, 10, 25, 60]
 
 export default function UnidadCNC() {
+  const tactil = useTactil()
   const inicial = useMemo(leerGuardado, [])
   const [config, setConfig] = useState<ConfigCNC>(inicial.config)
   const [codigos, setCodigos] = useState(inicial.codigos)
@@ -514,7 +516,7 @@ export default function UnidadCNC() {
             <label style={{ display: 'flex', gap: 5, alignItems: 'center' }} title="Husillo, corte y ejes; se activa al hacer clic en la vista 3D">
               <input type="checkbox" checked={sonido} onChange={(e) => setSonido(e.target.checked)} /> Sonido
             </label>
-            <span style={{ color: '#5a6b7d' }}>Arrastra para girar la vista, rueda para acercar.</span>
+            <span style={{ color: '#5a6b7d' }}>Arrastra para girar la vista · {acercar(tactil)}.</span>
           </div>
           <Tablero
             sim={sim}

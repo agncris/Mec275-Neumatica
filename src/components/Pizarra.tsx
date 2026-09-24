@@ -126,7 +126,7 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
   const { moverPieza, seleccionar, iniciarCable, conectarCable, cancelarCable } = useStore()
 
   const colocando = useStore((s) => s.colocando)
-  const { agregarPieza, agregarPiezaEn, terminarColocacion } = useStore()
+  const { agregarPiezaEn, terminarColocacion } = useStore()
 
   const [cursor, setCursor] = useState<Punto | null>(null)
   const [fantasma, setFantasma] = useState<Punto | null>(null)
@@ -139,6 +139,11 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
     movido: boolean
   } | null>(null)
   const panRef = useRef<{ x: number; y: number; px: number; py: number } | null>(null)
+  // Zoom con dos dedos (pantallas táctiles).
+  const dedosRef = useRef(new Map<number, { x: number; y: number }>())
+  const pinzaRef = useRef<{ d0: number; esc0: number; mundo: Punto } | null>(null)
+  const viewRef = useRef<VistaVentana>({ x: 0, y: 0, w: VW_BASE, h: VH_BASE })
+  viewRef.current = view
   const escalaRef = useRef(1)
   /** Ficha que se está arrastrando ahora mismo (para no reenrutar todo el plano). */
   const [arrastrando, setArrastrando] = useState<string | null>(null)
@@ -242,6 +247,12 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
         h,
       })
       escalaRef.current = esc
+    } else {
+      // Tablero vacío: a tamaño real (un poco menos en el celular), para que
+      // las fichas y sus puertos se vean y se puedan tocar.
+      const esc = cw < 600 ? 0.7 : 1
+      setView({ x: 0, y: 0, w: cw / esc, h: ch / esc })
+      escalaRef.current = esc
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -255,6 +266,9 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
     const desc = DESCRIPTORES[colocando.tipo]
 
     const posSoltado = (clientX: number, clientY: number): Punto | null => {
+      // Sólo cuenta si se suelta dentro del tablero.
+      const r = contenedorRef.current?.getBoundingClientRect()
+      if (!r || clientX < r.left || clientX > r.right || clientY < r.top || clientY > r.bottom) return null
       const p = coordsDesdeCliente(clientX, clientY)
       if (!p) return null
       const x = Math.round((p.x - desc.ancho / 2) / REJILLA) * REJILLA
@@ -269,7 +283,29 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
         agregarPiezaEn(colocando.tipo, { ...colocando.params }, destino.x, destino.y)
       } else {
         const dist = Math.hypot(e.clientX - colocando.inicio.x, e.clientY - colocando.inicio.y)
-        if (dist < 8) agregarPieza(colocando.tipo, { ...colocando.params })
+        if (dist < 8) {
+          // Tocar la ficha (sin arrastrar) la agrega al centro de lo que se ve.
+          // Si ahí ya hay una ficha, busca el primer lugar libre alrededor.
+          const v = viewRef.current
+          const x0 = Math.round((v.x + v.w / 2 - desc.ancho / 2) / REJILLA) * REJILLA
+          const y0 = Math.round((v.y + v.h / 2 - desc.alto / 2) / REJILLA) * REJILLA
+          const ocupado = (x: number, y: number) =>
+            useStore.getState().piezas.some((q) => {
+              const dq = DESCRIPTORES[q.tipo]
+              return x < q.x + dq.ancho + 20 && x + desc.ancho + 20 > q.x && y < q.y + dq.alto + 30 && y + desc.alto + 30 > q.y
+            })
+          let lugar = { x: x0, y: y0 }
+          buscar: for (let r = 1; r < 12 && ocupado(lugar.x, lugar.y); r++) {
+            for (const [dx, dy] of [[0, 1], [1, 0], [-1, 0], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]]) {
+              const c = { x: x0 + dx * r * 60, y: y0 + dy * r * 60 }
+              if (!ocupado(c.x, c.y)) {
+                lugar = c
+                break buscar
+              }
+            }
+          }
+          agregarPiezaEn(colocando.tipo, { ...colocando.params }, lugar.x, lugar.y)
+        }
       }
       terminarColocacion()
     }
@@ -368,6 +404,44 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
     else void cont.requestFullscreen?.().catch(() => setPantallaCompleta(false))
   }
 
+  // --- zoom con dos dedos --------------------------------------------------
+  const medirPinza = () => {
+    const [a, b] = Array.from(dedosRef.current.values())
+    return { d: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 }
+  }
+  const onDedoAbajo = (e: React.PointerEvent) => {
+    if (e.pointerType !== 'touch' || soloLectura) return
+    dedosRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    if (dedosRef.current.size === 2) {
+      // El segundo dedo convierte el gesto en zoom: se cancela lo que hacía el primero.
+      panRef.current = null
+      arrastreRef.current = null
+      setIman(null)
+      const { d, mx, my } = medirPinza()
+      const cw = contenedorRef.current?.clientWidth || viewRef.current.w
+      pinzaRef.current = { d0: Math.max(10, d), esc0: cw / viewRef.current.w, mundo: coordsDesdeCliente(mx, my) ?? { x: 0, y: 0 } }
+    }
+  }
+  const onDedoMueve = (e: React.PointerEvent) => {
+    if (e.pointerType !== 'touch' || !dedosRef.current.has(e.pointerId)) return
+    dedosRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    const pz = pinzaRef.current
+    const cont = contenedorRef.current
+    if (!pz || dedosRef.current.size < 2 || !cont) return
+    e.stopPropagation()
+    const { d, mx, my } = medirPinza()
+    const r = cont.getBoundingClientRect()
+    const esc = Math.max(ESC_MIN, Math.min(ESC_MAX, (pz.esc0 * d) / pz.d0))
+    const w = r.width / esc
+    const h = r.height / esc
+    escalaRef.current = esc
+    setView({ x: pz.mundo.x - ((mx - r.left) / r.width) * w, y: pz.mundo.y - ((my - r.top) / r.height) * h, w, h })
+  }
+  const onDedoArriba = (e: React.PointerEvent) => {
+    dedosRef.current.delete(e.pointerId)
+    if (dedosRef.current.size < 2) pinzaRef.current = null
+  }
+
   // --- pan / zoom ----------------------------------------------------------
   const escDe = (v: VistaVentana, cw: number) => cw / v.w
 
@@ -407,8 +481,11 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
 
   const onPointerDownFondo = (e: React.PointerEvent) => {
     if (soloLectura || e.target !== svgRef.current) return
-    if (modo === 'editar' && iman) {
-      accionPuerto(iman.ref)
+    // Con el dedo no hay «imán» previo (no se pasa por encima): se busca el
+    // puerto más cercano al tocar.
+    const cerca = modo === 'editar' ? (iman ?? (e.pointerType !== 'mouse' ? puertoMasCercano(coordsSvg(e)) : null)) : null
+    if (cerca) {
+      accionPuerto(cerca.ref)
       return
     }
     // Arrastrar el fondo = pan (deja el puntero libre para cablear con clic)
@@ -425,7 +502,7 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
    * atasca acumulando trabajo que ya está obsoleto.
    */
   const onPointerMove = (e: React.PointerEvent) => {
-    if (soloLectura) return
+    if (soloLectura || pinzaRef.current) return
     pendienteRef.current = coordsSvg(e)
     if (fotogramaRef.current !== null) return
     fotogramaRef.current = requestAnimationFrame(() => {
@@ -663,6 +740,10 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
         preserveAspectRatio="xMidYMid meet"
         style={{ display: 'block', cursor: modo === 'editar' && iman ? 'crosshair' : 'default' }}
         onWheel={onWheel}
+        onPointerDownCapture={onDedoAbajo}
+        onPointerMoveCapture={onDedoMueve}
+        onPointerUpCapture={onDedoArriba}
+        onPointerCancelCapture={onDedoArriba}
         onPointerDown={onPointerDownFondo}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -900,6 +981,7 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
                       r={16}
                       fill="transparent"
                       style={{ cursor: modo === 'editar' ? 'crosshair' : 'default' }}
+                      data-puerto={`${pieza.id}.${puerto.id}`}
                       onPointerDown={(e) => onClickPuerto(e, { componente: pieza.id, puerto: puerto.id })}
                     />
                   </g>

@@ -13,6 +13,7 @@
  * altura del punto de la carrera que vigilan, para que se vea a la leva
  * pisarlos.
  */
+import { acercar, useTactil } from '../components/ui'
 import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
@@ -300,6 +301,7 @@ function estadoDe(motor: Motor | null, p: Pieza): { estado: EstadoPieza; presion
 }
 
 export default function Banco3D({ motor }: Props) {
+  const tactil = useTactil()
   const contenedorRef = useRef<HTMLDivElement>(null)
   const motorRef = useRef<Motor | null>(motor)
   motorRef.current = motor
@@ -816,8 +818,8 @@ export default function Banco3D({ motor }: Props) {
       )}
       <p style={pista}>
         {motor
-          ? 'Arrastra para girar el banco · rueda para acercarte · mantén pulsado un mando para accionarlo'
-          : 'Pulsa ▶ Simular para poner el banco en marcha · arrastra para girarlo · rueda para acercarte'}
+          ? `Arrastra para girar el banco · ${acercar(tactil)} · mantén pulsado un mando para accionarlo`
+          : `Pulsa ▶ Simular para poner el banco en marcha · arrastra para girarlo · ${acercar(tactil)}`}
       </p>
     </div>
   )

@@ -42,6 +42,23 @@ export const botonSecundario: CSSProperties = { ...base, border: `1px solid ${CO
 /** Acciones menores: sólo texto. */
 export const botonTerciario: CSSProperties = { ...base, border: '1px solid transparent', background: 'transparent', color: COLOR.pizarra, padding: '0.4rem 0.6rem', fontWeight: 500 }
 
+/** ¿Pantalla táctil (dedo) en vez de mouse? Para escribir las ayudas como corresponde. */
+export function useTactil(): boolean {
+  const consulta = '(pointer: coarse)'
+  const [t, setT] = useState(() => typeof window !== 'undefined' && !!window.matchMedia?.(consulta).matches)
+  useEffect(() => {
+    const mq = window.matchMedia?.(consulta)
+    if (!mq) return
+    const cambiar = () => setT(mq.matches)
+    mq.addEventListener?.('change', cambiar)
+    return () => mq.removeEventListener?.('change', cambiar)
+  }, [])
+  return t
+}
+
+/** «rueda» o «dos dedos», según el dispositivo. */
+export const acercar = (tactil: boolean) => (tactil ? 'pellizca con dos dedos para acercar' : 'rueda para acercar')
+
 // ---------------------------------------------------------------------------
 // Cabecera y barra de herramientas
 // ---------------------------------------------------------------------------
@@ -109,6 +126,8 @@ export interface ItemMenu {
 
 export function Menu({ etiqueta, items, ancho = 280, datos }: { etiqueta: string; items: ItemMenu[]; ancho?: number; datos?: string }) {
   const [abierto, setAbierto] = useState(false)
+  // Se abre hacia donde haya espacio (en el celular el botón puede quedar a la izquierda).
+  const [izquierda, setIzquierda] = useState(0)
   const raiz = useRef<HTMLSpanElement>(null)
   const lista = useRef<HTMLDivElement>(null)
   const id = useId()
@@ -144,7 +163,14 @@ export function Menu({ etiqueta, items, ancho = 280, datos }: { etiqueta: string
         aria-haspopup="menu"
         aria-expanded={abierto}
         aria-controls={id}
-        onClick={() => setAbierto((a) => !a)}
+        onClick={(e) => {
+          const r = e.currentTarget.getBoundingClientRect()
+          // Posición del menú respecto del botón, sin salirse de la pantalla.
+          const w = Math.min(ancho, window.innerWidth - 32)
+          const ideal = r.width - w // alineado al borde derecho del botón
+          setIzquierda(Math.max(16 - r.left, Math.min(ideal, window.innerWidth - 16 - w - r.left)))
+          setAbierto((a) => !a)
+        }}
         style={{ ...botonSecundario, background: abierto ? '#eef2f6' : '#fff' }}
         data-menu={datos ?? etiqueta}
       >
@@ -157,7 +183,7 @@ export function Menu({ etiqueta, items, ancho = 280, datos }: { etiqueta: string
           role="menu"
           style={{
             position: 'absolute',
-            right: 0,
+            left: izquierda,
             top: 'calc(100% + 4px)',
             zIndex: 50,
             width: `min(${ancho}px, calc(100vw - 32px))`,

@@ -588,6 +588,8 @@ export default function UnidadRobotica() {
                   setSeleccion(id)
                 }}
                 capas={dxf?.capas ?? []}
+                cables={nodoSel ? def.cables.filter((c) => c.a === nodoSel.id) : []}
+                onDesconectar={(c) => setDef({ ...def, cables: def.cables.filter((k) => k !== c) })}
               />
             </>
           ) : (
@@ -799,6 +801,8 @@ function Propiedades({
   onBorrar,
   onDuplicar,
   capas,
+  cables = [],
+  onDesconectar,
 }: {
   nodo: Definicion['nodos'][number] | null
   evaluacion: ReturnType<typeof evaluar>
@@ -806,11 +810,14 @@ function Propiedades({
   onBorrar: () => void
   onDuplicar: () => void
   capas: string[]
+  /** Cables que llegan a este componente. */
+  cables?: Definicion['cables']
+  onDesconectar?: (c: Definicion['cables'][number]) => void
 }) {
   if (!nodo)
     return (
       <p style={{ margin: '8px 0 0', fontSize: '0.84rem', color: '#5a6b7d' }} data-propiedades="vacio">
-        Selecciona un componente para ver qué hace, sus entradas y salidas y ajustar sus valores. Arrastra desde una salida (derecha) hasta una entrada (izquierda) para conectar.
+        Selecciona un componente para ver qué hace, sus entradas y salidas y ajustar sus valores. Arrastra desde una salida (derecha) hasta una entrada (izquierda) para conectar. Con dos dedos (o con − y +) acercas y alejas el lienzo.
       </p>
     )
   const comp = componente(nodo.tipo)
@@ -897,11 +904,24 @@ function Propiedades({
           <div>
             <strong>Entradas</strong>
             <ul style={{ margin: '2px 0', paddingLeft: 16 }}>
-              {comp.entradas.map((e) => (
-                <li key={e.corto}>
-                  <code>{e.corto}</code> {e.nombre}: {e.descripcion}
-                </li>
-              ))}
+              {comp.entradas.map((e, i) => {
+                const llegan = cables.filter((c) => c.entrada === i)
+                return (
+                  <li key={e.corto}>
+                    <code>{e.corto}</code> {e.nombre}: {e.descripcion}
+                    {llegan.map((c) => (
+                      <span key={`${c.de}-${c.salida}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginLeft: 6 }}>
+                        <span style={{ color: '#51606f' }}>← {c.de}</span>
+                        {onDesconectar && (
+                          <button onClick={() => onDesconectar(c)} style={{ ...botonSuave, padding: '1px 8px', fontSize: '0.76rem', minHeight: 28 }} title="Quitar este cable">
+                            Desconectar
+                          </button>
+                        )}
+                      </span>
+                    ))}
+                  </li>
+                )
+              })}
             </ul>
           </div>
         )}

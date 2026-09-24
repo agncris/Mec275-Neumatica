@@ -12,6 +12,7 @@
  *  - Colores como en Grasshopper: gris = bien, naranjo = faltan datos o hay
  *    un aviso, rojo = error, verde = seleccionado.
  */
+import { useTactil } from '../components/ui'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   COMPONENTES,
@@ -80,6 +81,7 @@ type Arrastre =
   | { tipo: 'cable'; de?: { id: string; j: number }; a?: { id: string; i: number }; x: number; y: number; agregar: boolean }
 
 export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onSeleccionar, alto = 460 }: Props) {
+  const tactil = useTactil()
   const svgRef = useRef<SVGSVGElement>(null)
   const [vista, setVista] = useState({ tx: 20, ty: 40, k: 0.8 })
   const [arrastre, setArrastre] = useState<Arrastre | null>(null)
@@ -200,6 +202,50 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
     setArrastre(null)
   }
 
+  /** Zoom alrededor de un punto de la pantalla (px dentro del lienzo). */
+  const zoomEn = (mx: number, my: number, factor: number) =>
+    setVista((v) => {
+      const k2 = Math.min(2.2, Math.max(0.25, v.k * factor))
+      return { k: k2, tx: mx - ((mx - v.tx) / v.k) * k2, ty: my - ((my - v.ty) / v.k) * k2 }
+    })
+  const zoomCentro = (factor: number) => {
+    const r = svgRef.current!.getBoundingClientRect()
+    zoomEn(r.width / 2, r.height / 2, factor)
+  }
+
+  // Zoom con dos dedos.
+  const dedos = useRef(new Map<number, { x: number; y: number }>())
+  const pinza = useRef<{ d0: number; k0: number; wx: number; wy: number } | null>(null)
+  const medir = () => {
+    const [a, b] = Array.from(dedos.current.values())
+    return { d: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 }
+  }
+  const dedoAbajo = (e: React.PointerEvent) => {
+    if (e.pointerType !== 'touch') return
+    dedos.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    if (dedos.current.size === 2) {
+      setArrastre(null)
+      const { d, mx, my } = medir()
+      const w = aMundo(mx, my)
+      pinza.current = { d0: Math.max(10, d), k0: vista.k, wx: w.x, wy: w.y }
+    }
+  }
+  const dedoMueve = (e: React.PointerEvent) => {
+    if (e.pointerType !== 'touch' || !dedos.current.has(e.pointerId)) return
+    dedos.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    const pz = pinza.current
+    if (!pz || dedos.current.size < 2) return
+    e.stopPropagation()
+    const { d, mx, my } = medir()
+    const r = svgRef.current!.getBoundingClientRect()
+    const k = Math.min(2.2, Math.max(0.25, (pz.k0 * d) / pz.d0))
+    setVista({ k, tx: mx - r.left - pz.wx * k, ty: my - r.top - pz.wy * k })
+  }
+  const dedoArriba = (e: React.PointerEvent) => {
+    dedos.current.delete(e.pointerId)
+    if (dedos.current.size < 2) pinza.current = null
+  }
+
   const onWheel = (e: React.WheelEvent) => {
     const r = svgRef.current!.getBoundingClientRect()
     const mx = e.clientX - r.left
@@ -253,8 +299,8 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
               borderBottom: pestana === p ? '2px solid #33475c' : '1px solid #c6ced6',
               background: pestana === p ? '#fff' : '#f1f4f7',
               color: '#33475c',
-              padding: '2px 10px',
-              fontSize: '0.8rem',
+              padding: tactil ? '6px 12px' : '2px 10px',
+              fontSize: tactil ? '0.88rem' : '0.8rem',
               fontWeight: pestana === p ? 700 : 500,
               cursor: 'pointer',
               borderRadius: '6px 6px 0 0',
@@ -264,7 +310,7 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
           </button>
         ))}
         <span style={{ marginLeft: 'auto', fontSize: '0.76rem', color: '#5f6b78', alignSelf: 'center' }}>
-          Doble clic en el fondo: buscar componente · Supr: borrar
+          {tactil ? 'Toca un componente (LIN, PTP…) para agregarlo · arrastra desde una salida hasta una entrada para conectar · dos dedos: zoom' : 'Doble clic en el fondo: buscar componente · Supr: borrar'}
         </span>
       </div>
       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 6, minHeight: 30 }}>
@@ -282,7 +328,7 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
                   const p = aMundo(r.left + r.width / 2 - 75, r.top + r.height / 2 - 30)
                   agregarNodo(c.tipo, p.x, p.y)
                 }}
-                style={{ border: '1px solid #b8c1ca', background: '#fff', borderRadius: 4, padding: '1px 6px', fontSize: '0.74rem', cursor: 'pointer', color: '#1c2733' }}
+                style={{ border: '1px solid #b8c1ca', background: '#fff', borderRadius: 4, padding: tactil ? '6px 10px' : '1px 6px', minHeight: tactil ? 34 : undefined, fontSize: tactil ? '0.85rem' : '0.74rem', cursor: 'pointer', color: '#1c2733' }}
               >
                 {c.corto}
               </button>
@@ -316,7 +362,11 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
             svgRef.current?.focus()
             setArrastre({ tipo: 'fondo', x: e.clientX, y: e.clientY, tx: vista.tx, ty: vista.ty })
           }}
-          onPointerMove={onPointerMove}
+          onPointerDownCapture={dedoAbajo}
+          onPointerMoveCapture={dedoMueve}
+          onPointerUpCapture={dedoArriba}
+          onPointerCancelCapture={dedoArriba}
+          onPointerMove={(e) => !pinza.current && onPointerMove(e)}
           onPointerUp={onPointerUp}
           onPointerLeave={() => arrastre?.tipo !== 'cable' && setArrastre(null)}
           onWheel={onWheel}
@@ -422,6 +472,12 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
           </div>
         )}
         <div style={{ position: 'absolute', right: 8, bottom: 8, display: 'flex', gap: 4 }}>
+          <button onClick={() => zoomCentro(1 / 1.25)} style={{ ...botonMini, minWidth: 34 }} aria-label="Alejar" title="Alejar">
+            −
+          </button>
+          <button onClick={() => zoomCentro(1.25)} style={{ ...botonMini, minWidth: 34 }} aria-label="Acercar" title="Acercar">
+            +
+          </button>
           <button onClick={encuadrar} style={botonMini} title="Encuadrar toda la definición">
             ⤢ Encuadrar
           </button>
@@ -437,7 +493,7 @@ function agrupar(cs: Componente[]): Array<[string, Componente[]]> {
   return [...m.entries()]
 }
 
-const botonMini: React.CSSProperties = { border: '1px solid #8a97a5', background: 'rgba(255,255,255,0.92)', borderRadius: 5, padding: '2px 8px', fontSize: '0.76rem', cursor: 'pointer' }
+const botonMini: React.CSSProperties = { border: '1px solid #8a97a5', background: 'rgba(255,255,255,0.95)', borderRadius: 6, padding: '4px 10px', minHeight: 32, fontSize: '0.82rem', cursor: 'pointer' }
 
 function Nodo({
   nodo,
