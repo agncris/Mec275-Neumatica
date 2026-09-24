@@ -133,3 +133,64 @@ describe('evaluación de la definición', () => {
     expect(sim.krl).toMatch(/\$BASE = \{X 900, Y 0, Z 200/)
   })
 })
+
+describe('choques con el mesón y la plancha', () => {
+  const programa = (z: number, base = planoXY(v(900, 0, 300))) => ({
+    comandos: [
+      { tipo: 'PTP' as const, plano: planoXY(v(50, 50, 20)), vel: 30, nodo: 'a' },
+      { tipo: 'LIN' as const, plano: planoXY(v(50, 50, z)), vel: 0.05, nodo: 'b' },
+    ],
+    robot: { modelo: robotPorId('kr16'), pedestal: 0 },
+    herramienta: { tipo: 'fresa' as const, nombre: 'f', largo: 200, diametro: 6 },
+    base,
+    espesor: 5,
+    inicio: [0, -90, 90, 0, 0, 0],
+    nodo: 'x',
+  })
+  it('cortar la plancha no es choque; enterrarse en el mesón sí', () => {
+    expect(simular(programa(-5)).problemas.filter((p) => p.nivel === 'error')).toEqual([])
+    const malo = simular(programa(-30)).problemas.find((p) => /Choque/.test(p.texto))
+    expect(malo?.texto).toMatch(/mesón/)
+    expect(malo?.nodo).toBe('b')
+  })
+  it('avisa si el mesón queda encima del robot', () => {
+    const sim = simular(programa(20, planoXY(v(100, 0, 300))), { x0: -200, y0: -200, x1: 200, y1: 200 })
+    expect(sim.problemas.some((p) => /Choque: la base del robot/.test(p.texto))).toBe(true)
+  })
+})
+
+describe('robot personalizado', () => {
+  it('usa las medidas propias y los rangos del modelo elegido', () => {
+    const comp = componente('robot')!
+    const p = { ...paramsIniciales(comp), modelo: 'personalizado', como: 'kr16', a2: 700, d4: 600, nombre: 'Robot del taller' }
+    const r = comp.evaluar([], p, { id: 'r' } as never).salidas[0][0] as { modelo: { nombre: string; a2: number; alcance: number; limites: unknown } }
+    expect(r.modelo.nombre).toBe('Robot del taller')
+    expect(r.modelo.a2).toBe(700)
+    expect(r.modelo.limites).toEqual(robotPorId('kr16').limites)
+    expect(r.modelo.alcance).toBe(Math.round(25 + 700 + Math.hypot(35, 600)))
+    const malo = comp.evaluar([], { ...p, a2: 0 }, { id: 'r' } as never)
+    expect(malo.error).toMatch(/más de 0/)
+  })
+})
+
+describe('croquis para el informe', () => {
+  it('acota la pieza y reconoce los círculos', async () => {
+    const { croquisPieza } = await import('../robot/croquis')
+    const { circulo } = await import('../robot/geometria')
+    const svg = croquisPieza([rectangulo(120, 80, 0, v(10, 5, 0)), circulo(v(70, 45, 0), 15), rectangulo(120, 80, 0, v(10, 5, -5))], 'placa')
+    expect(svg).toMatch(/^<svg/)
+    expect(svg).toContain('>120<')
+    expect(svg).toContain('>80<')
+    expect(svg).toContain('Ø30 · centro (70; 45)')
+    expect(svg).toContain('esquina en (10; 5)')
+  })
+  it('dibuja la posición del robot y dice si la plancha queda al alcance', async () => {
+    const { croquisPosicion } = await import('../robot/croquis')
+    const datos = { modelo: robotPorId('kr6r900'), pedestal: 0, base: planoXY(v(450, -150, 300)), espesor: 5, placa: { x0: -20, y0: -20, x1: 220, y1: 170 }, herramienta: { tipo: 'fresa' as const, nombre: 'Fresa', largo: 150, diametro: 6 } }
+    const svg = croquisPosicion(datos, 'celda')
+    expect(svg).toContain('X 450')
+    expect(svg).toContain('Y -150')
+    expect(svg).toContain('✓ al alcance')
+    expect(croquisPosicion({ ...datos, base: planoXY(v(1500, 0, 300)) }, 'lejos')).toContain('✗ fuera del alcance')
+  })
+})

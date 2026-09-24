@@ -281,6 +281,8 @@ export function SimbolosLadder() {
     [caja('TOF'), 'Temporizador a la desconexión', 'Su contacto se cierra con corriente y se abre cuando lleva el tiempo PT sin ella.'],
     [caja('CTU'), 'Contador ascendente', 'Suma uno en cada flanco de subida; su contacto se cierra al llegar a PV. Se reinicia con Reset.'],
     [caja('CTD'), 'Contador descendente', 'Parte de PV y resta uno en cada flanco; su contacto se cierra al llegar a 0.'],
+    [caja('MOV'), 'Mover (MOV)', 'Con corriente, copia un valor (constante, registro o acumulado) en un registro N. En cada barrido, mientras tenga corriente: para hacerlo una sola vez, pon antes un ONS.'],
+    [caja('ADD'), 'Cálculo: ADD, SUB, MUL, DIV', 'Con corriente, guarda en un registro N la suma, resta, multiplicación o división (entera) de A y B. Un resultado mayor que 32767 se desborda y dividir por cero no cambia nada: el PLC marca la falla.'],
   ]
   const fila = ([s, n, d]: [ReactNode, string, string]) => (
     <tr key={n}>
@@ -357,6 +359,11 @@ export function CicloScan() {
         En la aplicación, el programa se ejecuta así, unas 50 veces por segundo, contra la planta simulada. Con el PLC
         en <strong>RUN</strong>, el diagrama se pinta como en los simuladores: los tramos con tensión en verde, los
         contactos cerrados rellenos y las bobinas activas encendidas.
+      </p>
+      <p style={p}>
+        <strong>Forzar</strong> una entrada o salida es fijarla a 1 o a 0 por encima de lo que diga el campo o el
+        programa: se usa en la puesta en marcha para probar un actuador o simular un sensor. Es peligroso (el programa
+        ya no manda sobre esa dirección), por eso el PLC avisa mientras haya algo forzado y hay que quitarlo al terminar.
       </p>
     </div>
   )

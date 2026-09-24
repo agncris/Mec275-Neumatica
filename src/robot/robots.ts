@@ -11,9 +11,10 @@
  * referencia A2 = −90° deja el brazo vertical y A3 = +90° deja el antebrazo
  * horizontal; A5 positivo inclina la herramienta hacia abajo.
  *
- * Los datos de las fichas son orientativos (valores publicados por el
- * fabricante para cada modelo, redondeados); para un trabajo formal hay que
- * confirmarlos en la ficha técnica oficial.
+ * Carga, alcance, repetibilidad, peso, rangos y velocidades son los de las
+ * fichas técnicas publicadas de cada modelo (revisadas en 2026). Las medidas
+ * de los eslabones (d1, a1…) son las de los modelos cinemáticos habituales;
+ * el alcance real puede diferir unos milímetros.
  */
 import {
   aplicar,
@@ -92,7 +93,7 @@ export const ROBOTS: ModeloRobot[] = [
     carga: 10,
     alcance: 1101,
     repetibilidad: 0.03,
-    peso: 54,
+    peso: 55,
     montaje: 'Suelo, techo, pared',
     descripcion: 'Como el KR 6 pero con más alcance y carga: fresado liviano, pegado, ensamblaje.',
     d1: 400,
@@ -117,7 +118,7 @@ export const ROBOTS: ModeloRobot[] = [
     familia: 'Carga baja',
     carga: 16,
     alcance: 1611,
-    repetibilidad: 0.04,
+    repetibilidad: 0.05,
     peso: 235,
     montaje: 'Suelo, techo',
     descripcion: 'Clásico para soldadura por arco, manipulación y mecanizado de piezas medianas.',
@@ -182,12 +183,12 @@ export const ROBOTS: ModeloRobot[] = [
     limites: [
       [-185, 185],
       [-140, -5],
-      [-120, 155],
+      [-120, 168],
       [-350, 350],
       [-125, 125],
       [-350, 350],
     ],
-    velocidades: [123, 115, 112, 179, 172, 219],
+    velocidades: [120, 115, 120, 190, 180, 260],
   },
 ]
 

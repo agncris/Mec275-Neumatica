@@ -88,7 +88,78 @@ function circunferencia(a: V3, b: V3, c: V3): { centro: V3; r: number; n: V3 } |
   return { centro, r: dist(centro, a), n: unit(nn) }
 }
 
-export function simular(prog: Programa): Simulacion {
+/** Plancha en coordenadas de la base (mm). */
+export interface Placa {
+  x0: number
+  y0: number
+  x1: number
+  y1: number
+}
+
+/** La plancha que se dibuja cuando no hay geometría. */
+export const PLACA_DEFECTO: Placa = { x0: -20, y0: -20, x1: 220, y1: 170 }
+/** Cuánto sobresale el mesón de la plancha, por lado (mm). */
+export const BORDE_MESON = 80
+
+/**
+ * Busca choques del robot con el mesón y la plancha en cada muestra. El
+ * brazo se toma como un tubo del grosor aproximado de sus eslabones; la
+ * herramienta puede entrar a la plancha (está cortando), pero no pasarla.
+ */
+function revisarChoques(prog: Programa, placa: Placa, muestras: Muestra[], problema: (m: Muestra, texto: string) => void) {
+  const { modelo, pedestal } = prog.robot
+  const L = prog.herramienta.largo
+  const Rb = trasp(matrizPlano(prog.base))
+  const aBase = (p: V3) => aplicar(Rb, resta(p, prog.base.o))
+  const e = prog.espesor
+  const hayMeson = prog.base.o.z - e > 15
+  const radio = Math.max(40, modelo.a2 * 0.08)
+  const dentro = (p: V3, x0: number, y0: number, x1: number, y1: number, z0: number, z1: number, m: number) =>
+    p.x > x0 - m && p.x < x1 + m && p.y > y0 - m && p.y < y1 + m && p.z > z0 - m && p.z < z1 + m
+  const enMeson = (p: V3, m: number) => hayMeson && dentro(p, placa.x0 - BORDE_MESON, placa.y0 - BORDE_MESON, placa.x1 + BORDE_MESON, placa.y1 + BORDE_MESON, -1e6, -e, m)
+  const enPlancha = (p: V3, m: number) => e > 0 && dentro(p, placa.x0, placa.y0, placa.x1, placa.y1, -e, 0, m)
+  const nombres = ['la base', 'el brazo', 'el antebrazo', 'la muñeca']
+  for (const mu of muestras) {
+    const c = directa(modelo, mu.q, L, v(0, 0, pedestal)).cadena.map(aBase)
+    let choque: string | null = null
+    // Eslabones: del suelo al hombro, hombro-codo, codo-muñeca, muñeca-flange.
+    const suelo = aBase(v(0, 0, 0))
+    const tramos: Array<[V3, V3, string]> = [
+      [suelo, c[1], nombres[0]],
+      [c[1], c[2], nombres[1]],
+      [c[2], c[3], nombres[2]],
+      [c[3], c[4], nombres[3]],
+    ]
+    for (const [a, b, nombre] of tramos) {
+      const n = Math.max(2, Math.ceil(dist(a, b) / 25))
+      for (let i = 0; i <= n && !choque; i++) {
+        const p = lerp(a, b, i / n)
+        if (enMeson(p, radio * 0.6)) choque = `Choque: ${nombre} del robot toca el mesón.`
+        else if (enPlancha(p, radio * 0.6)) choque = `Choque: ${nombre} del robot toca la plancha.`
+      }
+      if (choque) break
+    }
+    if (!choque) {
+      // Herramienta: el cuerpo (la mitad cercana al flange) no puede entrar;
+      // la punta sí entra a la plancha, pero no la atraviesa.
+      const n = Math.max(2, Math.ceil(L / 10))
+      for (let i = 0; i <= n && !choque; i++) {
+        const f = i / n
+        const p = lerp(c[4], c[5], f)
+        if (f < 0.5 && (enPlancha(p, 0) || enMeson(p, 0))) choque = 'Choque: el portaherramienta toca la plancha o el mesón (la herramienta es muy corta o está muy inclinada).'
+      }
+      // Pasar la plancha hasta 2 mm es normal al cortarla de lado a lado.
+      if (!choque && c[5].z < -e - 2 && (enMeson(c[5], 0) || dentro(c[5], placa.x0, placa.y0, placa.x1, placa.y1, -1e6, 0, 0)))
+        choque = 'Choque: la herramienta atraviesa la plancha y se entierra en el mesón (más de 2 mm bajo la plancha). Revisa la Z de los puntos: la cara de la plancha es Z0.'
+    }
+    if (choque) {
+      mu.estado = 'error'
+      problema(mu, choque)
+    }
+  }
+}
+
+export function simular(prog: Programa, placa: Placa | null = null): Simulacion {
   const { modelo, pedestal } = prog.robot
   const L = prog.herramienta.largo
   const base0 = v(0, 0, pedestal)
@@ -232,6 +303,12 @@ export function simular(prog: Programa): Simulacion {
     }
     finales.push([...q])
   })
+
+  revisarChoques(prog, placa ?? PLACA_DEFECTO, muestras, (m, texto) => {
+    t = m.t
+    problema(Math.max(0, m.cmd), 'error', texto)
+  })
+  problemas.sort((a, b) => a.t - b.t)
 
   const uso: Array<[number, number]> = [0, 1, 2, 3, 4, 5].map((k) => [Math.min(...muestras.map((m) => m.q[k])), Math.max(...muestras.map((m) => m.q[k]))])
   const sim: Simulacion = { muestras, problemas, tiempo: t, largoCorte, uso, salidas, finales, krl: '' }

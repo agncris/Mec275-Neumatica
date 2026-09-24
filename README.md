@@ -190,7 +190,10 @@ NA ┤ ├, NC ┤/├, cable, rama (une dos filas en un nodo para hacer un para
 columna de la derecha, bobinas ( ), (/), Set (S / OTL), Reset (R / OTU / RES),
 flancos (P) y (N), temporizadores **TON / TOF / RTO** y contadores **CTU / CTD**;
 además **ONS** (un solo pulso) y **comparaciones** EQU, NEQ, GRT, LES, GEQ, LEQ sobre
-el acumulado de un temporizador o contador. Los temporizadores y contadores tienen
+el acumulado de un temporizador o contador, una constante o un registro. Las
+**instrucciones de datos** MOV, ADD, SUB, MUL y DIV trabajan con 16 registros enteros
+`N0…N15` (`N7:0…` en LogixPro, `MW0…` en Siemens), con aviso de desborde y de división
+por cero. Los temporizadores y contadores tienen
 sus bits como en LogixPro (`.EN`, `.TT`, `.DN`, `.CU`), que se usan como contactos.
 Cada elemento lleva su dirección (`I0.0…I0.7`, `Q0.0…Q0.7`, marcas `M0.0…M1.7`,
 `T0…T7`, `C0…C7`) y se
@@ -211,7 +214,9 @@ datos y los rótulos de la planta 3D.
 entradas y las 8 salidas: las que no usa la planta quedan libres, cada una con un
 interruptor o un pulsador NA / NC para probar cualquier programa. La **tabla de
 datos** muestra la memoria del PLC en vivo: los bits de E/S y marcas, y cada
-temporizador (PRE, ACC, EN, TT, DN) y contador (PRE, ACC, CU, DN).
+temporizador (PRE, ACC, EN, TT, DN) y contador (PRE, ACC, CU, DN), y los registros
+N, que se pueden escribir a mano. Cada entrada o salida se puede **forzar** (F1 / F0),
+como en el PLC real, con un aviso mientras haya algo forzado.
 
 **Ciclo de scan.** El programa se ejecuta como en un PLC real, ~50 barridos por
 segundo: lee las entradas, resuelve los escalones de arriba abajo (lo que escribe un
@@ -272,13 +277,18 @@ el material (latón, aluminio, acero, acrílico, madera) y las medidas del bruto
 torno también lo que toman las garras y el sobremetal de la cara); la lista de
 herramientas muestra la torreta del torno (desbaste y afinado izquierda/derecha,
 perfilado 35°, ranurado, tronzado 4 mm, roscado, brocas) y el almacén de la fresadora
-(fresas planas, de bola, brocas, grabado en V, planeadora).
+(fresas planas, de bola, brocas, grabado en V, planeadora). Las herramientas se pueden
+editar, agregar y quitar (número T, nombre, tipo y medidas), como al armar la torreta.
 
 **Código G.** Bloques con `N`, `G`, `X Y Z`, `U V W` (incrementales), `I J K` / `R`,
 `F`, `S`, `T`, `M` y comentarios `( … )` o `;`. Movimientos G00/G01/G02/G03, G04, G17–G19,
 G20/G21 (y G70/G71 como en el apunte), G28, G33 (roscado), G90/G91, G94/G95, G96/G97,
 ciclos G81/G83 con G98/G99 y G80; M00–M09 y M30. En el torno `T0101` elige la herramienta;
-en la fresadora `T1 M06`.
+en la fresadora `T1 M06`. **Compensación de radio** G41/G42 con `D` y G40 en la fresadora
+(el contorno se programa con las medidas de la pieza; avisa si la fresa no cabe en un
+rincón). **Ciclos del torno** (Fanuc) `G71 U… R…` + `G71 P… Q… U… W… F…` para desbastar
+un perfil y `G70 P… Q…` para afinarlo (sin P y Q, G70/G71 siguen siendo pulgadas y
+milímetros). **Subprogramas** `O…` … `M99` llamados con `M98 P… L…` (o `M98 P31000`).
 
 **Compatibilidad con CNC Simulator Pro.** Los programas escritos para ese simulador se
 abren tal cual: `$Millimeter`/`$Inch` fijan las unidades y `$AddRegPart n` pone en el
@@ -312,8 +322,9 @@ en absolutas e incrementales (se copia con un clic); descarga del programa como
 **Ejemplos** (comentados línea a línea): refrentado y cilindrado; eje escalonado con
 ranura y tronzado; pomo con arcos G02/G03; buje taladrado; contorno cuadrado (el de la
 guía); un programa en formato CNC Simulator Pro (cero en las garras, G81 y rosca G76);
-círculo y arcos; agujeros en línea con G91; cajera en dos niveles; ciclos
-G81/G83; grabado de letras.
+ciclos G71/G70 sobre un perfil; círculo y arcos; agujeros en línea con G91; cajera en
+dos niveles; ciclos G81/G83; grabado de letras; contorno con G41 repetido por un
+subprograma.
 
 **Teoría** (secciones plegables): qué es el CNC, ventajas y aplicaciones, cómo
 organizar la programación, coordenadas absolutas e incrementales con una **práctica
@@ -340,7 +351,8 @@ pestañas y los nombres siguen a Grasshopper y KUKA|prc:
   Offset Curve (para compensar el radio de la fresa).
 - *Vector*: XY Plane, Rotate Plane, Move. *Sets*: Merge, List Item, Reverse List.
 - *KUKA|prc*: LIN, PTP, CIR y AXIS Movement, Custom KRL, **Core**, Robot (KR 6 R900,
-  KR 10 R1100, KR 16-2, KR 50 R2100 y KR 120 R2700), Tool (husillo, taladro, ventosa,
+  KR 10 R1100, KR 16-2, KR 50 R2100 y KR 120 R2700, con los datos de sus fichas, o uno
+  **personalizado** con las medidas de sus eslabones), Tool (husillo, taladro, ventosa,
   portalápiz, personalizada), Divide Curve (planos orientados), Set Digital Out, Wait y
   Command Weaver (en secuencia o intercalado).
 
@@ -353,11 +365,16 @@ capas del archivo. La definición guarda el plano, así que viaja completa en el
 se fija en el Core (X, Y, altura del mesón, giro, espesor), herramienta montada y
 reproductor como KUKA|play. La trayectoria se pinta verde, naranja o roja según el
 análisis: fuera de alcance, eje fuera de su rango, cerca de un límite, singularidad de
-muñeca (A5 ≈ 0 con A4/A6 girando) o salto brusco de configuración; cada problema se
+muñeca (A5 ≈ 0 con A4/A6 girando), salto brusco de configuración o **choque** del
+brazo o la herramienta con el mesón o la plancha (la herramienta puede entrar a la
+plancha, pero no enterrarse en el mesón); cada problema se
 puede cliquear para ir a ese momento. Barras con el rango usado por cada eje, ficha
 técnica del robot, esfera de alcance, huella de la herramienta sobre la plancha y
 husillo que gira con la salida digital. **Exportar KRL** descarga el programa .src
 ($BASE, $TOOL, PTP con ejes, LIN/CIR con X Y Z A B C, $OUT, WAIT); también se graba video.
+**Croquis** para el informe (PNG o SVG): la pieza acotada en planta, con el cero de la
+pieza, y el posicionamiento del robot (planta y elevación con las distancias a la base,
+la altura del mesón y si la plancha queda al alcance).
 
 **Mando manual (teach-in).** Como el smartPAD: mover eje por eje o en X/Y/Z/A/B/C,
 dejar la herramienta vertical, grabar puntos PTP o LIN (con la salida de la pinza) y
@@ -508,7 +525,7 @@ npm run dev        # http://localhost:5173
 ```
 
 ```bash
-npm test           # 303 pruebas: motor, análisis, entregas, plano, símbolos, banco 3D, PLC, CNC, robótica y utilidades
+npm test           # 320 pruebas: motor, análisis, entregas, plano, símbolos, banco 3D, PLC, CNC, robótica y utilidades
 npm run typecheck  # comprobación de tipos
 npm run build      # compila a /dist
 ```

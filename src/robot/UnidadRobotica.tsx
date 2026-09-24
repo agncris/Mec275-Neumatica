@@ -6,14 +6,15 @@
  */
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Seccion } from '../components/Seccion'
-import { nombreSeguro } from '../exportar'
+import { exportarPng, nombreSeguro } from '../exportar'
+import { croquisPieza, croquisPosicion } from './croquis'
 import { Historial } from '../historial'
 import EditorNodos from './EditorNodos'
 import { EJEMPLOS_ROBOT } from './ejemplos'
 import { cajaCurvas, leerDXF, type Curva } from './geometria'
 import { planoXY, v, type Plano, type V3 } from './matematica'
 import Mando, { poseDe, type PuntoEnsenado } from './Mando'
-import { ejesEn, generarKRL, simular, type Simulacion } from './movimiento'
+import { ejesEn, generarKRL, PLACA_DEFECTO, simular, type Simulacion } from './movimiento'
 import {
   componente,
   describirDato,
@@ -124,7 +125,27 @@ export default function UnidadRobotica() {
   const dxf = useMemo(() => (def.dxf ? leerDXF(def.dxf.texto) : null), [def.dxf])
   const evaluacion = useMemo(() => evaluar(def, dxf), [def, dxf])
   const programa: Programa | null = evaluacion.programas[0] ?? null
-  const sim = useMemo(() => (programa ? simular(programa) : null), [programa])
+  const previa = useMemo(() => {
+    const todos: Dato[] = []
+    for (const n of def.nodos) {
+      const r = evaluacion.nodos[n.id]
+      if (!r || r.estado === 'error' || n.tipo === 'core') continue
+      for (const s of r.salidas) todos.push(...s)
+    }
+    return previaDe(todos)
+  }, [def, evaluacion])
+  const seleccionPrevia = useMemo(
+    () => (seleccion ? previaDe((evaluacion.nodos[seleccion]?.salidas ?? []).flat()) : { curvas: [], puntos: [], planos: [] }),
+    [evaluacion, seleccion],
+  )
+  // Plancha: el contorno de la geometría con 20 mm de margen.
+  const placa = useMemo(() => {
+    const curvas = previa.curvas.map((pts) => ({ pts, cerrada: true, esquinas: [] }))
+    if (!curvas.length) return null
+    const { min, max } = cajaCurvas(curvas)
+    return Number.isFinite(min.x) ? { x0: min.x - 20, y0: min.y - 20, x1: max.x + 20, y1: max.y + 20 } : null
+  }, [previa])
+  const sim = useMemo(() => (programa ? simular(programa, placa) : null), [programa, placa])
 
   // Programa del mando (teach-in): PTP por ejes, LIN en línea recta.
   const herrMando = HERR_MANDO
@@ -186,23 +207,6 @@ export default function UnidadRobotica() {
     return planoXY(v(Number(p.bx), Number(p.by), Number(p.bz)))
   }, [programa, def])
 
-  const { previa, seleccionPrevia, placa } = useMemo(() => {
-    const todos: Dato[] = []
-    for (const n of def.nodos) {
-      const r = evaluacion.nodos[n.id]
-      if (!r || r.estado === 'error' || n.tipo === 'core') continue
-      for (const s of r.salidas) todos.push(...s)
-    }
-    const pr = previaDe(todos)
-    const sel = seleccion ? previaDe((evaluacion.nodos[seleccion]?.salidas ?? []).flat()) : { curvas: [], puntos: [], planos: [] }
-    const curvas = pr.curvas.map((pts) => ({ pts, cerrada: true, esquinas: [] }))
-    let pl: VistaRobot['placa'] = null
-    if (curvas.length) {
-      const { min, max } = cajaCurvas(curvas)
-      if (Number.isFinite(min.x)) pl = { x0: min.x - 20, y0: min.y - 20, x1: max.x + 20, y1: max.y + 20 }
-    }
-    return { previa: pr, seleccionPrevia: sel, placa: pl }
-  }, [def, evaluacion, seleccion])
 
   const vista = useRef<VistaRobot>({
     modelo: robotVista.modelo,
@@ -366,6 +370,32 @@ export default function UnidadRobotica() {
     }
   }
 
+  const exportarCroquis = async (cual: string) => {
+    const [tipo, formato] = cual.split('-')
+    const nombre = def.nombre || 'robot'
+    let svg: string
+    if (tipo === 'pieza') {
+      const curvas = dxf?.curvas.length
+        ? dxf.curvas.map((c) => ({ pts: c.pts, cerrada: c.cerrada }))
+        : previa.curvas.map((pts) => ({ pts, cerrada: pts.length > 2 && Math.hypot(pts[0].x - pts[pts.length - 1].x, pts[0].y - pts[pts.length - 1].y) < 1e-3 }))
+      if (!curvas.length) return setAviso('No hay geometría para el croquis: abre un DXF o arma curvas en la definición.')
+      svg = croquisPieza(curvas, nombre)
+    } else {
+      svg = croquisPosicion(
+        { modelo: robotVista.modelo, pedestal: robotVista.pedestal, base: baseVista, espesor: programa?.espesor ?? 5, placa: placa ?? PLACA_DEFECTO, herramienta: herrVista },
+        nombre,
+      )
+    }
+    const archivo = nombreSeguro(`${nombre}-${tipo === 'pieza' ? 'croquis-pieza' : 'posicionamiento'}`, formato)
+    if (formato === 'svg') return descargar(svg, archivo, 'image/svg+xml')
+    const el = new DOMParser().parseFromString(svg, 'image/svg+xml').documentElement as unknown as SVGSVGElement
+    try {
+      await exportarPng(el, archivo)
+    } catch (e) {
+      setAviso(e instanceof Error ? e.message : 'No se pudo generar la imagen.')
+    }
+  }
+
   const exportarKRL = () => {
     if (modo === 'mando') {
       if (!programaMando || !simMando) return
@@ -487,6 +517,24 @@ export default function UnidadRobotica() {
           <button onClick={exportarKRL} style={botonSuave} title="Programa para el controlador KUKA (.src, lenguaje KRL)">
             Exportar KRL
           </button>
+          {modo === 'visual' && (
+            <select
+              value=""
+              onChange={(e) => {
+                if (e.target.value) void exportarCroquis(e.target.value)
+                e.target.value = ''
+              }}
+              style={{ ...botonSuave, padding: '0.35rem 0.4rem' }}
+              title="Croquis para el informe: la pieza acotada y la posición del robot respecto del mesón"
+              data-croquis="si"
+            >
+              <option value="">Croquis…</option>
+              <option value="pieza-png">Pieza acotada (PNG)</option>
+              <option value="pieza-svg">Pieza acotada (SVG)</option>
+              <option value="posicion-png">Posicionamiento del robot (PNG)</option>
+              <option value="posicion-svg">Posicionamiento del robot (SVG)</option>
+            </select>
+          )}
           <button
             onClick={alternarGrabacion}
             disabled={!puedeGrabar}
@@ -789,7 +837,7 @@ function Propiedades({
       ))}
       {comp.params.length > 0 && (
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', margin: '6px 0' }}>
-          {comp.params.map((p) => {
+          {comp.params.filter((p) => !p.si || p.si(params)).map((p) => {
             const valor = params[p.clave]
             return (
               <label key={p.clave} style={{ ...rotulo, flexDirection: p.tipo === 'bool' ? 'row' : 'column', alignItems: p.tipo === 'bool' ? 'center' : 'flex-start', gap: 2 }}>
@@ -931,18 +979,24 @@ function ComoUsar() {
       <li style={li}>
         <strong>Simular y analizar:</strong> ▶ recorre el programa (como KUKA|play). La trayectoria se pinta verde si todo va
         bien, naranjo si hay avisos (cerca de un límite o de una singularidad) y roja si hay errores (fuera de alcance, fuera
-        del rango de un eje, saltos bruscos). Haz clic en un problema para ir a ese momento.
+        del rango de un eje, saltos bruscos, choques del brazo o la herramienta con el mesón o la plancha). Haz clic en un
+        problema para ir a ese momento.
       </li>
       <li style={li}>
         <strong>Entregar:</strong> «Exportar KRL» descarga el programa .src; «Guardar definición» guarda tu definición (con el
-        plano); «● Grabar video» graba la simulación; la ficha técnica del robot está bajo la vista 3D.
+        plano); «● Grabar video» graba la simulación; «Croquis…» descarga la pieza acotada y el posicionamiento del robot
+        (planta y elevación) para el informe; la ficha técnica del robot está bajo la vista 3D.
       </li>
       <li style={li}>
         <strong>Mando manual:</strong> mueve el robot eje por eje o en X/Y/Z, graba puntos PTP o LIN y reprodúcelos: es el
         teach-in/playback.
       </li>
       <li style={li}>
-        <strong>Diferencias con KUKA|prc:</strong> los robots tienen la geometría y los rangos aproximados de los modelos reales;
+        <strong>Otro robot:</strong> en el componente Robot elige «Personalizado» y escribe las medidas de sus eslabones (d1,
+        a1, a2, a3, d4, d6) sacadas de su ficha; los rangos y velocidades se toman del modelo parecido que elijas.
+      </li>
+      <li style={li}>
+        <strong>Diferencias con KUKA|prc:</strong> los robots tienen los rangos y velocidades de sus fichas y una geometría muy parecida a la real;
         no se abren archivos .gh de Grasshopper (se arma la definición aquí, con los mismos componentes) y el código KRL es
         de estudio: revísalo antes de usarlo en un robot real.
       </li>

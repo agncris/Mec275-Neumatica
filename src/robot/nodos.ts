@@ -126,6 +126,8 @@ export interface ParamSpec {
   max?: number
   paso?: number
   opciones?: Array<[string, string]>
+  /** Se muestra sólo si se cumple (por ejemplo, las medidas del robot personalizado). */
+  si?: (params: Record<string, ValorParam>) => boolean
 }
 
 export type Pestana = 'Params' | 'Curve' | 'Vector' | 'Sets' | 'KUKA|prc'
@@ -155,6 +157,37 @@ export interface ResultadoNodo {
 }
 
 const n = (x: Dato | undefined, def = 0) => (typeof x === 'number' && Number.isFinite(x) ? x : def)
+
+// Robot personalizado: el alumno escribe las medidas de los eslabones (por
+// ejemplo, las de la ficha de un robot que no está en la lista).
+const esPropio = (p: Record<string, ValorParam>) => p.modelo === 'personalizado'
+const MEDIDAS_PROPIAS: ParamSpec[] = [
+  { clave: 'nombre', etiqueta: 'Nombre del robot', tipo: 'texto', defecto: 'Mi robot', si: esPropio },
+  { clave: 'como', etiqueta: 'Rangos, velocidades y carga como el', tipo: 'opcion', defecto: 'kr6r900', opciones: ROBOTS.map((r): [string, string] => [r.id, r.nombre]), si: esPropio },
+  { clave: 'd1', etiqueta: 'd1: altura del hombro (mm)', tipo: 'numero', defecto: 400, si: esPropio },
+  { clave: 'a1', etiqueta: 'a1: avance del hombro (mm)', tipo: 'numero', defecto: 25, si: esPropio },
+  { clave: 'a2', etiqueta: 'a2: largo del brazo (mm)', tipo: 'numero', defecto: 455, si: esPropio },
+  { clave: 'a3', etiqueta: 'a3: desnivel del antebrazo (mm)', tipo: 'numero', defecto: 35, si: esPropio },
+  { clave: 'd4', etiqueta: 'd4: largo del antebrazo (mm)', tipo: 'numero', defecto: 420, si: esPropio },
+  { clave: 'd6', etiqueta: 'd6: muñeca al flange (mm)', tipo: 'numero', defecto: 80, si: esPropio },
+]
+
+function robotPropio(p: Record<string, ValorParam>): ModeloRobot | { error: string } {
+  const b = robotPorId(String(p.como ?? 'kr6r900'))
+  const m = (k: 'd1' | 'a1' | 'a2' | 'a3' | 'd4' | 'd6') => n(p[k] as number, b[k])
+  const med = { d1: m('d1'), a1: m('a1'), a2: m('a2'), a3: m('a3'), d4: m('d4'), d6: m('d6') }
+  if (med.a2 <= 0 || med.d4 <= 0) return { error: 'El brazo (a2) y el antebrazo (d4) tienen que medir más de 0 mm.' }
+  if (med.d1 < 0 || med.a1 < 0 || med.d6 < 0) return { error: 'Las medidas d1, a1 y d6 no pueden ser negativas.' }
+  return {
+    ...b,
+    ...med,
+    id: 'personalizado',
+    nombre: String(p.nombre || 'Robot personalizado'),
+    familia: 'Personalizado',
+    alcance: Math.round(med.a1 + med.a2 + Math.hypot(med.a3, med.d4)),
+    descripcion: `Medidas propias, con los rangos, velocidades y carga del ${b.nombre}.`,
+  }
+}
 const esCurva = (x: Dato): x is Curva => typeof x === 'object' && x !== null && 'pts' in x && 'cerrada' in x
 const esPlano = (x: Dato): x is Plano => typeof x === 'object' && x !== null && 'o' in x && 'z' in x
 const esPunto = (x: Dato): x is V3 => typeof x === 'object' && x !== null && 'x' in x && 'y' in x && 'z' in x && !('o' in x)
@@ -726,10 +759,15 @@ export const COMPONENTES: Componente[] = [
     entradas: [],
     salidas: [{ nombre: 'Robot', corto: 'R', tipo: 'robot', descripcion: 'Robot virtual' }],
     params: [
-      { clave: 'modelo', etiqueta: 'Modelo', tipo: 'opcion', defecto: 'kr6r900', opciones: ROBOTS.map((r) => [r.id, r.nombre]) },
+      { clave: 'modelo', etiqueta: 'Modelo', tipo: 'opcion', defecto: 'kr6r900', opciones: [...ROBOTS.map((r): [string, string] => [r.id, r.nombre]), ['personalizado', 'Personalizado (medidas propias)']] },
       { clave: 'pedestal', etiqueta: 'Altura del pedestal (mm)', tipo: 'numero', defecto: 0 },
+      ...MEDIDAS_PROPIAS,
     ],
-    evaluar: (_e, p) => ({ salidas: [[{ modelo: robotPorId(String(p.modelo)), pedestal: Math.max(0, n(p.pedestal as number)) } as RobotVirtual]] }),
+    evaluar: (_e, p) => {
+      const modelo = String(p.modelo) === 'personalizado' ? robotPropio(p) : robotPorId(String(p.modelo))
+      if ('error' in modelo) return { salidas: [[]], error: modelo.error }
+      return { salidas: [[{ modelo, pedestal: Math.max(0, n(p.pedestal as number)) } as RobotVirtual]] }
+    },
   },
   {
     tipo: 'herramienta',
