@@ -16,6 +16,7 @@
 import type { Paso, ResultadoGcode, Vec3 } from './gcode'
 import {
   envolventeTorno,
+  fijarHerramientas,
   herramientaFresa,
   herramientaTorno,
   perfilFresa,
@@ -104,12 +105,15 @@ export class SimuladorCNC {
   private cosAxial = 1
   private saliendo = false
   private lineaBloque: number | null = null
+  /** Celdas cortadas a más de 2,5 mm de profundidad, por línea. */
+  private hondas = new Map<number, number>()
 
   constructor(
     readonly programa: ResultadoGcode,
     readonly config: ConfigCNC,
     readonly casa: Vec3,
   ) {
+    fijarHerramientas(config)
     this.pieza = config.maquina === 'torno' ? new PiezaTorno(config.torno) : new PiezaFresa(config.fresa)
     this.pos = { ...casa }
   }
@@ -285,6 +289,7 @@ export class SimuladorCNC {
     if (this.saliendo && h.forma !== 'broca') return true
     let arrancado = 0
     let profundidad = 0
+    let hondas = 0
     if (h.forma === 'broca') {
       if (Math.abs(q.x) > 0.2) {
         const i = pz.indice(q.z)
@@ -326,6 +331,7 @@ export class SimuladorCNC {
           if (quita > 0) {
             arrancado += quita
             profundidad = Math.max(profundidad, quita * this.cosAxial)
+            if (quita * this.cosAxial > 2.55) hondas++
           }
           pz.ext[i] = Math.max(r, 0)
           if (pz.ext[i] <= pz.int[i]) pz.ext[i] = pz.int[i]
@@ -341,7 +347,11 @@ export class SimuladorCNC {
       }
       pz.version++
       this.cortando += arrancado
-      if (profundidad > 2.5 + 0.05 && h.forma !== 'ranurado' && h.forma !== 'broca' && h.forma !== 'roscado') {
+      // Una pared delgada (el sobremetal de un resalte) no es una pasada honda:
+      // se cuenta sólo si lo hondo abarca más de 0,5 mm a lo largo de Z.
+      const cuenta = (this.hondas.get(p.linea) ?? 0) + hondas
+      this.hondas.set(p.linea, cuenta)
+      if (profundidad > 2.5 + 0.05 && cuenta * RES_TORNO > 0.5 && h.forma !== 'ranurado' && h.forma !== 'broca' && h.forma !== 'roscado') {
         this.consejo(p.linea, `prof-${p.linea}`, `Pasada de ${(profundidad * 2).toFixed(1)} mm en diámetro: no conviene quitar más de 5 mm por pasada.`)
       }
       this.revisarTronzado(pz)

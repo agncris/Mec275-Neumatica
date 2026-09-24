@@ -13,10 +13,16 @@ import EditorGcode, { type EditorGcodeRef } from './EditorGcode'
 import { EJEMPLOS_CNC, programaNuevo } from './ejemplos'
 import { explicarBloque, interpretar, type ResultadoGcode } from './gcode'
 import {
+  almacenDe,
+  COLORES_HERRAMIENTA,
   CONFIG_INICIAL,
-  HERRAMIENTAS_FRESA,
-  HERRAMIENTAS_TORNO,
+  fijarHerramientas,
   MATERIALES,
+  torretaDe,
+  type FormaFresa,
+  type FormaTorno,
+  type HerramientaFresa,
+  type HerramientaTorno,
   material as materialDe,
   nombreHerramienta,
   origenPrograma,
@@ -92,7 +98,19 @@ export default function UnidadCNC() {
 
   const casa = useMemo(() => posicionCasa(config), [config])
   const cero = useMemo(() => origenPrograma(config, codigo), [config, codigo])
-  const resultado: ResultadoGcode = useMemo(() => interpretar(codigo, maquina, casa, { origen: cero.origen }), [codigo, maquina, casa, cero])
+  fijarHerramientas(config)
+  const almacen = almacenDe(config)
+  const resultado: ResultadoGcode = useMemo(
+    () =>
+      interpretar(codigo, maquina, casa, {
+        origen: cero.origen,
+        radio: (t) => {
+          const h = almacen.find((x) => x.t === t)
+          return h ? h.diametro / 2 : undefined
+        },
+      }),
+    [codigo, maquina, casa, cero, almacen],
+  )
 
   const vista = useRef<VistaCNC>({ sim: new SimuladorCNC(resultado, config, casa), trayectoria, sonido, corte })
   vista.current.corte = corte
@@ -631,7 +649,7 @@ function Preparacion({
       />
     </label>
   )
-  const herramientas = torno ? HERRAMIENTAS_TORNO : HERRAMIENTAS_FRESA
+  const herramientas = torno ? torretaDe(config) : almacenDe(config)
   return (
     <section style={{ ...tarjeta, marginTop: 0 }}>
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-end' }}>
@@ -686,34 +704,9 @@ function Preparacion({
       </div>
       <details style={{ marginTop: 8 }}>
         <summary style={{ cursor: 'pointer', color: '#33475c', fontWeight: 600, fontSize: '0.9rem' }}>
-          Herramientas disponibles {torno ? 'en la torreta' : 'en el almacén'} ({herramientas.length})
+          Herramientas {torno ? 'de la torreta' : 'del almacén'} ({herramientas.length}){(torno ? config.herramientasTorno : config.herramientasFresa) ? ' · propias' : ''}
         </summary>
-        <div style={{ overflowX: 'auto', marginTop: 6 }}>
-          <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '0.85rem' }}>
-            <thead>
-              <tr>
-                {['T', 'Herramienta', 'Para qué sirve', torno ? 'Cómo llamarla' : 'Cómo montarla'].map((h) => (
-                  <th key={h} style={{ textAlign: 'left', background: '#33475c', color: '#fff', padding: '4px 8px' }}>
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {herramientas.map((h) => (
-                <tr key={h.t}>
-                  <td style={celda}>
-                    <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: `#${h.color.toString(16).padStart(6, '0')}`, marginRight: 5 }} />
-                    T{h.t}
-                  </td>
-                  <td style={celda}>{h.nombre}</td>
-                  <td style={celda}>{h.uso}</td>
-                  <td style={{ ...celda, fontFamily: 'ui-monospace, Menlo, monospace' }}>{torno ? `T${String(h.t).padStart(2, '0')}${String(h.t).padStart(2, '0')}` : `T${h.t} M06`}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <EditorHerramientas config={config} setConfig={setConfig} bloqueado={bloqueado} />
       </details>
     </section>
   )
@@ -909,7 +902,7 @@ function ComoUsar() {
       <li style={li}>
         <strong>Prepara la máquina:</strong> elige el centro de torneado o la fresadora, el material y las medidas del bruto.
         Revisa la lista de herramientas: en el torno se llaman con <code>T0101</code> (herramienta 1, corrector 1); en la
-        fresadora con <code>T1 M06</code>.
+        fresadora con <code>T1 M06</code>. Puedes editarlas, agregar las tuyas o quitar las que no tengas.
       </li>
       <li style={li}>
         <strong>Escribe el programa</strong> en el editor (o abre un .cnc). Mientras escribes se revisa: los errores salen
@@ -937,8 +930,16 @@ function ComoUsar() {
         la cara queda en Z77); también puedes elegirlo en «Cero del programa». <code>G92 X… Z…</code> mueve el cero (la
         posición actual toma esas coordenadas), <code>ET2</code> llama una herramienta igual que <code>T2</code>, y
         <code>T… M6</code> la monta. En el torno funcionan los ciclos <code>G81</code>/<code>G83</code> (taladrado en el eje)
-        y <code>G76</code> (roscado en dos bloques). Otras instrucciones <code>$</code> se ignoran y la compensación de radio
-        (G41/G42) no se simula. El punto programado de la herramienta de tronzado es su esquina derecha (hacia la cara).
+        y <code>G76</code> (roscado en dos bloques). Otras instrucciones <code>$</code> se ignoran. El punto programado de la
+        herramienta de tronzado es su esquina derecha (hacia la cara).
+      </li>
+      <li style={li}>
+        <strong>Para programar menos:</strong> en el torno, <code>G71 U… R…</code> + <code>G71 P… Q… U… W… F…</code> desbasta
+        el perfil escrito entre los bloques N indicados en P y Q, y <code>G70 P… Q…</code> lo afina (solos, G70 y G71 siguen
+        siendo pulgadas y milímetros). <code>M98 P1000 L3</code> llama tres veces al subprograma <code>O1000</code>, que se
+        escribe después del M30 y termina con <code>M99</code>. En la fresadora, <code>G41</code>/<code>G42</code> con
+        <code>D…</code> corren la fresa un radio a la izquierda o a la derecha del contorno (se programa con las medidas de la
+        pieza) y <code>G40</code> la cancela; en el torno no se simula la compensación del radio de la punta.
       </li>
     </ol>
   )
@@ -955,6 +956,136 @@ const tarjeta: React.CSSProperties = {
   minWidth: 0,
 }
 const subtitulo: React.CSSProperties = { margin: '0 0 0.6rem', fontSize: '1.05rem', color: '#33475c' }
+// ---------------------------------------------------------------------------
+// Herramientas propias: se pueden editar, agregar y quitar
+// ---------------------------------------------------------------------------
+const FORMAS_TORNO: Array<[FormaTorno, string]> = [
+  ['izquierda', 'Cilindrar hacia el plato (Z−)'],
+  ['derecha', 'Cilindrar hacia la cara (Z+)'],
+  ['ranurado', 'Ranurado / tronzado'],
+  ['roscado', 'Roscado'],
+  ['broca', 'Broca (en el eje)'],
+]
+const FORMAS_FRESA: Array<[FormaFresa, string]> = [
+  ['plana', 'Fresa plana'],
+  ['bola', 'Fresa bola'],
+  ['broca', 'Broca'],
+  ['grabado', 'Grabado en V'],
+]
+
+function EditorHerramientas({ config, setConfig, bloqueado }: { config: ConfigCNC; setConfig: (f: (c: ConfigCNC) => ConfigCNC) => void; bloqueado: boolean }) {
+  const torno = config.maquina === 'torno'
+  const lista: Array<HerramientaTorno | HerramientaFresa> = torno ? torretaDe(config) : almacenDe(config)
+  const propias = torno ? !!config.herramientasTorno : !!config.herramientasFresa
+  const guardar = (nueva: Array<HerramientaTorno | HerramientaFresa>) =>
+    setConfig((c) => (torno ? { ...c, herramientasTorno: nueva as HerramientaTorno[] } : { ...c, herramientasFresa: nueva as HerramientaFresa[] }))
+  const cambiar = (i: number, cambio: Partial<HerramientaTorno> & Partial<HerramientaFresa>) => guardar(lista.map((h, k) => (k === i ? ({ ...h, ...cambio } as HerramientaTorno | HerramientaFresa) : h)))
+  const agregar = () => {
+    const t = Math.max(0, ...lista.map((h) => h.t)) + 1
+    const color = COLORES_HERRAMIENTA[t % COLORES_HERRAMIENTA.length]
+    const nueva: HerramientaTorno | HerramientaFresa = torno
+      ? { t, nombre: 'Herramienta nueva', forma: 'izquierda', angulo: 30, uso: 'Escribe para qué sirve.', color }
+      : { t, nombre: 'Fresa nueva', forma: 'plana', diametro: 8, uso: 'Escribe para qué sirve.', color }
+    guardar([...lista, nueva])
+  }
+  const repetidas = new Set(lista.map((h) => h.t).filter((t, i, a) => a.indexOf(t) !== i))
+  const entrada: React.CSSProperties = { padding: '2px 4px', border: '1px solid #c6ced6', borderRadius: 4, fontSize: '0.82rem' }
+  return (
+    <div style={{ marginTop: 6 }} data-herramientas="si">
+      <p style={{ margin: '0 0 6px', fontSize: '0.8rem', color: '#5a6b7d' }}>
+        Puedes cambiar las herramientas como en la máquina: el número T, el nombre, el tipo y sus medidas.
+        {torno ? ' En el torno la medida es el ancho de la hoja (ranurado) o el diámetro (broca); el ángulo es el del filo secundario (el de roscado, el de la punta).' : ' El diámetro es el que usa la compensación de radio G41/G42 (radio = diámetro ÷ 2).'}
+      </p>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '0.85rem' }}>
+          <thead>
+            <tr>
+              {['T', 'Herramienta', 'Tipo', torno ? 'Medida / ángulo' : 'Diámetro', 'Para qué sirve', torno ? 'Cómo llamarla' : 'Cómo montarla', ''].map((h, i) => (
+                <th key={i} style={{ textAlign: 'left', background: '#33475c', color: '#fff', padding: '4px 8px' }}>
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {lista.map((h, i) => {
+              const ht = h as HerramientaTorno
+              const hf = h as HerramientaFresa
+              return (
+                <tr key={i}>
+                  <td style={{ ...celda, whiteSpace: 'nowrap' }}>
+                    <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: `#${h.color.toString(16).padStart(6, '0')}`, marginRight: 5 }} />
+                    <input
+                      type="number"
+                      min={1}
+                      max={99}
+                      value={h.t}
+                      disabled={bloqueado}
+                      onChange={(e) => cambiar(i, { t: Math.max(1, Math.min(99, Math.round(Number(e.target.value) || 1))) })}
+                      style={{ ...entrada, width: 46, borderColor: repetidas.has(h.t) ? '#d93025' : '#c6ced6' }}
+                      aria-label="Número T"
+                    />
+                  </td>
+                  <td style={celda}>
+                    <input value={h.nombre} disabled={bloqueado} onChange={(e) => cambiar(i, { nombre: e.target.value })} style={{ ...entrada, width: 150 }} aria-label="Nombre" />
+                  </td>
+                  <td style={celda}>
+                    <select value={h.forma} disabled={bloqueado} onChange={(e) => cambiar(i, { forma: e.target.value as FormaTorno & FormaFresa })} style={entrada}>
+                      {(torno ? FORMAS_TORNO : FORMAS_FRESA).map(([v, t]) => (
+                        <option key={v} value={v}>
+                          {t}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td style={{ ...celda, whiteSpace: 'nowrap' }}>
+                    {torno ? (
+                      ht.forma === 'ranurado' || ht.forma === 'broca' ? (
+                        <label>
+                          {ht.forma === 'broca' ? 'Ø' : 'ancho'}{' '}
+                          <input type="number" min={0.5} max={40} step={0.5} value={ht.medida ?? 4} disabled={bloqueado} onChange={(e) => cambiar(i, { medida: Math.max(0.5, Number(e.target.value) || 1) })} style={{ ...entrada, width: 58 }} /> mm
+                        </label>
+                      ) : (
+                        <label>
+                          <input type="number" min={1} max={85} step={1} value={ht.angulo ?? (ht.forma === 'roscado' ? 60 : 5)} disabled={bloqueado} onChange={(e) => cambiar(i, { angulo: Math.max(1, Math.min(85, Number(e.target.value) || 5)) })} style={{ ...entrada, width: 52 }} />°
+                        </label>
+                      )
+                    ) : (
+                      <label>
+                        Ø <input type="number" min={0.5} max={80} step={0.5} value={hf.diametro} disabled={bloqueado} onChange={(e) => cambiar(i, { diametro: Math.max(0.5, Math.min(80, Number(e.target.value) || 1)) })} style={{ ...entrada, width: 58 }} /> mm
+                      </label>
+                    )}
+                  </td>
+                  <td style={celda}>
+                    <input value={h.uso} disabled={bloqueado} onChange={(e) => cambiar(i, { uso: e.target.value })} style={{ ...entrada, width: '100%', minWidth: 180 }} aria-label="Para qué sirve" />
+                  </td>
+                  <td style={{ ...celda, fontFamily: 'ui-monospace, Menlo, monospace' }}>{torno ? `T${String(h.t).padStart(2, '0')}${String(h.t).padStart(2, '0')}` : `T${h.t} M06`}</td>
+                  <td style={celda}>
+                    <button onClick={() => guardar(lista.filter((_, k) => k !== i))} disabled={bloqueado || lista.length <= 1} title="Quitar esta herramienta" style={{ ...entrada, cursor: 'pointer', background: '#fff' }}>
+                      ✕
+                    </button>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+      {repetidas.size > 0 && <p style={{ margin: '4px 0 0', color: '#d93025', fontSize: '0.8rem' }}>Hay números T repetidos: la máquina usa la primera herramienta con ese número.</p>}
+      <div style={{ display: 'flex', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
+        <button onClick={agregar} disabled={bloqueado} style={{ ...botonSuave }} data-agregar-herramienta="si">
+          + Agregar herramienta
+        </button>
+        {propias && (
+          <button onClick={() => setConfig((c) => (torno ? { ...c, herramientasTorno: undefined } : { ...c, herramientasFresa: undefined }))} disabled={bloqueado} style={{ ...botonSuave }}>
+            Volver a las de fábrica
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 const boton: React.CSSProperties = { border: 'none', color: '#fff', padding: '0.45rem 0.9rem', borderRadius: 8, fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer' }
 const botonSuave: React.CSSProperties = {
   border: '1px solid #c6ced6',

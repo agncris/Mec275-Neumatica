@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { EJEMPLOS_CNC } from '../cnc/ejemplos'
 import { analizarLinea, explicarBloque, interpretar } from '../cnc/gcode'
-import { CONFIG_INICIAL, origenPrograma, posicionCasa, type ConfigCNC } from '../cnc/maquinas'
+import { almacenDe, CONFIG_INICIAL, origenPrograma, posicionCasa, type ConfigCNC } from '../cnc/maquinas'
 import { PiezaFresa, PiezaTorno, SimuladorCNC } from '../cnc/simulador'
 
 const TORNO: ConfigCNC = { ...CONFIG_INICIAL, maquina: 'torno' }
@@ -9,7 +9,11 @@ const FRESA: ConfigCNC = { ...CONFIG_INICIAL, maquina: 'fresadora' }
 
 function correr(codigo: string, config: ConfigCNC) {
   const casa = posicionCasa(config)
-  const r = interpretar(codigo, config.maquina, casa, { origen: origenPrograma(config, codigo).origen })
+  const radio = (t: number) => {
+    const h = almacenDe(config).find((x) => x.t === t)
+    return h ? h.diametro / 2 : undefined
+  }
+  const r = interpretar(codigo, config.maquina, casa, { origen: origenPrograma(config, codigo).origen, radio })
   const sim = new SimuladorCNC(r, config, casa)
   sim.terminar()
   return { r, sim }
@@ -262,5 +266,71 @@ describe('compatibilidad con CNC Simulator Pro', () => {
     expect(sim.pos).toMatchObject({ x: 36, z: 2 })
     const pz = sim.pieza as PiezaTorno
     expect(pz.ext[pz.indice(-10)] * 2).toBeCloseTo(40, 1)
+  })
+})
+
+describe('subprogramas, ciclos G71/G70 y compensación de radio', () => {
+  const casaF = posicionCasa(FRESA)
+  it('M98 llama al subprograma las veces pedidas y vuelve con M99', () => {
+    const cod = 'G21 G90\nG00 X0 Y0 Z5\nM98 P1000 L3\nG90 G00 Z20\nM30\nO1000 (paso de 10)\nG91 G00 X10\nM99'
+    const r = interpretar(cod, 'fresadora', casaF)
+    expect(r.diagnosticos.filter((d) => d.nivel !== 'info')).toEqual([])
+    expect(r.puntos[r.puntos.length - 1].prog).toMatchObject({ x: 30, z: 20 })
+    const r2 = interpretar(cod.replace('P1000 L3', 'P21000'), 'fresadora', casaF)
+    expect(r2.puntos[r2.puntos.length - 1].prog.x).toBe(20)
+  })
+  it('avisa si el subprograma no existe', () => {
+    expect(errores('G21\nM98 P2000\nM30')[0].texto).toMatch(/No existe el subprograma O2000/)
+  })
+  it('G70 y G71 solos siguen siendo pulgadas y milímetros', () => {
+    const r = interpretar('G70\nG00 X1\nG71\nG00 X1\nM30', 'fresadora', casaF)
+    expect(r.estados[1].pulgadas).toBe(true)
+    expect(r.estados[3].pulgadas).toBe(false)
+  })
+  it('G71 desbasta y G70 afina el perfil de los bloques P a Q', () => {
+    const cod = [
+      'G21 G90 G94',
+      'T0101',
+      'M03 S1500',
+      'G00 X44 Z2',
+      'G71 U2 R0.5',
+      'G71 P10 Q50 U0.4 W0.1 F150',
+      'N10 G00 X20',
+      'N20 G01 Z-20',
+      'N30 X30',
+      'N40 Z-35',
+      'N50 X42',
+      'T0202',
+      'G00 X44 Z2',
+      'G70 P10 Q50 F80',
+      'G28',
+      'M30',
+    ].join('\n')
+    const { r, sim } = correr(cod, TORNO)
+    expect(r.diagnosticos.filter((d) => d.nivel === 'error')).toEqual([])
+    const desbaste = r.pasos.filter((p) => p.codigo === 'G71' && p.tipo === 'corte')
+    expect(desbaste.length).toBeGreaterThan(8)
+    expect(Math.min(...desbaste.flatMap((p) => p.puntos.map((q) => q.x)))).toBeCloseTo(20.4, 5)
+    expect(sim.alarma).toBeNull()
+    const pieza = sim.pieza as PiezaTorno
+    expect(pieza.ext[pieza.indice(-10)]).toBeCloseTo(10, 0)
+    expect(pieza.ext[pieza.indice(-30)]).toBeCloseTo(15, 0)
+  })
+  const contorno = (g: string) =>
+    ['G21 G90 G17', 'T2 M06', 'M03 S2000', 'G00 X-10 Y-10 Z5', 'G01 Z-2 F200', `${g} D2 G01 X0 Y0`, 'X40', 'Y40', 'X0', 'Y0', 'G40 G01 X-10 Y-10', 'G00 Z5', 'M30'].join('\n')
+  const opciones = { radio: (t: number) => (t === 2 ? 3 : undefined) }
+  it('G42 corre la fresa un radio por fuera del contorno (sentido antihorario)', () => {
+    const r = interpretar(contorno('G42'), 'fresadora', casaF, opciones)
+    const pts = r.pasos.filter((p) => p.tipo === 'corte').flatMap((p) => p.puntos).filter((q) => q.z < -1)
+    expect(Math.max(...pts.map((q) => q.x))).toBeCloseTo(43, 5)
+    expect(Math.max(...pts.map((q) => q.y))).toBeCloseTo(43, 5)
+    expect(pts.some((q) => q.x > 0.01 && q.x < 39.99 && q.y > 0.01 && q.y < 39.99)).toBe(false)
+  })
+  it('G41 la corre por dentro y avisa si la herramienta no cabe', () => {
+    const r = interpretar(contorno('G41'), 'fresadora', casaF, opciones)
+    const pts = r.pasos.filter((p) => p.tipo === 'corte' && p.comp?.fase === 'activa').flatMap((p) => p.puntos)
+    expect(Math.max(...pts.map((q) => q.x))).toBeCloseTo(37, 5)
+    const chico = contorno('G41').replace('X40\nY40', 'X4\nY4').replace('X0\nY0\nG40', 'X0\nY0\nG40')
+    expect(interpretar(chico, 'fresadora', casaF, opciones).diagnosticos.some((d) => /no cabe/.test(d.texto))).toBe(true)
   })
 })

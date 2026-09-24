@@ -272,6 +272,40 @@ N390 M30                 ( fin )
 `,
   },
   {
+    id: 'torno-ciclos',
+    titulo: 'Torno 6 · Ciclos G71 y G70 (desbaste y acabado)',
+    maquina: 'torno',
+    resumen: 'El perfil se escribe una sola vez (bloques N10 a N60): G71 lo desbasta en pasadas de 2 mm y G70 lo afina siguiendo el contorno.',
+    config: BRUTO_TORNO,
+    codigo: `%
+( Ciclos G71 y G70: desbaste y acabado de un perfil )
+( Bruto: latón Ø40 x 90 mm. Cero pieza en la cara, sobre el eje )
+( El perfil va una sola vez, entre los bloques N10 y N60 )
+G21 G90 G94 ( milímetros, absolutas, avance en mm/min )
+T0101 ( desbaste izquierda )
+M03 S1500 ( husillo a 1500 rpm )
+G00 X44 Z0 ( a la altura de la cara )
+G01 X0 F100 ( refrenta la cara hasta el eje )
+G00 Z2 ( se aleja de la cara )
+G00 X44 ( punto de partida del ciclo, fuera del bruto )
+G71 U2 R0.5 ( pasadas de 2 mm en radio y retiro de 0,5 mm )
+G71 P10 Q60 U0.4 W0.1 F150 ( desbasta dejando 0,4 mm en X y 0,1 mm en Z )
+N10 G00 X16 ( perfil: llega al diámetro de la punta )
+N20 G01 Z0 ( hasta la cara )
+N30 X20 Z-2 ( chaflán de 2 mm )
+N40 Z-20 ( cilindro Ø20 )
+N50 X30 Z-30 ( cono de Ø20 a Ø30 )
+N60 X42 ( sale sobre el bruto )
+G28 ( vuelve para cambiar de herramienta )
+T0202 ( afinado izquierda )
+G00 X44 Z2 ( mismo punto de partida )
+G70 P10 Q60 F80 ( una pasada siguiendo el perfil )
+G28 ( vuelve a la referencia )
+M05 ( para el husillo )
+M30 ( fin de programa )
+`,
+  },
+  {
     id: 'fresa-cuadrado',
     titulo: 'Fresadora 1 · Contorno cuadrado',
     maquina: 'fresadora',
@@ -480,6 +514,38 @@ N250 G28                 ( a la referencia )
 N260 M05                 ( parar el husillo )
 N270 M30                 ( fin )
 %
+`,
+  },
+  {
+    id: 'fresa-subprograma',
+    titulo: 'Fresadora 7 · Compensación G41 y subprograma M98',
+    maquina: 'fresadora',
+    resumen: 'El contorno se programa con las medidas de la pieza y G41 corre la fresa un radio hacia afuera. Un subprograma repite la vuelta tres veces, bajando 2 mm cada vez.',
+    config: BRUTO_FRESA,
+    codigo: `%
+( Contorno exterior con compensación de radio G41 y subprograma )
+( Bruto: aluminio 100 x 80 x 20. Cero pieza: esquina delantera izquierda arriba )
+( El contorno usa las medidas de la pieza: la máquina corre la fresa un radio )
+G21 G90 G17 G94 ( milímetros, absolutas, plano XY, mm/min )
+T1 M06 ( fresa plana Ø10: radio 5 )
+M03 S2500 ( husillo a 2500 rpm )
+G00 X-15 Y-15 Z5 ( fuera de la pieza, frente a la esquina )
+G01 Z0 F200 ( baja a la cara superior )
+M98 P1000 L3 ( el contorno 3 veces, bajando 2 mm cada vez )
+G90 G00 Z20 ( sube )
+M05 ( para el husillo )
+G28 ( vuelve a la referencia )
+M30 ( fin del programa principal )
+
+O1000 ( subprograma: una vuelta al contorno 2 mm más abajo )
+G91 G01 Z-2 F100 ( baja 2 mm desde donde está )
+G90 G41 D1 G01 X10 Y10 F300 ( entra con la compensación a la izquierda )
+Y70 ( lado izquierdo )
+X90 ( lado de arriba )
+Y10 ( lado derecho )
+X10 ( lado de abajo: cierra el contorno )
+G40 G01 X-15 Y-15 ( sale y cancela la compensación )
+M99 ( vuelve al programa principal )
 `,
   },
 ]

@@ -480,7 +480,22 @@ export function Torno() {
       <p style={p}>
         <strong>Compensación del radio (G41/G42):</strong> la punta del inserto es redondeada. En chaflanes y radios, si
         se programa la punta teórica, el contorno queda levemente distinto; la compensación corre la trayectoria a la
-        izquierda (G41) o a la derecha (G42). Se cancela con G40.
+        izquierda (G41) o a la derecha (G42). Se cancela con G40. En la fresadora es imprescindible: el contorno se
+        programa con las medidas de la pieza y la máquina corre el centro de la fresa un radio (el del corrector D); el
+        lado se mira en el sentido del avance.
+      </p>
+      <p style={p}>
+        <strong>Ciclos de desbaste y acabado (G71/G70, dialecto Fanuc):</strong> el perfil se escribe una sola vez,
+        entre dos bloques numerados. <code>G71 U2 R0.5</code> fija la pasada (2 mm en radio) y el retiro;{' '}
+        <code>G71 P10 Q60 U0.4 W0.1 F150</code> desbasta desde el punto de partida hasta el perfil N10…N60 dejando 0,4 mm
+        en el diámetro y 0,1 mm en Z; <code>G70 P10 Q60</code> lo recorre una vez para afinar. Sin P y Q, G70 y G71
+        son pulgadas y milímetros (DIN).
+      </p>
+      <p style={p}>
+        <strong>Subprogramas (M98/M99):</strong> una parte que se repite (una ranura, una vuelta de contorno) se escribe
+        una vez como subprograma <code>O1000</code> … <code>M99</code>, después del M30, y se llama con{' '}
+        <code>M98 P1000 L3</code> (tres veces). Con coordenadas incrementales (G91) dentro del subprograma, cada llamada
+        trabaja desde donde quedó la anterior.
       </p>
     </div>
   )

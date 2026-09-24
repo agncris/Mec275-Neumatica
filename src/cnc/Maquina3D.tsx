@@ -416,6 +416,7 @@ function escenaTorno(sim: SimuladorCNC): EscenaMaquina {
   raiz.add(carro)
   let herr: THREE.Group | null = null
   let tHerr = -1
+  let hHerr: unknown = null
   let giroTorreta = 0
 
   const boquilla = cil(2.5, 40, M.naranja, 12)
@@ -483,10 +484,12 @@ function escenaTorno(sim: SimuladorCNC): EscenaMaquina {
       giro.rotation.x = angulo
       // Herramienta.
       const t = s.herramienta
-      if (t !== tHerr) {
+      const hNueva = herramientaTorno(t)
+      if (t !== tHerr || hNueva !== hHerr) {
         tHerr = t
+        hHerr = hNueva
         if (herr) carro.remove(herr)
-        const h = herramientaTorno(t)
+        const h = hNueva
         herr = h ? modeloHerramientaTorno(h) : new THREE.Group()
         carro.add(herr)
         giroTorreta += Math.PI / 6
@@ -624,6 +627,7 @@ function escenaFresa(sim: SimuladorCNC): EscenaMaquina {
   raiz.add(cabezal)
   let herr: THREE.Group | null = null
   let tHerr = -1
+  let hHerr: unknown = null
   let angulo = 0
 
   const boquilla = cil(2.5, 50, M.naranja, 12)
@@ -662,10 +666,12 @@ function escenaFresa(sim: SimuladorCNC): EscenaMaquina {
       const rpm = paso && paso.husillo !== 'off' && !s.alarma ? paso.rpm : 0
       angulo += Math.min(rpm, 900) * 0.1 * dt * (paso?.husillo === 'ccw' ? 1 : -1)
       const t = s.herramienta
-      if (t !== tHerr) {
+      const hNueva = herramientaFresa(t)
+      if (t !== tHerr || hNueva !== hHerr) {
         tHerr = t
+        hHerr = hNueva
         if (herr) husillo.remove(herr)
-        const h = herramientaFresa(t)
+        const h = hNueva
         herr = h ? modeloHerramientaFresa(h) : new THREE.Group()
         husillo.add(herr)
       }

@@ -198,6 +198,9 @@ export interface ConfigCNC {
   material: string
   torno: BrutoTorno
   fresa: BrutoFresa
+  /** Herramientas propias (si no están, se usan las de fábrica). */
+  herramientasTorno?: HerramientaTorno[]
+  herramientasFresa?: HerramientaFresa[]
 }
 
 export const CONFIG_INICIAL: ConfigCNC = {
@@ -222,13 +225,33 @@ export function posicionCasa(c: ConfigCNC): { x: number; y: number; z: number } 
   return { x: 0, y: 0, z: 50 }
 }
 
+export function torretaDe(c: ConfigCNC): HerramientaTorno[] {
+  return c.herramientasTorno ?? HERRAMIENTAS_TORNO
+}
+
+export function almacenDe(c: ConfigCNC): HerramientaFresa[] {
+  return c.herramientasFresa ?? HERRAMIENTAS_FRESA
+}
+
+// Herramientas de la preparación en uso (las fija el simulador).
+let torretaActiva: HerramientaTorno[] = HERRAMIENTAS_TORNO
+let almacenActivo: HerramientaFresa[] = HERRAMIENTAS_FRESA
+
+export function fijarHerramientas(c: ConfigCNC) {
+  torretaActiva = torretaDe(c)
+  almacenActivo = almacenDe(c)
+}
+
 export function herramientaTorno(t: number): HerramientaTorno | undefined {
-  return HERRAMIENTAS_TORNO.find((h) => h.t === t)
+  return torretaActiva.find((h) => h.t === t)
 }
 
 export function herramientaFresa(t: number): HerramientaFresa | undefined {
-  return HERRAMIENTAS_FRESA.find((h) => h.t === t)
+  return almacenActivo.find((h) => h.t === t)
 }
+
+/** Colores para las herramientas nuevas. */
+export const COLORES_HERRAMIENTA = [0xd9a400, 0x2f8fdd, 0x2aa876, 0xe07b39, 0x8e5bd6, 0xd64550, 0x1f6fb2, 0x607d8b]
 
 export function nombreHerramienta(maquina: TipoMaquina, t: number): string {
   const h = maquina === 'torno' ? herramientaTorno(t) : herramientaFresa(t)

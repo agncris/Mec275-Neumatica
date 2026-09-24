@@ -45,6 +45,8 @@ export interface Paso {
   paso?: number
   /** Cero del programa vigente (en coordenadas de la máquina simulada). */
   origen: Vec3
+  /** Compensación de radio (G41/G42) que afecta a este paso. */
+  comp?: { lado: 41 | 42; r: number; fase: 'arranque' | 'activa' | 'salida' }
 }
 
 export type Nivel = 'error' | 'aviso' | 'info'
@@ -75,6 +77,10 @@ export interface EstadoModal {
   ciclo: { r: number; z: number; q: number; retorno: 98 | 99; zInicial: number } | null
   /** Primer bloque del ciclo de roscado G76. */
   g76: { repasos: number; angulo: number; minimo: number; acabado: number } | null
+  /** Primer bloque del ciclo de desbaste G71 (profundidad y retiro, en radio). */
+  g71: { prof: number; retiro: number } | null
+  /** Compensación de radio vigente (40 = sin compensación). */
+  comp: 40 | 41 | 42
 }
 
 export interface PuntoPrograma {
@@ -107,6 +113,8 @@ export interface ResultadoGcode {
 export interface OpcionesInterprete {
   /** Cero del programa al empezar (por omisión, el de la máquina simulada). */
   origen?: Vec3
+  /** Radio de la herramienta o corrector n (para G41/G42 en la fresadora). */
+  radio?: (n: number) => number | undefined
 }
 
 export interface LineaAnalizada {
@@ -169,12 +177,12 @@ export const CODIGOS_G: Record<string, string> = {
   G21: 'Programar en milímetros',
   G28: 'Volver a la posición de referencia (home)',
   G33: 'Roscado: avance sincronizado con el giro (F = paso de la rosca)',
-  G40: 'Cancelar la compensación de radio de la herramienta',
-  G41: 'Compensación de radio a la izquierda de la trayectoria',
-  G42: 'Compensación de radio a la derecha de la trayectoria',
+  G40: 'Cancelar la compensación de radio: el centro de la herramienta vuelve a seguir la trayectoria programada',
+  G41: 'Compensación de radio a la izquierda: la herramienta va corrida un radio a la izquierda del contorno, mirando en el sentido del avance',
+  G42: 'Compensación de radio a la derecha: la herramienta va corrida un radio a la derecha del contorno, mirando en el sentido del avance',
   G54: 'Usar el cero pieza 1',
-  G70: 'Unidad de medida en pulgadas (DIN)',
-  G71: 'Unidad de medida en milímetros (DIN)',
+  G70: 'Unidad de medida en pulgadas (DIN). En el torno, G70 P… Q… es el ciclo de acabado: recorre el perfil de los bloques P a Q',
+  G71: 'Unidad de medida en milímetros (DIN). En el torno, G71 U… R… y G71 P… Q… es el ciclo de desbaste del perfil',
   G80: 'Cancelar ciclo fijo de taladrado',
   G81: 'Ciclo de taladrado: baja a Z al avance F y sube en rápido',
   G76: 'Ciclo de roscado en el torno (dos bloques: parámetros y rosca)',
@@ -202,6 +210,8 @@ export const CODIGOS_M: Record<string, string> = {
   M08: 'Encender líquido refrigerante',
   M09: 'Apagar líquido refrigerante',
   M30: 'Fin de programa con vuelta al inicio',
+  M98: 'Llamar a un subprograma (P = su número O, L = cuántas veces)',
+  M99: 'Fin del subprograma: vuelve al bloque siguiente al M98',
 }
 
 export function codigo(letra: 'G' | 'M', v: number): string {
@@ -215,20 +225,52 @@ export function codigo(letra: 'G' | 'M', v: number): string {
 const RAPIDO = { torno: 6000, fresadora: 5000 }
 const RPM_MAX = { torno: 4000, fresadora: 12000 }
 const G_CONOCIDOS = new Set([0, 1, 2, 3, 4, 17, 18, 19, 20, 21, 28, 33, 40, 41, 42, 54, 55, 56, 57, 58, 59, 70, 71, 76, 80, 81, 83, 90, 91, 92, 94, 95, 96, 97, 98, 99])
-const M_CONOCIDOS = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 30])
+const M_CONOCIDOS = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 30, 98, 99])
 
 export function interpretar(texto: string, maquina: TipoMaquina, casa: Vec3, opciones: OpcionesInterprete = {}): ResultadoGcode {
   const lineas = texto.replace(/\r/g, '').split('\n')
+  const an = lineas.map(analizarLinea)
   const diagnosticos: Diagnostico[] = []
   const pasos: Paso[] = []
-  const estados: EstadoModal[] = []
+  const estados: EstadoModal[] = new Array(lineas.length)
   const puntos: PuntoPrograma[] = []
   const sinComentario: number[] = []
   const torno = maquina === 'torno'
   let primerError: number | null = null
+  /** Cuántos pasos quedan válidos: el programa corre sólo hasta el primer error. */
+  let corte: number | null = null
+  let inicioBloque = 0
   const diag = (linea: number, nivel: Nivel, t: string) => {
     diagnosticos.push({ linea, nivel, texto: t })
-    if (nivel === 'error' && primerError === null) primerError = linea
+    if (nivel === 'error') {
+      if (primerError === null) primerError = linea
+      if (corte === null) corte = inicioBloque
+    }
+  }
+
+  // Números de bloque (N) y de programa (O), para los ciclos y los subprogramas.
+  const numeros = new Map<number, number>()
+  const programas = new Map<number, number>()
+  let primeraCodigo = -1
+  an.forEach((a, i) => {
+    if (a.vacia || a.directiva !== null || a.resto !== null) return
+    if (primeraCodigo < 0) primeraCodigo = i
+    if (!a.comentario) sinComentario.push(i)
+    const nn = a.palabras.find((p) => p.letra === 'N')
+    if (nn && !numeros.has(nn.valor)) numeros.set(nn.valor, i)
+    const o = a.palabras.find((p) => p.letra === 'O')
+    if (o && !programas.has(o.valor)) programas.set(o.valor, i)
+  })
+  // Líneas que son subprogramas (de O… hasta M99).
+  const enSub = new Uint8Array(lineas.length)
+  for (const [num, i] of programas) {
+    if (i === primeraCodigo) continue
+    let k = i
+    for (; k < lineas.length; k++) {
+      enSub[k] = 1
+      if (an[k].palabras.some((p) => p.letra === 'M' && p.valor === 99)) break
+    }
+    if (k >= lineas.length) diag(i, 'aviso', `El subprograma O${num} no termina con M99.`)
   }
 
   const e: EstadoModal = {
@@ -248,16 +290,21 @@ export function interpretar(texto: string, maquina: TipoMaquina, casa: Vec3, opc
     rpmMax: RPM_MAX[maquina],
     ciclo: null,
     g76: null,
+    g71: null,
+    comp: 40,
   }
   let addRegPart: number | null = null
   let unidadesDichas = false
   let fin: number | null = null
-  let avisoTrasFin = false
   let herramientaElegida = false
   let tAvisado = false
   let sinFAvisado = false
   let compAvisada = false
   let pendienteT: number | null = null
+  // Compensación de radio en la fresadora.
+  let faseComp: 'nada' | 'arranque' | 'activa' | 'cancelando' = 'nada'
+  let radioComp = 0
+  let ladoAnterior: 41 | 42 = 41
 
   const rpmEn = (xDiam: number) => {
     if (e.husillo === 'off') return 0
@@ -271,6 +318,20 @@ export function interpretar(texto: string, maquina: TipoMaquina, casa: Vec3, opc
     let largo = 0
     for (let i = 1; i < pts.length; i++) largo += dist(pts[i - 1], pts[i])
     const duracion = extra.duracion ?? (avance > 0 ? (largo / avance) * 60 : 0)
+    let comp: Paso['comp']
+    if (faseComp !== 'nada' && e.comp !== 40 && faseComp !== 'cancelando') {
+      const enXY = pts.some((p) => Math.hypot(p.x - pts[0].x, p.y - pts[0].y) > 1e-6)
+      if (faseComp === 'arranque') {
+        if (enXY) {
+          comp = { lado: e.comp, r: radioComp, fase: 'arranque' }
+          faseComp = 'activa'
+        }
+      } else comp = { lado: e.comp, r: radioComp, fase: 'activa' }
+    } else if (faseComp === 'cancelando') {
+      const enXY = pts.some((p) => Math.hypot(p.x - pts[0].x, p.y - pts[0].y) > 1e-6)
+      comp = { lado: ladoAnterior, r: radioComp, fase: enXY ? 'salida' : 'activa' }
+      if (enXY) faseComp = 'nada'
+    }
     pasos.push({
       linea,
       tipo,
@@ -285,6 +346,7 @@ export function interpretar(texto: string, maquina: TipoMaquina, casa: Vec3, opc
       refrigerante: e.refrigerante,
       origen: { ...e.origen },
       ...extra,
+      ...(comp ? { comp } : {}),
     })
   }
   const avanceMmMin = (linea: number): number => {
@@ -305,9 +367,20 @@ export function interpretar(texto: string, maquina: TipoMaquina, casa: Vec3, opc
     return f
   }
 
-  for (let n = 0; n < lineas.length; n++) {
-    estados.push(clonarEstado(e))
-    const a = analizarLinea(lineas[n])
+  const pila: Array<{ vuelta: number; quedan: number; inicio: number; o: number }> = []
+  const ejecutada = new Uint8Array(lineas.length)
+  let ejecutadas = 0
+  let siguiente = 0
+  for (let n = 0; n < lineas.length; n = siguiente) {
+    siguiente = n + 1
+    inicioBloque = pasos.length
+    if (++ejecutadas > 20000) {
+      diag(n, 'error', 'El programa no termina: se repite sin fin. Revisa los M98 y M99.')
+      break
+    }
+    if (!estados[n]) estados[n] = clonarEstado(e)
+    ejecutada[n] = 1
+    const a = an[n]
     if (a.directiva !== null) {
       const d = a.directiva.toLowerCase()
       if (d.startsWith('millimeter')) {
@@ -327,11 +400,17 @@ export function interpretar(texto: string, maquina: TipoMaquina, casa: Vec3, opc
       diag(n, 'error', `No entiendo «${a.resto}». Cada palabra es una letra seguida de un número, por ejemplo G01 o X25.5. Los comentarios van entre paréntesis ( ) o después de ;`)
       continue
     }
-    if (!a.comentario) sinComentario.push(n)
-    if (fin !== null) {
-      if (!avisoTrasFin) diag(n, 'aviso', `Esta línea está después del fin de programa (línea ${fin + 1}): no se ejecuta.`)
-      avisoTrasFin = true
-      continue
+    // Bloque O: nombre del programa o comienzo de un subprograma.
+    const oPal = a.palabras.find((p) => p.letra === 'O')
+    if (oPal) {
+      if (n === primeraCodigo) continue
+      if (pila.length) {
+        diag(n, 'error', `Falta M99 al final del subprograma O${pila[pila.length - 1].o}: la ejecución llegó al bloque O${oPal.valor}.`)
+        break
+      }
+      diag(n, 'aviso', `El programa principal llega al subprograma O${oPal.valor} sin haber terminado: falta M30 antes de los subprogramas.`)
+      fin = n
+      break
     }
 
     // Reunir las palabras del bloque.
@@ -362,13 +441,16 @@ export function interpretar(texto: string, maquina: TipoMaquina, casa: Vec3, opc
     for (const m of ms) if (!M_CONOCIDOS.has(m)) diag(n, 'aviso', `${codigo('M', m)} no está disponible en este simulador y se ignora.`)
     const tieneG = (g: number) => gs.includes(g)
     const tieneM = (m: number) => ms.includes(m)
+    // G70/G71 son unidades (DIN) o, con P y Q (o U y R), los ciclos del torno.
+    const esG71 = tieneG(71) && (('P' in val && 'Q' in val) || ('U' in val && 'R' in val && !('X' in val) && !('Z' in val)))
+    const esG70 = tieneG(70) && 'P' in val && 'Q' in val
 
     // 1. Modos.
-    if (tieneG(20) || tieneG(70)) {
+    if ((tieneG(20) || tieneG(70)) && !esG70) {
       e.pulgadas = true
       unidadesDichas = true
     }
-    if (tieneG(21) || tieneG(71)) {
+    if ((tieneG(21) || tieneG(71)) && !esG71) {
       e.pulgadas = false
       unidadesDichas = true
     }
@@ -386,10 +468,6 @@ export function interpretar(texto: string, maquina: TipoMaquina, casa: Vec3, opc
       else diag(n, 'aviso', 'G96 (velocidad de corte constante) es propio del torno.')
     }
     if (tieneG(97)) e.velocidadConstante = false
-    if ((tieneG(41) || tieneG(42)) && !compAvisada) {
-      compAvisada = true
-      diag(n, 'info', 'La compensación de radio (G41/G42) no se simula: la herramienta sigue exactamente la trayectoria programada.')
-    }
     const esc = e.pulgadas ? 25.4 : 1
     if ('F' in val) {
       if (val.F < 0) diag(n, 'error', 'El avance F no puede ser negativo.')
@@ -417,10 +495,34 @@ export function interpretar(texto: string, maquina: TipoMaquina, casa: Vec3, opc
       if (cambio === null) cambio = pendienteT ?? e.herramienta
     }
     if (cambio !== null) {
+      if (e.comp !== 40 && !torno) diag(n, 'aviso', 'Cambias de herramienta con la compensación de radio activa: cancélala antes con G40.')
       e.herramienta = cambio
       herramientaElegida = true
       pendienteT = null
       agregar(n, 'herramienta', [{ ...e.pos }], 0, `T${cambio}`, { duracion: torno ? 1 : 2 })
+    }
+    // Compensación de radio (G41/G42/G40).
+    if (tieneG(41) || tieneG(42)) {
+      if (torno) {
+        if (!compAvisada) diag(n, 'info', 'En el torno la compensación del radio de la punta (G41/G42) no se simula: las herramientas tienen punta viva.')
+        compAvisada = true
+      } else if (e.plano !== 17) {
+        diag(n, 'aviso', 'La compensación de radio se simula sólo en el plano XY (G17).')
+      } else {
+        const nr = 'D' in val ? Math.round(val.D) : e.herramienta
+        const r = nr === 0 ? 0 : opciones.radio?.(nr)
+        if (r === undefined) diag(n, 'aviso', `No hay una herramienta ${nr} para leer su radio: se compensa con radio 0.`)
+        radioComp = r ?? 0
+        if (faseComp === 'cancelando') faseComp = 'activa'
+        else if (e.comp === 40) faseComp = 'arranque'
+        e.comp = tieneG(41) ? 41 : 42
+        ladoAnterior = e.comp
+      }
+    }
+    if (tieneG(40) && !torno && e.comp !== 40) {
+      ladoAnterior = e.comp
+      e.comp = 40
+      faseComp = faseComp === 'arranque' ? 'nada' : 'cancelando'
     }
     // 3. Husillo y refrigerante que empiezan antes del movimiento.
     if (tieneM(3)) e.husillo = 'cw'
@@ -447,19 +549,7 @@ export function interpretar(texto: string, maquina: TipoMaquina, casa: Vec3, opc
     }
     const ejes = torno ? ['X', 'Z', 'U', 'W'] : ['X', 'Y', 'Z', 'U', 'V', 'W']
     const hayEjes = ejes.some((l) => l in val)
-    const destino = (): Vec3 => {
-      const d = { ...e.pos }
-      const ax: Array<[keyof Vec3, string, string]> = [
-        ['x', 'X', 'U'],
-        ['y', 'Y', 'V'],
-        ['z', 'Z', 'W'],
-      ]
-      for (const [k, abs, inc] of ax) {
-        if (abs in val) d[k] = e.absoluto ? e.origen[k] + val[abs] * esc : e.pos[k] + val[abs] * esc
-        if (inc in val) d[k] = e.pos[k] + val[inc] * esc
-      }
-      return d
-    }
+    const destino = (): Vec3 => destinoDe(val, e.pos, e.origen, e.absoluto, esc)
 
     if (tieneG(92)) {
       // G92: la posición actual pasa a tener las coordenadas indicadas.
@@ -476,6 +566,69 @@ export function interpretar(texto: string, maquina: TipoMaquina, casa: Vec3, opc
       }
       if (torno && 'S' in val) e.rpmMax = val.S
       if (movio) diag(n, 'info', `G92: el cero del programa se mueve; desde aquí la posición actual es ${['X', 'Y', 'Z'].filter((l) => l in val).map((l) => `${l}${val[l]}`).join(' ')}.`)
+    } else if (esG71 || esG70) {
+      const nombre = esG71 ? 'G71 (ciclo de desbaste)' : 'G70 (ciclo de acabado)'
+      if (!torno) {
+        diag(n, 'error', `${nombre} es propio del torno. En la fresadora, G70 y G71 sólo eligen pulgadas o milímetros.`)
+        continue
+      }
+      if (esG71 && !('P' in val)) {
+        // Primer bloque: U = profundidad de cada pasada (en radio), R = retiro.
+        if (val.U <= 0) diag(n, 'error', 'En G71 U… R…, U es la profundidad de cada pasada (en radio) y tiene que ser positiva.')
+        else e.g71 = { prof: val.U * esc, retiro: Math.abs(val.R) * esc }
+      } else {
+        const ns = numeros.get(val.P)
+        const nf = numeros.get(val.Q)
+        if (ns === undefined || nf === undefined || nf < ns) {
+          diag(n, 'error', `${nombre}: no encuentro el perfil. P y Q son los números N del primer y del último bloque del contorno (por ejemplo P10 Q90 para los bloques N10 a N90).`)
+          continue
+        }
+        const perfil = leerPerfil(an, ns, nf, e, esc)
+        if ('error' in perfil) {
+          diag(perfil.linea, 'error', perfil.error)
+          continue
+        }
+        const inicio = { ...e.pos }
+        if (esG71) {
+          const prof = 'D' in val ? (val.D >= 100 ? val.D / 1000 : val.D) * esc : e.g71?.prof
+          if (!prof || prof <= 0) {
+            diag(n, 'error', 'Falta la profundidad de pasada de G71: escribe antes un bloque G71 U… R… (U = profundidad en radio, R = retiro).')
+            continue
+          }
+          const f = avanceMmMin(n)
+          if (f <= 0) continue
+          const r = desbasteG71(perfil.tramos, inicio, prof, e.g71?.retiro ?? 0.5, (val.U ?? 0) * esc, (val.W ?? 0) * esc)
+          if ('error' in r) {
+            diag(n, 'error', r.error)
+            continue
+          }
+          if (r.rebajes) diag(n, 'info', 'El perfil tiene rebajes (el diámetro vuelve a achicarse): G71 desbasta en escalones y los rebajes quedan para la pasada que sigue el contorno.')
+          for (const m of r.movs) agregar(n, m.corte ? 'corte' : 'rapido', m.pts, m.corte ? f : RAPIDO.torno, 'G71')
+        } else {
+          for (const t of perfil.tramos) {
+            if (t.tipo === 'rapido') agregar(t.linea, 'rapido', t.pts, RAPIDO.torno, 'G70')
+            else {
+              let f = t.f ?? e.avance
+              if (f <= 0) {
+                diag(n, 'error', 'Falta el avance F del acabado: ponlo en el bloque G70 o en los bloques del perfil.')
+                break
+              }
+              if (e.avancePorVuelta) f *= rpmEn(t.pts[0].x)
+              if (f <= 0) {
+                diag(n, 'error', 'Con G95 el avance es por vuelta, pero el husillo está detenido: enciéndelo con M03 o M04.')
+                break
+              }
+              agregar(t.linea, 'corte', t.pts, f, 'G70')
+            }
+          }
+          const ult = perfil.tramos[perfil.tramos.length - 1].pts.slice(-1)[0]
+          agregar(n, 'rapido', [{ ...ult }, { ...ult, x: inicio.x }, { ...inicio }], RAPIDO.torno, 'G70')
+        }
+        e.pos = inicio
+        puntos.push({ linea: n, pos: { ...inicio }, prog: resta(inicio, e.origen), codigo: esG71 ? 'G71' : 'G70' })
+        // Los bloques del perfil no se ejecutan de nuevo.
+        if (ns > n) siguiente = nf + 1
+      }
     } else if (tieneG(76)) {
       if (!torno) {
         diag(n, 'error', 'G76 (ciclo de roscado) es propio del torno.')
@@ -559,6 +712,7 @@ export function interpretar(texto: string, maquina: TipoMaquina, casa: Vec3, opc
           diag(n, 'error', arco.error)
           continue
         }
+        if (faseComp === 'arranque' || (faseComp === 'cancelando' && e.plano === 17)) diag(n, 'aviso', 'La compensación de radio se activa y se cancela en un bloque recto (G00 o G01), no en un arco.')
         agregar(n, 'corte', arco.puntos, f, codigo('G', m))
       } else if (m === 81 || m === 83) {
         if (!e.ciclo || 'R' in val || 'Z' in val || 'Q' in val) {
@@ -617,22 +771,75 @@ export function interpretar(texto: string, maquina: TipoMaquina, casa: Vec3, opc
     }
     if (tieneM(9)) e.refrigerante = false
     if (tieneM(0) || tieneM(1)) agregar(n, 'pausa', [{ ...e.pos }], 0, tieneM(0) ? 'M00' : 'M01', { duracion: 0, parada: true })
+    if (tieneM(98)) {
+      // Llamada a subprograma: M98 P1000 L3, o M98 P31000 (3 veces el O1000).
+      if (!('P' in val)) diag(n, 'error', 'M98 necesita P con el número del subprograma, por ejemplo M98 P1000.')
+      else {
+        let num = Math.round(val.P)
+        let veces = 'L' in val ? Math.round(val.L) : 1
+        if (!('L' in val) && num > 9999 && !programas.has(num)) {
+          veces = Math.floor(num / 10000)
+          num = num % 10000
+        }
+        const ini = programas.get(num)
+        if (ini === undefined || ini === primeraCodigo) diag(n, 'error', `No existe el subprograma O${num}: escríbelo después del M30, empezando con el bloque O${num} y terminando con M99.`)
+        else if (pila.length >= 8) diag(n, 'error', 'Demasiados subprogramas uno dentro de otro (el máximo es 8).')
+        else if (veces > 0) {
+          pila.push({ vuelta: n + 1, quedan: veces - 1, inicio: ini + 1, o: num })
+          siguiente = ini + 1
+        }
+      }
+    }
+    if (tieneM(99)) {
+      const tope = pila[pila.length - 1]
+      if (!tope) {
+        diag(n, 'aviso', 'M99 en el programa principal: la máquina volvería al comienzo sin parar; aquí se toma como fin de programa.')
+        fin = n
+        siguiente = lineas.length
+      } else if (tope.quedan > 0) {
+        tope.quedan--
+        siguiente = tope.inicio
+      } else {
+        pila.pop()
+        siguiente = tope.vuelta
+      }
+    }
     if (tieneM(2) || tieneM(30)) {
       fin = n
       e.husillo = 'off'
       e.refrigerante = false
+      if (pila.length) diag(n, 'aviso', 'El fin de programa quedó dentro de un subprograma: el subprograma termina con M99.')
+      siguiente = lineas.length
     }
     if (!herramientaElegida && !tAvisado && pasos.some((p) => p.tipo === 'corte')) {
       tAvisado = true
       diag(n, 'info', `No se eligió herramienta: se trabaja con la T${e.herramienta} que está montada.`)
     }
   }
+  if (e.comp !== 40 && faseComp !== 'nada') diag(lineas.length - 1, 'aviso', 'La compensación de radio queda activa al final: cancélala con G40 en un bloque de salida.')
+
+  // Lo que no se ejecutó: errores de escritura y líneas después del fin.
+  inicioBloque = pasos.length
+  let avisoTrasFin = false
+  for (let i = 0; i < lineas.length; i++) {
+    if (!estados[i]) estados[i] = clonarEstado(i > 0 ? estados[i - 1] : e)
+    if (ejecutada[i] || an[i].vacia || an[i].directiva !== null) continue
+    if (an[i].resto !== null) {
+      diag(i, 'error', `No entiendo «${an[i].resto}». Cada palabra es una letra seguida de un número, por ejemplo G01 o X25.5. Los comentarios van entre paréntesis ( ) o después de ;`)
+      continue
+    }
+    if (fin !== null && i > fin && !enSub[i] && !avisoTrasFin) {
+      diag(i, 'aviso', `Esta línea está después del fin de programa (línea ${fin + 1}): no se ejecuta.`)
+      avisoTrasFin = true
+    }
+  }
 
   if (!unidadesDichas) diag(0, 'aviso', 'No indicas las unidades: se asume milímetros. Escribe G21 al comienzo del programa.')
   if (fin === null && pasos.length) diag(lineas.length - 1, 'aviso', 'Falta el fin de programa (M30 o M02).')
 
-  // Si hay un error, el programa corre sólo hasta la línea anterior.
-  const validos = primerError === null ? pasos : pasos.filter((p) => p.linea < (primerError as number))
+  // Si hay un error, el programa corre sólo hasta el bloque anterior.
+  const validos = corte === null ? pasos : pasos.slice(0, corte)
+  compensar(validos, (linea, t) => diag(linea, 'aviso', t))
   diagnosticos.sort((x, y) => x.linea - y.linea || orden(x.nivel) - orden(y.nivel))
   return {
     maquina,
@@ -647,12 +854,263 @@ export function interpretar(texto: string, maquina: TipoMaquina, casa: Vec3, opc
     addRegPart,
   }
 }
+
+function destinoDe(val: Record<string, number>, pos: Vec3, origen: Vec3, absoluto: boolean, esc: number): Vec3 {
+  const d = { ...pos }
+  const ax: Array<[keyof Vec3, string, string]> = [
+    ['x', 'X', 'U'],
+    ['y', 'Y', 'V'],
+    ['z', 'Z', 'W'],
+  ]
+  for (const [k, abs, inc] of ax) {
+    if (abs in val) d[k] = absoluto ? origen[k] + val[abs] * esc : pos[k] + val[abs] * esc
+    if (inc in val) d[k] = pos[k] + val[inc] * esc
+  }
+  return d
+}
+
+interface Tramo {
+  linea: number
+  tipo: 'rapido' | 'corte'
+  pts: Vec3[]
+  f?: number
+}
+
+/** Lee el contorno de los bloques ns a nf (para G71 y G70). */
+function leerPerfil(an: LineaAnalizada[], ns: number, nf: number, e: EstadoModal, esc: number): { tramos: Tramo[] } | { error: string; linea: number } {
+  let mov = [0, 1, 2, 3].includes(e.movimiento) ? e.movimiento : 1
+  let absoluto = e.absoluto
+  let pos = { ...e.pos }
+  let f: number | undefined
+  const tramos: Tramo[] = []
+  for (let i = ns; i <= nf; i++) {
+    const a = an[i]
+    if (a.vacia || a.directiva !== null) continue
+    if (a.resto !== null) return { linea: i, error: `No entiendo «${a.resto}» en el perfil.` }
+    const val: Record<string, number> = {}
+    for (const p of a.palabras) {
+      if (p.letra === 'G') {
+        if ([0, 1, 2, 3].includes(p.valor)) mov = p.valor
+        else if (p.valor === 90) absoluto = true
+        else if (p.valor === 91) absoluto = false
+        else if (![40, 41, 42].includes(p.valor)) return { linea: i, error: `El perfil de G71/G70 sólo puede tener movimientos G00, G01, G02 y G03 (aparece ${codigo('G', p.valor)}).` }
+      } else if (p.letra === 'M') return { linea: i, error: 'El perfil de G71/G70 no puede tener funciones M.' }
+      else val[p.letra] = p.valor
+    }
+    if ('F' in val) f = val.F * esc
+    if ('Y' in val) return { linea: i, error: 'El torno no tiene eje Y.' }
+    if (!['X', 'Z', 'U', 'W'].some((l) => l in val)) continue
+    const d = destinoDe(val, pos, e.origen, absoluto, esc)
+    if (mov === 0 || mov === 1) tramos.push({ linea: i, tipo: mov === 0 ? 'rapido' : 'corte', pts: [{ ...pos }, d], f })
+    else {
+      const arco = puntosArco(pos, d, mov === 2, val, esc, 18, true)
+      if ('error' in arco) return { linea: i, error: arco.error }
+      tramos.push({ linea: i, tipo: 'corte', pts: arco.puntos, f })
+    }
+    pos = d
+  }
+  if (!tramos.length) return { linea: ns, error: 'El perfil (bloques P a Q) no tiene movimientos.' }
+  return { tramos }
+}
+
+/**
+ * Desbaste G71 (tipo I, como Fanuc): pasadas paralelas a Z de profundidad
+ * «prof» (en radio) desde el punto de partida hasta el contorno con su
+ * sobremetal (du en diámetro, dw en Z), y al final una pasada siguiendo el
+ * contorno. Sirve para exterior (el perfil está bajo el punto de partida) y
+ * para interior (sobre él).
+ */
+function desbasteG71(
+  tramos: Tramo[],
+  inicio: Vec3,
+  prof: number,
+  retiro: number,
+  du: number,
+  dw: number,
+): { movs: Array<{ corte: boolean; pts: Vec3[] }>; rebajes: boolean } | { error: string } {
+  const bruto = tramos.flatMap((t) => t.pts.slice(1))
+  const c = bruto.map((p) => ({ ...p, x: p.x + du, z: p.z + dw }))
+  if (!c.length) return { error: 'El perfil de G71 está vacío.' }
+  const x0 = c[0].x
+  const s = x0 < inicio.x ? -1 : 1 // −1: exterior (se baja el diámetro); +1: interior
+  if (Math.abs(x0 - inicio.x) < 1e-6) return { error: 'G71: el primer bloque del perfil tiene que llevar la herramienta al diámetro inicial del contorno (por ejemplo N10 G00 X20).' }
+  const niveles = Math.abs(inicio.x - x0) / (2 * prof)
+  if (niveles > 400) return { error: 'G71: son demasiadas pasadas; revisa U (profundidad en radio) y el punto de partida.' }
+  let rebajes = false
+  for (let i = 1; i < c.length; i++) if (s * (c[i].x - c[i - 1].x) > 0.01) rebajes = true
+  const zS = inicio.z
+  const dz = Math.sign(c[c.length - 1].z - zS) || -1
+  const tol = 1e-6
+  const hastaDonde = (xc: number): number => {
+    for (let i = 0; i < c.length; i++) {
+      if (s * (c[i].x - xc) < -tol) {
+        if (i === 0) return zS
+        const a = c[i - 1]
+        const b = c[i]
+        const t = (xc - a.x) / (b.x - a.x)
+        return a.z + (b.z - a.z) * t
+      }
+    }
+    return c[c.length - 1].z
+  }
+  const movs: Array<{ corte: boolean; pts: Vec3[] }> = []
+  let cur = { ...inicio }
+  const niv: number[] = []
+  for (let xc = inicio.x + s * 2 * prof; s * (xc - x0) < -tol; xc += s * 2 * prof) niv.push(xc)
+  niv.push(x0)
+  for (const xc of niv) {
+    const zE = hastaDonde(xc)
+    if (Math.abs(zE - zS) < 1e-6) continue
+    const a = { ...inicio, x: xc, z: zS }
+    const b = { ...inicio, x: xc, z: zE }
+    const sale = { ...inicio, x: xc - s * 2 * retiro, z: zE - dz * retiro }
+    movs.push({ corte: false, pts: [cur, a] })
+    movs.push({ corte: true, pts: [a, b] })
+    movs.push({ corte: true, pts: [b, sale] })
+    cur = { ...sale, z: zS }
+    movs.push({ corte: false, pts: [sale, cur] })
+  }
+  // Pasada siguiendo el contorno (deja el sobremetal parejo).
+  const p0 = { ...c[0] }
+  movs.push({ corte: false, pts: [cur, { ...p0, z: zS }, p0].filter((p, i, arr) => i === 0 || dist(p, arr[i - 1]) > 1e-9) })
+  movs.push({ corte: true, pts: c.map((p) => ({ ...p })) })
+  const ult = c[c.length - 1]
+  movs.push({ corte: false, pts: [{ ...ult }, { ...ult, x: inicio.x }, { ...inicio }] })
+  return { movs: movs.filter((m) => m.pts.length > 1), rebajes }
+}
+
+/**
+ * Compensación de radio G41/G42 en la fresadora: corre la trayectoria del
+ * centro de la herramienta un radio hacia el lado pedido. En las esquinas
+ * interiores se corta en la intersección de las paralelas; en las exteriores
+ * la herramienta rodea la esquina con un arco.
+ */
+function compensar(pasos: Paso[], avisar: (linea: number, texto: string) => void) {
+  let i = 0
+  while (i < pasos.length) {
+    const c = pasos[i].comp
+    if (!c || c.fase !== 'arranque') {
+      i++
+      continue
+    }
+    let j = i + 1
+    let cierra = false
+    while (j < pasos.length) {
+      const cj = pasos[j].comp
+      if (!cj || cj.fase === 'arranque') break
+      j++
+      if (cj.fase === 'salida') {
+        cierra = true
+        break
+      }
+    }
+    desfasarTramo(pasos.slice(i, j), c.lado, c.r, cierra, avisar)
+    i = j
+  }
+}
+
+function desfasarTramo(run: Paso[], lado: 41 | 42, r: number, cierra: boolean, avisar: (linea: number, texto: string) => void) {
+  if (r <= 0) return
+  type Oc = { k: number; idx: number }
+  const verts: Array<{ x: number; y: number; occ: Oc[] }> = []
+  run.forEach((p, k) =>
+    p.puntos.forEach((q, idx) => {
+      const u = verts[verts.length - 1]
+      if (u && Math.hypot(u.x - q.x, u.y - q.y) < 1e-7) u.occ.push({ k, idx })
+      else verts.push({ x: q.x, y: q.y, occ: [{ k, idx }] })
+    }),
+  )
+  const m = verts.length
+  if (m < 2) return
+  const signo = lado === 41 ? 1 : -1
+  const dir = (a: { x: number; y: number }, b: { x: number; y: number }) => {
+    const l = Math.hypot(b.x - a.x, b.y - a.y)
+    return { x: (b.x - a.x) / l, y: (b.y - a.y) / l }
+  }
+  const normal = (d: { x: number; y: number }) => ({ x: -d.y * signo, y: d.x * signo })
+  const listas: Array<Array<{ x: number; y: number }>> = []
+  for (let v = 0; v < m; v++) {
+    const P = verts[v]
+    const mas = (n: { x: number; y: number }, k = r) => ({ x: P.x + n.x * k, y: P.y + n.y * k })
+    if (v === 0) {
+      listas.push([{ x: P.x, y: P.y }])
+      continue
+    }
+    const n1 = normal(dir(verts[v - 1], P))
+    if (v === m - 1) {
+      listas.push([cierra ? { x: P.x, y: P.y } : mas(n1)])
+      continue
+    }
+    const d1 = dir(verts[v - 1], P)
+    const d2 = dir(P, verts[v + 1])
+    const n2 = normal(d2)
+    if (v === 1) {
+      listas.push([mas(n2)])
+      continue
+    }
+    if (cierra && v === m - 2) {
+      listas.push([mas(n1)])
+      continue
+    }
+    const cruz = d1.x * d2.y - d1.y * d2.x
+    const punto = d1.x * d2.x + d1.y * d2.y
+    if (Math.abs(cruz) < 1e-9 && punto > 0) listas.push([mas(n1)])
+    else if (cruz * signo > 0) {
+      // Esquina interior: intersección de las dos paralelas.
+      const den = Math.max(0.05, 1 + n1.x * n2.x + n1.y * n2.y)
+      listas.push([mas({ x: n1.x + n2.x, y: n1.y + n2.y }, r / den)])
+    } else {
+      // Esquina exterior: la herramienta la rodea con un arco.
+      const a1 = Math.atan2(n1.y, n1.x)
+      let da = Math.atan2(n2.y, n2.x) - a1
+      while (da > Math.PI) da -= 2 * Math.PI
+      while (da <= -Math.PI) da += 2 * Math.PI
+      const pasosArco = Math.max(1, Math.ceil(Math.abs(da) / (Math.PI / 18)))
+      const l: Array<{ x: number; y: number }> = []
+      for (let s = 0; s <= pasosArco; s++) {
+        const ang = a1 + (da * s) / pasosArco
+        l.push(mas({ x: Math.cos(ang), y: Math.sin(ang) }))
+      }
+      listas.push(l)
+    }
+  }
+  // ¿La herramienta cabe? Si un tramo desfasado queda al revés, se comería la pieza.
+  for (let v = 0; v < m - 1; v++) {
+    const a = listas[v][listas[v].length - 1]
+    const b = listas[v + 1][0]
+    const d = { x: verts[v + 1].x - verts[v].x, y: verts[v + 1].y - verts[v].y }
+    if ((b.x - a.x) * d.x + (b.y - a.y) * d.y < -1e-6) {
+      const oc = verts[v + 1].occ[0]
+      avisar(run[oc.k].linea, `La herramienta (radio ${r} mm) no cabe en este rincón: con la compensación se devuelve y se comería la pieza. Usa una herramienta más chica.`)
+      break
+    }
+  }
+  const nuevos: Vec3[][] = run.map(() => [])
+  verts.forEach((vt, v) => {
+    const l = listas[v]
+    vt.occ.forEach((o, q) => {
+      const z = run[o.k].puntos[o.idx].z
+      const usar = q === vt.occ.length - 1 ? l : [l[0]]
+      for (const p of usar) nuevos[o.k].push({ x: p.x, y: p.y, z })
+    })
+  })
+  run.forEach((p, k) => {
+    p.puntos = nuevos[k]
+    if (p.tipo === 'corte' || p.tipo === 'rapido') {
+      let largo = 0
+      for (let s = 1; s < p.puntos.length; s++) largo += dist(p.puntos[s - 1], p.puntos[s])
+      p.largo = largo
+      if (p.avance > 0) p.duracion = (largo / p.avance) * 60
+    }
+  })
+}
+
 function orden(n: Nivel) {
   return n === 'error' ? 0 : n === 'aviso' ? 1 : 2
 }
 
 function clonarEstado(e: EstadoModal): EstadoModal {
-  return { ...e, pos: { ...e.pos }, origen: { ...e.origen }, ciclo: e.ciclo ? { ...e.ciclo } : null, g76: e.g76 ? { ...e.g76 } : null }
+  return { ...e, pos: { ...e.pos }, origen: { ...e.origen }, ciclo: e.ciclo ? { ...e.ciclo } : null, g76: e.g76 ? { ...e.g76 } : null, g71: e.g71 ? { ...e.g71 } : null }
 }
 
 export function resta(a: Vec3, b: Vec3): Vec3 {
@@ -765,6 +1223,11 @@ export function explicarBloque(texto: string, antes: EstadoModal | undefined, ma
   let css = antes?.velocidadConstante ?? false
   let mov = antes?.movimiento ?? 0
   const u = antes?.pulgadas ? 'pulg' : 'mm'
+  const letras = new Set(a.palabras.map((p) => p.letra))
+  const hay = (l: string, v: number) => a.palabras.some((p) => p.letra === l && p.valor === v)
+  const llamada = hay('M', 98)
+  const cicloPerfil = torno && (hay('G', 71) || hay('G', 70)) && letras.has('P') && letras.has('Q')
+  const g71Param = torno && hay('G', 71) && letras.has('U') && letras.has('R') && !letras.has('P')
   for (const p of a.palabras) {
     if (p.letra === 'G') {
       if (p.valor === 90) absoluto = true
@@ -784,10 +1247,15 @@ export function explicarBloque(texto: string, antes: EstadoModal | undefined, ma
         t = `Número de bloque (secuencia) ${v}.`
         break
       case 'O':
-        t = `Número de programa ${v}.`
+        t = `Número de programa ${v}. Si va después del M30, aquí empieza el subprograma O${v} (termina con M99).`
         break
       case 'G':
-        t = CODIGOS_G[codigo('G', v)] ?? 'Función preparatoria que este simulador no usa.'
+        t =
+          (v === 71 && (cicloPerfil || g71Param)) || (v === 70 && cicloPerfil)
+            ? v === 71
+              ? 'Ciclo de desbaste del torno: pasadas paralelas a Z hasta el perfil de los bloques P a Q, dejando el sobremetal U/W.'
+              : 'Ciclo de acabado del torno: recorre una vez el perfil de los bloques P a Q y vuelve al punto de partida.'
+            : CODIGOS_G[codigo('G', v)] ?? 'Función preparatoria que este simulador no usa.'
         break
       case 'M':
         t = CODIGOS_M[codigo('M', v)] ?? 'Función auxiliar que este simulador no usa.'
@@ -810,13 +1278,19 @@ export function explicarBloque(texto: string, antes: EstadoModal | undefined, ma
           : `Avanza ${v > 0 ? '+' : ''}${v} ${u} en Z desde donde está.`
         break
       case 'U':
-        t = torno ? `Incremental en X: cambia el diámetro en ${v} ${u}.` : `Incremental en X: ${v} ${u}.`
+        t = g71Param
+          ? `Profundidad de cada pasada de desbaste: ${v} ${u} (en radio).`
+          : cicloPerfil
+            ? `Sobremetal que se deja para el acabado en X: ${v} ${u} (en diámetro).`
+            : torno
+              ? `Incremental en X: cambia el diámetro en ${v} ${u}.`
+              : `Incremental en X: ${v} ${u}.`
         break
       case 'V':
         t = `Incremental en Y: ${v} ${u}.`
         break
       case 'W':
-        t = `Incremental en Z: ${v} ${u}.`
+        t = cicloPerfil ? `Sobremetal que se deja para el acabado en Z: ${v} ${u}.` : `Incremental en Z: ${v} ${u}.`
         break
       case 'I':
         t = `Centro del arco: ${v} ${u} en X desde el punto de partida${torno ? ' (en radio)' : ''}.`
@@ -828,7 +1302,9 @@ export function explicarBloque(texto: string, antes: EstadoModal | undefined, ma
         t = `Centro del arco: ${v} ${u} en Z desde el punto de partida.`
         break
       case 'R':
-        t = mov === 2 || mov === 3 ? `Radio del arco: ${Math.abs(v)} ${u}${v < 0 ? ' (negativo: el arco largo, más de media vuelta)' : ''}.` : `Plano de aproximación R = ${v} ${u} del ciclo.`
+        t = g71Param
+          ? `Retiro después de cada pasada: ${v} ${u}.`
+          : mov === 2 || mov === 3 ? `Radio del arco: ${Math.abs(v)} ${u}${v < 0 ? ' (negativo: el arco largo, más de media vuelta)' : ''}.` : `Plano de aproximación R = ${v} ${u} del ciclo.`
         break
       case 'F':
         t = mov === 33 ? `Paso de la rosca: ${v} ${u} por vuelta.` : porVuelta ? `Avance de ${v} ${u} por vuelta del husillo.` : `Velocidad de avance: ${v} ${u}/min.`
@@ -843,13 +1319,20 @@ export function explicarBloque(texto: string, antes: EstadoModal | undefined, ma
         break
       }
       case 'P':
-        t = `Parámetro P = ${v} (en G04, tiempo de espera en milisegundos).`
+        t = llamada
+          ? `Número del subprograma que se llama: O${v > 9999 && !letras.has('L') ? v % 10000 : v}${v > 9999 && !letras.has('L') ? `, ${Math.floor(v / 10000)} veces` : ''}.`
+          : cicloPerfil
+            ? `Primer bloque del perfil: N${v}.`
+            : `Parámetro P = ${v} (en G04, tiempo de espera en milisegundos).`
         break
       case 'Q':
-        t = `Profundidad de cada picada: ${v} ${u}.`
+        t = cicloPerfil ? `Último bloque del perfil: N${v}.` : `Profundidad de cada picada: ${v} ${u}.`
+        break
+      case 'L':
+        t = `Cuántas veces se repite el subprograma: ${v}.`
         break
       case 'D':
-        t = `Número de corrector de radio ${v}.`
+        t = cicloPerfil ? `Profundidad de cada pasada: ${v} ${u}.` : `Corrector de radio ${v}: la compensación usa el radio de la herramienta ${v}.`
         break
       case 'H':
         t = `Número de corrector de largo ${v}.`
