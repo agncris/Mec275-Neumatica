@@ -12,6 +12,7 @@ import { usePanelAcoplado, type PestanaPanel } from '../components/banco/PanelAc
 import PaginaEstudiar, { type SeccionEstudio } from '../components/banco/PaginaEstudiar'
 import SubnavUnidad, { useSeccionUnidad } from '../components/banco/SubnavUnidad'
 import CajonEntregar from '../components/banco/CajonEntregar'
+import MisTrabajos from '../components/banco/MisTrabajos'
 import { copiarTabla, copiarTexto, descargarTexto, enlaceTrabajo, limpiarEnlace, trabajoDelEnlace } from '../entregar'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { exportarPng, nombreSeguro } from '../exportar'
@@ -86,6 +87,7 @@ export default function UnidadCNC() {
   const [seccion, setSeccion] = useSeccionUnidad(SECCIONES_CNC.map((x) => x.id))
   const panel = usePanelAcoplado<PestanaCNC>('neumalab.cnc.panel', 'preparacion', typeof window !== 'undefined' && window.innerHeight >= 860)
   const [entregaAbierta, setEntregaAbierta] = useState(false)
+  const [misTrabajos, setMisTrabajos] = useState(false)
   /** Nombre del próximo video (desde «Entregar» se nombra como pide el enunciado). */
   const nombreVideo = useRef<string | null>(null)
   const inicial = useMemo(leerGuardado, [])
@@ -391,6 +393,7 @@ export default function UnidadCNC() {
     { texto: 'Nuevo programa', ayuda: 'Un programa en blanco para esta máquina', onClick: nuevo },
     { texto: 'Abrir…', ayuda: '.cnc, .nc, .gcode o .txt (también de CNC Simulator Pro)', onClick: () => inputArchivo.current?.click() },
     { texto: 'Guardar .cnc', ayuda: 'El archivo de texto que se entrega', onClick: guardarCnc },
+    { texto: 'Mis trabajos…', ayuda: 'Guarda varios programas con nombre (con su preparación)', onClick: () => setMisTrabajos(true), separar: true },
   ]
   const itemsExportar = [
     { texto: 'Trayectoria (PNG)', ayuda: 'La trayectoria 2D con sus puntos, para el informe', onClick: () => void exportarPlano() },
@@ -665,6 +668,23 @@ export default function UnidadCNC() {
           descripcion="Teoría de la unidad. Los programas de ejemplo se abren en el Laboratorio."
           pie="NeumaLab · MEC275 — Unidad 3: Control numérico computacional · código G"
           secciones={SECCIONES_CNC}
+        />
+      )}
+      {misTrabajos && (
+        <MisTrabajos
+          unidad="cnc"
+          nombreActual={nombres[maquina] ?? ''}
+          actual={() => ({ config, codigo, nombre: nombres[maquina] })}
+          abrir={(dato, nombre) => {
+            const d = dato as { config?: ConfigCNC; codigo?: string }
+            if (!d?.config || typeof d.codigo !== 'string') return 'Ese trabajo no es un programa de CNC válido.'
+            const m = d.config.maquina
+            setEstado('listo')
+            setConfig(d.config)
+            setCodigos((x) => ({ ...x, [m]: d.codigo as string }))
+            setNombres((x) => ({ ...x, [m]: nombre }))
+          }}
+          onCerrar={() => setMisTrabajos(false)}
         />
       )}
       {entregaAbierta && (

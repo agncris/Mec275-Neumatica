@@ -12,6 +12,7 @@ import { usePanelAcoplado, type PestanaPanel } from '../components/banco/PanelAc
 import PaginaEstudiar, { type SeccionEstudio } from '../components/banco/PaginaEstudiar'
 import SubnavUnidad, { useSeccionUnidad } from '../components/banco/SubnavUnidad'
 import CajonEntregar from '../components/banco/CajonEntregar'
+import MisTrabajos from '../components/banco/MisTrabajos'
 import { copiarTabla, copiarTexto, descargarTexto, enlaceTrabajo, limpiarEnlace, trabajoDelEnlace } from '../entregar'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { exportarPng, nombreSeguro } from '../exportar'
@@ -96,6 +97,7 @@ export default function UnidadPLC() {
   const panel = usePanelAcoplado<PestanaPLC>('neumalab.plc.panel', 'es', typeof window !== 'undefined' && window.innerHeight >= 860)
   const [movil, setMovil] = useState('programa')
   const [entregaAbierta, setEntregaAbierta] = useState(false)
+  const [misTrabajos, setMisTrabajos] = useState(false)
   const [notacion, setNotacion] = useState<Notacion>(() => {
     try {
       return localStorage.getItem('neumalab.plc.notacion') === 'ab' ? 'ab' : 'siemens'
@@ -383,6 +385,7 @@ export default function UnidadPLC() {
     { texto: 'Nuevo programa', ayuda: 'Empieza con el diagrama vacío', onClick: nuevo },
     { texto: 'Abrir…', ayuda: 'Un programa guardado (.json)', onClick: () => inputArchivo.current?.click() },
     { texto: 'Guardar', ayuda: 'Descarga el programa para volver a abrirlo', onClick: guardar },
+    { texto: 'Mis trabajos…', ayuda: 'Guarda varios programas con nombre y cámbiate entre ellos', onClick: () => setMisTrabajos(true), separar: true },
   ]
   const itemExportar = { texto: 'Diagrama Ladder (PNG)', ayuda: 'Imagen del programa para tu informe', onClick: () => void exportarLadder() }
 
@@ -644,6 +647,19 @@ export default function UnidadPLC() {
           descripcion="Teoría de la unidad. Los programas de ejemplo y los ejercicios se abren en el Laboratorio."
           pie="NeumaLab · MEC275 — Unidad 2: Controlador Lógico Programable · Ladder"
           secciones={SECCIONES_PLC}
+        />
+      )}
+      {misTrabajos && (
+        <MisTrabajos
+          unidad="plc"
+          nombreActual={programa.nombre ?? ''}
+          actual={() => programa}
+          abrir={(dato) => {
+            if (!esProgramaPLC(dato)) return 'Ese trabajo no es un programa de PLC válido.'
+            setCorriendo(false)
+            setPrograma(dato)
+          }}
+          onCerrar={() => setMisTrabajos(false)}
         />
       )}
       {entregaAbierta && (

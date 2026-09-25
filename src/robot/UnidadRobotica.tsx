@@ -10,6 +10,7 @@ import { usePanelAcoplado, type PestanaPanel } from '../components/banco/PanelAc
 import PaginaEstudiar, { type SeccionEstudio } from '../components/banco/PaginaEstudiar'
 import SubnavUnidad, { useSeccionUnidad } from '../components/banco/SubnavUnidad'
 import CajonEntregar from '../components/banco/CajonEntregar'
+import MisTrabajos from '../components/banco/MisTrabajos'
 import { copiarTabla, copiarTexto, descargarTexto, enlaceTrabajo, limpiarEnlace, trabajoDelEnlace } from '../entregar'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { exportarPng, nombreSeguro } from '../exportar'
@@ -101,6 +102,7 @@ export default function UnidadRobotica() {
   const [seccion, setSeccion] = useSeccionUnidad(SECCIONES_ROBOT.map((x) => x.id))
   const panel = usePanelAcoplado<PestanaRobot>('neumalab.robot.panel', 'analisis', false)
   const [entregaAbierta, setEntregaAbierta] = useState(false)
+  const [misTrabajos, setMisTrabajos] = useState(false)
   const nombreVideo = useRef<string | null>(null)
   const [seleccion, setSeleccion] = useState<string | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
@@ -474,6 +476,7 @@ export default function UnidadRobotica() {
     { texto: 'Abrir definición…', ayuda: 'Una definición guardada (.json), con su plano', onClick: () => inputDef.current?.click() },
     { texto: 'Guardar definición', ayuda: 'Descarga la definición y el plano DXF', onClick: () => descargar(JSON.stringify(def, null, 2), nombreSeguro(def.nombre || 'definicion', 'json'), 'application/json') },
     { texto: 'Abrir plano DXF…', ayuda: 'Trae las curvas de tu plano', onClick: () => inputDXF.current?.click(), separar: true },
+    { texto: 'Mis trabajos…', ayuda: 'Guarda varias definiciones con nombre y cámbiate entre ellas', onClick: () => setMisTrabajos(true), separar: true },
   ]
   const itemsExportar = [
     { texto: 'Programa KRL (.src)', ayuda: 'Para el controlador KUKA', onClick: exportarKRL },
@@ -823,6 +826,21 @@ export default function UnidadRobotica() {
           descripcion="Teoría de la unidad. Las definiciones de ejemplo se abren en el Laboratorio."
           pie="NeumaLab · MEC275 — Unidad 4: Robótica industrial"
           secciones={SECCIONES_ROBOT}
+        />
+      )}
+      {misTrabajos && (
+        <MisTrabajos
+          unidad="robotica"
+          nombreActual={def.nombre ?? ''}
+          actual={() => def}
+          abrir={(dato, nombre) => {
+            if (!esDefinicion(dato)) return 'Ese trabajo no es una definición válida.'
+            setReproduciendo(false)
+            setModo('visual')
+            setDef({ ...dato, nombre: dato.nombre || nombre })
+            setSeleccion(null)
+          }}
+          onCerrar={() => setMisTrabajos(false)}
         />
       )}
       {entregaAbierta && (

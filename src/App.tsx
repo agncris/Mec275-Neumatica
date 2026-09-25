@@ -26,11 +26,13 @@ import MetodoCascada from './components/MetodoCascada'
 import SimbologiaVDI from './components/SimbologiaVDI'
 import SimbologiaISO from './components/SimbologiaISO'
 import EntregaNeumatica from './components/EntregaNeumatica'
+import MisTrabajos from './components/banco/MisTrabajos'
 import { circuitoDesdeStore, useStore, type NumeroEjemplo } from './store'
 import { NOMBRES_EJEMPLO } from './circuitos/ejemplos'
 import {
   descargarJson,
   enlaceCompartir,
+  esCircuitoValido,
   guardarLocal,
   leerArchivo,
   leerDeUrl,
@@ -103,6 +105,7 @@ export default function App() {
     }
   }, [seccion, entregaAbierta])
   const [ayuda, setAyuda] = useState(false)
+  const [misTrabajos, setMisTrabajos] = useState(false)
   const [zoom, setZoom] = useState(100)
   const controles = useRef<ControlesPizarra | null>(null)
   const seleccion = useStore((s) => s.seleccion)
@@ -443,7 +446,8 @@ export default function App() {
       ayuda: 'Descarga el circuito para seguir editándolo',
       onClick: () => descargarJson({ version: 1, nombre: ejercicio || undefined, piezas, mangueras }, nombreSeguro(`${baseArchivo()}_circuito`, 'json')),
     },
-    { texto: 'Copiar enlace para compartir', ayuda: 'El circuito viaja dentro del enlace', onClick: () => void compartir(), separar: true },
+    { texto: 'Mis trabajos…', ayuda: 'Guarda varios circuitos con nombre y cámbiate entre ellos', onClick: () => setMisTrabajos(true), separar: true },
+    { texto: 'Copiar enlace para compartir', ayuda: 'El circuito viaja dentro del enlace', onClick: () => void compartir() },
   ]
   const itemsExportar = [
     { texto: 'Circuito (PNG)', ayuda: 'Imagen para pegar en el informe', onClick: () => void exportarLamina('pizarra-svg', 'circuito', 'png'), deshabilitado: bancoVacio, porque: 'Primero coloca fichas en el tablero' },
@@ -723,6 +727,21 @@ export default function App() {
       )}
 
       {ayuda && <AyudaAtajos tactil={tactil} onCerrar={() => setAyuda(false)} />}
+      {misTrabajos && (
+        <MisTrabajos
+          unidad="neumatica"
+          nombreActual={circuito?.nombre ?? ''}
+          actual={() => ({ version: 1, nombre: circuito?.nombre, piezas, mangueras, vdi: useStore.getState().respuestas.vdi })}
+          abrir={(dato, nombre) => {
+            if (!esCircuitoValido(dato)) return 'Ese trabajo no es un circuito válido.'
+            setModo('editar')
+            cargarCircuito(dato, nombre)
+            const vdi = (dato as { vdi?: unknown }).vdi
+            if (Array.isArray(vdi)) setRespuestas({ vdi })
+          }}
+          onCerrar={() => setMisTrabajos(false)}
+        />
+      )}
 
         </>
       ) : (
