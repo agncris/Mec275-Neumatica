@@ -14,8 +14,8 @@ export default function Propiedades() {
   if (!seleccion) {
     return (
       <p style={{ color: '#5a6b7d', margin: 0 }}>
-        Selecciona una ficha o una manguera para ver sus propiedades. Para cablear, haz clic en un
-        puerto y luego en el puerto de destino.
+        Selecciona una ficha o una manguera del tablero para ver y cambiar sus propiedades. Para
+        cablear, haz clic en un puerto y luego en el puerto de destino.
       </p>
     )
   }
@@ -38,7 +38,7 @@ export default function Propiedades() {
   const desc = DESCRIPTORES[pieza.tipo]
 
   return (
-    <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'stretch' }} data-propiedades={pieza.id}>
       <strong>
         {pieza.id} — {desc?.nombre}
       </strong>
@@ -248,7 +248,8 @@ export default function Propiedades() {
 const etiqueta: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: 8,
+  flexWrap: 'wrap',
+  gap: '4px 8px',
   fontSize: '0.9rem',
 }
 

@@ -37,7 +37,7 @@ export function botonPrimario(activo = false, color = COLOR.verde): CSSPropertie
 }
 
 /** Acciones de apoyo: con borde, sin relleno. */
-export const botonSecundario: CSSProperties = { ...base, border: `1px solid ${COLOR.borde}`, background: '#fff', color: COLOR.pizarra, padding: '0.4rem 0.8rem' }
+export const botonSecundario: CSSProperties = { ...base, border: `1px solid ${COLOR.borde}`, background: '#fff', color: COLOR.pizarra, padding: '0.4rem 0.7rem' }
 
 /** Acciones menores: sólo texto. */
 export const botonTerciario: CSSProperties = { ...base, border: '1px solid transparent', background: 'transparent', color: COLOR.pizarra, padding: '0.4rem 0.6rem', fontWeight: 500 }
@@ -232,4 +232,24 @@ export function Menu({ etiqueta, items, ancho = 280, datos }: { etiqueta: string
       )}
     </span>
   )
+}
+
+/** Estado que se recuerda en este navegador (paneles abiertos, anchos…). */
+export function usePersistente<T>(clave: string, inicial: T): [T, (v: T | ((a: T) => T)) => void] {
+  const [valor, setValor] = useState<T>(() => {
+    try {
+      const crudo = localStorage.getItem(clave)
+      return crudo === null ? inicial : (JSON.parse(crudo) as T)
+    } catch {
+      return inicial
+    }
+  })
+  useEffect(() => {
+    try {
+      localStorage.setItem(clave, JSON.stringify(valor))
+    } catch {
+      /* sin almacenamiento */
+    }
+  }, [clave, valor])
+  return [valor, setValor]
 }

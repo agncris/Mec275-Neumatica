@@ -148,3 +148,302 @@ button:disabled:hover {
     padding: 0 0.45rem;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Banco de trabajo (unidad de neumática)
+   --------------------------------------------------------------------------- */
+:root {
+  --alto-barra-superior: 53px;
+}
+.banco {
+  height: calc(100dvh - var(--alto-barra-superior));
+  display: flex;
+  flex-direction: column;
+  padding: 6px 10px 0;
+  gap: 6px;
+  max-width: 1920px;
+  margin: 0 auto;
+}
+.banco__barra {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+.banco__cuerpo {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 6px;
+}
+.banco__paleta {
+  width: 236px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.banco__paleta--plegada {
+  width: 50px;
+}
+.banco__centro {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+}
+.banco__lienzo {
+  flex: 1;
+  min-height: 160px;
+  position: relative;
+  display: flex;
+  gap: 6px;
+}
+.banco__lienzo > * {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+}
+.banco__inspector {
+  width: 300px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.banco__inspector--plegado {
+  width: 36px;
+}
+.banco__estado {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 28px;
+  font-size: 0.82rem;
+  color: #33475c;
+  padding: 0 4px 4px;
+}
+.banco-panel {
+  background: #fff;
+  border: 1px solid #dde2e8;
+  border-radius: 8px;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+.banco-panel select {
+  max-width: 100%;
+}
+.boton-icono {
+  border: 1px solid transparent;
+  background: transparent;
+  color: #33475c;
+  border-radius: 6px;
+  min-width: 32px;
+  min-height: 32px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.boton-icono:hover {
+  background: #eef2f6;
+  filter: none;
+}
+.ficha-paleta:hover:not(:disabled) {
+  background: #f1f4f7 !important;
+  filter: none;
+}
+.ficha-paleta:focus-visible {
+  outline: 2px solid #1668c7;
+}
+.cabeza-grupo:hover {
+  background: #f6f8fa !important;
+  filter: none;
+}
+.pestana-panel {
+  border: none;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: #51606f;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 0 10px;
+  min-height: 36px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.pestana-panel[aria-selected='true'] {
+  color: #1c2733;
+  border-bottom-color: #1668c7;
+}
+.pestana-panel:disabled {
+  color: #8b96a1;
+}
+.tirador-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 7px;
+  cursor: ns-resize;
+  z-index: 2;
+}
+.tirador-panel:hover,
+.tirador-panel:focus-visible {
+  background: linear-gradient(#1668c7 0, #1668c7 3px, transparent 3px);
+  outline: none;
+}
+.segmentado {
+  display: inline-flex;
+  border: 1px solid #c6ced6;
+  border-radius: 8px;
+  padding: 2px;
+  background: #fff;
+}
+.segmentado button {
+  border: none;
+  background: transparent;
+  color: #33475c;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 0 0.5rem;
+  min-height: 30px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.segmentado button[aria-checked='true'] {
+  background: #33475c;
+  color: #fff;
+}
+.grupo-zoom {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #c6ced6;
+  border-radius: 8px;
+  background: #fff;
+  padding: 2px;
+}
+.grupo-zoom button {
+  border: none;
+  background: transparent;
+  color: #33475c;
+  font-weight: 700;
+  min-width: 30px;
+  min-height: 30px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.grupo-zoom button:hover:not(:disabled) {
+  background: #eef2f6;
+  filter: none;
+}
+.interruptor {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #c6ced6;
+  background: #fff;
+  border-radius: 999px;
+  padding: 3px 10px 3px 4px;
+  min-height: 34px;
+  cursor: pointer;
+  font-size: 0.86rem;
+  color: #1c2733;
+}
+.interruptor__riel {
+  width: 34px;
+  height: 20px;
+  border-radius: 999px;
+  background: #8b96a1;
+  position: relative;
+  transition: background 120ms;
+}
+.interruptor__riel::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  transition: left 120ms;
+}
+.interruptor[aria-checked='true'] .interruptor__riel {
+  background: #1668c7;
+}
+.interruptor[aria-checked='true'] .interruptor__riel::after {
+  left: 16px;
+}
+.solo-lector {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+/* Bandejas inferiores (celular) */
+.hoja-fondo {
+  position: fixed;
+  inset: 0;
+  background: rgba(28, 39, 51, 0.3);
+  z-index: 70;
+}
+.hoja {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 71;
+  background: #fff;
+  border-radius: 14px 14px 0 0;
+  box-shadow: 0 -10px 30px rgba(28, 39, 51, 0.2);
+  max-height: 72dvh;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.hoja .banco-panel {
+  border: none;
+  border-radius: 0;
+}
+.banco__acciones-movil {
+  flex: none;
+  display: flex;
+  gap: 6px;
+  padding: 0 0 6px;
+}
+.banco__acciones-movil button {
+  flex: 1;
+  min-height: 44px;
+  white-space: nowrap;
+  padding: 0 4px;
+  border: 1px solid #c6ced6;
+  background: #fff;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #33475c;
+}
+@media (max-width: 1399px) {
+  .banco__paleta {
+    width: 216px;
+  }
+  .banco__inspector {
+    width: 272px;
+  }
+  .segmentado button {
+    padding: 0 0.4rem;
+  }
+  .interruptor {
+    font-size: 0.8rem;
+    gap: 6px;
+  }
+}

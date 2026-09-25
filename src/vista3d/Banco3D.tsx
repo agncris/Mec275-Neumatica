@@ -28,6 +28,8 @@ import { SonidoBanco } from './sonido'
 
 interface Props {
   motor: Motor | null
+  /** Ocupa todo el alto de su contenedor (banco de trabajo). */
+  llenar?: boolean
 }
 
 interface PiezaEnEscena {
@@ -300,7 +302,7 @@ function estadoDe(motor: Motor | null, p: Pieza): { estado: EstadoPieza; presion
   return { estado, presion }
 }
 
-export default function Banco3D({ motor }: Props) {
+export default function Banco3D({ motor, llenar = false }: Props) {
   const tactil = useTactil()
   const contenedorRef = useRef<HTMLDivElement>(null)
   const motorRef = useRef<Motor | null>(motor)
@@ -744,10 +746,10 @@ export default function Banco3D({ motor }: Props) {
       style={{
         position: 'relative',
         width: '100%',
-        height: pantallaCompleta ? '100%' : 520,
+        height: pantallaCompleta || llenar ? '100%' : 520,
         overflow: 'hidden',
-        borderRadius: pantallaCompleta ? 0 : 10,
-        border: `6px solid ${motor ? '#12a35a' : '#b9bec5'}`,
+        borderRadius: pantallaCompleta ? 0 : llenar ? 8 : 10,
+        border: `${llenar ? 3 : 6}px solid ${motor ? '#12a35a' : '#b9bec5'}`,
         background: '#d9dde2',
       }}
     >

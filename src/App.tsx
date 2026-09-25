@@ -6,18 +6,18 @@
  *  - Simular: el motor corre a 30 Hz; se accionan las válvulas y se ve el aire
  *    circular, las correderas conmutar y los vástagos moverse.
  */
-import { BarraHerramientas, botonPrimario, botonSecundario, botonTerciario, CabeceraUnidad, COLOR, estiloAviso, Etiquetado, Menu, useTactil } from './components/ui'
+import { botonPrimario, estiloAviso, Menu, usePersistente, useTactil } from './components/ui'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { DT_POR_DEFECTO, Motor, validarCircuito } from './engine'
 import Paleta from './components/Paleta'
-import Pizarra, { type Vista } from './components/Pizarra'
+import Pizarra, { type ControlesPizarra, type Vista } from './components/Pizarra'
+import Inspector, { type PestanaInspector } from './components/banco/Inspector'
+import PanelInferior, { type PestanaInferior } from './components/banco/PanelInferior'
+import AyudaAtajos from './components/banco/AyudaAtajos'
 
 // El banco 3D arrastra three.js: se carga sólo cuando alguien lo abre.
 const Banco3D = lazy(() => import('./vista3d/Banco3D'))
-type VistaApp = Vista | 'banco3d'
-import Propiedades from './components/Propiedades'
-import VistaCorte from './components/VistaCorte'
-import DiagramaEspacioFase from './components/DiagramaEspacioFase'
+type VistaApp = Vista | 'banco3d' | 'ambos'
 import TablaNomenclatura from './components/TablaNomenclatura'
 import { Seccion } from './components/Seccion'
 import MetodoCascada from './components/MetodoCascada'
@@ -83,8 +83,34 @@ export default function App() {
   const [motor, setMotor] = useState<Motor | null>(null)
   const [, setFotograma] = useState(0)
   const [aviso, setAviso] = useState<string | null>(null)
-  const [vista, setVista] = useState<VistaApp>('esquema')
-  const [paralela, setParalela] = useState(false)
+  const [vista, setVista] = usePersistente<VistaApp>('neumalab.banco.vista', 'esquema')
+  const [paletaPlegada, setPaletaPlegada] = usePersistente('neumalab.banco.paleta-plegada', false)
+  const [inspectorAbierto, setInspectorAbierto] = usePersistente('neumalab.banco.inspector', true)
+  const [pestanaInspector, setPestanaInspector] = useState<PestanaInspector>('propiedades')
+  const [inferiorAbierto, setInferiorAbierto] = usePersistente('neumalab.banco.inferior', false)
+  const [altoInferior, setAltoInferior] = usePersistente('neumalab.banco.alto-inferior', 200)
+  const [pestanaInferior, setPestanaInferior] = useState<PestanaInferior>('registro')
+  const [hoja, setHoja] = useState<'paleta' | 'inspector' | 'registro' | null>(null)
+  const [ayuda, setAyuda] = useState(false)
+  const [zoom, setZoom] = useState(100)
+  const controles = useRef<ControlesPizarra | null>(null)
+  const seleccion = useStore((s) => s.seleccion)
+  const origenCable = useStore((s) => s.origenCable)
+
+  // Al elegir una ficha se abre el inspector con sus propiedades.
+  useEffect(() => {
+    if (seleccion?.clase !== 'pieza') return
+    if (!estrecha) setInspectorAbierto(true)
+    setPestanaInspector((p) => (p === 'corte' ? p : 'propiedades'))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seleccion])
+  // Al simular se abre el registro.
+  useEffect(() => {
+    if (modo !== 'simular') return
+    setInferiorAbierto(true)
+    setPestanaInferior('registro')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modo])
   const estrecha = useEsEstrecha()
   const tactil = useTactil()
   const inputArchivo = useRef<HTMLInputElement>(null)
@@ -256,6 +282,14 @@ export default function App() {
     }
   }
 
+  /** El diagrama de fase vive en el panel inferior: se abre para exportarlo. */
+  const exportarFase = () => {
+    if (document.getElementById('diagrama-fase-svg')) return void exportarLamina('diagrama-fase-svg', 'diagrama-fase', 'png')
+    setInferiorAbierto(true)
+    setPestanaInferior('fase')
+    setTimeout(() => void exportarLamina('diagrama-fase-svg', 'diagrama-fase', 'png'), 250)
+  }
+
   const abrirArchivo = async (archivo: File | undefined) => {
     if (!archivo) return
     try {
@@ -281,310 +315,393 @@ export default function App() {
     }
   }
 
-  const eventos = motor ? motor.eventos.slice(-6).reverse() : []
   const avisosCircuito =
     modo === 'editar' ? validarCircuito(circuitoDesdeStore(piezas, mangueras)) : (motor?.advertencias ?? [])
   const bancoVacio = piezas.length === 0
   const hayCortes = piezas.some((p) => p.tipo.startsWith('valvula') || p.tipo.startsWith('cilindro'))
+  const simulando = modo === 'simular'
+
+  // Registro «¿Qué está pasando?»: en orden, lo último abajo. Al detener se
+  // conserva el último, para poder leerlo con calma.
+  const ultimoRegistro = useRef<Array<{ t: number; mensaje: string }>>([])
+  if (motor) ultimoRegistro.current = motor.eventos.slice(-300)
+  const eventos = ultimoRegistro.current
+
+  const zonaVista: Array<[VistaApp, string, string]> = [
+    ['esquema', 'Esquema', 'Símbolos ISO 1219-1'],
+    ['taller', 'Taller', 'Los componentes por dentro'],
+    ['banco3d', '3D', 'El banco en tres dimensiones'],
+    ['ambos', 'Esquema+Taller', 'Esquema y taller a la vez, sincronizados'],
+  ]
+
+  // Texto de la barra de estado según lo que está haciendo el alumno.
+  const textoEstado = (() => {
+    if (simulando)
+      return tactil
+        ? 'Simulando: mantén el dedo sobre las válvulas de pulsador · toca una biestable para conmutarla · toca la fuente para cortar el aire.'
+        : 'Simulando: mantén pulsadas las válvulas de pulsador · clic en una biestable la conmuta · clic en la fuente corta el aire · Espacio detiene.'
+    if (origenCable) return `Cableando desde ${origenCable.componente}.${origenCable.puerto}: ${tactil ? 'toca' : 'haz clic en'} el puerto de destino · Esc cancela.`
+    if (seleccion?.clase === 'pieza') return `${seleccion.id} seleccionada: arrástrala para moverla · sus propiedades están a la derecha · Supr la borra.`
+    if (seleccion?.clase === 'manguera') return `Manguera ${seleccion.id} seleccionada: Supr la quita.`
+    if (bancoVacio) return 'Modo edición: arrastra una ficha desde la paleta al tablero, o carga un ejemplo.'
+    return tactil
+      ? 'Modo edición: toca un puerto y luego el de destino para unirlos · toca una ficha para ver sus propiedades.'
+      : 'Modo edición: arrastra fichas desde la paleta · clic cerca de un puerto para cablear · Espacio simula.'
+  })()
+
+  const botonSimular = (
+    <button
+      onClick={() => setModo(simulando ? 'editar' : 'simular')}
+      disabled={bancoVacio}
+      title={bancoVacio ? 'Coloca al menos una ficha en el banco para poder simular' : 'Atajo: barra espaciadora'}
+      style={{ ...botonPrimario(simulando), ...(bancoVacio ? { background: '#dfe4ea', color: '#51606f' } : {}), minHeight: 36, padding: '0.4rem 1rem' }}
+      data-simular="si"
+    >
+      {simulando ? '■ Detener' : '▶ Simular'}
+    </button>
+  )
+  const deshacerRehacer = !simulando && (
+    <span style={{ display: 'flex', gap: 0 }}>
+      <button onClick={deshacer} disabled={!puedeDeshacer} title="Deshacer (Ctrl+Z)" aria-label="Deshacer" className="boton-icono" style={{ opacity: puedeDeshacer ? 1 : 0.4 }}>
+        ↶
+      </button>
+      <button onClick={rehacer} disabled={!puedeRehacer} title="Rehacer (Ctrl+Shift+Z)" aria-label="Rehacer" className="boton-icono" style={{ opacity: puedeRehacer ? 1 : 0.4 }}>
+        ↷
+      </button>
+    </span>
+  )
+  const interruptorAire = (
+    <button role="switch" aria-checked={aire} onClick={alternarAire} className="interruptor" title={aire ? 'Cortar el aire de la fuente' : 'Dar el aire'} data-aire="si">
+      <span className="interruptor__riel" aria-hidden />
+      Aire: <strong>{aire ? 'encendido' : 'cortado'}</strong>
+    </button>
+  )
+  const selectorEjemplos = (
+    <select
+      value={circuito ? 'actual' : ''}
+      title={circuito ? `Abierto: ${circuito.nombre}${circuito.modificado ? ' (modificado)' : ''}` : 'Cargar un circuito de ejemplo'}
+      aria-label="Ejemplos"
+      data-selector-ejemplos="si"
+      onChange={(e) => {
+        const n = Number(e.target.value) as NumeroEjemplo
+        if (!n) return
+        const etiqueta = EJEMPLOS.find((x) => x.n === n)?.etiqueta ?? ''
+        if (confirmarDescarte(`¿Cargar el ejemplo «${etiqueta}»?`)) cargarEjemplo(n)
+        e.target.value = circuito ? 'actual' : ''
+      }}
+      style={{ padding: '0.3rem 0.4rem', width: estrecha ? 'min(190px, 42vw)' : 172, minHeight: 34, fontSize: '0.86rem' }}
+    >
+      <option value="">— Ejemplos —</option>
+      {circuito && (
+        <option value="actual" disabled>
+          {circuito.nombre}
+          {circuito.modificado ? ' (modificado)' : ''}
+        </option>
+      )}
+      {EJEMPLOS.map((ej) => (
+        <option key={ej.n} value={ej.n}>
+          {ej.etiqueta}
+        </option>
+      ))}
+    </select>
+  )
+  const itemsArchivo = [
+    { texto: 'Nuevo diagrama', ayuda: 'Deja el tablero en blanco', onClick: () => confirmarDescarte('¿Empezar un diagrama nuevo?') && limpiarPizarra() },
+    { texto: 'Abrir…', ayuda: 'Un circuito o una entrega (.json)', onClick: () => inputArchivo.current?.click() },
+    {
+      texto: 'Guardar',
+      ayuda: 'Descarga el circuito para seguir editándolo',
+      onClick: () => descargarJson({ version: 1, nombre: ejercicio || undefined, piezas, mangueras }, nombreSeguro(`${baseArchivo()}_circuito`, 'json')),
+    },
+    { texto: 'Copiar enlace para compartir', ayuda: 'El circuito viaja dentro del enlace', onClick: () => void compartir(), separar: true },
+  ]
+  const itemsExportar = [
+    { texto: 'Circuito (PNG)', ayuda: 'Imagen para pegar en el informe', onClick: () => void exportarLamina('pizarra-svg', 'circuito', 'png'), deshabilitado: bancoVacio, porque: 'Primero coloca fichas en el tablero' },
+    { texto: 'Circuito (SVG)', ayuda: 'Dibujo vectorial, se amplía sin perder calidad', onClick: () => void exportarLamina('pizarra-svg', 'circuito', 'svg'), deshabilitado: bancoVacio, porque: 'Primero coloca fichas en el tablero' },
+    {
+      texto: 'Diagrama de fase (PNG)',
+      ayuda: 'El diagrama espacio-fase de la simulación',
+      onClick: () => exportarFase(),
+      deshabilitado: !simulando,
+      porque: 'Disponible mientras simulas (▶ Simular)',
+    },
+  ]
+  const zoomHabilitado = vista !== 'banco3d'
+  const grupoZoom = (
+    <span className="grupo-zoom" role="group" aria-label="Zoom del tablero">
+      <button onClick={() => controles.current?.alejar()} disabled={!zoomHabilitado} title="Alejar" aria-label="Alejar">
+        −
+      </button>
+      <button onClick={() => controles.current?.cien()} disabled={!zoomHabilitado} title="Volver al 100 %" style={{ minWidth: 48, fontWeight: 600, fontSize: '0.82rem' }} data-zoom="si">
+        {zoomHabilitado ? `${zoom}%` : '—'}
+      </button>
+      <button onClick={() => controles.current?.acercar()} disabled={!zoomHabilitado} title="Acercar" aria-label="Acercar">
+        +
+      </button>
+      <button onClick={() => controles.current?.ajustar()} disabled={!zoomHabilitado} title="Ajustar: ver todo el circuito" aria-label="Ajustar" data-ajustar="si">
+        ⤢
+      </button>
+      {controles.current?.hayPantallaCompleta !== false && (
+        <button onClick={() => controles.current?.pantallaCompleta()} disabled={!zoomHabilitado} title="Tablero a pantalla completa" aria-label="Pantalla completa">
+          ⛶
+        </button>
+      )}
+    </span>
+  )
+  const inputOculto = (
+    <input
+      ref={inputArchivo}
+      type="file"
+      accept="application/json,.json"
+      style={{ display: 'none' }}
+      onChange={(e) => {
+        void abrirArchivo(e.target.files?.[0])
+        e.target.value = ''
+      }}
+    />
+  )
+
+  const lienzo = (
+    <div className="banco__lienzo" data-vista={vista}>
+      {vista === 'banco3d' ? (
+        <>
+          <Suspense fallback={<p style={{ padding: 20, color: '#51606f' }}>Montando el banco…</p>}>
+            <Banco3D motor={motor} llenar />
+          </Suspense>
+          {/* La pizarra sigue montada, oculta, para poder exportar el circuito. */}
+          <div style={{ display: 'none' }}>
+            <Pizarra motor={motor} vista="esquema" />
+          </div>
+        </>
+      ) : (
+        <>
+          <div>
+            {vista === 'ambos' && <span style={rotuloVista}>Esquema · ISO 1219-1</span>}
+            <Pizarra motor={motor} vista={vista === 'taller' ? 'taller' : 'esquema'} llenar sinBarra controles={controles} onZoom={setZoom} />
+          </div>
+          {vista === 'ambos' && (
+            <div>
+              <span style={rotuloVista}>Taller · por dentro</span>
+              <Pizarra motor={motor} vista="taller" soloLectura id="pizarra-taller-svg" llenar sinBarra />
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+
+  const panelInferior = (
+    <PanelInferior
+      abierto={inferiorAbierto}
+      onAbrir={setInferiorAbierto}
+      alto={altoInferior}
+      onAlto={setAltoInferior}
+      pestana={pestanaInferior}
+      onPestana={setPestanaInferior}
+      motor={motor}
+      eventos={eventos}
+    />
+  )
+  const inspector = (
+    <Inspector
+      pestana={pestanaInspector}
+      onPestana={setPestanaInspector}
+      onPlegar={() => (estrecha ? setHoja(null) : setInspectorAbierto(false))}
+      motor={motor}
+      avisos={avisosCircuito}
+      hayCortes={hayCortes}
+    />
+  )
 
   return (
-    <main style={{ maxWidth: 1320, margin: '0 auto', padding: estrecha ? '0.8rem' : '1.25rem 1.5rem' }}>
-      <CabeceraUnidad titulo="Unidad 1 · Neumática" descripcion="Arma el circuito con la simbología ISO y simúlalo" />
-
-      <BarraHerramientas
-        derecha={
-          <>
-            <Menu
-              etiqueta="Archivo"
-              items={[
-                { texto: 'Nuevo diagrama', ayuda: 'Deja el tablero en blanco', onClick: () => confirmarDescarte('¿Empezar un diagrama nuevo?') && limpiarPizarra() },
-                { texto: 'Abrir…', ayuda: 'Un circuito o una entrega (.json)', onClick: () => inputArchivo.current?.click() },
-                {
-                  texto: 'Guardar',
-                  ayuda: 'Descarga el circuito para seguir editándolo',
-                  onClick: () => descargarJson({ version: 1, nombre: ejercicio || undefined, piezas, mangueras }, nombreSeguro(`${baseArchivo()}_circuito`, 'json')),
-                },
-                { texto: 'Copiar enlace para compartir', ayuda: 'El circuito viaja dentro del enlace', onClick: () => void compartir(), separar: true },
-              ]}
-            />
-            <Menu
-              etiqueta="Exportar"
-              items={[
-                { texto: 'Circuito (PNG)', ayuda: 'Imagen para pegar en el informe', onClick: () => void exportarLamina('pizarra-svg', 'circuito', 'png'), deshabilitado: bancoVacio, porque: 'Primero coloca fichas en el tablero' },
-                { texto: 'Circuito (SVG)', ayuda: 'Dibujo vectorial, se amplía sin perder calidad', onClick: () => void exportarLamina('pizarra-svg', 'circuito', 'svg'), deshabilitado: bancoVacio, porque: 'Primero coloca fichas en el tablero' },
-                {
-                  texto: 'Diagrama de fase (PNG)',
-                  ayuda: 'El diagrama espacio-fase de la simulación',
-                  onClick: () => void exportarLamina('diagrama-fase-svg', 'diagrama-fase', 'png'),
-                  deshabilitado: modo !== 'simular',
-                  porque: 'Disponible mientras simulas (▶ Simular)',
-                },
-              ]}
-            />
-            <input
-              ref={inputArchivo}
-              type="file"
-              accept="application/json,.json"
-              style={{ display: 'none' }}
-              onChange={(e) => {
-                void abrirArchivo(e.target.files?.[0])
-                e.target.value = ''
-              }}
-            />
-          </>
-        }
-      >
-        <button
-          onClick={() => setModo(modo === 'simular' ? 'editar' : 'simular')}
-          disabled={bancoVacio}
-          title={bancoVacio ? 'Coloca al menos una ficha en el banco para poder simular' : 'Atajo: barra espaciadora'}
-          style={{ ...botonPrimario(modo === 'simular'), ...(bancoVacio ? { background: '#dfe4ea', color: '#51606f' } : {}) }}
-        >
-          {modo === 'simular' ? '■ Detener' : '▶ Simular'}
-        </button>
-
-        {modo === 'editar' && (
-          <span style={{ display: 'flex', gap: 2 }}>
-            <button onClick={deshacer} disabled={!puedeDeshacer} title="Deshacer (Ctrl+Z)" aria-label="Deshacer" style={{ ...botonTerciario, opacity: puedeDeshacer ? 1 : 0.4 }}>
-              ↶ Deshacer
-            </button>
-            <button onClick={rehacer} disabled={!puedeRehacer} title="Rehacer (Ctrl+Shift+Z)" aria-label="Rehacer" style={{ ...botonTerciario, opacity: puedeRehacer ? 1 : 0.4 }}>
-              ↷
-            </button>
-          </span>
-        )}
-
-        {modo === 'simular' && (
-          <button onClick={alternarAire} aria-pressed={aire} style={{ ...botonSecundario, color: aire ? '#fff' : COLOR.pizarra, background: aire ? COLOR.azul : '#fff' }}>
-            Aire {aire ? 'ON' : 'OFF'}
-          </button>
-        )}
-
-        <Etiquetado texto="Ejemplos">
-          <select
-            value={circuito ? 'actual' : ''}
-            title={circuito ? `Abierto: ${circuito.nombre}${circuito.modificado ? ' (modificado)' : ''}` : undefined}
-            data-selector-ejemplos="si"
-            onChange={(e) => {
-              const n = Number(e.target.value) as NumeroEjemplo
-              if (!n) return
-              const etiqueta = EJEMPLOS.find((x) => x.n === n)?.etiqueta ?? ''
-              if (confirmarDescarte(`¿Cargar el ejemplo «${etiqueta}»?`)) cargarEjemplo(n)
-              e.target.value = ''
-            }}
-            style={{ padding: '0.35rem 0.4rem', maxWidth: 'min(260px, calc(100vw - 120px))', minHeight: 36 }}
-          >
-            <option value="">— elige un circuito —</option>
-            {circuito && (
-              <option value="actual" disabled>
-                {circuito.nombre}
-                {circuito.modificado ? ' (modificado)' : ''}
-              </option>
-            )}
-            {EJEMPLOS.map((ej) => (
-              <option key={ej.n} value={ej.n}>
-                {ej.etiqueta}
-              </option>
-            ))}
-          </select>
-        </Etiquetado>
-      </BarraHerramientas>
-
-      {aviso && (
-        <p role="status" style={estiloAviso}>
-          {aviso}
-        </p>
-      )}
-
-      <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', flexDirection: estrecha ? 'column' : 'row' }}>
-        {modo === 'editar' && <Paleta horizontal={estrecha} />}
-        <div style={{ flex: 1, minWidth: 0, width: '100%' }}>
-          <div
-            style={{
-              display: paralela ? 'grid' : 'block',
-              gridTemplateColumns: paralela ? 'repeat(auto-fit, minmax(320px, 1fr))' : undefined,
-              gap: 10,
-            }}
-          >
-            <div style={{ maxWidth: '100%' }}>
-              {paralela && <p style={rotuloVista}>Esquema · simbología ISO 1219-1</p>}
-              {!paralela && vista === 'banco3d' ? (
-                <>
-                  <Suspense fallback={<p style={{ padding: 20, color: '#5a6b7d' }}>Montando el banco…</p>}>
-                    <Banco3D motor={motor} />
-                  </Suspense>
-                  {/* La pizarra sigue montada, oculta, para poder exportar el circuito. */}
-                  <div style={{ display: 'none' }}>
-                    <Pizarra motor={motor} vista="esquema" />
-                  </div>
-                </>
-              ) : (
-                <Pizarra motor={motor} vista={paralela || vista === 'banco3d' ? 'esquema' : vista} />
-              )}
-            </div>
-            {paralela && (
-              <div style={{ maxWidth: '100%' }}>
-                <p style={rotuloVista}>Taller · el componente por dentro</p>
-                <Pizarra
-                  motor={motor}
-                  vista="taller"
-                  soloLectura
-                  id="pizarra-taller-svg"
-                />
-              </div>
-            )}
-          </div>
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center', margin: '6px 2px 0', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '0.8rem', color: '#5a6b7d' }}>Vista:</span>
-            {(
-              [
-                ['esquema', 'Esquema'],
-                ['taller', 'Taller'],
-                ['banco3d', 'Banco 3D'],
-              ] as Array<[VistaApp, string]>
-            ).map(([v, etiqueta]) => (
-              <button
-                key={v}
-                onClick={() => {
-                  setVista(v)
-                  setParalela(false)
-                }}
-                disabled={paralela}
-                style={{
-                  ...botonSuave,
-                  padding: '0.15rem 0.5rem',
-                  fontSize: '0.78rem',
-                  opacity: paralela ? 0.5 : 1,
-                  background: !paralela && vista === v ? '#33475c' : '#fff',
-                  color: !paralela && vista === v ? '#fff' : '#33475c',
-                }}
-              >
-                {etiqueta}
-              </button>
-            ))}
-            <button
-              onClick={() => setParalela((p) => !p)}
-              title="Muestra el esquema y el taller a la vez, sincronizados"
-              style={{
-                ...botonSuave,
-                padding: '0.15rem 0.5rem',
-                fontSize: '0.78rem',
-                background: paralela ? '#0e7a43' : '#fff',
-                color: paralela ? '#fff' : '#33475c',
-              }}
-            >
-              {paralela ? '✓ En paralelo' : 'Ver en paralelo'}
-            </button>
-            <span style={{ width: 10 }} />
-            <span style={{ fontSize: '0.8rem', color: '#5a6b7d' }}>
-              {tactil
-                ? 'Dos dedos para acercar o alejar · arrastra el fondo para moverte · «Ajustar» encuadra todo el circuito'
-                : 'Rueda para zoom · arrastra el fondo para moverte · los botones del panel ajustan la vista y la abren a pantalla completa'}
-            </span>
-          </div>
-          <p style={{ margin: '6px 2px', fontSize: '0.82rem', color: '#5a6b7d' }}>
-            {modo === 'editar'
-              ? tactil
-                ? 'Toca una ficha de la paleta para agregarla (o arrástrala) · toca un puerto y luego el de destino para unirlos · toca una ficha para ver sus propiedades'
-                : 'Clic cerca de un puerto para cablear (son magnéticos) · Supr borra la selección · Esc cancela · Espacio simula'
-              : tactil
-                ? 'Mantén el dedo sobre las válvulas de pulsador · toca una biestable para conmutarla · toca la fuente para cortar el aire'
-                : 'Mantén pulsadas las válvulas de pulsador · clic en una biestable la conmuta a mano · clic en la fuente corta el aire'}
-          </p>
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', gap: 14, alignItems: 'stretch', flexWrap: 'wrap' }}>
-        <section style={{ ...tarjeta, flex: '2 1 380px', minWidth: 0 }}>
-          {modo === 'editar' ? (
-            <>
-              <h2 style={subtitulo}>Propiedades</h2>
-              <Propiedades />
-            </>
-          ) : (
-            <>
-              <h2 style={subtitulo}>¿Qué está pasando?</h2>
-              {eventos.length === 0 ? (
-                <p style={{ color: '#5a6b7d', margin: 0 }}>
-                  Simulación corriendo. Acciona una válvula para ver los eventos.
-                </p>
-              ) : (
-                <ul style={{ margin: 0, paddingLeft: '1.2rem', lineHeight: 1.6 }}>
-                  {eventos.map((e, i) => (
-                    <li key={`${e.t}-${i}`} style={{ opacity: i === 0 ? 1 : 0.6 }}>
-                      <code>t={e.t.toFixed(1)}s</code> — {e.mensaje}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </>
-          )}
-          {avisosCircuito.length > 0 && (
-            <div style={{ marginTop: 10 }}>
-              {avisosCircuito.map((a, i) => (
-                <p key={i} style={{ color: '#8a5b00', margin: '3px 0', fontSize: '0.87rem' }}>
-                  ⚠ {a}
-                </p>
+    <>
+      <main className="banco" aria-label="Laboratorio de neumática">
+        <h1 className="solo-lector">Unidad 1 · Neumática — laboratorio</h1>
+        <div className="banco__barra" role="toolbar" aria-label="Herramientas del banco">
+          {botonSimular}
+          {deshacerRehacer}
+          {selectorEjemplos}
+          {!estrecha && (
+            <span className="segmentado" role="radiogroup" aria-label="Vista">
+              {zonaVista.map(([v, t, ayuda]) => (
+                <button key={v} role="radio" aria-checked={vista === v} onClick={() => setVista(v)} title={ayuda} data-vista-boton={v}>
+                  {t}
+                </button>
               ))}
-            </div>
+            </span>
           )}
-        </section>
+          {!estrecha && grupoZoom}
+          {!estrecha && simulando && interruptorAire}
+          <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
+            {estrecha ? (
+              <Menu
+                etiqueta="⋯"
+                datos="Mas"
+                ancho={300}
+                items={[
+                  ...zonaVista.map(([v, t]) => ({ texto: `${vista === v ? '✓ ' : ''}Vista: ${t}`, onClick: () => setVista(v) })),
+                  { texto: 'Ajustar el tablero', ayuda: 'Ver todo el circuito', onClick: () => controles.current?.ajustar(), separar: true },
+                  { texto: aire ? 'Cortar el aire' : 'Dar el aire', ayuda: `Aire: ${aire ? 'encendido' : 'cortado'}`, onClick: alternarAire },
+                  ...itemsArchivo.map((it, i) => ({ ...it, separar: i === 0 })),
+                  ...itemsExportar.map((it, i) => ({ ...it, separar: i === 0 })),
+                  { texto: 'Gestos del banco', onClick: () => setAyuda(true), separar: true },
+                ]}
+              />
+            ) : (
+              <>
+                <Menu etiqueta="Archivo" items={itemsArchivo} />
+                <Menu etiqueta="Exportar" items={itemsExportar} />
+                <button onClick={() => setAyuda(true)} className="boton-icono" style={{ border: '1px solid #c6ced6', background: '#fff', minWidth: 36, minHeight: 36 }} title="Atajos y gestos" aria-label="Atajos y gestos" data-ayuda="si">
+                  ?
+                </button>
+              </>
+            )}
+            {inputOculto}
+          </span>
+        </div>
 
-        {hayCortes && (
-          <section style={{ ...tarjeta, flex: '1 1 360px', maxWidth: estrecha ? '100%' : 540, minWidth: 0 }}>
-            <h2 style={subtitulo}>Vista en corte — así funciona por dentro</h2>
-            <VistaCorte motor={motor} />
-          </section>
+        {aviso && (
+          <p role="status" style={estiloAviso}>
+            {aviso}
+          </p>
         )}
-      </div>
 
-      {modo === 'simular' && (
-        <section style={tarjeta}>
-          <h2 style={subtitulo}>Diagrama espacio-fase (recorrido-tiempo)</h2>
-          <DiagramaEspacioFase motor={motor} />
-        </section>
+        {estrecha ? (
+          <>
+            {lienzo}
+            <div className="banco__acciones-movil">
+              <button onClick={() => setHoja('paleta')} disabled={simulando} title={simulando ? 'Detén la simulación para editar' : undefined}>
+                ＋ Componentes
+              </button>
+              <button onClick={() => setHoja('inspector')}>Propiedades{avisosCircuito.length ? ` ⚠${avisosCircuito.length}` : ''}</button>
+              <button onClick={() => setHoja('registro')}>Registro</button>
+            </div>
+          </>
+        ) : (
+          <div className="banco__cuerpo">
+            <div className={`banco__paleta${paletaPlegada ? ' banco__paleta--plegada' : ''}`}>
+              <Paleta plegada={paletaPlegada} onPlegar={setPaletaPlegada} deshabilitada={simulando} />
+            </div>
+            <div className="banco__centro">
+              {lienzo}
+              {panelInferior}
+            </div>
+            <div className={`banco__inspector${inspectorAbierto ? '' : ' banco__inspector--plegado'}`}>
+              {inspectorAbierto ? (
+                inspector
+              ) : (
+                <div className="banco-panel" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 4 }}>
+                  <button onClick={() => setInspectorAbierto(true)} className="boton-icono" title="Abrir el inspector (propiedades y vista en corte)" aria-label="Abrir el inspector">
+                    «
+                  </button>
+                  {avisosCircuito.length > 0 && (
+                    <span title={`${avisosCircuito.length} avisos del circuito`} style={{ marginTop: 6, color: '#7a4f00', fontSize: '0.8rem', fontWeight: 700 }}>
+                      ⚠{avisosCircuito.length}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="banco__estado" role="status" aria-live="polite" data-estado-banco="si">
+          <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={textoEstado}>
+            {textoEstado}
+          </span>
+          {!estrecha && (
+            <span style={{ color: '#51606f', whiteSpace: 'nowrap' }}>
+              {piezas.length} fichas · {mangueras.length} mangueras
+            </span>
+          )}
+          {!estrecha && avisosCircuito.length > 0 && (
+            <button
+              onClick={() => {
+                setInspectorAbierto(true)
+                setPestanaInspector('propiedades')
+              }}
+              style={{ border: 'none', background: 'transparent', color: '#7a4f00', fontWeight: 700, cursor: 'pointer', fontSize: '0.82rem' }}
+            >
+              ⚠ {avisosCircuito.length} {avisosCircuito.length === 1 ? 'aviso' : 'avisos'}
+            </button>
+          )}
+        </div>
+      </main>
+
+      {estrecha && hoja && (
+        <>
+          <div className="hoja-fondo" onClick={() => setHoja(null)} />
+          <div className="hoja" role="dialog" aria-label={hoja === 'paleta' ? 'Componentes' : hoja === 'inspector' ? 'Propiedades' : 'Registro'}>
+            <div style={{ display: 'flex', alignItems: 'center', padding: '8px 10px 4px' }}>
+              <strong style={{ fontSize: '0.95rem' }}>{hoja === 'paleta' ? 'Componentes' : hoja === 'inspector' ? 'Propiedades y vista en corte' : 'Registro y diagrama'}</strong>
+              <button onClick={() => setHoja(null)} className="boton-icono" style={{ marginLeft: 'auto' }} aria-label="Cerrar">
+                ✕
+              </button>
+            </div>
+            <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              {hoja === 'paleta' && <Paleta deshabilitada={simulando} onElegida={() => setHoja(null)} />}
+              {hoja === 'inspector' && inspector}
+              {hoja === 'registro' && (
+                <PanelInferior
+                  abierto
+                  onAbrir={() => undefined}
+                  alto={Math.round(window.innerHeight * 0.6)}
+                  onAlto={() => undefined}
+                  pestana={pestanaInferior}
+                  onPestana={setPestanaInferior}
+                  motor={motor}
+                  eventos={eventos}
+                />
+              )}
+            </div>
+          </div>
+        </>
       )}
 
-      <section style={tarjeta}>
-        <Seccion
-          titulo={
-            alumno.nombre
-              ? `Mi entrega · ${alumno.nombre}${alumno.rol ? ` (${alumno.rol})` : ''}`
-              : 'Mi entrega · responder el enunciado y descargar'
-          }
-        >
-          <PanelEntrega />
-        </Seccion>
-      </section>
+      {ayuda && <AyudaAtajos tactil={tactil} onCerrar={() => setAyuda(false)} />}
 
-      <section style={tarjeta}>
-        <Seccion titulo="Método cascada · secuencias con señales bloqueantes">
-          <MetodoCascada />
-        </Seccion>
-      </section>
+      <div style={{ maxWidth: 1320, margin: '0 auto', padding: estrecha ? '0.8rem' : '0.5rem 1.5rem 1.25rem' }}>
+        <section style={tarjeta}>
+          <Seccion
+            titulo={
+              alumno.nombre
+                ? `Mi entrega · ${alumno.nombre}${alumno.rol ? ` (${alumno.rol})` : ''}`
+                : 'Mi entrega · responder el enunciado y descargar'
+            }
+          >
+            <PanelEntrega />
+          </Seccion>
+        </section>
 
-      <section style={tarjeta}>
-        <Seccion titulo="Simbología VDI 2860 · funciones de manipulación">
-          <SimbologiaVDI />
-        </Seccion>
-      </section>
+        <section style={tarjeta}>
+          <Seccion titulo="Método cascada · secuencias con señales bloqueantes">
+            <MetodoCascada />
+          </Seccion>
+        </section>
 
-      <section style={tarjeta}>
-        <Seccion titulo="Simbología ISO 1219-1 · componentes neumáticos">
-          <SimbologiaISO />
-        </Seccion>
-      </section>
+        <section style={tarjeta}>
+          <Seccion titulo="Simbología VDI 2860 · funciones de manipulación">
+            <SimbologiaVDI />
+          </Seccion>
+        </section>
 
-      <section style={tarjeta}>
-        <Seccion titulo="Nº de vías y posiciones · nomenclatura de los orificios">
-          <TablaNomenclatura />
-        </Seccion>
-      </section>
+        <section style={tarjeta}>
+          <Seccion titulo="Simbología ISO 1219-1 · componentes neumáticos">
+            <SimbologiaISO />
+          </Seccion>
+        </section>
 
-      <footer style={{ margin: '1.5rem 0 0.5rem', color: '#5f6b78', fontSize: '0.8rem', textAlign: 'center' }}>
-        NeumaLab · MEC275 — Neumática industrial · Simbología ISO 1219-1
-      </footer>
-    </main>
+        <section style={tarjeta}>
+          <Seccion titulo="Nº de vías y posiciones · nomenclatura de los orificios">
+            <TablaNomenclatura />
+          </Seccion>
+        </section>
+
+        <footer style={{ margin: '1.5rem 0 0.5rem', color: '#5f6b78', fontSize: '0.8rem', textAlign: 'center' }}>
+          NeumaLab · MEC275 — Neumática industrial · Simbología ISO 1219-1
+        </footer>
+      </div>
+    </>
   )
 }
 
@@ -597,26 +714,18 @@ const tarjeta: React.CSSProperties = {
   boxShadow: '0 1px 3px rgba(28, 39, 51, 0.06)',
 }
 
-const subtitulo: React.CSSProperties = {
-  margin: '0 0 0.6rem',
-  fontSize: '1rem',
-  color: '#33475c',
-}
 
 const rotuloVista: React.CSSProperties = {
-  margin: '0 0 4px',
+  position: 'absolute',
+  left: 10,
+  bottom: 8,
+  zIndex: 4,
+  padding: '2px 8px',
+  background: 'rgba(255,255,255,0.92)',
+  border: '1px solid #d0d5db',
+  borderRadius: 6,
   fontSize: '0.78rem',
   fontWeight: 600,
-  color: '#5a6b7d',
-  letterSpacing: '0.02em',
+  color: '#33475c',
 }
 
-const botonSuave: React.CSSProperties = {
-  border: '1px solid #c6ced6',
-  background: '#fff',
-  color: '#33475c',
-  borderRadius: 6,
-  padding: '0.35rem 0.7rem',
-  cursor: 'pointer',
-  fontSize: '0.84rem',
-}

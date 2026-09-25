@@ -78,12 +78,29 @@ function firmaDe(
   ].join('|')
 }
 
+/** Controles del lienzo que usa la barra de herramientas del banco. */
+export interface ControlesPizarra {
+  alejar(): void
+  acercar(): void
+  cien(): void
+  ajustar(): void
+  pantallaCompleta(): void
+  hayPantallaCompleta: boolean
+}
+
 interface Props {
   motor: Motor | null
   /** La vista (esquema/taller) sirve para decidir qué dibujar. */
   vista?: Vista
   soloLectura?: boolean
   id?: string
+  /** Ocupa todo el alto de su contenedor (banco de trabajo). */
+  llenar?: boolean
+  /** Sin la barra de zoom flotante: los controles van en la barra del banco. */
+  sinBarra?: boolean
+  controles?: React.MutableRefObject<ControlesPizarra | null>
+  /** Avisa el zoom (en %) cada vez que cambia. */
+  onZoom?: (porcentaje: number) => void
 }
 
 interface Punto {
@@ -106,7 +123,7 @@ function puertoMundo(pieza: Pieza, idPuerto: string): Punto | null {
   return { x: pieza.x + puerto.x, y: pieza.y + puerto.y }
 }
 
-export default function Pizarra({ motor, vista = 'esquema', soloLectura = false, id = 'pizarra-svg' }: Props) {
+export default function Pizarra({ motor, vista = 'esquema', soloLectura = false, id = 'pizarra-svg', llenar = false, sinBarra = false, controles, onZoom }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
   const contenedorRef = useRef<HTMLDivElement>(null)
   // Ancho del tablero: al medirlo se vuelve a dibujar el porcentaje de zoom.
@@ -701,6 +718,21 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
     return cw / view.w
   }
 
+  if (controles) {
+    controles.current = {
+      alejar: () => zoomAbsoluto(Math.max(ESC_MIN, escActual() / 1.4)),
+      acercar: () => zoomAbsoluto(Math.min(ESC_MAX, escActual() * 1.4)),
+      cien: () => zoomAbsoluto(1),
+      ajustar,
+      pantallaCompleta: alternarPantallaCompleta,
+      hayPantallaCompleta,
+    }
+  }
+  const pctZoom = escPorcentaje()
+  useEffect(() => {
+    onZoom?.(pctZoom)
+  }, [pctZoom, onZoom])
+
   // --- render -------------------------------------------------------------
   const bancoVacio = piezas.length === 0
 
@@ -710,15 +742,16 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
       style={{
         position: 'relative',
         width: '100%',
-        height: pantallaCompleta ? '100%' : 520,
+        height: pantallaCompleta || llenar ? '100%' : 520,
         overflow: 'hidden',
-        borderRadius: pantallaCompleta ? 0 : 10,
-        border: `6px solid ${simulando ? '#12a35a' : '#b9bec5'}`,
+        borderRadius: pantallaCompleta ? 0 : llenar ? 8 : 10,
+        border: `${llenar ? 3 : 6}px solid ${simulando ? '#12a35a' : '#b9bec5'}`,
         background: '#f7f5ef',
         touchAction: 'none',
       }}
     >
       {/* barra de navegación */}
+      {(!sinBarra || pantallaCompleta) && (
       <div
         style={{
           position: 'absolute',
@@ -768,6 +801,7 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
           </button>
         )}
       </div>
+      )}
 
       <svg
         ref={svgRef}
