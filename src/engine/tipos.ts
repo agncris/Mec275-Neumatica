@@ -85,6 +85,23 @@ export type EmitirEvento = (tipo: string, mensaje: string) => void
 export const esActuador = (tipo: string): boolean =>
   tipo.startsWith('cilindro') || tipo === 'actuadorGiratorio' || tipo === 'motorNeumatico'
 
+const LETRAS_SECUENCIA = 'ABCDEFGHIJ'
+const letraValida = (l: unknown): l is string => typeof l === 'string' && /^[A-Z]$/.test(l)
+
+/**
+ * Letra de un actuador en la secuencia (A, B, C…): la que eligió el alumno
+ * (parámetro `letra`) o, si no eligió, la siguiente libre por orden.
+ */
+export function letraActuador(id: string, componentes: Array<{ id: string; tipo: string; params?: Params }>): string {
+  const actuadores = componentes.filter((c) => esActuador(c.tipo))
+  const propia = actuadores.find((c) => c.id === id)?.params?.letra
+  if (letraValida(propia)) return propia
+  const tomadas = new Set(actuadores.map((c) => c.params?.letra).filter(letraValida))
+  const libres = LETRAS_SECUENCIA.split('').filter((l) => !tomadas.has(l))
+  const i = actuadores.filter((c) => !letraValida(c.params?.letra)).findIndex((c) => c.id === id)
+  return i >= 0 ? (libres[i] ?? id) : id
+}
+
 /**
  * Ventana al resto del circuito que el motor entrega a los componentes que la
  * necesitan. Hoy la usan los finales de carrera, que se accionan cuando el

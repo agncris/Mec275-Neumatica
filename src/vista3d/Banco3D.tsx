@@ -584,7 +584,7 @@ export default function Banco3D({ motor, llenar = false }: Props) {
       if (!item) return
       const p = item.pieza
       controles.enabled = false
-      const biestable = p.params.modo === 'biestable'
+      const biestable = p.params.modo === 'biestable' || p.params.accionamiento === 'enclavamiento'
       if (p.tipo === 'fuente') {
         const params = mot.circuito.componentes.find((c) => c.id === p.id)?.params
         mot.setParametro(p.id, 'encendida', !((params?.encendida as boolean) ?? true))
@@ -801,8 +801,13 @@ export default function Banco3D({ motor, llenar = false }: Props) {
             <button
               key={p.id}
               style={botonMando}
-              title={`Mantén pulsado para accionar ${p.id}`}
+              title={p.params.accionamiento === 'enclavamiento' ? `Pulsa para enclavar o soltar ${p.id}` : `Mantén pulsado para accionar ${p.id}`}
               onPointerDown={(e) => {
+                // Con enclavamiento, cada pulsación la deja en la otra posición.
+                if (p.params.accionamiento === 'enclavamiento') {
+                  pulsar(p.id, !motorRef.current?.estadoDe<{ accionada: boolean }>(p.id).accionada)
+                  return
+                }
                 try {
                   e.currentTarget.setPointerCapture(e.pointerId)
                 } catch {
@@ -810,8 +815,8 @@ export default function Banco3D({ motor, llenar = false }: Props) {
                 }
                 pulsar(p.id, true)
               }}
-              onPointerUp={() => pulsar(p.id, false)}
-              onPointerCancel={() => pulsar(p.id, false)}
+              onPointerUp={() => p.params.accionamiento !== 'enclavamiento' && pulsar(p.id, false)}
+              onPointerCancel={() => p.params.accionamiento !== 'enclavamiento' && pulsar(p.id, false)}
             >
               ● {p.id}
             </button>

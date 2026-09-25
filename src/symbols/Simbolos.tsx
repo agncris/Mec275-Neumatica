@@ -139,6 +139,19 @@ function Pulsador({
   )
 }
 
+/**
+ * Enclavamiento (ISO 1219-1): el trazo con muescas sobre el vástago indica
+ * que el mando queda retenido en la posición en que se deja.
+ */
+function Enclavamiento({ x, y }: { x: number; y: number }) {
+  return (
+    <g data-iso="enclavamiento">
+      <line x1={x} y1={y - 3} x2={x} y2={y - 15} {...TRAZO} strokeWidth={1.4} />
+      <path d={`M${x - 6},${y - 15} l3,-4 l3,4 l3,-4 l3,4`} {...TRAZO} strokeWidth={1.4} />
+    </g>
+  )
+}
+
 /** Muelle de retorno (ISO 1219-1). */
 function Muelle({ x, y, hacia = 'derecha' }: { x: number; y: number; hacia?: 'derecha' | 'izquierda' }) {
   const s = hacia === 'derecha' ? 1 : -1
@@ -210,8 +223,13 @@ export function SimboloValvula32({ params, vivo }: PropsSimbolo) {
       {/* accionamientos fijos: mando a la izquierda, muelle a la derecha */}
       {params.accionamiento === 'rodillo' ? (
         <Rodillo x={22} y={55} accionado={accionada} />
+      ) : params.accionamiento === 'pilotaje' ? (
+        <PilotajeNeumatico xPuerto={0} xValvula={30} y={55} etiqueta={na ? '10' : '12'} />
       ) : (
-        <Pulsador xCabeza={16} xValvula={30} y={55} accionado={accionada} />
+        <>
+          <Pulsador xCabeza={16} xValvula={30} y={55} accionado={accionada} />
+          {params.accionamiento === 'enclavamiento' && <Enclavamiento x={23} y={55} />}
+        </>
       )}
       <Muelle x={110} y={55} />
       {/* corredera: dos posiciones que se desplazan al conmutar */}

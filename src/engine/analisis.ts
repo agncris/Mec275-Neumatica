@@ -9,14 +9,14 @@
 import { MODELOS } from './componentes'
 import { Motor } from './motor'
 import { validarCircuito } from './validacion'
-import { esActuador, type Circuito } from './tipos'
-
-const LETRAS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+import { esActuador, letraActuador, type Circuito } from './tipos'
 
 export interface Actuador {
   id: string
   letra: string
   nombre: string
+  /** Motor de giro continuo (no tiene fin de carrera: vale 1 mientras gira). */
+  motor?: boolean
 }
 
 export interface ElementoInventario {
@@ -48,7 +48,8 @@ export interface AnalisisCircuito {
 function mandosManuales(circuito: Circuito): string[] {
   return circuito.componentes
     .filter((c) => {
-      if (c.tipo === 'valvula32') return true
+      // La marcha: las 3/2 de mando manual (la pilotada la mueve el propio circuito).
+      if (c.tipo === 'valvula32') return c.params?.accionamiento !== 'pilotaje'
       if (c.tipo === 'valvula42' || c.tipo === 'valvula52') {
         return c.params?.modo !== 'biestable' && c.params?.accionamiento !== 'pilotaje'
       }
@@ -80,10 +81,11 @@ export function analizarCircuito(circuito: Circuito, opciones: OpcionesAnalisis 
   const erroresMontaje = validarCircuito(circuito)
   const actuadores: Actuador[] = circuito.componentes
     .filter((c) => esActuador(c.tipo))
-    .map((c, i) => ({
+    .map((c) => ({
       id: c.id,
-      letra: LETRAS[i] ?? c.id,
+      letra: letraActuador(c.id, circuito.componentes),
       nombre: MODELOS[c.tipo]?.nombre ?? c.tipo,
+      ...(c.tipo === 'motorNeumatico' ? { motor: true } : {}),
     }))
 
   const inventario = inventarioDe(circuito)
@@ -127,7 +129,9 @@ export function analizarCircuito(circuito: Circuito, opciones: OpcionesAnalisis 
     motor.tick()
     for (const act of actuadores) {
       const antes = previa.get(act.id) ?? 0
-      const ahora = motor.estadoDe<{ posicion?: number }>(act.id).posicion ?? 0
+      const est = motor.estadoDe<{ posicion?: number; accionada?: boolean }>(act.id)
+      // El motor neumático gira sin fin: cuenta como «+» al arrancar y «−» al detenerse.
+      const ahora = act.motor ? (est.accionada ? 1 : 0) : (est.posicion ?? 0)
       if (ahora >= 1 && antes < 1) secuencia.push(`${act.letra}+`)
       if (ahora <= 0 && antes > 0) secuencia.push(`${act.letra}−`)
       previa.set(act.id, ahora)

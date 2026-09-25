@@ -7,6 +7,7 @@
 import { useState } from 'react'
 import { diagramaPorPasos } from '../diagramaPasos'
 import { esActuador } from '../engine'
+import { letraDe, nombreDe } from '../rotulos'
 import type { Motor } from '../engine'
 
 interface Muestra {
@@ -25,16 +26,18 @@ const ESCALA = 1.4
 /** Ancho mínimo de cada paso: con secuencias largas el diagrama crece hacia el lado. */
 const ANCHO_PASO_MIN = 56
 
-const LETRAS = ['A', 'B', 'C', 'D', 'E', 'F']
 
 /**
  * Registro de la simulación, fuera del componente: se anota en cada cuadro
  * aunque el diagrama no esté a la vista, y se conserva al detener para poder
  * leerlo o exportarlo después.
  */
-const registro: { motor: Motor | null; cilindros: string[]; historia: Muestra[]; t: number } = {
+const registro: { motor: Motor | null; cilindros: string[]; letras: Record<string, string>; nombres: Record<string, string>; motores: Set<string>; historia: Muestra[]; t: number } = {
   motor: null,
   cilindros: [],
+  letras: {},
+  nombres: {},
+  motores: new Set(),
   historia: [],
   t: 0,
 }
@@ -45,14 +48,24 @@ export function registrarFase(motor: Motor | null): void {
   if (registro.motor !== motor) {
     // Cada ▶ Simular empieza un registro limpio.
     registro.motor = motor
-    registro.cilindros = motor.circuito.componentes.filter((c) => esActuador(c.tipo)).map((c) => c.id)
+    const comps = motor.circuito.componentes
+    const actuadores = comps.filter((c) => esActuador(c.tipo))
+    // En el orden de su letra (A, B, C…), como se dibuja a mano.
+    registro.letras = Object.fromEntries(actuadores.map((c) => [c.id, letraDe(c.id, comps)]))
+    registro.nombres = Object.fromEntries(actuadores.map((c) => [c.id, nombreDe(c)]))
+    registro.motores = new Set(actuadores.filter((c) => c.tipo === 'motorNeumatico').map((c) => c.id))
+    registro.cilindros = actuadores.map((c) => c.id).sort((a, b) => registro.letras[a].localeCompare(registro.letras[b]))
     registro.historia = []
   }
   registro.t = motor.t
   const ultima = registro.historia[registro.historia.length - 1]
   if (ultima && motor.t - ultima.t < PERIODO_MUESTREO) return
   const pos: Record<string, number> = {}
-  for (const id of registro.cilindros) pos[id] = motor.estadoDe<{ posicion?: number }>(id).posicion ?? 0
+  for (const id of registro.cilindros) {
+    const e = motor.estadoDe<{ posicion?: number; accionada?: boolean }>(id)
+    // El motor gira sin fin: en el diagrama vale 1 mientras gira y 0 detenido.
+    pos[id] = registro.motores.has(id) ? (e.accionada ? 1 : 0) : (e.posicion ?? 0)
+  }
   registro.historia.push({ t: motor.t, pos })
   // Conservamos algo más que la ventana para que el trazo entre suave
   const limite = motor.t - VENTANA * 1.2
@@ -117,7 +130,7 @@ export default function DiagramaEspacioFase({ motor, idSvg = 'diagrama-fase-svg'
   )
 
   if (modoEje === 'pasos') {
-    const actuadores = cilindros.map((id, i) => ({ id, letra: LETRAS[i] ?? id }))
+    const actuadores = cilindros.map((id) => ({ id, letra: registro.letras[id] ?? id }))
     const { inicial, pasos } = diagramaPorPasos(historia.current, actuadores)
     const n = Math.max(pasos.length, 1)
     const anchoPaso = Math.max(ANCHO_PASO_MIN, Math.min(90, (ANCHO - MARGEN_IZQ - 20) / n))
@@ -153,14 +166,14 @@ export default function DiagramaEspacioFase({ motor, idSvg = 'diagrama-fase-svg'
               const yTop = i * ALTO_PISTA + 12
               const yBase = yTop + 32
               const y = (v: number) => yBase - v * 32
-              const letra = LETRAS[i] ?? id
+              const letra = registro.letras[id] ?? id
               const puntos = [`${xPaso(0)},${y(inicial[id] ?? 0)}`]
               pasos.forEach((paso, k) => {
                 puntos.push(`${xPaso(k + 1)},${y(paso.estado[id] ?? 0)}`)
               })
               return (
                 <g key={id}>
-                  <text x={4} y={yBase - 10} fontSize={12} fontWeight={700} fill="#33475c">{letra} · {id}</text>
+                  <text x={4} y={yBase - 10} fontSize={12} fontWeight={700} fill="#33475c">{letra} · {registro.nombres[id] || id}</text>
                   <text x={MARGEN_IZQ - 8} y={y(1) + 4} fontSize={10} fill="#5f6b78" textAnchor="end">1</text>
                   <text x={MARGEN_IZQ - 8} y={y(0) + 4} fontSize={10} fill="#5f6b78" textAnchor="end">0</text>
                   <polyline points={puntos.join(' ')} fill="none" stroke="#1668c7" strokeWidth={2.4} strokeLinejoin="round" />
@@ -187,7 +200,7 @@ export default function DiagramaEspacioFase({ motor, idSvg = 'diagrama-fase-svg'
           const yTop = i * ALTO_PISTA + 12
           const yBase = yTop + 32
           const y = (p: number) => yBase - p * 32
-          const letra = LETRAS[i] ?? id
+          const letra = registro.letras[id] ?? id
 
           const puntos = muestras
             .map((m) => `${x(m.t).toFixed(1)},${y(m.pos[id] ?? 0).toFixed(1)}`)
@@ -214,7 +227,7 @@ export default function DiagramaEspacioFase({ motor, idSvg = 'diagrama-fase-svg'
               <text x={MARGEN_IZQ - 8} y={y(1) + 4} fontSize={10} fill="#5f6b78" textAnchor="end">1</text>
               <text x={MARGEN_IZQ - 8} y={y(0) + 4} fontSize={10} fill="#5f6b78" textAnchor="end">0</text>
               <text x={4} y={yBase - 10} fontSize={12} fontWeight={700} fill="#33475c">
-                {letra} · {id}
+                {letra} · {registro.nombres[id] || id}
               </text>
 
               {puntos && (

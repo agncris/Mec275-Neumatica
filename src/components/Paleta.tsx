@@ -38,6 +38,9 @@ export const GRUPOS: Grupo[] = [
     entradas: [
       { tipo: 'valvula32', etiqueta: 'Válvula 3/2 NC (pulsador)', params: { reposo: 'NC', accionamiento: 'pulsador' } },
       { tipo: 'valvula32', etiqueta: 'Válvula 3/2 NA (pulsador)', params: { reposo: 'NA', accionamiento: 'pulsador' } },
+      { tipo: 'valvula32', etiqueta: 'Válvula 3/2 de inicio (con enclavamiento)', params: { reposo: 'NC', accionamiento: 'enclavamiento' } },
+      { tipo: 'valvula32', etiqueta: 'Válvula 3/2 NC pilotada', params: { reposo: 'NC', accionamiento: 'pilotaje' } },
+      { tipo: 'valvula32', etiqueta: 'Válvula 3/2 NA pilotada', params: { reposo: 'NA', accionamiento: 'pilotaje' } },
       { tipo: 'valvula42', etiqueta: 'Válvula 4/2 monoestable', params: { modo: 'monoestable', accionamiento: 'pulsador' } },
       { tipo: 'valvula52', etiqueta: 'Válvula 5/2 monoestable', params: { modo: 'monoestable', accionamiento: 'pulsador' } },
       { tipo: 'valvula52', etiqueta: 'Válvula 5/2 biestable', params: { modo: 'biestable' } },

@@ -46,6 +46,8 @@ export const DESCRIPTORES: Record<string, Descriptor> = {
       { id: '2', x: 90, y: 0, dir: 'N' },
       { id: '1', x: 80, y: 100, dir: 'S' },
       { id: '3', x: 100, y: 100, dir: 'S' },
+      { id: '12', x: 0, y: 55, dir: 'O' },
+      { id: '10', x: 0, y: 55, dir: 'O' },
     ],
   },
   finalCarrera: {
@@ -190,10 +192,15 @@ export const DESCRIPTORES: Record<string, Descriptor> = {
   },
 }
 
-/** Puertos visibles según los parámetros (los pilotajes de la 5/2 dependen del modo). */
+/** Puertos visibles según los parámetros (los pilotajes dependen del modo y del accionamiento). */
 export function puertosVisibles(tipo: string, params: Params): PuertoGeom[] {
   const desc = DESCRIPTORES[tipo]
   if (!desc) return []
+  if (tipo === 'valvula32') {
+    const pilotada = params.accionamiento === 'pilotaje'
+    const puerto = params.reposo === 'NA' ? '10' : '12'
+    return desc.puertos.filter((p) => (p.id === '12' || p.id === '10' ? pilotada && p.id === puerto : true))
+  }
   if (tipo !== 'valvula52' && tipo !== 'valvula42') return desc.puertos
   const biestable = params.modo === 'biestable'
   const pilotaje = params.accionamiento === 'pilotaje'

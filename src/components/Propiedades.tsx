@@ -4,6 +4,7 @@
 import { esActuador } from '../engine'
 import { DESCRIPTORES } from './descriptores'
 import { useStore } from '../store'
+import { letraDe, rotuloPieza } from '../rotulos'
 
 export default function Propiedades() {
   const seleccion = useStore((s) => s.seleccion)
@@ -43,6 +44,32 @@ export default function Propiedades() {
         {pieza.id} — {desc?.nombre}
       </strong>
 
+      <label style={etiqueta}>
+        Nombre en la máquina:
+        <input
+          value={String(pieza.params.nombre ?? '')}
+          onChange={(e) => setParamPieza(pieza.id, 'nombre', e.target.value)}
+          placeholder={esActuador(pieza.tipo) ? 'Ej.: Elevador' : pieza.tipo === 'valvula32' ? 'Ej.: Inicio' : 'Opcional'}
+          maxLength={24}
+          style={{ padding: '0.3rem 0.45rem', border: '1px solid #b8c1ca', borderRadius: 6, minHeight: 32 }}
+          data-nombre-pieza={pieza.id}
+        />
+      </label>
+
+      {esActuador(pieza.tipo) && (
+        <label style={etiqueta} title="La letra con que aparece en la secuencia (A+ B+ …), en el diagrama de fase y en las señales de sus finales de carrera (a0, a1)">
+          Letra en la secuencia:
+          <select value={letraDe(pieza.id, piezas)} onChange={(e) => setParamPieza(pieza.id, 'letra', e.target.value)} data-letra-pieza={pieza.id}>
+            {'ABCDEFGHIJ'.split('').map((l) => (
+              <option key={l} value={l}>
+                {l}
+                {piezas.some((q) => q.id !== pieza.id && esActuador(q.tipo) && letraDe(q.id, piezas) === l) ? ' (la usa otro actuador)' : ''}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+
       {pieza.tipo === 'fuente' && (
         <label style={etiqueta}>
           Presión: <strong>{Number(pieza.params.presion ?? 6).toFixed(1)} bar</strong>
@@ -66,6 +93,20 @@ export default function Propiedades() {
           >
             <option value="NC">Normalmente cerrada (NC)</option>
             <option value="NA">Normalmente abierta (NA)</option>
+          </select>
+        </label>
+      )}
+      {pieza.tipo === 'valvula32' && (
+        <label style={etiqueta}>
+          Accionamiento:
+          <select
+            value={String(pieza.params.accionamiento ?? 'pulsador')}
+            onChange={(e) => setParamPieza(pieza.id, 'accionamiento', e.target.value)}
+            data-accionamiento={pieza.id}
+          >
+            <option value="pulsador">Pulsador (vuelve al soltarlo)</option>
+            <option value="enclavamiento">Pulsador con enclavamiento (queda accionada: inicio de ciclo)</option>
+            <option value="pilotaje">Pilotaje neumático ({pieza.params.reposo === 'NA' ? '10' : '12'})</option>
           </select>
         </label>
       )}
@@ -110,7 +151,7 @@ export default function Propiedades() {
                 .filter((p) => esActuador(p.tipo) && p.tipo !== 'motorNeumatico')
                 .map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.id}
+                    {rotuloPieza(c, piezas)}
                   </option>
                 ))}
             </select>

@@ -35,11 +35,15 @@ export const Fuente: ModeloComponente<EstadoFuente> = {
 }
 
 // ---------------------------------------------------------------------------
-// Válvula 3/2 con accionamiento por pulsador y retorno por muelle.
-// Puertos ISO: 1 = alimentación, 2 = trabajo, 3 = escape.
+// Válvula 3/2 con retorno por muelle. Se acciona con pulsador, con pulsador
+// con enclavamiento (queda accionada hasta volver a pulsarla: la válvula de
+// inicio de un ciclo automático) o por pilotaje neumático.
+// Puertos ISO: 1 = alimentación, 2 = trabajo, 3 = escape, 12/10 = pilotaje.
 //   NC en reposo: 2→3 (salida venteada). Accionada: 1→2.
 //   NA en reposo: 1→2.                    Accionada: 2→3.
 // ---------------------------------------------------------------------------
+const UMBRAL_PILOTO = 2 // bar mínimos para mover la corredera
+
 export interface EstadoValvula32 {
   accionada: boolean
 }
@@ -51,8 +55,21 @@ export const Valvula32: ModeloComponente<EstadoValvula32> = {
     { id: '1', rol: 'trabajo', descripcion: 'Alimentación' },
     { id: '2', rol: 'trabajo', descripcion: 'Salida de trabajo' },
     { id: '3', rol: 'escape', descripcion: 'Escape a atmósfera' },
+    // Pilotaje neumático (accionamiento «pilotaje»): 12 en la NC (abre 1→2), 10 en la NA (cierra 1).
+    { id: '12', rol: 'trabajo', descripcion: 'Pilotaje: conmuta la válvula (NC: abre 1→2)', opcional: true },
+    { id: '10', rol: 'trabajo', descripcion: 'Pilotaje: conmuta la válvula (NA: cierra el paso de 1)', opcional: true },
   ],
   estadoInicial: () => ({ accionada: false }),
+  // Pilotada: la señal de aire la conmuta y el muelle la devuelve al desaparecer.
+  asentar: (estado, entradas, params, emitir) => {
+    if (params.accionamiento !== 'pilotaje') return false
+    const puerto = params.reposo === 'NA' ? '10' : '12'
+    const senal = (entradas.presion[puerto] ?? 0) > UMBRAL_PILOTO
+    if (senal === estado.accionada) return false
+    estado.accionada = senal
+    emitir('conmutacion', senal ? `la señal en ${puerto} conmuta la válvula 3/2` : `sin señal en ${puerto}, el muelle devuelve la válvula 3/2 a reposo`)
+    return true
+  },
   caminos: (estado, params) => {
     const abiertaEnReposo = params.reposo === 'NA'
     const pasoAbierto = abiertaEnReposo !== estado.accionada // XOR
@@ -136,7 +153,6 @@ export interface EstadoValvula52 {
   conflictoPilotos: boolean
 }
 
-const UMBRAL_PILOTO = 2 // bar mínimos para mover la corredera
 
 /**
  * Lógica de conmutación por pilotaje neumático, común a las válvulas de

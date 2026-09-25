@@ -4,6 +4,7 @@
  * cursor) y desplazamiento (pan) sobre un área de trabajo amplia, y dibuja
  * el circuito con auto-layout y enrutado ortogonal de mangueras.
  */
+import { rotuloPieza } from '../rotulos'
 import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import type { Motor, RefPuerto } from '../engine'
 import type { EstadoVivo } from '../symbols/Simbolos'
@@ -638,7 +639,8 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
     }
     if (simulando && motor) {
       const esCorredera = pieza.tipo === 'valvula42' || pieza.tipo === 'valvula52'
-      const esBiestable = esCorredera && pieza.params.modo === 'biestable'
+      // La biestable y la 3/2 con enclavamiento quedan donde se dejan: cada clic cambia de posición.
+      const esBiestable = (esCorredera && pieza.params.modo === 'biestable') || (pieza.tipo === 'valvula32' && pieza.params.accionamiento === 'enclavamiento')
       if ((pieza.tipo === 'valvula32' || esCorredera) && !esBiestable) {
         if (pieza.params.accionamiento !== 'pilotaje') {
           motor.accionar(pieza.id, true)
@@ -1036,8 +1038,9 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
                 textAnchor="middle"
                 pointerEvents="none"
                 style={{ paintOrder: 'stroke', stroke: '#fffefa', strokeWidth: 3, strokeLinejoin: 'round' }}
+                data-rotulo={pieza.id}
               >
-                {pieza.id}
+                {rotuloPieza(pieza, piezas)}
               </text>
               {/* puertos */}
               {puertosVisibles(pieza.tipo, pieza.params).map((puerto) => {
