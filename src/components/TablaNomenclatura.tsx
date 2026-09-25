@@ -27,7 +27,7 @@ export default function TablaNomenclatura() {
       <div style={{ overflowX: 'auto' }}>
         <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '0.86rem', minWidth: 460 }}>
           <thead>
-            <tr style={{ background: '#8a97a5', color: '#fff' }}>
+            <tr style={{ background: '#51606f', color: '#fff' }}>
               <th style={{ ...celda, textAlign: 'left', width: 110 }}>Norma ISO</th>
               <th style={{ ...celda, textAlign: 'left', width: 120 }}>Norma CETOP</th>
               <th style={{ ...celda, textAlign: 'left' }}>Función</th>

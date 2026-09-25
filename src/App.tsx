@@ -89,7 +89,7 @@ export default function App() {
   const [inspectorAbierto, setInspectorAbierto] = usePersistente('neumalab.banco.inspector', true)
   const [pestanaInspector, setPestanaInspector] = useState<PestanaInspector>('propiedades')
   const [inferiorAbierto, setInferiorAbierto] = usePersistente('neumalab.banco.inferior', false)
-  const [altoInferior, setAltoInferior] = usePersistente('neumalab.banco.alto-inferior', 200)
+  const [altoInferior, setAltoInferior] = usePersistente('neumalab.banco.alto-inferior', typeof window === 'undefined' ? 200 : Math.round(Math.min(200, Math.max(130, window.innerHeight * 0.2))))
   const [pestanaInferior, setPestanaInferior] = useState<PestanaInferior>('registro')
   const [hoja, setHoja] = useState<'paleta' | 'inspector' | 'registro' | null>(null)
   // Laboratorio (el banco) o Estudiar; «Mi entrega» es un cajón sobre el laboratorio.
@@ -394,7 +394,7 @@ export default function App() {
       onClick={() => setModo(simulando ? 'editar' : 'simular')}
       disabled={bancoVacio}
       title={bancoVacio ? 'Coloca al menos una ficha en el banco para poder simular' : 'Atajo: barra espaciadora'}
-      style={{ ...botonPrimario(simulando), ...(bancoVacio ? { background: '#dfe4ea', color: '#51606f' } : {}), minHeight: 36, padding: '0.4rem 1rem' }}
+      style={{ ...botonPrimario(simulando), ...(bancoVacio ? { background: '#dfe4ea', color: '#51606f' } : {}), minHeight: 36, padding: estrecha ? '0.4rem 0.7rem' : '0.4rem 1rem' }}
       data-simular="si"
     >
       {simulando ? '■ Detener' : '▶ Simular'}
@@ -405,9 +405,11 @@ export default function App() {
       <button onClick={deshacer} disabled={!puedeDeshacer} title="Deshacer (Ctrl+Z)" aria-label="Deshacer" className="boton-icono" style={{ opacity: puedeDeshacer ? 1 : 0.4 }}>
         ↶
       </button>
-      <button onClick={rehacer} disabled={!puedeRehacer} title="Rehacer (Ctrl+Shift+Z)" aria-label="Rehacer" className="boton-icono" style={{ opacity: puedeRehacer ? 1 : 0.4 }}>
-        ↷
-      </button>
+      {!estrecha && (
+        <button onClick={rehacer} disabled={!puedeRehacer} title="Rehacer (Ctrl+Shift+Z)" aria-label="Rehacer" className="boton-icono" style={{ opacity: puedeRehacer ? 1 : 0.4 }}>
+          ↷
+        </button>
+      )}
     </span>
   )
   const interruptorAire = (
@@ -429,7 +431,7 @@ export default function App() {
         if (confirmarDescarte(`¿Cargar el ejemplo «${etiqueta}»?`)) cargarEjemplo(n)
         e.target.value = circuito ? 'actual' : ''
       }}
-      style={{ padding: '0.3rem 0.4rem', width: estrecha ? 'min(190px, 42vw)' : 172, minHeight: 34, fontSize: '0.86rem' }}
+      style={{ padding: '0.3rem 0.4rem', width: estrecha ? '34vw' : 172, minHeight: 34, fontSize: '0.86rem' }}
     >
       <option value="">— Ejemplos —</option>
       {circuito && (
@@ -609,6 +611,7 @@ export default function App() {
                 items={[
                   ...zonaVista.map(([v, t]) => ({ texto: `${vista === v ? '✓ ' : ''}Vista: ${t}`, onClick: () => setVista(v) })),
                   { texto: 'Ajustar el tablero', ayuda: 'Ver todo el circuito', onClick: () => controles.current?.ajustar(), separar: true },
+                  { texto: 'Rehacer', onClick: rehacer, deshabilitado: !puedeRehacer || simulando, porque: 'No hay nada que rehacer' },
                   { texto: aire ? 'Cortar el aire' : 'Dar el aire', ayuda: `Aire: ${aire ? 'encendido' : 'cortado'}`, onClick: alternarAire },
                   ...itemsArchivo.map((it, i) => ({ ...it, separar: i === 0 })),
                   ...itemsExportar.map((it, i) => ({ ...it, separar: i === 0 })),

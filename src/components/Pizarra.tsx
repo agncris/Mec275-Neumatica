@@ -298,6 +298,9 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
       // Sólo cuenta si se suelta dentro del tablero.
       const r = contenedorRef.current?.getBoundingClientRect()
       if (!r || clientX < r.left || clientX > r.right || clientY < r.top || clientY > r.bottom) return null
+      // Y que lo de encima sea el tablero (en el celular la bandeja lo tapa).
+      const encima = document.elementFromPoint(clientX, clientY)
+      if (!encima || !contenedorRef.current?.contains(encima)) return null
       const p = coordsDesdeCliente(clientX, clientY)
       if (!p) return null
       const x = Math.round((p.x - desc.ancho / 2) / REJILLA) * REJILLA
@@ -323,17 +326,25 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
               const dq = DESCRIPTORES[q.tipo]
               return x < q.x + dq.ancho + 20 && x + desc.ancho + 20 > q.x && y < q.y + dq.alto + 30 && y + desc.alto + 30 > q.y
             })
+          // Primero un lugar libre dentro de lo que se ve; si no hay, el más cercano.
+          const dentro = (x: number, y: number) => x >= v.x + 30 && y >= v.y + 40 && x + desc.ancho <= v.x + v.w - 30 && y + desc.alto <= v.y + v.h - 40
           let lugar = { x: x0, y: y0 }
-          buscar: for (let r = 1; r < 12 && ocupado(lugar.x, lugar.y); r++) {
+          let fuera: { x: number; y: number } | null = null
+          buscar: for (let r = 1; r < 14 && (ocupado(lugar.x, lugar.y) || !dentro(lugar.x, lugar.y)); r++) {
             for (const [dx, dy] of [[0, 1], [1, 0], [-1, 0], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]]) {
-              const c = { x: x0 + dx * r * 60, y: y0 + dy * r * 60 }
-              if (!ocupado(c.x, c.y)) {
+              const c = { x: x0 + dx * r * 50, y: y0 + dy * r * 50 }
+              if (ocupado(c.x, c.y)) continue
+              if (dentro(c.x, c.y)) {
                 lugar = c
                 break buscar
               }
+              fuera ??= c
             }
+            if (r === 13 && fuera) lugar = fuera
           }
           agregarPiezaEn(colocando.tipo, { ...colocando.params }, lugar.x, lugar.y)
+          // Si no cupo a la vista, se reajusta el tablero (salvo que el alumno lo haya movido).
+          if (!dentro(lugar.x, lugar.y) && !manualRef.current) requestAnimationFrame(() => ajustarRef.current?.())
         }
       }
       terminarColocacion()
@@ -882,7 +893,7 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
                 textAnchor="end"
                 fontSize={15}
                 fontWeight={700}
-                fill={viva ? '#1668c7' : '#7d8894'}
+                fill={viva ? '#1668c7' : '#5f6b78'}
               >
                 {b.etiqueta}
               </text>

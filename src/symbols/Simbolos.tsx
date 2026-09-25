@@ -46,7 +46,7 @@ function Flecha({ x, y, angulo }: { x: number; y: number; angulo: number }) {
 
 function Etiqueta({ x, y, texto }: { x: number; y: number; texto: string }) {
   return (
-    <text x={x} y={y} fontSize={9} fill="#6a7683" textAnchor="middle" fontFamily="inherit">
+    <text x={x} y={y} fontSize={9} fill="#5f6b78" textAnchor="middle" fontFamily="inherit">
       {texto}
     </text>
   )
@@ -602,7 +602,7 @@ function SimboloLogica({ vivo, tipo }: PropsSimbolo & { tipo: 'O' | 'Y' }) {
       <Etiqueta x={45} y={12} texto="A" />
       <Etiqueta x={16} y={76} texto="X" />
       <Etiqueta x={74} y={76} texto="Y" />
-      <text x={45} y={34} fontSize={13} fontWeight={700} fill="#6a7683" textAnchor="middle">
+      <text x={45} y={34} fontSize={13} fontWeight={700} fill="#5f6b78" textAnchor="middle">
         {tipo}
       </text>
     </g>
@@ -670,7 +670,7 @@ export function SimboloTemporizador({ params, vivo }: PropsSimbolo) {
       <rect x={30} y={54} width={22} height={22} {...TRAZO} strokeWidth={1.6} fill="#fff" />
       <path d="M30,76 L52,76" {...TRAZO} strokeWidth={1.6} />
       <line x1={52} y1={65} x2={62} y2={65} {...TRAZO} strokeWidth={1.8} />
-      <text x={41} y={48} fontSize={9} fill="#6a7683" textAnchor="middle">
+      <text x={41} y={48} fontSize={9} fill="#5f6b78" textAnchor="middle">
         {retardo.toFixed(1)} s
       </text>
 

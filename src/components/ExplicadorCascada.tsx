@@ -60,8 +60,8 @@ const RODILLOS = [
 ]
 
 const AZUL = '#1668c7'
-const GRIS = '#9aa5b1'
-const VERDE = '#12a35a'
+const GRIS = '#66727f'
+const VERDE = '#0e7a43'
 const ROJO = '#b3261e'
 
 /**
