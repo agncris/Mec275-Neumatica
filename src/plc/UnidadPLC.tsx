@@ -11,6 +11,8 @@ import BancoDividido, { TituloArea } from '../components/banco/BancoDividido'
 import { usePanelAcoplado, type PestanaPanel } from '../components/banco/PanelAcoplado'
 import PaginaEstudiar, { type SeccionEstudio } from '../components/banco/PaginaEstudiar'
 import SubnavUnidad, { useSeccionUnidad } from '../components/banco/SubnavUnidad'
+import CajonEntregar from '../components/banco/CajonEntregar'
+import { copiarTabla, copiarTexto, descargarTexto, enlaceTrabajo, limpiarEnlace, trabajoDelEnlace } from '../entregar'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { exportarPng, nombreSeguro } from '../exportar'
 import EditorLadder from './EditorLadder'
@@ -93,6 +95,7 @@ export default function UnidadPLC() {
   const [seccion, setSeccion] = useSeccionUnidad(SECCIONES_PLC.map((x) => x.id))
   const panel = usePanelAcoplado<PestanaPLC>('neumalab.plc.panel', 'es', typeof window !== 'undefined' && window.innerHeight >= 860)
   const [movil, setMovil] = useState('programa')
+  const [entregaAbierta, setEntregaAbierta] = useState(false)
   const [notacion, setNotacion] = useState<Notacion>(() => {
     try {
       return localStorage.getItem('neumalab.plc.notacion') === 'ab' ? 'ab' : 'siemens'
@@ -143,6 +146,20 @@ export default function UnidadPLC() {
       /* sin almacenamiento */
     }
   }, [programa])
+
+  // Un enlace con un programa (#plc=…) lo abre, avisando si reemplaza el que había.
+  useEffect(() => {
+    void trabajoDelEnlace('plc').then((dato) => {
+      if (!dato) return
+      limpiarEnlace()
+      if (!esProgramaPLC(dato)) return setAviso('El enlace no trae un programa de PLC válido.')
+      if (!window.confirm('¿Abrir el programa que viene en el enlace? Reemplaza el programa que tienes en el editor.')) return
+      setCorriendo(false)
+      setPrograma(dato)
+      setAviso(`Programa del enlace abierto${dato.nombre ? `: «${dato.nombre}»` : ''}.`)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Otra planta: se monta de nuevo, en reposo.
   useEffect(() => {
@@ -607,7 +624,7 @@ export default function UnidadPLC() {
 
   return (
     <>
-      <SubnavUnidad nombre="PLC" seccion={seccion} onSeccion={setSeccion} />
+      <SubnavUnidad nombre="PLC" seccion={seccion} onSeccion={setSeccion} entregar={{ abierto: entregaAbierta, onAlternar: () => setEntregaAbierta((a) => !a) }} />
       {seccion === 'laboratorio' ? (
         <BancoDividido<PestanaPLC>
           clave="neumalab.plc.banco"
@@ -618,6 +635,7 @@ export default function UnidadPLC() {
           estado={barraEstado}
           movil={movil}
           onMovil={setMovil}
+          conCajon={entregaAbierta && !estrecha}
         />
       ) : (
         <PaginaEstudiar
@@ -626,6 +644,87 @@ export default function UnidadPLC() {
           descripcion="Teoría de la unidad. Los programas de ejemplo y los ejercicios se abren en el Laboratorio."
           pie="NeumaLab · MEC275 — Unidad 2: Controlador Lógico Programable · Ladder"
           secciones={SECCIONES_PLC}
+        />
+      )}
+      {entregaAbierta && (
+        <CajonEntregar
+          unidad="PLC"
+          clave="neumalab.plc.entrega"
+          trabajoSugerido="Trabajo-2"
+          onCerrar={() => setEntregaAbierta(false)}
+          revisar={() => {
+            const usadas = new Set<string>()
+            for (const e of programa.escalones) {
+              for (const f of e.celdas) for (const c of f) if ('dir' in c && typeof c.dir === 'string' && c.dir) usadas.add(c.dir)
+              for (const b of e.bobinas) if (b?.dir) usadas.add(b.dir)
+            }
+            const sinNombre = [...usadas].filter((d) => ['I', 'Q'].includes(areaDe(d) ?? '') && !programa.simbolos.find((x) => x.dir === d)?.nombre)
+            return [
+              { ok: hayContenido, texto: hayContenido ? `El programa tiene ${programa.escalones.length} escalón(es).` : 'El programa está vacío.' },
+              { ok: avisos.length === 0, texto: avisos.length === 0 ? 'El editor no encuentra problemas en el programa.' : `Hay ${avisos.length} aviso(s). El primero: ${avisos[0]}` },
+              {
+                ok: sinNombre.length === 0,
+                texto: sinNombre.length === 0 ? 'Todas las entradas y salidas que usas tienen nombre en la tabla de símbolos.' : `Ponle nombre en la tabla de símbolos a: ${sinNombre.map((d) => formatear(d, notacion)).join(', ')}.`,
+              },
+              { ok: Object.keys(forzados).length === 0, texto: Object.keys(forzados).length === 0 ? 'No quedan entradas ni salidas forzadas.' : 'Quedan E/S forzadas: quítalas antes de probar y entregar.' },
+              {
+                ok: true,
+                texto: ejercicioActual ? 'Pruébalo con «✓ Verificar mi programa» del ejercicio y también en RUN, accionando la planta.' : 'Pruébalo en RUN accionando la planta (pestaña Planta) antes de entregar.',
+              },
+            ]
+          }}
+          presentacion={[
+            {
+              id: 'ladder',
+              tipo: 'imagen',
+              titulo: 'Diagrama Ladder',
+              detalle: 'Tu programa completo, escalón por escalón.',
+              hacer: async (base) => {
+                const svg = document.getElementById('ladder-svg') as SVGSVGElement | null
+                if (!svg) throw new Error('No se encontró el diagrama.')
+                await exportarPng(svg, `${base}_ladder.png`)
+                return `Descargada: ${base}_ladder.png`
+              },
+            },
+            {
+              id: 'es',
+              tipo: 'tabla',
+              titulo: 'Tabla de entradas y salidas',
+              detalle: 'Símbolo, dirección, tipo y descripción, desde tu tabla de símbolos.',
+              hacer: async () => {
+                const tipo: Record<string, string> = { I: 'Entrada (INPUT)', Q: 'Salida (OUTPUT)', M: 'Marca', T: 'Temporizador', C: 'Contador' }
+                const orden = 'IQMTC'
+                const filas = programa.simbolos
+                  .filter((x) => x.nombre.trim())
+                  .sort((a, b) => orden.indexOf(areaDe(a.dir) ?? 'Z') - orden.indexOf(areaDe(b.dir) ?? 'Z') || a.dir.localeCompare(b.dir))
+                  .map((x) => [x.nombre, formatear(x.dir, notacion), tipo[areaDe(x.dir) ?? ''] ?? '', x.descripcion])
+                if (!filas.length) throw new Error('Tu tabla de símbolos no tiene nombres todavía.')
+                return (await copiarTabla([['Símbolo', 'Dirección', 'Tipo', 'Descripción'], ...filas])) ? 'Tabla copiada: pégala en tu presentación (Ctrl+V).' : 'Tu navegador no dejó copiar.'
+              },
+            },
+          ]}
+          archivos={[
+            {
+              id: 'enlace',
+              tipo: 'enlace',
+              titulo: 'Enlace a tu programa',
+              detalle: 'Pégalo en tu PDF: quien lo abra ve tu programa en la app y lo puede correr.',
+              hacer: async () => {
+                const url = await enlaceTrabajo('plc', 'plc', programa)
+                return (await copiarTexto(url)) ? 'Enlace copiado: pégalo en tu presentación.' : `Copia este enlace: ${url}`
+              },
+            },
+            {
+              id: 'programa',
+              tipo: 'archivo',
+              titulo: 'Tu programa (NeumaLab)',
+              detalle: 'Se abre en la app con Archivo › Abrir.',
+              hacer: (base) => {
+                descargarTexto(JSON.stringify(programa, null, 2), `${base}.json`, 'application/json')
+                return `Descargado: ${base}.json`
+              },
+            },
+          ]}
         />
       )}
       {aviso && (

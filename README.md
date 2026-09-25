@@ -50,27 +50,31 @@ Todo el contenido y la interfaz están en español.
 
 ## La entrega
 
-La aplicación no trae enunciados: esos se reparten aparte. Lo que sí trae es todo lo
-necesario para resolverlos y entregarlos.
+La aplicación no trae enunciados ni soluciones: el enunciado y la plantilla (PPT) los
+reparte el profesor. El alumno responde en la plantilla, la guarda como PDF y la sube
+junto con el archivo de su trabajo. Cada unidad tiene un botón **«Entregar»** (arriba a
+la derecha) que abre un cajón con cuatro pasos:
 
-En la sección **«Mi entrega»** se rellenan los datos, se pone título al trabajo y se
-responde lo que pida el enunciado:
+1. **Tus datos**: nombre (y el de la pareja, si hay) y el trabajo. Todos los archivos
+   salen con el nombre que piden los enunciados: `Nombre_Apellido_Trabajo-2`.
+2. **Revisa tu trabajo**: avisa de lo que conviene arreglar antes de entregar (piezas
+   sueltas, líneas de código sin comentario, alarmas, E/S forzadas…). No corrige ni
+   califica.
+3. **Para pegar en tu presentación**: imágenes en PNG y tablas que se copian y se pegan
+   en PowerPoint como tabla.
+4. **Archivos que subes junto con tu PDF**: el archivo de la app (que se vuelve a abrir
+   y a simular), el video de la simulación y, en PLC, CNC y Robótica, un enlace que
+   abre el trabajo en la app.
 
-| Apartado | Cómo se responde |
-|---|---|
-| Diagrama de funcionamiento VDI 2860 | Se arma con los símbolos de la norma, ordenables y anotables |
-| Secuencia, grupos y activadores | Al escribir la secuencia, la aplicación divide los grupos y dice cuántas válvulas de cascada hacen falta |
-| Elementos necesarios | Se rellena solo con el inventario del circuito montado, y se puede editar |
-| Diagrama de fase | Se dibuja solo al simular; se descarga en PNG |
-| Circuito neumático | El banco |
+| Unidad | Para la presentación | Archivos |
+|---|---|---|
+| Neumática | Diagrama VDI 2860 (se arma en el mismo cajón), diagrama espacio-fase, elementos del circuito, imagen del circuito | Circuito `.json` |
+| PLC | Diagrama Ladder, tabla de entradas y salidas | Enlace al programa, programa `.json` |
+| CNC | Trayectoria con los puntos, tabla de coordenadas, herramientas usadas, bruto | Programa `.cnc` (se abre también en CNC Simulator Pro), video, enlace |
+| Robótica | Croquis de la pieza, posicionamiento, definición de nodos, ficha técnica | Definición `.json`, programa KRL `.src`, video, enlace |
 
-**Comprobar mi trabajo** simula el circuito y contrasta lo escrito con lo que de verdad
-hace: si está bien montado, si se mueve, si hay señales bloqueantes, si el ciclo se
-cierra y si la secuencia declarada coincide con la que ejecuta. No corrige ni califica.
-
-**Descargar mi entrega** produce un único `.json` con las respuestas y el circuito
-dentro. Sustituye al par PDF + `.ct`/`.bak`, con la ventaja de que el circuito sigue
-siendo ejecutable: quien lo abra con **Abrir** puede simularlo.
+Las entregas `.json` de semestres anteriores (con respuestas escritas) se siguen
+abriendo.
 
 Para informes con imágenes, la barra superior descarga:
 

@@ -74,7 +74,8 @@ const hexagono = (r: number) =>
     })
     .join(' ')
 
-export function SimboloVDI({ n }: { n: number }) {
+/** Símbolo VDI 2860 nº `n`. Con `grupo`, sólo el dibujo (0–100) para meterlo en otro SVG. */
+export function SimboloVDI({ n, grupo = false }: { n: number; grupo?: boolean }) {
   const contenido = () => {
     switch (n) {
       case 1:
@@ -299,6 +300,7 @@ export function SimboloVDI({ n }: { n: number }) {
     }
   }
 
+  if (grupo) return <>{contenido()}</>
   return (
     <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%', display: 'block' }}>
       {contenido()}

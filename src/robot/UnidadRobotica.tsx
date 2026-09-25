@@ -9,6 +9,8 @@ import BancoDividido, { TituloArea } from '../components/banco/BancoDividido'
 import { usePanelAcoplado, type PestanaPanel } from '../components/banco/PanelAcoplado'
 import PaginaEstudiar, { type SeccionEstudio } from '../components/banco/PaginaEstudiar'
 import SubnavUnidad, { useSeccionUnidad } from '../components/banco/SubnavUnidad'
+import CajonEntregar from '../components/banco/CajonEntregar'
+import { copiarTabla, copiarTexto, descargarTexto, enlaceTrabajo, limpiarEnlace, trabajoDelEnlace } from '../entregar'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { exportarPng, nombreSeguro } from '../exportar'
 import { croquisPieza, croquisPosicion } from './croquis'
@@ -98,6 +100,8 @@ export default function UnidadRobotica() {
   const estrecha = useEsEstrecha()
   const [seccion, setSeccion] = useSeccionUnidad(SECCIONES_ROBOT.map((x) => x.id))
   const panel = usePanelAcoplado<PestanaRobot>('neumalab.robot.panel', 'analisis', false)
+  const [entregaAbierta, setEntregaAbierta] = useState(false)
+  const nombreVideo = useRef<string | null>(null)
   const [seleccion, setSeleccion] = useState<string | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
   const [reproduciendo, setReproduciendo] = useState(false)
@@ -115,6 +119,19 @@ export default function UnidadRobotica() {
   const [modeloMando, setModeloMando] = useState('kr6r900')
   const [qMando, setQMando] = useState<number[]>([0, -80, 100, 0, 60, 0])
   const [puntos, setPuntos] = useState<PuntoEnsenado[]>([])
+
+  // Un enlace con una definición (#rob=…) la abre, avisando si reemplaza la actual.
+  useEffect(() => {
+    void trabajoDelEnlace('rob').then((dato) => {
+      if (!dato) return
+      limpiarEnlace()
+      if (!esDefinicion(dato)) return setAviso('El enlace no trae una definición válida.')
+      if (!window.confirm('¿Abrir la definición que viene en el enlace? Reemplaza la que tienes en el lienzo.')) return
+      setDef(dato)
+      setAviso(`Definición del enlace abierta: «${dato.nombre}».`)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     try {
@@ -377,27 +394,31 @@ export default function UnidadRobotica() {
     }
   }
 
-  const exportarCroquis = async (cual: string) => {
-    const [tipo, formato] = cual.split('-')
+  /** Croquis (SVG en texto): la pieza acotada o el posicionamiento del robot. */
+  const crearCroquis = (tipo: string): string => {
     const nombre = def.nombre || 'robot'
-    let svg: string
     if (tipo === 'pieza') {
       const curvas = dxf?.curvas.length
         ? dxf.curvas.map((c) => ({ pts: c.pts, cerrada: c.cerrada }))
         : previa.curvas.map((pts) => ({ pts, cerrada: pts.length > 2 && Math.hypot(pts[0].x - pts[pts.length - 1].x, pts[0].y - pts[pts.length - 1].y) < 1e-3 }))
-      if (!curvas.length) return setAviso('No hay geometría para el croquis: abre un DXF o arma curvas en la definición.')
-      svg = croquisPieza(curvas, nombre)
-    } else {
-      svg = croquisPosicion(
-        { modelo: robotVista.modelo, pedestal: robotVista.pedestal, base: baseVista, espesor: programa?.espesor ?? 5, placa: placa ?? PLACA_DEFECTO, herramienta: herrVista },
-        nombre,
-      )
+      if (!curvas.length) throw new Error('No hay geometría para el croquis: abre un DXF o arma curvas en la definición.')
+      return croquisPieza(curvas, nombre)
     }
-    const archivo = nombreSeguro(`${nombre}-${tipo === 'pieza' ? 'croquis-pieza' : 'posicionamiento'}`, formato)
-    if (formato === 'svg') return descargar(svg, archivo, 'image/svg+xml')
-    const el = new DOMParser().parseFromString(svg, 'image/svg+xml').documentElement as unknown as SVGSVGElement
+    return croquisPosicion(
+      { modelo: robotVista.modelo, pedestal: robotVista.pedestal, base: baseVista, espesor: programa?.espesor ?? 5, placa: placa ?? PLACA_DEFECTO, herramienta: herrVista },
+      nombre,
+    )
+  }
+  const croquisPng = async (tipo: string, archivo: string) => {
+    const el = new DOMParser().parseFromString(crearCroquis(tipo), 'image/svg+xml').documentElement as unknown as SVGSVGElement
+    await exportarPng(el, archivo)
+  }
+  const exportarCroquis = async (cual: string) => {
+    const [tipo, formato] = cual.split('-')
+    const archivo = nombreSeguro(`${def.nombre || 'robot'}-${tipo === 'pieza' ? 'croquis-pieza' : 'posicionamiento'}`, formato)
     try {
-      await exportarPng(el, archivo)
+      if (formato === 'svg') return descargar(crearCroquis(tipo), archivo, 'image/svg+xml')
+      await croquisPng(tipo, archivo)
     } catch (e) {
       setAviso(e instanceof Error ? e.message : 'No se pudo generar la imagen.')
     }
@@ -429,7 +450,8 @@ export default function UnidadRobotica() {
       const url = URL.createObjectURL(new Blob(partes, { type: rec.mimeType || 'video/webm' }))
       const a = document.createElement('a')
       a.href = url
-      a.download = nombreSeguro(`${def.nombre || 'robot'}_simulacion`, ext)
+      a.download = nombreVideo.current ? `${nombreVideo.current}.${ext}` : nombreSeguro(`${def.nombre || 'robot'}_simulacion`, ext)
+      nombreVideo.current = null
       a.click()
       setTimeout(() => URL.revokeObjectURL(url), 2000)
       setAviso(`Video descargado: ${a.download}`)
@@ -783,7 +805,7 @@ export default function UnidadRobotica() {
 
   return (
     <>
-      <SubnavUnidad nombre="Robótica" seccion={seccion} onSeccion={setSeccion} />
+      <SubnavUnidad nombre="Robótica" seccion={seccion} onSeccion={setSeccion} entregar={{ abierto: entregaAbierta, onAlternar: () => setEntregaAbierta((a) => !a) }} />
       {seccion === 'laboratorio' ? (
         <BancoDividido<PestanaRobot>
           clave="neumalab.robot.banco"
@@ -792,6 +814,7 @@ export default function UnidadRobotica() {
           derecha={{ id: 'simulacion', titulo: 'Simulación', contenido: areaSimulacion }}
           inferior={{ etiqueta: 'Análisis, código y ficha', pestanas, estado: panel }}
           estado={barraEstado}
+          conCajon={entregaAbierta && !estrecha}
         />
       ) : (
         <PaginaEstudiar
@@ -800,6 +823,131 @@ export default function UnidadRobotica() {
           descripcion="Teoría de la unidad. Las definiciones de ejemplo se abren en el Laboratorio."
           pie="NeumaLab · MEC275 — Unidad 4: Robótica industrial"
           secciones={SECCIONES_ROBOT}
+        />
+      )}
+      {entregaAbierta && (
+        <CajonEntregar
+          unidad="Robótica"
+          clave="neumalab.robot.entrega"
+          trabajoSugerido="Trabajo4"
+          onCerrar={() => setEntregaAbierta(false)}
+          revisar={() => {
+            const errs = sim?.problemas.filter((p) => p.nivel === 'error') ?? []
+            const avs = sim?.problemas.filter((p) => p.nivel === 'aviso') ?? []
+            return [
+              { ok: !!sim, texto: sim ? `El Core arma un programa de ${sim.tiempo.toFixed(1)} s.` : 'El Core todavía no arma un programa: necesita comandos, robot y herramienta.' },
+              { ok: !!def.dxf, texto: def.dxf ? `Usas el plano «${def.dxf.nombre}».` : 'No abriste un plano DXF: si el enunciado trae un plano, ábrelo con «Abrir DXF».' },
+              { ok: errs.length === 0, texto: errs.length === 0 ? 'La simulación no encuentra errores (alcance, límites de ejes).' : `La simulación encuentra ${errs.length} error(es). El primero: ${errs[0].texto}` },
+              { ok: avs.length === 0, texto: avs.length === 0 ? 'Sin avisos de singularidades ni de cercanía a los límites.' : `${avs.length} aviso(s). Revísalos en la pestaña Análisis.` },
+              { ok: !evaluacion.ciclo, texto: evaluacion.ciclo ? 'Hay un ciclo en los cables.' : 'Los cables no forman ciclos.' },
+            ]
+          }}
+          presentacion={[
+            {
+              id: 'croquis-pieza',
+              tipo: 'imagen',
+              titulo: 'Croquis de la pieza',
+              detalle: 'La pieza acotada, con el cero de la pieza.',
+              hacer: async (base) => {
+                await croquisPng('pieza', `${base}_croquis-pieza.png`)
+                return `Descargada: ${base}_croquis-pieza.png`
+              },
+            },
+            {
+              id: 'posicionamiento',
+              tipo: 'imagen',
+              titulo: 'Posicionamiento del robot',
+              detalle: 'Planta y elevación: robot, mesón y alcance.',
+              hacer: async (base) => {
+                await croquisPng('posicion', `${base}_posicionamiento.png`)
+                return `Descargada: ${base}_posicionamiento.png`
+              },
+            },
+            {
+              id: 'definicion-png',
+              tipo: 'imagen',
+              titulo: 'Tu definición (los nodos)',
+              detalle: 'El lienzo de nodos tal como se ve: encuádralo antes (⤢ Encuadrar).',
+              deshabilitado: modo !== 'visual',
+              porque: 'Cambia a «Programación visual».',
+              hacer: async (base) => {
+                const svg = document.querySelector('svg[data-lienzo-nodos]') as SVGSVGElement | null
+                if (!svg) throw new Error('No se encontró el lienzo de nodos.')
+                await exportarPng(svg, `${base}_definicion.png`)
+                return `Descargada: ${base}_definicion.png`
+              },
+            },
+            {
+              id: 'ficha',
+              tipo: 'tabla',
+              titulo: `Ficha técnica · ${modeloVista.nombre}`,
+              detalle: 'Las características del robot que elegiste.',
+              hacer: async () => {
+                const filas = [
+                  ['Característica', 'Valor'],
+                  ['Modelo', modeloVista.nombre],
+                  ['Carga', `${modeloVista.carga} kg`],
+                  ['Alcance máximo', `${modeloVista.alcance} mm`],
+                  ['Repetibilidad', `± ${modeloVista.repetibilidad} mm`],
+                  ['Número de ejes', '6'],
+                  ['Peso', `${modeloVista.peso} kg`],
+                  ['Montaje', modeloVista.montaje],
+                  ['Rango de los ejes', modeloVista.limites.map((l, k) => `A${k + 1} ${l[0]}°/${l[1]}°`).join(' · ')],
+                ]
+                return (await copiarTabla(filas)) ? 'Tabla copiada: pégala en tu presentación (Ctrl+V). Cita la ficha oficial de KUKA.' : 'Tu navegador no dejó copiar.'
+              },
+            },
+          ]}
+          archivos={[
+            {
+              id: 'definicion',
+              tipo: 'archivo',
+              titulo: 'Tu definición (NeumaLab)',
+              detalle: 'Se abre en la app con Archivo › Abrir definición; incluye el plano DXF.',
+              hacer: (base) => {
+                descargarTexto(JSON.stringify(def, null, 2), `${base}.json`, 'application/json')
+                return `Descargado: ${base}.json`
+              },
+            },
+            {
+              id: 'krl',
+              tipo: 'archivo',
+              titulo: 'Programa KRL (.src)',
+              detalle: 'El programa para el controlador KUKA.',
+              deshabilitado: !sim,
+              porque: 'El Core todavía no arma un programa.',
+              hacer: (base) => {
+                if (!programa || !sim) throw new Error('No hay programa.')
+                descargarTexto(generarKRL(programa, sim, def.nombre), `${base}.src`)
+                return `Descargado: ${base}.src`
+              },
+            },
+            {
+              id: 'video',
+              tipo: 'video',
+              titulo: 'Video de la simulación',
+              detalle: grabando ? 'Grabando… pulsa «■ Detener grabación» arriba al terminar.' : 'Graba la celda 3D mientras el robot recorre la pieza; se descarga al detener.',
+              deshabilitado: !puedeGrabar || grabando || !simActiva,
+              porque: grabando ? 'Grabando… pulsa «■ Detener grabación» arriba al terminar.' : !simActiva ? 'Todavía no hay recorrido que grabar.' : 'Tu navegador no permite grabar video.',
+              hacer: (base) => {
+                nombreVideo.current = `${base}_simulacion`
+                tRef.current = 0
+                alternarGrabacion()
+                setReproduciendo(true)
+                return 'Grabando desde el inicio. Al terminar el recorrido pulsa «■ Detener grabación» (arriba a la derecha).'
+              },
+            },
+            {
+              id: 'enlace',
+              tipo: 'enlace',
+              titulo: 'Enlace a tu definición',
+              detalle: 'Opcional: abre tu definición, con su plano, en la app.',
+              hacer: async () => {
+                const url = await enlaceTrabajo('robotica', 'rob', def)
+                return (await copiarTexto(url)) ? 'Enlace copiado.' : `Copia este enlace: ${url}`
+              },
+            },
+          ]}
         />
       )}
       {aviso && (

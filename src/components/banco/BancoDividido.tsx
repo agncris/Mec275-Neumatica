@@ -44,6 +44,8 @@ interface Props<T extends string> {
   /** Qué área o pestaña mostrar en el celular (controlado desde fuera). */
   movil?: string
   onMovil?: (id: string) => void
+  /** Deja libre el lado derecho para el cajón «Entregar» (en el computador). */
+  conCajon?: boolean
 }
 
 const ANCHO_MIN = 320
@@ -51,7 +53,7 @@ const ANCHO_MIN = 320
 /** Una capa del celular: todas ocupan el mismo lugar y sólo la elegida se ve. */
 const capa = (visible: boolean): React.CSSProperties => ({ position: 'absolute', inset: 0, visibility: visible ? 'visible' : 'hidden', zIndex: visible ? 1 : 0 })
 
-export default function BancoDividido<T extends string>({ clave, barra, izquierda, derecha, inferior, estado, encabezado, movil, onMovil }: Props<T>) {
+export default function BancoDividido<T extends string>({ clave, barra, izquierda, derecha, inferior, estado, encabezado, movil, onMovil, conCajon }: Props<T>) {
   const estrecha = useEsEstrecha()
   const [division, setDivision] = usePersistente(`${clave}.division`, 0.5)
   const [movilPropio, setMovilPropio] = useState(izquierda.id)
@@ -130,7 +132,7 @@ export default function BancoDividido<T extends string>({ clave, barra, izquierd
   }
 
   return (
-    <main className="banco banco--dividido">
+    <main className="banco banco--dividido" style={conCajon ? { marginRight: 480 } : undefined}>
       <div className="banco__barra" role="toolbar" aria-label="Herramientas">
         {barra}
       </div>

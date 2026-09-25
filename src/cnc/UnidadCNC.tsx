@@ -11,6 +11,8 @@ import BancoDividido, { TituloArea } from '../components/banco/BancoDividido'
 import { usePanelAcoplado, type PestanaPanel } from '../components/banco/PanelAcoplado'
 import PaginaEstudiar, { type SeccionEstudio } from '../components/banco/PaginaEstudiar'
 import SubnavUnidad, { useSeccionUnidad } from '../components/banco/SubnavUnidad'
+import CajonEntregar from '../components/banco/CajonEntregar'
+import { copiarTabla, copiarTexto, descargarTexto, enlaceTrabajo, limpiarEnlace, trabajoDelEnlace } from '../entregar'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { exportarPng, nombreSeguro } from '../exportar'
 import EditorGcode, { type EditorGcodeRef } from './EditorGcode'
@@ -83,6 +85,9 @@ export default function UnidadCNC() {
   const estrecha = useEsEstrecha()
   const [seccion, setSeccion] = useSeccionUnidad(SECCIONES_CNC.map((x) => x.id))
   const panel = usePanelAcoplado<PestanaCNC>('neumalab.cnc.panel', 'preparacion', typeof window !== 'undefined' && window.innerHeight >= 860)
+  const [entregaAbierta, setEntregaAbierta] = useState(false)
+  /** Nombre del próximo video (desde «Entregar» se nombra como pide el enunciado). */
+  const nombreVideo = useRef<string | null>(null)
   const inicial = useMemo(leerGuardado, [])
   const [config, setConfig] = useState<ConfigCNC>(inicial.config)
   const [codigos, setCodigos] = useState(inicial.codigos)
@@ -147,6 +152,23 @@ export default function UnidadCNC() {
       /* sin almacenamiento */
     }
   }, [config, codigos, nombres])
+
+  // Un enlace con un programa (#cnc=…) lo abre en su máquina, con su preparación.
+  useEffect(() => {
+    void trabajoDelEnlace('cnc').then((dato) => {
+      if (!dato) return
+      limpiarEnlace()
+      const d = dato as { config?: ConfigCNC; codigo?: string; nombre?: string }
+      if (!d.config || typeof d.codigo !== 'string') return setAviso('El enlace no trae un programa de CNC válido.')
+      if (!window.confirm('¿Abrir el programa que viene en el enlace? Reemplaza el programa de esa máquina.')) return
+      const m = d.config.maquina
+      setConfig(d.config)
+      setCodigos((x) => ({ ...x, [m]: d.codigo as string }))
+      setNombres((x) => ({ ...x, [m]: d.nombre || 'Programa del enlace' }))
+      setAviso('Programa del enlace abierto.')
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     if (!aviso) return
@@ -269,7 +291,7 @@ export default function UnidadCNC() {
     }
   }
 
-  const exportarPlano = async () => {
+  const exportarPlano = async (nombreArchivo?: string) => {
     let svg = document.querySelector('[data-plano2d]') as SVGSVGElement | null
     if (!svg) {
       // La trayectoria vive en una pestaña del panel: se abre para poder dibujarla.
@@ -281,7 +303,7 @@ export default function UnidadCNC() {
       }
     }
     if (!svg) return
-    const archivo = nombreSeguro(`${nombres[maquina] || 'programa'}_trayectoria`, 'png')
+    const archivo = nombreArchivo ?? nombreSeguro(`${nombres[maquina] || 'programa'}_trayectoria`, 'png')
     try {
       await exportarPng(svg, archivo)
       setAviso(`Imagen descargada: ${archivo}`)
@@ -313,7 +335,8 @@ export default function UnidadCNC() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = nombreSeguro(`${nombres[maquina] || 'simulacion'}_simulacion`, ext)
+      a.download = nombreVideo.current ? `${nombreVideo.current}.${ext}` : nombreSeguro(`${nombres[maquina] || 'simulacion'}_simulacion`, ext)
+      nombreVideo.current = null
       a.click()
       setTimeout(() => URL.revokeObjectURL(url), 2000)
       setAviso(`Video descargado: ${a.download}`)
@@ -624,7 +647,7 @@ export default function UnidadCNC() {
 
   return (
     <>
-      <SubnavUnidad nombre="CNC" seccion={seccion} onSeccion={setSeccion} />
+      <SubnavUnidad nombre="CNC" seccion={seccion} onSeccion={setSeccion} entregar={{ abierto: entregaAbierta, onAlternar: () => setEntregaAbierta((a) => !a) }} />
       {seccion === 'laboratorio' ? (
         <BancoDividido<PestanaCNC>
           clave="neumalab.cnc.banco"
@@ -633,6 +656,7 @@ export default function UnidadCNC() {
           derecha={{ id: 'maquina', titulo: 'Máquina', contenido: areaMaquina }}
           inferior={{ etiqueta: 'Preparación, trayectoria y tablas', pestanas, estado: panel }}
           estado={barraEstado}
+          conCajon={entregaAbierta && !estrecha}
         />
       ) : (
         <PaginaEstudiar
@@ -643,6 +667,128 @@ export default function UnidadCNC() {
           secciones={SECCIONES_CNC}
         />
       )}
+      {entregaAbierta && (
+        <CajonEntregar
+          unidad="CNC"
+          clave="neumalab.cnc.entrega"
+          trabajoSugerido="Trabajo-3"
+          onCerrar={() => setEntregaAbierta(false)}
+          revisar={() => {
+            const prueba = new SimuladorCNC(resultado, config, casa)
+            prueba.terminar()
+            const codigoSinComentarios = lineas.filter((l) => !/^\s*[(;%]/.test(l))
+            const unidadesMm = codigoSinComentarios.some((l) => /\bG21\b/i.test(l.replace(/\(.*?\)/g, '')))
+            const fin = codigoSinComentarios.some((l) => /\bM(30|0?2)\b/i.test(l.replace(/\(.*?\)/g, '')))
+            const sinC = resultado.sinComentario
+            return [
+              { ok: errores.length === 0, texto: errores.length === 0 ? 'El programa no tiene errores de escritura.' : `Hay ${errores.length} error(es). El primero, en la línea ${errores[0].linea + 1}: ${errores[0].texto}` },
+              {
+                ok: sinC.length === 0,
+                texto: sinC.length === 0 ? 'Cada línea de código tiene su comentario.' : `Hay ${sinC.length} línea(s) de código sin comentario (por ejemplo la ${sinC[0] + 1}). Si el enunciado pide comentar cada línea, agrégalo entre paréntesis.`,
+              },
+              { ok: unidadesMm, texto: unidadesMm ? 'Trabaja en milímetros (G21).' : 'No encuentro G21: indica que trabajas en milímetros.' },
+              { ok: fin, texto: fin ? 'El programa termina con M30 (o M02).' : 'El programa no termina con M30 ni M02.' },
+              {
+                ok: !prueba.alarma,
+                texto: prueba.alarma ? `Al mecanizar todo salta una alarma en la línea ${prueba.alarma.linea + 1}: ${prueba.alarma.texto}` : 'La simulación completa llega al final sin alarmas.',
+              },
+              ...prueba.consejos.slice(0, 3).map((c) => ({ ok: false, texto: `Línea ${c.linea + 1}: ${c.texto}` })),
+            ]
+          }}
+          presentacion={[
+            {
+              id: 'trayectoria',
+              tipo: 'imagen',
+              titulo: 'Trayectoria con sus puntos',
+              detalle: 'La silueta que recorre la herramienta, con los puntos numerados.',
+              hacer: async (base) => {
+                await exportarPlano(`${base}_trayectoria.png`)
+                return `Descargada: ${base}_trayectoria.png`
+              },
+            },
+            {
+              id: 'coordenadas',
+              tipo: 'tabla',
+              titulo: 'Tabla de coordenadas',
+              detalle: 'Dónde queda la herramienta en cada bloque, en absolutas e incrementales.',
+              hacer: async () => {
+                const filas = filasCoordenadas(resultado, torno, lineas, casa)
+                if (filas.length < 2) throw new Error('El programa todavía no mueve la máquina.')
+                return (await copiarTabla(filas)) ? 'Tabla copiada: pégala en tu presentación (Ctrl+V).' : 'Tu navegador no dejó copiar.'
+              },
+            },
+            {
+              id: 'herramientas',
+              tipo: 'tabla',
+              titulo: 'Herramientas que usa tu programa',
+              detalle: 'Cada herramienta con su nombre y en qué líneas se llama.',
+              hacer: async () => {
+                const lista = torno ? torretaDe(config) : almacenDe(config)
+                const uso = new Map<number, number[]>()
+                lineas.forEach((l, i) => {
+                  const limpia = l.replace(/\(.*?\)/g, '').replace(/;.*/, '')
+                  for (const m of limpia.matchAll(/\bT0*(\d{1,2})/gi)) {
+                    const t = Number(m[1])
+                    uso.set(t, [...(uso.get(t) ?? []), i + 1])
+                  }
+                })
+                if (!uso.size) throw new Error('Tu programa no llama a ninguna herramienta (T).')
+                const filas = [...uso.entries()].sort((a, b) => a[0] - b[0]).map(([t, ls]) => [`T${t}`, lista.find((h) => h.t === t)?.nombre ?? '(no está en la torreta)', lista.find((h) => h.t === t)?.uso ?? '', ls.join(', ')])
+                return (await copiarTabla([['Herramienta', 'Nombre', 'Para qué sirve', 'Líneas'], ...filas])) ? 'Tabla copiada: pégala en tu presentación (Ctrl+V).' : 'Tu navegador no dejó copiar.'
+              },
+            },
+            {
+              id: 'bruto',
+              tipo: 'tabla',
+              titulo: 'Material y dimensiones del bruto',
+              detalle: 'Lo que pusiste en Preparación.',
+              hacer: async () => {
+                const filas = torno
+                  ? [['Material', 'Diámetro (mm)', 'Largo (mm)', 'Toman las garras (mm)', 'Sobremetal en la cara (mm)'], [mat.nombre, String(config.torno.diametro), String(config.torno.largo), String(config.torno.agarre), String(config.torno.sobremetal)]]
+                  : [['Material', 'Largo X (mm)', 'Ancho Y (mm)', 'Alto Z (mm)'], [mat.nombre, String(config.fresa.largo), String(config.fresa.ancho), String(config.fresa.alto)]]
+                return (await copiarTabla(filas)) ? 'Tabla copiada: pégala en tu presentación (Ctrl+V).' : 'Tu navegador no dejó copiar.'
+              },
+            },
+          ]}
+          archivos={[
+            {
+              id: 'cnc',
+              tipo: 'archivo',
+              titulo: 'Programa .cnc',
+              detalle: 'El archivo de texto con tu código G. También se abre en CNC Simulator Pro.',
+              hacer: (base) => {
+                descargarTexto(codigo.replace(/\n/g, '\r\n'), `${base}.cnc`)
+                return `Descargado: ${base}.cnc`
+              },
+            },
+            {
+              id: 'video',
+              tipo: 'video',
+              titulo: 'Video de la simulación',
+              detalle: grabando ? 'Grabando… pulsa «■ Detener grabación» arriba al terminar.' : 'Graba la máquina 3D mientras mecaniza; se descarga al detener.',
+              deshabilitado: !puedeGrabar || grabando,
+              porque: grabando ? 'Grabando… pulsa «■ Detener grabación» arriba al terminar.' : 'Tu navegador no permite grabar video.',
+              hacer: (base) => {
+                nombreVideo.current = `${base}_simulacion`
+                reiniciar()
+                alternarGrabacion()
+                setTimeout(() => correr('corriendo'), 300)
+                return 'Grabando desde el inicio. Al terminar el mecanizado pulsa «■ Detener grabación» (arriba a la derecha).'
+              },
+            },
+            {
+              id: 'enlace',
+              tipo: 'enlace',
+              titulo: 'Enlace a tu programa',
+              detalle: 'Opcional: abre tu programa, con su preparación, en la app.',
+              hacer: async () => {
+                const url = await enlaceTrabajo('cnc', 'cnc', { config, codigo, nombre: nombres[maquina] })
+                return (await copiarTexto(url)) ? 'Enlace copiado.' : `Copia este enlace: ${url}`
+              },
+            },
+          ]}
+        />
+      )}
       {aviso && (
         <p role="status" style={avisoOk}>
           {aviso}
@@ -650,6 +796,21 @@ export default function UnidadCNC() {
       )}
     </>
   )
+}
+
+/** Filas de la tabla de coordenadas (con encabezado), para copiar al informe. */
+function filasCoordenadas(resultado: ResultadoGcode, torno: boolean, lineas: string[], casa: { x: number; y: number; z: number }): string[][] {
+  let previo = casa
+  const r = (v: number) => String(Math.round(v * 1000) / 1000)
+  const cab = torno ? ['Bloque', 'G', 'X (Ø)', 'Z', 'U (ΔX)', 'W (ΔZ)'] : ['Bloque', 'G', 'X', 'Y', 'Z', 'ΔX', 'ΔY', 'ΔZ']
+  const filas = resultado.puntos.map((p) => {
+    const d = { x: p.pos.x - previo.x, y: p.pos.y - previo.y, z: p.pos.z - previo.z }
+    previo = p.pos
+    const n = /^\s*N(\d+)/i.exec(lineas[p.linea] ?? '')
+    const b = n ? `N${n[1]}` : `L${p.linea + 1}`
+    return torno ? [b, p.codigo, r(p.prog.x), r(p.prog.z), r(d.x), r(d.z)] : [b, p.codigo, r(p.prog.x), r(p.prog.y), r(p.prog.z), r(d.x), r(d.y), r(d.z)]
+  })
+  return [cab, ...filas]
 }
 
 type PestanaCNC = 'preparacion' | 'plano' | 'explicar' | 'coordenadas'

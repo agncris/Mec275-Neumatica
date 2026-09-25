@@ -31,7 +31,16 @@ export function useSeccionUnidad(anclas: string[]): [SeccionUnidad, (s: SeccionU
   return [seccion, setSeccion]
 }
 
-export default function SubnavUnidad({ nombre, seccion, onSeccion, extra }: { nombre: string; seccion: SeccionUnidad; onSeccion: (s: SeccionUnidad) => void; extra?: ReactNode }) {
+interface PropsSubnav {
+  nombre: string
+  seccion: SeccionUnidad
+  onSeccion: (s: SeccionUnidad) => void
+  extra?: ReactNode
+  /** Botón «Entregar»: abre o cierra el cajón de la entrega. */
+  entregar?: { abierto: boolean; onAlternar: () => void }
+}
+
+export default function SubnavUnidad({ nombre, seccion, onSeccion, extra, entregar }: PropsSubnav) {
   const estrecha = useEsEstrecha()
   const [ranura, setRanura] = useState<HTMLElement | null>(null)
   useEffect(() => setRanura(document.getElementById('barra-unidad')), [])
@@ -44,6 +53,20 @@ export default function SubnavUnidad({ nombre, seccion, onSeccion, extra }: { no
         Estudiar
       </button>
       {extra}
+      {entregar && (
+        <button
+          className="subnav__entrega"
+          aria-expanded={entregar.abierto}
+          onClick={() => {
+            onSeccion('laboratorio')
+            entregar.onAlternar()
+          }}
+          data-abrir-entrega="si"
+          title="Descarga lo que pegas en tu presentación y el archivo que subes con tu tarea"
+        >
+          Entregar
+        </button>
+      )}
     </nav>
   )
   if (estrecha) return <div style={{ padding: '0 10px' }}>{nav}</div>

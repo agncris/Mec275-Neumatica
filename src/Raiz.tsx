@@ -18,6 +18,10 @@ function unidadInicial(): Unidad {
   if (typeof window === 'undefined') return 'neumatica'
   // Un enlace compartido de un circuito abre siempre neumática.
   if (/[#&]c=/.test(window.location.hash)) return 'neumatica'
+  // Los enlaces con un trabajo de otra unidad abren esa unidad.
+  if (/[#&]plc=/.test(window.location.hash)) return 'plc'
+  if (/[#&]cnc=/.test(window.location.hash)) return 'cnc'
+  if (/[#&]rob=/.test(window.location.hash)) return 'robotica'
   const param = new URLSearchParams(window.location.search).get('unidad')
   if (UNIDADES.includes(param as Unidad)) return param as Unidad
   try {

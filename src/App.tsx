@@ -25,7 +25,7 @@ import TablaNomenclatura from './components/TablaNomenclatura'
 import MetodoCascada from './components/MetodoCascada'
 import SimbologiaVDI from './components/SimbologiaVDI'
 import SimbologiaISO from './components/SimbologiaISO'
-import PanelEntrega from './components/PanelEntrega'
+import EntregaNeumatica from './components/EntregaNeumatica'
 import { circuitoDesdeStore, useStore, type NumeroEjemplo } from './store'
 import { NOMBRES_EJEMPLO } from './circuitos/ejemplos'
 import {
@@ -80,7 +80,7 @@ export default function App() {
   const [inferiorAmpliado, setInferiorAmpliado] = usePersistente('neumalab.banco.inferior-ampliado', false)
   const [pestanaInferior, setPestanaInferior] = useState<PestanaInferior>('registro')
   const [hoja, setHoja] = useState<'paleta' | 'inspector' | 'registro' | null>(null)
-  // Laboratorio (el banco) o Estudiar; «Mi entrega» es un cajón sobre el laboratorio.
+  // Laboratorio (el banco) o Estudiar; «Entregar» es un cajón sobre el laboratorio.
   const [seccion, setSeccion] = useState<'laboratorio' | 'estudiar'>(() =>
     typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('vista') === 'estudiar' ? 'estudiar' : 'laboratorio',
   )
@@ -273,7 +273,7 @@ export default function App() {
     }
   }
 
-  /** Nombre base de las descargas: sale de los datos de «Mi entrega». */
+  /** Nombre base de las descargas: sale del nombre y el título del trabajo. */
   const baseArchivo = () => [alumno.nombre, ejercicio].filter(Boolean).join('_') || 'circuito'
 
   /** Imagen del circuito o del diagrama, para pegar en el informe. */
@@ -296,7 +296,7 @@ export default function App() {
   /** El diagrama de fase vive en el panel inferior: se abre para exportarlo. */
   const exportarFase = () => void exportarLamina('diagrama-fase-exportar', 'diagrama-fase', 'png')
 
-  /** Imágenes para «Mi entrega», tomadas del banco. */
+  /** Imágenes para «Entregar», tomadas del banco. */
   const capturarCircuito = async (): Promise<string | { error: string }> => {
     const svg = document.getElementById('pizarra-svg') as SVGSVGElement | null
     if (!svg || useStore.getState().piezas.length === 0) return { error: 'Primero arma el circuito en el banco.' }
@@ -561,9 +561,9 @@ export default function App() {
           setEntregaAbierta((a) => !a)
         }}
         data-abrir-entrega="si"
-        title="Responder el enunciado y descargar la entrega, viendo tu circuito"
+        title="Descarga lo que pegas en tu presentación y el archivo que subes con tu tarea"
       >
-        Mi entrega{alumno.nombre ? ` · ${alumno.nombre.split(' ')[0]}` : ''}
+        Entregar
       </button>
     </nav>
   )
@@ -729,19 +729,7 @@ export default function App() {
         <PaginaNeumaticaEstudiar alCargarCircuito={() => setSeccion('laboratorio')} />
       )}
 
-      {entregaAbierta && (
-        <aside className="cajon" aria-label="Mi entrega" data-cajon-entrega="si">
-          <div style={{ display: 'flex', alignItems: 'center', padding: '10px 14px', borderBottom: '1px solid #e0e5eb' }}>
-            <h2 style={{ margin: 0, fontSize: '1.05rem' }}>Mi entrega{alumno.nombre ? ` · ${alumno.nombre}` : ''}</h2>
-            <button onClick={() => setEntregaAbierta(false)} className="boton-icono" style={{ marginLeft: 'auto' }} aria-label="Cerrar Mi entrega" title="Cerrar (tu trabajo queda guardado en este navegador)">
-              ✕
-            </button>
-          </div>
-          <div style={{ overflowY: 'auto', padding: '12px 16px 24px', flex: 1 }}>
-            <PanelEntrega capturarCircuito={capturarCircuito} capturarFase={capturarFase} />
-          </div>
-        </aside>
-      )}
+      {entregaAbierta && <EntregaNeumatica onCerrar={() => setEntregaAbierta(false)} capturarCircuito={capturarCircuito} capturarFase={capturarFase} />}
 
       {/* Diagrama de fase fuera de la vista: de aquí salen el PNG y la imagen de la entrega. */}
       <div aria-hidden style={{ position: 'fixed', left: -10000, top: 0, width: 640, pointerEvents: 'none' }}>
