@@ -54,3 +54,12 @@ describe('archivo de entrega', () => {
     expect(normalizarRespuestas({ vdi: [{ n: 3 } as any, 'basura' as any] }).vdi).toHaveLength(1)
   })
 })
+
+describe('imágenes insertadas en la entrega', () => {
+  it('conserva los PNG embebidos y descarta lo que no es imagen', () => {
+    const png = 'data:image/png;base64,iVBORw0KGgo='
+    const r = normalizarRespuestas({ imagenes: { circuito: png, fase: 'javascript:alert(1)' } })
+    expect(r.imagenes).toEqual({ circuito: png })
+    expect(normalizarRespuestas({ secuencia: 'A+' }).imagenes).toBeUndefined()
+  })
+})

@@ -38,12 +38,8 @@ function prepararCopia(svg: SVGSVGElement, escala: number): { texto: string; anc
   return { texto: new XMLSerializer().serializeToString(copia), ancho, alto }
 }
 
-/** Descarga el SVG indicado como PNG. */
-export async function exportarPng(
-  svg: SVGSVGElement,
-  nombreArchivo: string,
-  escala = 2,
-): Promise<void> {
+/** Dibuja el SVG en un lienzo (fondo blanco), listo para pasarlo a PNG. */
+async function svgALienzo(svg: SVGSVGElement, escala: number): Promise<HTMLCanvasElement> {
   const { texto, ancho, alto } = prepararCopia(svg, escala)
   const url = URL.createObjectURL(new Blob([texto], { type: 'image/svg+xml;charset=utf-8' }))
   try {
@@ -61,13 +57,28 @@ export async function exportarPng(
     ctx.fillStyle = '#ffffff'
     ctx.fillRect(0, 0, ancho, alto)
     ctx.drawImage(imagen, 0, 0, ancho, alto)
-
-    const blob = await new Promise<Blob | null>((resolve) => lienzo.toBlob(resolve, 'image/png'))
-    if (!blob) throw new Error('No se pudo generar el PNG.')
-    descargarBlob(blob, nombreArchivo)
+    return lienzo
   } finally {
     URL.revokeObjectURL(url)
   }
+}
+
+/** Descarga el SVG indicado como PNG. */
+export async function exportarPng(
+  svg: SVGSVGElement,
+  nombreArchivo: string,
+  escala = 2,
+): Promise<void> {
+  const lienzo = await svgALienzo(svg, escala)
+  const blob = await new Promise<Blob | null>((resolve) => lienzo.toBlob(resolve, 'image/png'))
+  if (!blob) throw new Error('No se pudo generar el PNG.')
+  descargarBlob(blob, nombreArchivo)
+}
+
+/** El SVG como imagen PNG embebida (data URL), para guardarla dentro de la entrega. */
+export async function pngEmbebido(svg: SVGSVGElement, escala = 1.5): Promise<string> {
+  const lienzo = await svgALienzo(svg, escala)
+  return lienzo.toDataURL('image/png')
 }
 
 /** Descarga el SVG tal cual (vectorial, útil para imprimir sin perder nitidez). */

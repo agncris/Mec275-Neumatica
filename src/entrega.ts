@@ -31,6 +31,8 @@ export interface Respuestas {
   elementos: string
   /** Observaciones libres del alumno. */
   comentarios: string
+  /** Imágenes insertadas desde el banco (PNG embebido): el circuito y el diagrama de fase. */
+  imagenes?: { circuito?: string; fase?: string }
 }
 
 export interface Entrega {
@@ -95,5 +97,16 @@ export function normalizarRespuestas(r: Partial<Respuestas> | undefined): Respue
     activadores: typeof r?.activadores === 'string' ? r.activadores : '',
     elementos: typeof r?.elementos === 'string' ? r.elementos : '',
     comentarios: typeof r?.comentarios === 'string' ? r.comentarios : '',
+    // Sólo si la entrega trae imágenes (las antiguas no las tienen).
+    ...(esPng(r?.imagenes?.circuito) || esPng(r?.imagenes?.fase)
+      ? {
+          imagenes: {
+            ...(esPng(r?.imagenes?.circuito) ? { circuito: r!.imagenes!.circuito } : {}),
+            ...(esPng(r?.imagenes?.fase) ? { fase: r!.imagenes!.fase } : {}),
+          },
+        }
+      : {}),
   }
 }
+
+const esPng = (x: unknown): x is string => typeof x === 'string' && x.startsWith('data:image/png;base64,')

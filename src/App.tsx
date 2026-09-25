@@ -8,6 +8,8 @@
  */
 import { botonPrimario, estiloAviso, Menu, usePersistente, useTactil } from './components/ui'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import DiagramaEspacioFase, { hayDiagramaFase, registrarFase } from './components/DiagramaEspacioFase'
 import { DT_POR_DEFECTO, Motor, validarCircuito } from './engine'
 import Paleta from './components/Paleta'
 import Pizarra, { type ControlesPizarra, type Vista } from './components/Pizarra'
@@ -19,7 +21,6 @@ import AyudaAtajos from './components/banco/AyudaAtajos'
 const Banco3D = lazy(() => import('./vista3d/Banco3D'))
 type VistaApp = Vista | 'banco3d' | 'ambos'
 import TablaNomenclatura from './components/TablaNomenclatura'
-import { Seccion } from './components/Seccion'
 import MetodoCascada from './components/MetodoCascada'
 import SimbologiaVDI from './components/SimbologiaVDI'
 import SimbologiaISO from './components/SimbologiaISO'
@@ -34,7 +35,7 @@ import {
   leerDeUrl,
   leerLocal,
 } from './persistencia'
-import { exportarPng, exportarSvg, nombreSeguro } from './exportar'
+import { exportarPng, exportarSvg, nombreSeguro, pngEmbebido } from './exportar'
 import { esEntrega, normalizarRespuestas } from './entrega'
 
 const EJEMPLOS: Array<{ n: NumeroEjemplo; etiqueta: string }> = ([1, 2, 3, 4, 5, 6, 7] as NumeroEjemplo[]).map((n) => ({ n, etiqueta: NOMBRES_EJEMPLO[n] }))
@@ -91,6 +92,28 @@ export default function App() {
   const [altoInferior, setAltoInferior] = usePersistente('neumalab.banco.alto-inferior', 200)
   const [pestanaInferior, setPestanaInferior] = useState<PestanaInferior>('registro')
   const [hoja, setHoja] = useState<'paleta' | 'inspector' | 'registro' | null>(null)
+  // Laboratorio (el banco) o Estudiar; «Mi entrega» es un cajón sobre el laboratorio.
+  const [seccion, setSeccion] = useState<'laboratorio' | 'estudiar'>(() =>
+    typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('vista') === 'estudiar' ? 'estudiar' : 'laboratorio',
+  )
+  const [entregaAbierta, setEntregaAbierta] = useState(
+    () => typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('vista') === 'entrega',
+  )
+  const [ranura, setRanura] = useState<HTMLElement | null>(null)
+  useEffect(() => setRanura(document.getElementById('barra-unidad')), [])
+  // La URL dice dónde está el alumno, para poder compartir o volver (deep link).
+  useEffect(() => {
+    try {
+      const url = new URL(window.location.href)
+      const vistaUrl = seccion === 'estudiar' ? 'estudiar' : entregaAbierta ? 'entrega' : null
+      if (vistaUrl) url.searchParams.set('vista', vistaUrl)
+      else url.searchParams.delete('vista')
+      if (seccion !== 'estudiar' && /^#(cascada|vdi|iso|vias)$/.test(url.hash)) url.hash = ''
+      if (url.href !== window.location.href) window.history.replaceState(null, '', url)
+    } catch {
+      /* sin historial */
+    }
+  }, [seccion, entregaAbierta])
   const [ayuda, setAyuda] = useState(false)
   const [zoom, setZoom] = useState(100)
   const controles = useRef<ControlesPizarra | null>(null)
@@ -269,7 +292,7 @@ export default function App() {
   const exportarLamina = async (id: string, sufijo: string, formato: 'png' | 'svg') => {
     const svg = document.getElementById(id) as SVGSVGElement | null
     if (!svg) {
-      setAviso(id === 'diagrama-fase-svg' ? 'Todavía no hay diagrama: acciona el circuito hasta que un cilindro complete una carrera.' : 'No hay nada que exportar todavía.')
+      setAviso(id.startsWith('diagrama-fase') ? 'Todavía no hay diagrama: acciona el circuito hasta que un cilindro complete una carrera.' : 'No hay nada que exportar todavía.')
       return
     }
     const archivo = nombreSeguro(`${baseArchivo()}_${sufijo}`, formato)
@@ -283,11 +306,27 @@ export default function App() {
   }
 
   /** El diagrama de fase vive en el panel inferior: se abre para exportarlo. */
-  const exportarFase = () => {
-    if (document.getElementById('diagrama-fase-svg')) return void exportarLamina('diagrama-fase-svg', 'diagrama-fase', 'png')
-    setInferiorAbierto(true)
-    setPestanaInferior('fase')
-    setTimeout(() => void exportarLamina('diagrama-fase-svg', 'diagrama-fase', 'png'), 250)
+  const exportarFase = () => void exportarLamina('diagrama-fase-exportar', 'diagrama-fase', 'png')
+
+  /** Imágenes para «Mi entrega», tomadas del banco. */
+  const capturarCircuito = async (): Promise<string | { error: string }> => {
+    const svg = document.getElementById('pizarra-svg') as SVGSVGElement | null
+    if (!svg || useStore.getState().piezas.length === 0) return { error: 'Primero arma el circuito en el banco.' }
+    try {
+      return await pngEmbebido(svg)
+    } catch {
+      return { error: 'No se pudo tomar la imagen del circuito.' }
+    }
+  }
+  const capturarFase = async (): Promise<string | { error: string }> => {
+    const svg = document.getElementById('diagrama-fase-exportar') as SVGSVGElement | null
+    if (!svg || !hayDiagramaFase())
+      return { error: 'Todavía no hay diagrama: pulsa ▶ Simular y acciona el circuito hasta que un cilindro complete una carrera.' }
+    try {
+      return await pngEmbebido(svg)
+    } catch {
+      return { error: 'No se pudo tomar la imagen del diagrama.' }
+    }
   }
 
   const abrirArchivo = async (archivo: File | undefined) => {
@@ -315,6 +354,7 @@ export default function App() {
     }
   }
 
+  registrarFase(motor)
   const avisosCircuito =
     modo === 'editar' ? validarCircuito(circuitoDesdeStore(piezas, mangueras)) : (motor?.advertencias ?? [])
   const bancoVacio = piezas.length === 0
@@ -422,8 +462,8 @@ export default function App() {
       texto: 'Diagrama de fase (PNG)',
       ayuda: 'El diagrama espacio-fase de la simulación',
       onClick: () => exportarFase(),
-      deshabilitado: !simulando,
-      porque: 'Disponible mientras simulas (▶ Simular)',
+      deshabilitado: !hayDiagramaFase(),
+      porque: 'Simula y acciona el circuito hasta que un cilindro complete una carrera',
     },
   ]
   const zoomHabilitado = vista !== 'banco3d'
@@ -513,9 +553,37 @@ export default function App() {
     />
   )
 
+  const subnav = (
+    <nav className="subnav" aria-label="Neumática" style={estrecha ? { borderBottom: '1px solid #e0e5eb', margin: '0 -10px', padding: '0 10px', background: '#fff' } : undefined}>
+      <button aria-current={seccion === 'laboratorio' ? 'page' : undefined} onClick={() => setSeccion('laboratorio')} data-seccion="laboratorio">
+        Laboratorio
+      </button>
+      <button aria-current={seccion === 'estudiar' ? 'page' : undefined} onClick={() => setSeccion('estudiar')} data-seccion="estudiar">
+        Estudiar
+      </button>
+      <button
+        className="subnav__entrega"
+        aria-expanded={entregaAbierta}
+        onClick={() => {
+          setSeccion('laboratorio')
+          setEntregaAbierta((a) => !a)
+        }}
+        data-abrir-entrega="si"
+        title="Responder el enunciado y descargar la entrega, viendo tu circuito"
+      >
+        Mi entrega{alumno.nombre ? ` · ${alumno.nombre.split(' ')[0]}` : ''}
+      </button>
+    </nav>
+  )
+
   return (
     <>
-      <main className="banco" aria-label="Laboratorio de neumática">
+      {ranura && !estrecha && createPortal(subnav, ranura)}
+      {estrecha && <div style={{ padding: '0 10px' }}>{subnav}</div>}
+
+      {seccion === 'laboratorio' ? (
+        <>
+      <main className="banco" aria-label="Laboratorio de neumática" style={estrecha ? { height: 'calc(100dvh - var(--alto-barra-superior) - 45px)' } : entregaAbierta ? { marginRight: 480 } : undefined}>
         <h1 className="solo-lector">Unidad 1 · Neumática — laboratorio</h1>
         <div className="banco__barra" role="toolbar" aria-label="Herramientas del banco">
           {botonSimular}
@@ -586,6 +654,7 @@ export default function App() {
               {lienzo}
               {panelInferior}
             </div>
+            {!entregaAbierta && (
             <div className={`banco__inspector${inspectorAbierto ? '' : ' banco__inspector--plegado'}`}>
               {inspectorAbierto ? (
                 inspector
@@ -602,6 +671,7 @@ export default function App() {
                 </div>
               )}
             </div>
+            )}
           </div>
         )}
 
@@ -660,48 +730,109 @@ export default function App() {
 
       {ayuda && <AyudaAtajos tactil={tactil} onCerrar={() => setAyuda(false)} />}
 
-      <div style={{ maxWidth: 1320, margin: '0 auto', padding: estrecha ? '0.8rem' : '0.5rem 1.5rem 1.25rem' }}>
-        <section style={tarjeta}>
-          <Seccion
-            titulo={
-              alumno.nombre
-                ? `Mi entrega · ${alumno.nombre}${alumno.rol ? ` (${alumno.rol})` : ''}`
-                : 'Mi entrega · responder el enunciado y descargar'
-            }
+        </>
+      ) : (
+        <PaginaEstudiar alCargarCircuito={() => setSeccion('laboratorio')} />
+      )}
+
+      {entregaAbierta && (
+        <aside className="cajon" aria-label="Mi entrega" data-cajon-entrega="si">
+          <div style={{ display: 'flex', alignItems: 'center', padding: '10px 14px', borderBottom: '1px solid #e0e5eb' }}>
+            <h2 style={{ margin: 0, fontSize: '1.05rem' }}>Mi entrega{alumno.nombre ? ` · ${alumno.nombre}` : ''}</h2>
+            <button onClick={() => setEntregaAbierta(false)} className="boton-icono" style={{ marginLeft: 'auto' }} aria-label="Cerrar Mi entrega" title="Cerrar (tu trabajo queda guardado en este navegador)">
+              ✕
+            </button>
+          </div>
+          <div style={{ overflowY: 'auto', padding: '12px 16px 24px', flex: 1 }}>
+            <PanelEntrega capturarCircuito={capturarCircuito} capturarFase={capturarFase} />
+          </div>
+        </aside>
+      )}
+
+      {/* Diagrama de fase fuera de la vista: de aquí salen el PNG y la imagen de la entrega. */}
+      <div aria-hidden style={{ position: 'fixed', left: -10000, top: 0, width: 640, pointerEvents: 'none' }}>
+        <DiagramaEspacioFase motor={motor} idSvg="diagrama-fase-exportar" />
+      </div>
+    </>
+  )
+}
+
+/** «Estudiar»: la teoría y las autoevaluaciones de la unidad, con índice. */
+function PaginaEstudiar({ alCargarCircuito }: { alCargarCircuito: () => void }) {
+  const secciones: Array<[string, string, React.ReactNode]> = [
+    ['cascada', 'Método cascada', <MetodoCascada alCargar={alCargarCircuito} />],
+    ['vdi', 'Simbología VDI 2860', <SimbologiaVDI />],
+    ['iso', 'Simbología ISO 1219-1', <SimbologiaISO />],
+    ['vias', 'Nº de vías y posiciones', <TablaNomenclatura />],
+  ]
+  const titulos: Record<string, string> = {
+    cascada: 'Método cascada · secuencias con señales bloqueantes',
+    vdi: 'Simbología VDI 2860 · funciones de manipulación',
+    iso: 'Simbología ISO 1219-1 · componentes neumáticos',
+    vias: 'Nº de vías y posiciones · nomenclatura de los orificios',
+  }
+  const [actual, setActual] = useState(() => (typeof window !== 'undefined' ? window.location.hash.slice(1) : '') || 'cascada')
+  // Ir a la sección del enlace (#cascada, #vdi…) al entrar.
+  useEffect(() => {
+    const id = window.location.hash.slice(1)
+    if (id && document.getElementById(id)) document.getElementById(id)!.scrollIntoView()
+    else window.scrollTo({ top: 0 })
+  }, [])
+  // Marcar en el índice la sección que se está leyendo.
+  useEffect(() => {
+    const obs = new IntersectionObserver(
+      (entradas) => {
+        const visible = entradas.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0]
+        if (visible) setActual(visible.target.id)
+      },
+      { rootMargin: '-60px 0px -60% 0px' },
+    )
+    for (const [id] of secciones) {
+      const el = document.getElementById(id)
+      if (el) obs.observe(el)
+    }
+    return () => obs.disconnect()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  return (
+    <main className="estudiar" aria-label="Estudiar neumática">
+      <nav className="estudiar__indice" aria-label="Índice">
+        {secciones.map(([id, t]) => (
+          <a
+            key={id}
+            href={`#${id}`}
+            aria-current={actual === id ? 'true' : undefined}
+            onClick={(e) => {
+              e.preventDefault()
+              document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
+              try {
+                window.history.replaceState(null, '', `#${id}`)
+              } catch {
+                /* sin historial */
+              }
+              setActual(id)
+            }}
           >
-            <PanelEntrega />
-          </Seccion>
-        </section>
-
-        <section style={tarjeta}>
-          <Seccion titulo="Método cascada · secuencias con señales bloqueantes">
-            <MetodoCascada />
-          </Seccion>
-        </section>
-
-        <section style={tarjeta}>
-          <Seccion titulo="Simbología VDI 2860 · funciones de manipulación">
-            <SimbologiaVDI />
-          </Seccion>
-        </section>
-
-        <section style={tarjeta}>
-          <Seccion titulo="Simbología ISO 1219-1 · componentes neumáticos">
-            <SimbologiaISO />
-          </Seccion>
-        </section>
-
-        <section style={tarjeta}>
-          <Seccion titulo="Nº de vías y posiciones · nomenclatura de los orificios">
-            <TablaNomenclatura />
-          </Seccion>
-        </section>
-
+            {t}
+          </a>
+        ))}
+      </nav>
+      <div>
+        <h1 style={{ margin: '0 0 4px', fontSize: '1.4rem' }}>Estudiar · Neumática</h1>
+        <p style={{ margin: '0 0 12px', color: '#51606f' }}>Teoría y autoevaluaciones de la unidad. Los circuitos de ejemplo se abren en el Laboratorio.</p>
+        {secciones.map(([id, , contenido]) => (
+          <section key={id} id={id} style={tarjeta} aria-labelledby={`t-${id}`}>
+            <h2 id={`t-${id}`} style={{ margin: '0 0 10px', fontSize: '1.1rem', color: '#1c2733' }}>
+              {titulos[id]}
+            </h2>
+            {contenido}
+          </section>
+        ))}
         <footer style={{ margin: '1.5rem 0 0.5rem', color: '#5f6b78', fontSize: '0.8rem', textAlign: 'center' }}>
           NeumaLab · MEC275 — Neumática industrial · Simbología ISO 1219-1
         </footer>
       </div>
-    </>
+    </main>
   )
 }
 

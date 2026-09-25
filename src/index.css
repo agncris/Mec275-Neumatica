@@ -447,3 +447,131 @@ button:disabled:hover {
     gap: 6px;
   }
 }
+
+/* Los placeholders son ejemplos del formato, no respuestas: gris con contraste AA y cursiva. */
+::placeholder {
+  color: #5f6b78;
+  font-style: italic;
+  opacity: 1;
+}
+
+/* Navegación de segundo nivel dentro de una unidad (en la barra superior). */
+.barra-superior__extra {
+  margin-left: auto;
+  display: flex;
+  align-items: stretch;
+  align-self: stretch;
+}
+.subnav {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+}
+.subnav button {
+  border: none;
+  border-bottom: 3px solid transparent;
+  border-top: 3px solid transparent;
+  background: transparent;
+  color: #51606f;
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 0 0.7rem;
+  min-height: 44px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.subnav button:hover {
+  color: #1c2733;
+  background: #f3f5f8;
+  filter: none;
+}
+.subnav button[aria-current='page'] {
+  color: #1c2733;
+  border-bottom-color: #1c2733;
+}
+.subnav .subnav__entrega {
+  margin: 8px 0 8px 6px;
+  min-height: 34px;
+  border: 1px solid #1668c7;
+  border-radius: 8px;
+  color: #1668c7;
+}
+.subnav .subnav__entrega[aria-expanded='true'] {
+  background: #1668c7;
+  color: #fff;
+}
+
+/* Cajón lateral «Mi entrega» */
+.cajon {
+  position: fixed;
+  top: var(--alto-barra-superior);
+  right: 0;
+  bottom: 0;
+  width: min(480px, 100vw);
+  z-index: 60;
+  background: #fff;
+  border-left: 1px solid #dde2e8;
+  box-shadow: -12px 0 30px rgba(28, 39, 51, 0.16);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Página «Estudiar» */
+.estudiar {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 1rem clamp(0.75rem, 3vw, 1.5rem) 2rem;
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.estudiar__indice {
+  position: sticky;
+  top: calc(var(--alto-barra-superior) + 12px);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.estudiar__indice a {
+  display: block;
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: #33475c;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border-left: 3px solid transparent;
+}
+.estudiar__indice a:hover {
+  background: #eef2f6;
+}
+.estudiar__indice a[aria-current='true'] {
+  background: #fff;
+  border-left-color: #1668c7;
+  color: #1c2733;
+}
+.estudiar section {
+  scroll-margin-top: calc(var(--alto-barra-superior) + 12px);
+}
+@media (max-width: 900px) {
+  .estudiar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .estudiar__indice {
+    top: var(--alto-barra-superior);
+    z-index: 5;
+    flex-direction: row;
+    overflow-x: auto;
+    background: #f6f7f9;
+    padding: 6px 0;
+  }
+  .estudiar__indice a {
+    white-space: nowrap;
+    border-left: none;
+    border-bottom: 3px solid transparent;
+  }
+  .estudiar__indice a[aria-current='true'] {
+    border-bottom-color: #1668c7;
+  }
+}

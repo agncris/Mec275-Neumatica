@@ -22,7 +22,7 @@ const PASOS_EJEMPLO = [
   ['t = 5,1 s', 'a0 (desde L2) + marcha → vuelta a L1: el ciclo se repite'],
 ]
 
-export default function MetodoCascada() {
+export default function MetodoCascada({ alCargar }: { alCargar?: () => void } = {}) {
   const cargarCircuito = useStore((s) => s.cargarCircuito)
   const [secuencia, setSecuencia] = useState('A+ B+ B- A-')
   const analisis = analizarSecuencia(secuencia)
@@ -38,6 +38,7 @@ export default function MetodoCascada() {
       return
     }
     cargarCircuito(circuito, nombre)
+    alCargar?.()
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 

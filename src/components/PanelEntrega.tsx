@@ -13,7 +13,14 @@ import { descargarJson } from '../persistencia'
 import { nombreSeguro } from '../exportar'
 import { circuitoDesdeStore, useStore } from '../store'
 
-export default function PanelEntrega() {
+interface Props {
+  /** Imagen del circuito del banco (PNG embebido), o un mensaje si no se pudo. */
+  capturarCircuito?: () => Promise<string | { error: string }>
+  /** Imagen del diagrama de fase de la simulación (actual o la última). */
+  capturarFase?: () => Promise<string | { error: string }>
+}
+
+export default function PanelEntrega({ capturarCircuito, capturarFase }: Props = {}) {
   const piezas = useStore((s) => s.piezas)
   const mangueras = useStore((s) => s.mangueras)
   const alumno = useStore((s) => s.alumno)
@@ -23,6 +30,20 @@ export default function PanelEntrega() {
 
   const [eligiendoVdi, setEligiendoVdi] = useState(false)
   const [analisis, setAnalisis] = useState<ReturnType<typeof analizarCircuito> | null>(null)
+  const [avisoImagen, setAvisoImagen] = useState<string | null>(null)
+  const insertar = async (cual: 'circuito' | 'fase') => {
+    const capturar = cual === 'circuito' ? capturarCircuito : capturarFase
+    if (!capturar) return
+    setAvisoImagen(null)
+    const r = await capturar()
+    if (typeof r !== 'string') return setAvisoImagen(r.error)
+    setRespuestas({ imagenes: { ...respuestas.imagenes, [cual]: r } })
+  }
+  const quitarImagen = (cual: 'circuito' | 'fase') => {
+    const imagenes = { ...respuestas.imagenes }
+    delete imagenes[cual]
+    setRespuestas({ imagenes })
+  }
 
   const grupos = useMemo(() => analizarSecuencia(respuestas.secuencia), [respuestas.secuencia])
 
@@ -69,6 +90,9 @@ export default function PanelEntrega() {
 
   return (
     <div>
+      <p style={{ ...pie, margin: '0 0 8px' }}>
+        <Obligatorio /> Campo obligatorio. Los textos grises en cursiva son sólo ejemplos del formato.
+      </p>
       <p style={parrafo}>
         Aquí respondes lo que te pida el enunciado y lo dejas todo junto. Cuando termines, pulsa{' '}
         <strong>Comprobar mi trabajo</strong>: la aplicación simula tu circuito y te dice si hace de
@@ -79,20 +103,28 @@ export default function PanelEntrega() {
       {/* Identificación ------------------------------------------------- */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
         <label style={campo}>
-          Nombre y apellido
+          <span>
+            Nombre y apellido <Obligatorio />
+          </span>
           <input
             value={alumno.nombre}
             onChange={(e) => setAlumno({ ...alumno, nombre: e.target.value })}
-            placeholder="Ana Pérez"
+            placeholder="Ej.: Nombre Apellido"
+            required
+            aria-required="true"
             style={entrada}
           />
         </label>
         <label style={campo}>
-          Rol USM
+          <span>
+            Rol USM <Obligatorio />
+          </span>
           <input
             value={alumno.rol}
             onChange={(e) => setAlumno({ ...alumno, rol: e.target.value })}
-            placeholder="202012345-6"
+            placeholder="Ej.: 2024xxxxx-x"
+            required
+            aria-required="true"
             style={entrada}
           />
         </label>
@@ -101,7 +133,7 @@ export default function PanelEntrega() {
           <input
             value={ejercicio}
             onChange={(e) => setEjercicio(e.target.value)}
-            placeholder="Tarea 1"
+            placeholder="Ej.: Tarea 1"
             style={entrada}
           />
         </label>
@@ -112,7 +144,7 @@ export default function PanelEntrega() {
       <p style={pie}>
         Describe el proceso paso a paso con los símbolos de la norma: añade una función por cada
         cosa que hace la máquina y anota a qué elemento corresponde. Si no sabes cuál es cada
-        símbolo, tienes la tabla completa en la sección «Simbología VDI 2860».
+        símbolo, tienes la tabla completa en «Estudiar › Simbología VDI 2860».
       </p>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-start', margin: '8px 0' }}>
         {respuestas.vdi.map((paso, i) => {
@@ -173,11 +205,15 @@ export default function PanelEntrega() {
       {/* 2 · Secuencia --------------------------------------------------- */}
       <h3 style={titulo}>Secuencia, grupos y activadores</h3>
       <label style={{ ...campo, maxWidth: 340 }}>
-        Secuencia de automatización
+        <span>
+          Secuencia de automatización <Obligatorio />
+        </span>
         <input
           value={respuestas.secuencia}
           onChange={(e) => setRespuestas({ secuencia: e.target.value })}
-          placeholder="A+ B+ B- A-"
+          placeholder="Ej.: A+ B+ …"
+          required
+          aria-required="true"
           spellCheck={false}
           style={{ ...entrada, fontFamily: 'ui-monospace, Menlo, monospace' }}
         />
@@ -198,7 +234,7 @@ export default function PanelEntrega() {
         <textarea
           value={respuestas.activadores}
           onChange={(e) => setRespuestas({ activadores: e.target.value })}
-          placeholder={'marcha + a0 → A+\na1 → B+\nb1 → cambio de grupo\n…'}
+          placeholder={'Ej.: señal → movimiento\n(una línea por movimiento)'}
           rows={4}
           style={{ ...entrada, fontFamily: 'ui-monospace, Menlo, monospace', fontSize: '0.82rem' }}
         />
@@ -213,7 +249,7 @@ export default function PanelEntrega() {
         <textarea
           value={respuestas.elementos}
           onChange={(e) => setRespuestas({ elementos: e.target.value })}
-          placeholder={'2 × Cilindro de doble efecto\n1 × Actuador giratorio\n…'}
+          placeholder={'Ej.: cantidad × elemento\n(una línea por elemento)'}
           rows={5}
           style={{ ...entrada, fontFamily: 'ui-monospace, Menlo, monospace', fontSize: '0.82rem' }}
         />
@@ -222,11 +258,41 @@ export default function PanelEntrega() {
       {/* 4 y 5 ------------------------------------------------------------ */}
       <h3 style={titulo}>Diagrama de fase y circuito</h3>
       <p style={pie}>
-        Los dos salen del banco: monta el circuito arriba y pulsa <strong>▶ Simular</strong>. El
-        diagrama de fase se dibuja solo mientras corre, con la secuencia A+ / A− marcada. Si tu
-        informe lleva imágenes, descárgalas con «Circuito (PNG)» y «Diagrama de fase (PNG)» de la
-        barra de arriba.
+        Los dos salen del banco: arma el circuito y pulsa <strong>▶ Simular</strong>; el diagrama
+        de fase se dibuja mientras corre (y se conserva al detener). Insértalos aquí y quedan
+        guardados dentro de tu entrega.
       </p>
+      {(capturarCircuito || capturarFase) && (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '6px 0' }}>
+          {capturarCircuito && (
+            <button onClick={() => void insertar('circuito')} style={{ ...boton, background: '#1668c7' }} data-insertar="circuito">
+              Insertar imagen del circuito
+            </button>
+          )}
+          {capturarFase && (
+            <button onClick={() => void insertar('fase')} style={{ ...boton, background: '#1668c7' }} data-insertar="fase">
+              Insertar diagrama de fase actual
+            </button>
+          )}
+        </div>
+      )}
+      {avisoImagen && <p style={{ ...pie, color: '#7a4f00' }}>⚠ {avisoImagen}</p>}
+      {(['circuito', 'fase'] as const).map((cual) =>
+        respuestas.imagenes?.[cual] ? (
+          <figure key={cual} style={{ margin: '8px 0', border: '1px solid #dbe1e8', borderRadius: 8, padding: 6 }} data-imagen={cual}>
+            <img src={respuestas.imagenes[cual]} alt={cual === 'circuito' ? 'Circuito del banco' : 'Diagrama de fase'} style={{ width: '100%', display: 'block' }} />
+            <figcaption style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.8rem', color: '#51606f', marginTop: 4 }}>
+              {cual === 'circuito' ? 'Circuito' : 'Diagrama de fase'}
+              <button onClick={() => void insertar(cual)} style={{ ...miniBoton, marginLeft: 'auto', fontSize: '0.78rem', padding: '2px 8px' }}>
+                Reemplazar
+              </button>
+              <button onClick={() => quitarImagen(cual)} style={{ ...miniBoton, color: '#b3261e', fontSize: '0.78rem', padding: '2px 8px' }}>
+                Quitar
+              </button>
+            </figcaption>
+          </figure>
+        ) : null,
+      )}
       <label style={{ ...campo, maxWidth: '100%' }}>
         Observaciones (opcional)
         <textarea
@@ -286,6 +352,14 @@ export default function PanelEntrega() {
         </ul>
       )}
     </div>
+  )
+}
+
+function Obligatorio() {
+  return (
+    <span aria-hidden style={{ color: '#b3261e', fontWeight: 700 }} title="Obligatorio">
+      *
+    </span>
   )
 }
 

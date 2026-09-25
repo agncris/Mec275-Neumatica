@@ -89,6 +89,8 @@ export default function Raiz() {
               </button>
             ))}
           </nav>
+          {/* Aquí cada unidad puede poner su navegación de segundo nivel. */}
+          <div id="barra-unidad" className="barra-superior__extra" />
         </div>
       </div>
       {unidad === 'neumatica' ? (

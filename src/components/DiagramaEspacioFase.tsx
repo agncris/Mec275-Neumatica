@@ -4,7 +4,7 @@
  * vástago de cada cilindro mientras corre la simulación y la dibuja como una
  * línea 0 (retraído) / 1 (extendido), marcando los movimientos A+ y A−.
  */
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { diagramaPorPasos } from '../diagramaPasos'
 import { esActuador } from '../engine'
 import type { Motor } from '../engine'
@@ -23,39 +23,51 @@ const ANCHO = 620
 
 const LETRAS = ['A', 'B', 'C', 'D', 'E', 'F']
 
-export default function DiagramaEspacioFase({ motor }: { motor: Motor | null }) {
-  const historia = useRef<Muestra[]>([])
-  const [, redibujar] = useState(0)
+/**
+ * Registro de la simulación, fuera del componente: se anota en cada cuadro
+ * aunque el diagrama no esté a la vista, y se conserva al detener para poder
+ * leerlo o exportarlo después.
+ */
+const registro: { motor: Motor | null; cilindros: string[]; historia: Muestra[]; t: number } = {
+  motor: null,
+  cilindros: [],
+  historia: [],
+  t: 0,
+}
+
+/** Anota la posición de los actuadores (se llama en cada cuadro de la simulación). */
+export function registrarFase(motor: Motor | null): void {
+  if (!motor) return
+  if (registro.motor !== motor) {
+    // Cada ▶ Simular empieza un registro limpio.
+    registro.motor = motor
+    registro.cilindros = motor.circuito.componentes.filter((c) => esActuador(c.tipo)).map((c) => c.id)
+    registro.historia = []
+  }
+  registro.t = motor.t
+  const ultima = registro.historia[registro.historia.length - 1]
+  if (ultima && motor.t - ultima.t < PERIODO_MUESTREO) return
+  const pos: Record<string, number> = {}
+  for (const id of registro.cilindros) pos[id] = motor.estadoDe<{ posicion?: number }>(id).posicion ?? 0
+  registro.historia.push({ t: motor.t, pos })
+  // Conservamos algo más que la ventana para que el trazo entre suave
+  const limite = motor.t - VENTANA * 1.2
+  while (registro.historia.length > 2 && registro.historia[0].t < limite) registro.historia.shift()
+}
+
+/** ¿Hay un diagrama (de la simulación actual o de la última) para mostrar o exportar? */
+export function hayDiagramaFase(): boolean {
+  return registro.cilindros.length > 0 && registro.historia.length > 1
+}
+
+export default function DiagramaEspacioFase({ motor, idSvg = 'diagrama-fase-svg' }: { motor: Motor | null; idSvg?: string }) {
   const [modoEje, setModoEje] = useState<'pasos' | 'tiempo'>('pasos')
+  registrarFase(motor)
+  const cilindros = registro.cilindros
+  const historia = { current: registro.historia }
+  const detenida = !motor
 
-  const cilindros = motor
-    ? motor.circuito.componentes.filter((c) => esActuador(c.tipo)).map((c) => c.id)
-    : []
-
-  // Cada motor nuevo (cada pulsación de ▶ Simular) arranca un registro limpio
-  useEffect(() => {
-    historia.current = []
-    redibujar((n) => n + 1)
-  }, [motor])
-
-  useEffect(() => {
-    if (!motor) return
-    const ultima = historia.current[historia.current.length - 1]
-    if (ultima && motor.t - ultima.t < PERIODO_MUESTREO) return
-    const pos: Record<string, number> = {}
-    for (const id of cilindros) {
-      pos[id] = motor.estadoDe<{ posicion?: number }>(id).posicion ?? 0
-    }
-    historia.current.push({ t: motor.t, pos })
-    // Conservamos algo más que la ventana para que el trazo entre suave
-    const limite = motor.t - VENTANA * 1.2
-    while (historia.current.length > 2 && historia.current[0].t < limite) {
-      historia.current.shift()
-    }
-    redibujar((n) => n + 1)
-  })
-
-  if (!motor || cilindros.length === 0) {
+  if (cilindros.length === 0 || (detenida && registro.historia.length < 2)) {
     return (
       <p style={{ color: '#5a6b7d', margin: 0, fontSize: '0.9rem' }}>
         Pulsa <strong>▶ Simular</strong> con al menos un cilindro en la pizarra para ver aquí su
@@ -64,7 +76,7 @@ export default function DiagramaEspacioFase({ motor }: { motor: Motor | null }) 
     )
   }
 
-  const tFin = Math.max(motor.t, VENTANA)
+  const tFin = Math.max(registro.t, VENTANA)
   const tIni = tFin - VENTANA
   const x = (t: number) => MARGEN_IZQ + ((t - tIni) / VENTANA) * (ANCHO - MARGEN_IZQ - 12)
   const alto = cilindros.length * ALTO_PISTA + 30
@@ -72,8 +84,9 @@ export default function DiagramaEspacioFase({ motor }: { motor: Motor | null }) 
   const muestras = historia.current.filter((m) => m.t >= tIni - PERIODO_MUESTREO * 2)
 
   const selector = (
-    <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 8 }}>
-      <span style={{ fontSize: '0.8rem', color: '#5a6b7d' }}>Eje horizontal:</span>
+    <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 8, flexWrap: 'wrap' }}>
+      {detenida && <span style={{ fontSize: '0.8rem', color: '#7a4f00', marginRight: 6 }}>Simulación detenida: es el diagrama de la última.</span>}
+      <span style={{ fontSize: '0.8rem', color: '#51606f' }}>Eje horizontal:</span>
       {(
         [
           ['pasos', 'Pasos (desplazamiento-paso)'],
@@ -114,7 +127,7 @@ export default function DiagramaEspacioFase({ motor }: { motor: Motor | null }) 
             Acciona el circuito: cada vez que un actuador complete una carrera aparecerá un paso.
           </p>
         ) : (
-          <svg id="diagrama-fase-svg" viewBox={`0 0 ${ANCHO} ${altoP}`} style={{ width: '100%', minWidth: 380, height: 'auto', display: 'block' }}>
+          <svg id={idSvg} viewBox={`0 0 ${ANCHO} ${altoP}`} style={{ width: '100%', minWidth: 380, height: 'auto', display: 'block' }}>
             {/* rejilla de pasos */}
             {Array.from({ length: pasos.length + 1 }, (_, k) => (
               <g key={`g${k}`}>
@@ -159,7 +172,7 @@ export default function DiagramaEspacioFase({ motor }: { motor: Motor | null }) 
   return (
     <div style={{ overflowX: 'auto' }}>
       {selector}
-      <svg id="diagrama-fase-svg" viewBox={`0 0 ${ANCHO} ${alto}`} style={{ width: '100%', minWidth: 380, height: 'auto', display: 'block' }}>
+      <svg id={idSvg} viewBox={`0 0 ${ANCHO} ${alto}`} style={{ width: '100%', minWidth: 380, height: 'auto', display: 'block' }}>
         {cilindros.map((id, i) => {
           const yTop = i * ALTO_PISTA + 12
           const yBase = yTop + 32
