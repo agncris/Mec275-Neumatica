@@ -27,6 +27,7 @@ import SimbologiaVDI from './components/SimbologiaVDI'
 import SimbologiaISO from './components/SimbologiaISO'
 import EntregaNeumatica from './components/EntregaNeumatica'
 import MisTrabajos from './components/banco/MisTrabajos'
+import FichaNeumatica from './components/estudio/FichaNeumatica'
 import { circuitoDesdeStore, useStore, type NumeroEjemplo } from './store'
 import { NOMBRES_EJEMPLO } from './circuitos/ejemplos'
 import {
@@ -98,7 +99,7 @@ export default function App() {
       const vistaUrl = seccion === 'estudiar' ? 'estudiar' : entregaAbierta ? 'entrega' : null
       if (vistaUrl) url.searchParams.set('vista', vistaUrl)
       else url.searchParams.delete('vista')
-      if (seccion !== 'estudiar' && /^#(cascada|vdi|iso|vias)$/.test(url.hash)) url.hash = ''
+      if (seccion !== 'estudiar' && /^#(cascada|vdi|iso|vias|ficha)$/.test(url.hash)) url.hash = ''
       if (url.href !== window.location.href) window.history.replaceState(null, '', url)
     } catch {
       /* sin historial */
@@ -771,6 +772,7 @@ function PaginaNeumaticaEstudiar({ alCargarCircuito }: { alCargarCircuito: () =>
         { id: 'vdi', indice: 'Simbología VDI 2860', titulo: 'Simbología VDI 2860 · funciones de manipulación', contenido: <SimbologiaVDI /> },
         { id: 'iso', indice: 'Simbología ISO 1219-1', titulo: 'Simbología ISO 1219-1 · componentes neumáticos', contenido: <SimbologiaISO /> },
         { id: 'vias', indice: 'Nº de vías y posiciones', titulo: 'Nº de vías y posiciones · nomenclatura de los orificios', contenido: <TablaNomenclatura /> },
+        { id: 'ficha', indice: 'Ficha de repaso', titulo: 'Ficha de repaso · para imprimir', contenido: <FichaNeumatica /> },
       ]}
     />
   )

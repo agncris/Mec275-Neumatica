@@ -13,6 +13,9 @@ import PaginaEstudiar, { type SeccionEstudio } from '../components/banco/PaginaE
 import SubnavUnidad, { useSeccionUnidad } from '../components/banco/SubnavUnidad'
 import CajonEntregar from '../components/banco/CajonEntregar'
 import MisTrabajos from '../components/banco/MisTrabajos'
+import Autoevaluacion from '../components/Autoevaluacion'
+import FichaCNC from './FichaCNC'
+import { PREGUNTAS_CNC } from './preguntasCNC'
 import { copiarTabla, copiarTexto, descargarTexto, enlaceTrabajo, limpiarEnlace, trabajoDelEnlace } from '../entregar'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { exportarPng, nombreSeguro } from '../exportar'
@@ -836,6 +839,8 @@ function filasCoordenadas(resultado: ResultadoGcode, torno: boolean, lineas: str
 type PestanaCNC = 'preparacion' | 'plano' | 'explicar' | 'coordenadas'
 
 const SECCIONES_CNC: SeccionEstudio[] = [
+  { id: 'practica', indice: 'Autoevaluación', titulo: 'Autoevaluación · practica con preguntas al azar', contenido: <Autoevaluacion generadores={PREGUNTAS_CNC} /> },
+  { id: 'ficha', indice: 'Ficha de repaso', titulo: 'Ficha de repaso · para imprimir', contenido: <FichaCNC /> },
   { id: 'que-es', indice: '¿Qué es el CNC?', titulo: '¿Qué es el CNC?', contenido: <QueEsCNC /> },
   { id: 'ventajas', indice: 'Ventajas y aplicaciones', titulo: 'Ventajas, limitaciones y aplicaciones', contenido: <VentajasCNC /> },
   { id: 'organizar', indice: 'Organizar la programación', titulo: 'Cómo organizar la programación', contenido: <OrganizarPrograma /> },

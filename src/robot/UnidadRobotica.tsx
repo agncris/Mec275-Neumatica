@@ -11,6 +11,9 @@ import PaginaEstudiar, { type SeccionEstudio } from '../components/banco/PaginaE
 import SubnavUnidad, { useSeccionUnidad } from '../components/banco/SubnavUnidad'
 import CajonEntregar from '../components/banco/CajonEntregar'
 import MisTrabajos from '../components/banco/MisTrabajos'
+import Autoevaluacion from '../components/Autoevaluacion'
+import FichaRobot from './FichaRobot'
+import { PREGUNTAS_ROBOT } from './preguntasRobot'
 import { copiarTabla, copiarTexto, descargarTexto, enlaceTrabajo, limpiarEnlace, trabajoDelEnlace } from '../entregar'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { exportarPng, nombreSeguro } from '../exportar'
@@ -980,6 +983,8 @@ export default function UnidadRobotica() {
 type PestanaRobot = 'analisis' | 'krl' | 'ficha'
 
 const SECCIONES_ROBOT: SeccionEstudio[] = [
+  { id: 'practica', indice: 'Autoevaluación', titulo: 'Autoevaluación · practica con preguntas al azar', contenido: <Autoevaluacion generadores={PREGUNTAS_ROBOT} /> },
+  { id: 'ficha', indice: 'Ficha de repaso', titulo: 'Ficha de repaso · para imprimir', contenido: <FichaRobot /> },
   {
     id: 'tipos-3d',
     indice: 'Tipos de robots en 3D',

@@ -688,3 +688,66 @@ button:disabled:hover {
     min-height: 220px;
   }
 }
+
+/* Ficha de repaso (Estudiar): compacta en pantalla, sola en la hoja al imprimir. */
+.ficha-repaso {
+  border: 1px solid #dbe1e8;
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: #fff;
+  columns: 2 320px;
+  column-gap: 20px;
+  font-size: 0.86rem;
+  color: #1c2733;
+}
+.ficha-repaso__titulo {
+  column-span: all;
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+}
+.ficha-repaso h4 {
+  margin: 10px 0 4px;
+  font-size: 0.9rem;
+  color: #33475c;
+  break-after: avoid;
+}
+.ficha-repaso__pie {
+  column-span: all;
+  margin: 10px 0 0;
+  font-size: 0.75rem;
+  color: #51606f;
+}
+.tabla-ficha {
+  border-collapse: collapse;
+  width: 100%;
+  break-inside: avoid;
+  margin-bottom: 6px;
+}
+.tabla-ficha th,
+.tabla-ficha td {
+  border: 1px solid #dbe1e8;
+  padding: 3px 6px;
+  text-align: left;
+  vertical-align: top;
+}
+.tabla-ficha th {
+  background: #eef2f6;
+}
+#impresion-ficha {
+  display: none;
+}
+@media print {
+  body.imprimir-ficha > *:not(#impresion-ficha) {
+    display: none !important;
+  }
+  body.imprimir-ficha #impresion-ficha {
+    display: block;
+  }
+  body.imprimir-ficha {
+    background: #fff !important;
+  }
+  #impresion-ficha .ficha-repaso {
+    border: none;
+    font-size: 10pt;
+  }
+}

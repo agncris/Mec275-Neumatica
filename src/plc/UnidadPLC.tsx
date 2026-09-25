@@ -13,6 +13,9 @@ import PaginaEstudiar, { type SeccionEstudio } from '../components/banco/PaginaE
 import SubnavUnidad, { useSeccionUnidad } from '../components/banco/SubnavUnidad'
 import CajonEntregar from '../components/banco/CajonEntregar'
 import MisTrabajos from '../components/banco/MisTrabajos'
+import Autoevaluacion from '../components/Autoevaluacion'
+import FichaPLC from './FichaPLC'
+import { PREGUNTAS_PLC } from './preguntasPLC'
 import { copiarTabla, copiarTexto, descargarTexto, enlaceTrabajo, limpiarEnlace, trabajoDelEnlace } from '../entregar'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { exportarPng, nombreSeguro } from '../exportar'
@@ -755,6 +758,8 @@ export default function UnidadPLC() {
 type PestanaPLC = 'es' | 'simbolos' | 'datos' | 'registro'
 
 const SECCIONES_PLC: SeccionEstudio[] = [
+  { id: 'practica', indice: 'Autoevaluación', titulo: 'Autoevaluación · practica con preguntas al azar', contenido: <Autoevaluacion generadores={PREGUNTAS_PLC} /> },
+  { id: 'ficha', indice: 'Ficha de repaso', titulo: 'Ficha de repaso · para imprimir', contenido: <FichaPLC /> },
   { id: 'que-es', indice: '¿Qué es un PLC?', titulo: '¿Qué es un PLC y para qué se usa?', contenido: <QueEsPLC /> },
   { id: 'componentes', indice: 'Componentes', titulo: 'Componentes de un PLC', contenido: <ComponentesPLC /> },
   { id: 'entradas-salidas', indice: 'Entradas y salidas', titulo: 'Entradas, salidas y direcciones', contenido: <EntradasSalidas /> },
