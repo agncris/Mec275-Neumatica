@@ -47,6 +47,8 @@ interface Props {
   acciones: Array<{ id: string; etiqueta: string; titulo: string }>
   onAccion: (id: string) => void
   notacion: Notacion
+  /** Alto de la vista (en píxeles, o '100%' para llenar el área). */
+  alto?: number | string
 }
 
 const CLAVE_SONIDO = 'neumalab.plc.sonido'
@@ -1312,7 +1314,7 @@ function crearEscena(id: string): Escena {
 // ---------------------------------------------------------------------------
 // Componente
 // ---------------------------------------------------------------------------
-export default function Planta3D({ sim, version, acciones, onAccion, notacion }: Props) {
+export default function Planta3D({ sim, version, acciones, onAccion, notacion, alto = 440 }: Props) {
   const tactil = useTactil()
   const contRef = useRef<HTMLDivElement>(null)
   const [sinWebGL, setSinWebGL] = useState(false)
@@ -1549,7 +1551,7 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion }:
       style={{
         position: 'relative',
         width: '100%',
-        height: pantallaCompleta ? '100%' : 440,
+        height: pantallaCompleta ? '100%' : alto,
         overflow: 'hidden',
         borderRadius: pantallaCompleta ? 0 : 10,
         border: '1px solid #d0d5db',

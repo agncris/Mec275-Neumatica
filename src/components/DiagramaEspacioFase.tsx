@@ -20,6 +20,10 @@ const PERIODO_MUESTREO = 0.05
 const ALTO_PISTA = 68
 const MARGEN_IZQ = 74
 const ANCHO = 620
+/** Escala de dibujo: el diagrama no se estira más allá de esto (se lee mejor y se desplaza si no cabe). */
+const ESCALA = 1.4
+/** Ancho mínimo de cada paso: con secuencias largas el diagrama crece hacia el lado. */
+const ANCHO_PASO_MIN = 56
 
 const LETRAS = ['A', 'B', 'C', 'D', 'E', 'F']
 
@@ -84,7 +88,7 @@ export default function DiagramaEspacioFase({ motor, idSvg = 'diagrama-fase-svg'
   const muestras = historia.current.filter((m) => m.t >= tIni - PERIODO_MUESTREO * 2)
 
   const selector = (
-    <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 8, flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', position: 'sticky', top: -6, left: 0, zIndex: 1, background: '#fff', padding: '4px 0' }}>
       {detenida && <span style={{ fontSize: '0.8rem', color: '#7a4f00', marginRight: 6 }}>Simulación detenida: es el diagrama de la última.</span>}
       <span style={{ fontSize: '0.8rem', color: '#51606f' }}>Eje horizontal:</span>
       {(
@@ -116,18 +120,24 @@ export default function DiagramaEspacioFase({ motor, idSvg = 'diagrama-fase-svg'
     const actuadores = cilindros.map((id, i) => ({ id, letra: LETRAS[i] ?? id }))
     const { inicial, pasos } = diagramaPorPasos(historia.current, actuadores)
     const n = Math.max(pasos.length, 1)
-    const anchoPaso = Math.min(90, (ANCHO - MARGEN_IZQ - 20) / n)
+    const anchoPaso = Math.max(ANCHO_PASO_MIN, Math.min(90, (ANCHO - MARGEN_IZQ - 20) / n))
+    const anchoP = Math.max(ANCHO, MARGEN_IZQ + n * anchoPaso + 20)
     const xPaso = (k: number) => MARGEN_IZQ + k * anchoPaso
     const altoP = cilindros.length * ALTO_PISTA + 34
     return (
-      <div style={{ overflowX: 'auto' }}>
+      <div>
         {selector}
         {pasos.length === 0 ? (
           <p style={{ color: '#5a6b7d', margin: 0, fontSize: '0.88rem' }}>
             Acciona el circuito: cada vez que un actuador complete una carrera aparecerá un paso.
           </p>
         ) : (
-          <svg id={idSvg} viewBox={`0 0 ${ANCHO} ${altoP}`} style={{ width: '100%', minWidth: 380, height: 'auto', display: 'block' }}>
+          <svg
+            id={idSvg}
+            viewBox={`0 0 ${anchoP} ${altoP}`}
+            data-diagrama-fase="pasos"
+            style={{ width: anchoP * ESCALA, maxWidth: anchoP > ANCHO ? 'none' : '100%', minWidth: 380, height: 'auto', display: 'block' }}
+          >
             {/* rejilla de pasos */}
             {Array.from({ length: pasos.length + 1 }, (_, k) => (
               <g key={`g${k}`}>
@@ -170,9 +180,9 @@ export default function DiagramaEspacioFase({ motor, idSvg = 'diagrama-fase-svg'
   }
 
   return (
-    <div style={{ overflowX: 'auto' }}>
+    <div>
       {selector}
-      <svg id={idSvg} viewBox={`0 0 ${ANCHO} ${alto}`} style={{ width: '100%', minWidth: 380, height: 'auto', display: 'block' }}>
+      <svg id={idSvg} viewBox={`0 0 ${ANCHO} ${alto}`} data-diagrama-fase="tiempo" style={{ width: ANCHO * ESCALA, maxWidth: '100%', minWidth: 380, height: 'auto', display: 'block' }}>
         {cilindros.map((id, i) => {
           const yTop = i * ALTO_PISTA + 12
           const yBase = yTop + 32

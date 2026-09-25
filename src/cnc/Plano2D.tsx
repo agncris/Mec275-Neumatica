@@ -167,7 +167,7 @@ export default function Plano2D({
       >
         <Grilla caja={caja} tx={tx} ty={ty} esc={escalaTexto} torno={torno} desfase={torno ? origen.z : origen.x} />
         {silueta}
-        <path d={trazos.rap} fill="none" stroke="#ff7a00" strokeWidth={escalaTexto * 0.18} strokeDasharray={`${escalaTexto * 0.8} ${escalaTexto * 0.6}`} />
+        <path d={trazos.rap} fill="none" stroke="#e06a00" strokeWidth={escalaTexto * 0.18} strokeDasharray={`${escalaTexto * 0.8} ${escalaTexto * 0.6}`} />
         <path d={trazos.cor} fill="none" stroke="#1668c7" strokeWidth={escalaTexto * 0.22} />
         {puntos.map((p, k) => (
           <Punto
@@ -184,7 +184,7 @@ export default function Plano2D({
         <circle cx={tx(pos[0])} cy={ty(pos[1])} r={escalaTexto * 0.6} fill="none" stroke="#ff2d55" strokeWidth={escalaTexto * 0.25} />
       </svg>
       <p style={{ margin: '4px 0 0', fontSize: '0.78rem', color: '#5a6b7d' }}>
-        <span style={{ color: '#ff7a00', fontWeight: 700 }}>- - -</span> rápido (G00) ·{' '}
+        <span style={{ color: '#a35200', fontWeight: 700 }}>- - -</span> rápido (G00) ·{' '}
         <span style={{ color: '#1668c7', fontWeight: 700 }}>——</span> corte (G01/G02/G03) · puntos: fin de cada bloque (pasa el
         mouse para ver sus coordenadas; clic para ir a la línea) ·{' '}
         {torno ? 'Z hacia la derecha, X (radio) hacia arriba; cero pieza en la cara, sobre el eje.' : 'X a la derecha, Y hacia arriba; cero pieza en la esquina delantera izquierda.'}

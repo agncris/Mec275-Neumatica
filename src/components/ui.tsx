@@ -1,8 +1,7 @@
 /**
  * Piezas de interfaz comunes a las cuatro unidades, para que todas se usen
- * igual: la cabecera de la unidad, la barra de herramientas (acción
- * principal a la izquierda; «Archivo» y «Exportar» a la derecha), los tres
- * pesos de botón y un menú desplegable accesible.
+ * igual: los tres pesos de botón, el aviso flotante, las etiquetas y un menú
+ * desplegable accesible.
  */
 import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 
@@ -56,30 +55,22 @@ export function useTactil(): boolean {
   return t
 }
 
+/** Pantalla estrecha (celular o tablet vertical): la interfaz se reordena. */
+export function useEsEstrecha(): boolean {
+  const consulta = '(max-width: 900px)'
+  const [estrecha, setEstrecha] = useState(() => typeof window !== 'undefined' && !!window.matchMedia?.(consulta).matches)
+  useEffect(() => {
+    const mq = window.matchMedia?.(consulta)
+    if (!mq) return
+    const alCambiar = (e: MediaQueryListEvent) => setEstrecha(e.matches)
+    mq.addEventListener?.('change', alCambiar)
+    return () => mq.removeEventListener?.('change', alCambiar)
+  }, [])
+  return estrecha
+}
+
 /** «rueda» o «dos dedos», según el dispositivo. */
 export const acercar = (tactil: boolean) => (tactil ? 'pellizca con dos dedos para acercar' : 'rueda para acercar')
-
-// ---------------------------------------------------------------------------
-// Cabecera y barra de herramientas
-// ---------------------------------------------------------------------------
-export function CabeceraUnidad({ titulo, descripcion }: { titulo: string; descripcion: string }) {
-  return (
-    <header style={{ display: 'flex', alignItems: 'baseline', gap: '4px 12px', flexWrap: 'wrap', margin: '0.2rem 0 0.7rem' }}>
-      <h1 style={{ margin: 0, fontSize: 'clamp(1.2rem, 3.5vw, 1.45rem)', letterSpacing: '-0.01em' }}>{titulo}</h1>
-      <p style={{ margin: 0, color: COLOR.texto2, fontSize: '0.92rem' }}>{descripcion}</p>
-    </header>
-  )
-}
-
-/** Fila de herramientas: lo de la izquierda es el trabajo; a la derecha, archivo y exportar. */
-export function BarraHerramientas({ children, derecha }: { children: ReactNode; derecha?: ReactNode }) {
-  return (
-    <div role="toolbar" aria-label="Herramientas" style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12 }}>
-      {children}
-      {derecha && <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>{derecha}</span>}
-    </div>
-  )
-}
 
 /** Aviso flotante (no empuja el contenido): confirma descargas, cargas, etc. */
 export const estiloAviso: CSSProperties = {

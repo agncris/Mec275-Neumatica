@@ -493,7 +493,7 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
   return (
     <div>
       {editable && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 6 }} role="toolbar" aria-label="Herramientas Ladder">
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 6, position: 'sticky', top: -8, zIndex: 2, background: '#fff', padding: '4px 0' }} role="toolbar" aria-label="Herramientas Ladder">
           {herramientas(notacion).map((h, i, todas) => (
             <span key={h.id} style={{ display: 'contents' }}>
               {i > 0 && todas[i - 1].grupo !== h.grupo && <span style={{ width: 6 }} aria-hidden />}

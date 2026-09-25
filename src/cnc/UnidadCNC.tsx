@@ -6,10 +6,12 @@
  * sus coordenadas, explicación de cada bloque y exportación del .cnc y del
  * video de la simulación.
  */
-import { acercar, useTactil } from '../components/ui'
-import { BarraHerramientas, botonSecundario, CabeceraUnidad, estiloAviso, Etiquetado, Menu } from '../components/ui'
+import { acercar, botonPrimario, botonSecundario, estiloAviso, Etiquetado, Menu, useEsEstrecha, useTactil } from '../components/ui'
+import BancoDividido, { TituloArea } from '../components/banco/BancoDividido'
+import { usePanelAcoplado, type PestanaPanel } from '../components/banco/PanelAcoplado'
+import PaginaEstudiar, { type SeccionEstudio } from '../components/banco/PaginaEstudiar'
+import SubnavUnidad, { useSeccionUnidad } from '../components/banco/SubnavUnidad'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Seccion } from '../components/Seccion'
 import { exportarPng, nombreSeguro } from '../exportar'
 import EditorGcode, { type EditorGcodeRef } from './EditorGcode'
 import { EJEMPLOS_CNC, programaNuevo } from './ejemplos'
@@ -78,6 +80,9 @@ const VELOCIDADES = [0.5, 1, 2, 5, 10, 25, 60]
 
 export default function UnidadCNC() {
   const tactil = useTactil()
+  const estrecha = useEsEstrecha()
+  const [seccion, setSeccion] = useSeccionUnidad(SECCIONES_CNC.map((x) => x.id))
+  const panel = usePanelAcoplado<PestanaCNC>('neumalab.cnc.panel', 'preparacion', typeof window !== 'undefined' && window.innerHeight >= 860)
   const inicial = useMemo(leerGuardado, [])
   const [config, setConfig] = useState<ConfigCNC>(inicial.config)
   const [codigos, setCodigos] = useState(inicial.codigos)
@@ -265,7 +270,16 @@ export default function UnidadCNC() {
   }
 
   const exportarPlano = async () => {
-    const svg = document.querySelector('[data-plano2d]') as SVGSVGElement | null
+    let svg = document.querySelector('[data-plano2d]') as SVGSVGElement | null
+    if (!svg) {
+      // La trayectoria vive en una pestaña del panel: se abre para poder dibujarla.
+      panel.onPestana('plano')
+      panel.onAbrir(true)
+      for (let i = 0; i < 20 && !svg; i++) {
+        await new Promise((r) => requestAnimationFrame(r))
+        svg = document.querySelector('[data-plano2d]') as SVGSVGElement | null
+      }
+    }
     if (!svg) return
     const archivo = nombreSeguro(`${nombres[maquina] || 'programa'}_trayectoria`, 'png')
     try {
@@ -341,213 +355,218 @@ export default function UnidadCNC() {
     fin: ['FIN DE PROGRAMA', '#33475c'],
   }
 
-  return (
-    <main style={{ maxWidth: 1320, margin: '0 auto', padding: '0.8rem clamp(0.75rem, 3vw, 1.5rem) 1.25rem' }}>
-      <CabeceraUnidad titulo="Unidad 3 · CNC" descripcion="Escribe tu programa en código G y mira cómo la máquina mecaniza la pieza" />
+  const bloqueado = estado === 'corriendo' || estado === 'bloque'
+  const nombreMaquina = torno ? 'Centro de torneado' : 'Fresadora de 3 ejes'
 
-      <BarraHerramientas
-        derecha={
-          <>
-            {grabando && (
-              <button onClick={alternarGrabacion} style={{ ...botonSecundario, color: '#fff', background: '#c62828', borderColor: '#c62828' }}>
-                ■ Detener grabación
-              </button>
-            )}
-            <Menu
-              etiqueta="Archivo"
-              items={[
-                { texto: 'Nuevo programa', ayuda: 'Un programa en blanco para esta máquina', onClick: nuevo },
-                { texto: 'Abrir…', ayuda: '.cnc, .nc, .gcode o .txt (también de CNC Simulator Pro)', onClick: () => inputArchivo.current?.click() },
-                { texto: 'Guardar .cnc', ayuda: 'El archivo de texto que se entrega', onClick: guardarCnc },
-              ]}
-            />
-            <Menu
-              etiqueta="Exportar"
-              items={[
-                { texto: 'Trayectoria (PNG)', ayuda: 'La trayectoria 2D con sus puntos, para el informe', onClick: () => void exportarPlano() },
-                {
-                  texto: 'Grabar video de la simulación',
-                  ayuda: 'Graba la vista 3D; se descarga al detener',
-                  onClick: alternarGrabacion,
-                  deshabilitado: !puedeGrabar || grabando,
-                  porque: grabando ? 'Ya está grabando' : 'Tu navegador no permite grabar video',
-                },
-              ]}
-            />
-            <input
-              ref={inputArchivo}
-              type="file"
-              accept=".cnc,.nc,.gcode,.ngc,.tap,.txt,text/plain"
-              style={{ display: 'none' }}
-              onChange={(e) => {
-                void abrir(e.target.files?.[0])
-                e.target.value = ''
-              }}
-            />
-          </>
-        }
-      >
-        <Etiquetado texto="Máquina">
-          <select value={maquina} onChange={(e) => cambiarMaquina(e.target.value as TipoMaquina)} style={{ ...selector, minHeight: 36 }} data-selector-maquina="si">
-            <option value="torno">Centro de torneado (torno)</option>
-            <option value="fresadora">Fresadora de 3 ejes</option>
-          </select>
-        </Etiquetado>
-        <Etiquetado texto="Ejemplos">
-          <select
-            value=""
-            onChange={(e) => {
-              const v = e.target.value
-              e.target.value = ''
-              cargarEjemplo(v)
-            }}
-            style={{ ...selector, maxWidth: 'min(300px, calc(100vw - 130px))' }}
-            data-ejemplos-cnc="si"
-          >
-            <option value="">— elige un ejemplo —</option>
-            <optgroup label="Centro de torneado">
-              {EJEMPLOS_CNC.filter((e) => e.maquina === 'torno').map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.titulo}
-                </option>
-              ))}
-            </optgroup>
-            <optgroup label="Fresadora">
-              {EJEMPLOS_CNC.filter((e) => e.maquina === 'fresadora').map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.titulo}
-                </option>
-              ))}
-            </optgroup>
-          </select>
-        </Etiquetado>
-      </BarraHerramientas>
+  const selectorMaquina = (
+    <select value={maquina} onChange={(e) => cambiarMaquina(e.target.value as TipoMaquina)} style={{ ...selector, minHeight: 36, width: estrecha ? '100%' : 196 }} data-selector-maquina="si" aria-label="Máquina">
+      <option value="torno">Centro de torneado (torno)</option>
+      <option value="fresadora">Fresadora de 3 ejes</option>
+    </select>
+  )
+  const itemsArchivo = [
+    { texto: 'Nuevo programa', ayuda: 'Un programa en blanco para esta máquina', onClick: nuevo },
+    { texto: 'Abrir…', ayuda: '.cnc, .nc, .gcode o .txt (también de CNC Simulator Pro)', onClick: () => inputArchivo.current?.click() },
+    { texto: 'Guardar .cnc', ayuda: 'El archivo de texto que se entrega', onClick: guardarCnc },
+  ]
+  const itemsExportar = [
+    { texto: 'Trayectoria (PNG)', ayuda: 'La trayectoria 2D con sus puntos, para el informe', onClick: () => void exportarPlano() },
+    {
+      texto: 'Grabar video de la simulación',
+      ayuda: 'Graba la vista 3D; se descarga al detener',
+      onClick: alternarGrabacion,
+      deshabilitado: !puedeGrabar || grabando,
+      porque: grabando ? 'Ya está grabando' : 'Tu navegador no permite grabar video',
+    },
+  ]
 
-      {aviso && (
-        <p role="status" style={avisoOk}>
-          {aviso}
-        </p>
+  const barra = (
+    <>
+      {estado === 'corriendo' ? (
+        <button onClick={() => setEstado('pausa')} style={{ ...botonPrimario(false, '#ffa726'), color: '#1c2733' }} data-control="pausa">
+          ❚❚ Pausa
+        </button>
+      ) : (
+        <button
+          onClick={() => correr('corriendo')}
+          disabled={!resultado.pasos.length}
+          title={hayErrores ? 'Hay errores: la máquina corre hasta la línea anterior al primer error' : 'Ejecuta el programa completo'}
+          style={{ ...botonPrimario(), opacity: resultado.pasos.length ? 1 : 0.5 }}
+          data-control="ciclo"
+        >
+          {estado === 'parada' ? '▶ Continuar' : '▶ Ciclo'}
+        </button>
       )}
+      <span className="grupo-zoom" role="group" aria-label="Avance del programa">
+        <button onClick={atras} disabled={estado === 'corriendo' || estado === 'listo'} style={{ opacity: estado === 'corriendo' || estado === 'listo' ? 0.4 : 1 }} title="Bloque anterior: vuelve una línea" aria-label="Bloque anterior" data-control="atras">
+          {'⏮\uFE0E'}
+        </button>
+        <button onClick={() => correr('bloque')} disabled={!resultado.pasos.length || estado === 'corriendo'} style={{ opacity: !resultado.pasos.length || estado === 'corriendo' ? 0.4 : 1 }} title="Bloque a bloque: ejecuta una línea y se detiene" aria-label="Bloque a bloque" data-control="bloque">
+          {'⏭\uFE0E'}
+        </button>
+        <button onClick={alFinal} disabled={!resultado.pasos.length} title="Al final: mecaniza todo de una vez" aria-label="Al final" data-control="final">
+          {'⏩\uFE0E'}
+        </button>
+        <button onClick={reiniciar} title="Reiniciar: vuelve al inicio con el bruto entero" aria-label="Reiniciar" data-control="reiniciar">
+          {'⟲\uFE0E'}
+        </button>
+      </span>
+      <label style={{ ...rotulo }} title="Velocidad de la simulación">
+        {!estrecha && 'Velocidad'}
+        <select value={velocidad} onChange={(e) => setVelocidad(Number(e.target.value))} style={{ ...selector, minHeight: 36 }} aria-label="Velocidad">
+          {VELOCIDADES.map((v) => (
+            <option key={v} value={v}>
+              ×{v}
+            </option>
+          ))}
+        </select>
+      </label>
+      {!estrecha && <Etiquetado texto="Máquina">{selectorMaquina}</Etiquetado>}
+      <select
+        value=""
+        onChange={(e) => {
+          const v = e.target.value
+          e.target.value = ''
+          cargarEjemplo(v)
+        }}
+        style={{ ...selector, minHeight: 36, width: estrecha ? '30vw' : 200 }}
+        data-ejemplos-cnc="si"
+        aria-label="Ejemplos"
+      >
+        <option value="">Ejemplos…</option>
+        <optgroup label="Centro de torneado">
+          {EJEMPLOS_CNC.filter((e) => e.maquina === 'torno').map((e) => (
+            <option key={e.id} value={e.id}>
+              {e.titulo}
+            </option>
+          ))}
+        </optgroup>
+        <optgroup label="Fresadora">
+          {EJEMPLOS_CNC.filter((e) => e.maquina === 'fresadora').map((e) => (
+            <option key={e.id} value={e.id}>
+              {e.titulo}
+            </option>
+          ))}
+        </optgroup>
+      </select>
+      <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
+        {grabando && (
+          <button onClick={alternarGrabacion} style={{ ...botonSecundario, color: '#fff', background: '#c62828', borderColor: '#c62828' }}>
+            ■ {estrecha ? 'Detener' : 'Detener grabación'}
+          </button>
+        )}
+        {estrecha ? (
+          <Menu etiqueta="⋯" datos="mas" items={[...itemsArchivo, ...itemsExportar.map((it, i) => (i === 0 ? { ...it, separar: true } : it))]} />
+        ) : (
+          <>
+            <Menu etiqueta="Archivo" items={itemsArchivo} />
+            <Menu etiqueta="Exportar" items={itemsExportar} />
+          </>
+        )}
+      </span>
+      <input
+        ref={inputArchivo}
+        type="file"
+        accept=".cnc,.nc,.gcode,.ngc,.tap,.txt,text/plain"
+        style={{ display: 'none' }}
+        onChange={(e) => {
+          void abrir(e.target.files?.[0])
+          e.target.value = ''
+        }}
+      />
+    </>
+  )
 
-      <Preparacion config={config} setConfig={setConfig} bloqueado={estado === 'corriendo' || estado === 'bloque'} modoCero={cero.modo} addRegPart={resultado.addRegPart} />
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 480px), 1fr))', gap: 14, alignItems: 'start', marginTop: 12 }}>
-        <section style={{ ...tarjeta, marginTop: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-            {estado === 'corriendo' ? (
-              <button onClick={() => setEstado('pausa')} style={{ ...boton, background: '#ffa726', color: '#1c2733', padding: '0.5rem 1rem' }} data-control="pausa">
-                ❚❚ Pausa
-              </button>
-            ) : (
-              <button
-                onClick={() => correr('corriendo')}
-                disabled={!resultado.pasos.length}
-                title={hayErrores ? 'Hay errores: la máquina corre hasta la línea anterior al primer error' : 'Ejecuta el programa completo'}
-                style={{ ...boton, background: '#0e7a43', padding: '0.5rem 1rem', opacity: resultado.pasos.length ? 1 : 0.5 }}
-                data-control="ciclo"
-              >
-                {estado === 'parada' ? '▶ Continuar' : '▶ Ciclo'}
-              </button>
-            )}
-            <button onClick={() => correr('bloque')} disabled={!resultado.pasos.length || estado === 'corriendo'} style={botonSuave} title="Ejecuta un bloque (una línea) y se detiene" data-control="bloque">
-              ⏭ Bloque a bloque
-            </button>
-            <button onClick={atras} disabled={estado === 'corriendo' || estado === 'listo'} style={{ ...botonSuave, opacity: estado === 'corriendo' || estado === 'listo' ? 0.5 : 1 }} title="Vuelve al bloque anterior" data-control="atras">
-              ⏮ Bloque anterior
-            </button>
-            <button onClick={reiniciar} style={botonSuave} title="Vuelve al inicio con el bruto entero" data-control="reiniciar">
-              ⟲ Reiniciar
-            </button>
-            <button onClick={alFinal} disabled={!resultado.pasos.length} style={botonSuave} title="Mecaniza todo de una vez" data-control="final">
-              ⏩ Al final
-            </button>
-            <label style={{ ...rotulo, marginLeft: 'auto' }}>
-              Velocidad
-              <select value={velocidad} onChange={(e) => setVelocidad(Number(e.target.value))} style={selector}>
-                {VELOCIDADES.map((v) => (
-                  <option key={v} value={v}>
-                    ×{v}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <h2 style={{ ...subtitulo, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            Programa · {nombres[maquina]}
-            <span style={{ ...estadoChip, background: textoEstado[estado][1] }} data-estado-cnc={estado}>
-              {textoEstado[estado][0]}
-            </span>
-          </h2>
-          <EditorGcode
-            ref={editor}
-            codigo={codigo}
-            onCambiar={setCodigo}
-            lineaActiva={lineaActiva}
-            diagnosticos={resultado.diagnosticos}
-            onCursor={setCursor}
-            soloLectura={estado === 'corriendo' || estado === 'bloque'}
-          />
-          <Revision resultado={resultado} errores={errores} avisos={avisosProg} irA={irA} />
-        </section>
-
-        <section style={{ ...tarjeta, marginTop: 0 }}>
-          <h2 style={subtitulo}>{torno ? 'Centro de torneado' : 'Fresadora de 3 ejes'} · {mat.nombre}</h2>
-          {sim.alarma && (
-            <div role="alert" style={alarma} data-alarma-cnc="si">
-              <strong>⚠ ALARMA en la línea {sim.alarma.linea + 1}:</strong> {sim.alarma.texto}{' '}
-              <button onClick={() => irA(sim.alarma!.linea)} style={{ ...botonSuave, padding: '1px 8px', marginLeft: 6 }}>
-                Ir a la línea
-              </button>
-            </div>
-          )}
-          {estado === 'parada' && <div style={{ ...alarma, background: '#fff5e0', borderColor: '#f0c36d', color: '#7a4b00' }}>Programa detenido por M00/M01. Pulsa ▶ Continuar.</div>}
-          <Suspense fallback={<p style={{ padding: 20, color: '#5a6b7d' }}>Preparando la máquina…</p>}>
-            <Maquina3D vista={vista} onCanvas={(c) => (canvasRef.current = c)} />
-          </Suspense>
-          <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 6, fontSize: '0.85rem', color: '#33475c' }}>
-            <label style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
-              <input type="checkbox" checked={trayectoria} onChange={(e) => setTrayectoria(e.target.checked)} /> Trayectoria
-            </label>
-            {torno && (
-              <label style={{ display: 'flex', gap: 5, alignItems: 'center' }} title="Corta la pieza por la mitad para ver agujeros y ranuras por dentro">
-                <input type="checkbox" checked={corte} onChange={(e) => setCorte(e.target.checked)} /> Vista en corte
-              </label>
-            )}
-            <label style={{ display: 'flex', gap: 5, alignItems: 'center' }} title="Husillo, corte y ejes; se activa al hacer clic en la vista 3D">
-              <input type="checkbox" checked={sonido} onChange={(e) => setSonido(e.target.checked)} /> Sonido
-            </label>
-            <span style={{ color: '#5a6b7d' }}>Arrastra para girar la vista · {acercar(tactil)}.</span>
-          </div>
-          <Tablero
-            sim={sim}
-            torno={torno}
-            paso={paso}
-            ultimo={ultimo}
-            modal={estadoModal}
-            tiempoTotal={resultado.tiempoTotal}
-            volumen={volumen}
-            volumenInicial={volumenInicial}
-          />
-          {sim.consejos.length > 0 && (
-            <div style={{ marginTop: 8 }}>
-              {sim.consejos.map((c, i) => (
-                <p key={i} style={{ color: '#8a5b00', margin: '3px 0', fontSize: '0.85rem', cursor: 'pointer' }} onClick={() => irA(c.linea)}>
-                  💡 Línea {c.linea + 1}: {c.texto}
-                </p>
-              ))}
-            </div>
-          )}
-        </section>
+  const areaPrograma = (
+    <>
+      {estrecha && <div style={{ marginBottom: 6 }}>{selectorMaquina}</div>}
+      <TituloArea>
+        Programa · {nombres[maquina]}
+        <span style={{ ...estadoChip, background: textoEstado[estado][1] }} data-estado-cnc={estado}>
+          {textoEstado[estado][0]}
+        </span>
+      </TituloArea>
+      <div className="relleno" style={{ minHeight: 220 }}>
+        <EditorGcode
+          ref={editor}
+          codigo={codigo}
+          onCambiar={setCodigo}
+          lineaActiva={lineaActiva}
+          diagnosticos={resultado.diagnosticos}
+          onCursor={setCursor}
+          soloLectura={bloqueado}
+          alto="100%"
+        />
       </div>
+      <div style={{ maxHeight: '30%', overflow: 'auto', flexShrink: 0 }}>
+        <Revision resultado={resultado} errores={errores} avisos={avisosProg} irA={irA} />
+      </div>
+    </>
+  )
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 480px), 1fr))', gap: 14, alignItems: 'start', marginTop: 14 }}>
-        <section style={{ ...tarjeta, marginTop: 0 }}>
-          <h2 style={subtitulo}>Trayectoria 2D {torno ? '(plano Z-X)' : '(vista desde arriba)'}</h2>
-          <Plano2D programa={resultado} sim={sim} config={config} lineas={lineas} seleccionada={cursor} onElegirLinea={irA} origen={cero.origen} />
-        </section>
-        <section style={{ ...tarjeta, marginTop: 0 }}>
-          <h2 style={subtitulo}>Explicar el bloque · línea {lineaExplicada + 1}</h2>
-          <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: '#5a6b7d' }}>Pon el cursor en una línea del programa para ver qué hace cada palabra.</p>
+  const areaMaquina = (
+    <>
+      <TituloArea>
+        {nombreMaquina} · {mat.nombre}
+      </TituloArea>
+      {sim.alarma && (
+        <div role="alert" style={alarma} data-alarma-cnc="si">
+          <strong>⚠ ALARMA en la línea {sim.alarma.linea + 1}:</strong> {sim.alarma.texto}{' '}
+          <button onClick={() => irA(sim.alarma!.linea)} style={{ ...botonSuave, padding: '1px 8px', marginLeft: 6 }}>
+            Ir a la línea
+          </button>
+        </div>
+      )}
+      {estado === 'parada' && <div style={{ ...alarma, background: '#fff5e0', borderColor: '#f0c36d', color: '#7a4b00' }}>Programa detenido por M00/M01. Pulsa ▶ Continuar.</div>}
+      <div className="relleno">
+        <Suspense fallback={<p style={{ padding: 20, color: '#51606f' }}>Preparando la máquina…</p>}>
+          <Maquina3D vista={vista} onCanvas={(c) => (canvasRef.current = c)} alto="100%" />
+        </Suspense>
+      </div>
+      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 6, fontSize: '0.85rem', color: '#33475c' }}>
+        <label style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+          <input type="checkbox" checked={trayectoria} onChange={(e) => setTrayectoria(e.target.checked)} /> Trayectoria
+        </label>
+        {torno && (
+          <label style={{ display: 'flex', gap: 5, alignItems: 'center' }} title="Corta la pieza por la mitad para ver agujeros y ranuras por dentro">
+            <input type="checkbox" checked={corte} onChange={(e) => setCorte(e.target.checked)} /> Vista en corte
+          </label>
+        )}
+        <label style={{ display: 'flex', gap: 5, alignItems: 'center' }} title="Husillo, corte y ejes; se activa al hacer clic en la vista 3D">
+          <input type="checkbox" checked={sonido} onChange={(e) => setSonido(e.target.checked)} /> Sonido
+        </label>
+        <span style={{ color: '#51606f' }}>Arrastra para girar la vista · {acercar(tactil)}.</span>
+      </div>
+      <Tablero sim={sim} torno={torno} paso={paso} ultimo={ultimo} modal={estadoModal} tiempoTotal={resultado.tiempoTotal} volumen={volumen} volumenInicial={volumenInicial} />
+      {sim.consejos.length > 0 && (
+        <div style={{ marginTop: 8 }}>
+          {sim.consejos.map((c, i) => (
+            <p key={i} style={{ color: '#7a4f00', margin: '3px 0', fontSize: '0.85rem', cursor: 'pointer' }} onClick={() => irA(c.linea)}>
+              💡 Línea {c.linea + 1}: {c.texto}
+            </p>
+          ))}
+        </div>
+      )}
+    </>
+  )
+
+  const pestanas: Array<PestanaPanel<PestanaCNC>> = [
+    {
+      id: 'preparacion',
+      titulo: 'Preparación',
+      contenido: <Preparacion config={config} setConfig={setConfig} bloqueado={bloqueado} modoCero={cero.modo} addRegPart={resultado.addRegPart} />,
+    },
+    {
+      id: 'plano',
+      titulo: `Trayectoria 2D ${torno ? '(Z-X)' : '(desde arriba)'}`,
+      contenido: <Plano2D programa={resultado} sim={sim} config={config} lineas={lineas} seleccionada={cursor} onElegirLinea={irA} origen={cero.origen} />,
+    },
+    {
+      id: 'explicar',
+      titulo: 'Explicar el bloque',
+      contenido: (
+        <>
+          <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: '#51606f' }}>Línea {lineaExplicada + 1}. Pon el cursor en una línea del programa para ver qué hace cada palabra.</p>
           <code style={{ display: 'block', background: '#f4f6f9', padding: '6px 8px', borderRadius: 6, marginBottom: 6, whiteSpace: 'pre-wrap' }}>{lineas[lineaExplicada] || ' '}</code>
           {explicacion.length ? (
             <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '0.88rem' }} data-explicacion="si">
@@ -563,64 +582,90 @@ export default function UnidadCNC() {
           ) : (
             <p style={{ color: '#5f6b78', fontSize: '0.86rem' }}>Línea vacía.</p>
           )}
-          <h2 style={{ ...subtitulo, marginTop: 14 }}>Tabla de coordenadas</h2>
-          <TablaPuntos resultado={resultado} torno={torno} lineas={lineas} irA={irA} seleccionada={cursor} casa={casa} origen={cero.origen} />
-        </section>
-      </div>
+        </>
+      ),
+    },
+    {
+      id: 'coordenadas',
+      titulo: 'Tabla de coordenadas',
+      contenido: <TablaPuntos resultado={resultado} torno={torno} lineas={lineas} irA={irA} seleccionada={cursor} casa={casa} origen={cero.origen} />,
+    },
+  ]
 
-      <section style={tarjeta}>
-        <Seccion titulo="¿Qué es el CNC?">
-          <QueEsCNC />
-        </Seccion>
-      </section>
-      <section style={tarjeta}>
-        <Seccion titulo="Ventajas, limitaciones y aplicaciones">
-          <VentajasCNC />
-        </Seccion>
-      </section>
-      <section style={tarjeta}>
-        <Seccion titulo="Cómo organizar la programación">
-          <OrganizarPrograma />
-        </Seccion>
-      </section>
-      <section style={tarjeta}>
-        <Seccion titulo="Coordenadas absolutas e incrementales (con práctica)">
-          <Coordenadas />
-        </Seccion>
-      </section>
-      <section style={tarjeta}>
-        <Seccion titulo="Estructura de un bloque de código G">
-          <EstructuraBloque />
-        </Seccion>
-      </section>
-      <section style={tarjeta}>
-        <Seccion titulo="Códigos G y M">
-          <CodigosGM />
-        </Seccion>
-      </section>
-      <section style={tarjeta}>
-        <Seccion titulo="Arcos: G02 y G03">
-          <Arcos />
-        </Seccion>
-      </section>
-      <section style={tarjeta}>
-        <Seccion titulo="El torno CNC y sus operaciones">
-          <Torno />
-        </Seccion>
-      </section>
-      <section style={tarjeta}>
-        <Seccion titulo="Herramientas de corte: código de los insertos">
-          <Insertos />
-        </Seccion>
-      </section>
-      <section style={tarjeta}>
-        <Seccion titulo="Cómo usar este simulador (y entregar tu trabajo)">
-          <ComoUsar />
-        </Seccion>
-      </section>
-    </main>
+  const barraEstado = (
+    <>
+      <span>
+        {estado === 'corriendo'
+          ? 'En ciclo: la máquina ejecuta el programa · ❚❚ Pausa lo detiene.'
+          : estado === 'alarma'
+            ? 'Alarma: corrige la línea marcada y vuelve a pulsar ▶ Ciclo.'
+            : bloqueado
+              ? 'Bloque a bloque: cada ⏭ ejecuta una línea.'
+              : 'Escribe o abre un programa y pulsa ▶ Ciclo · ⏭ avanza bloque a bloque.'}
+      </span>
+      <button
+        onClick={() => {
+          panel.onPestana('preparacion')
+          panel.onAbrir(true)
+        }}
+        style={{ marginLeft: 'auto', border: 'none', background: 'transparent', color: '#1668c7', fontWeight: 600, cursor: 'pointer', fontSize: '0.82rem' }}
+        title="Ver o cambiar la preparación (bruto y cero)"
+      >
+        {mat.nombre} ·{' '}
+        {torno ? `Ø${config.torno.diametro} × ${config.torno.largo} mm` : `${config.fresa.largo} × ${config.fresa.ancho} × ${config.fresa.alto} mm`}
+      </button>
+      {(errores.length > 0 || avisosProg.length > 0) && (
+        <span style={{ color: errores.length ? '#b3261e' : '#7a4f00', fontWeight: 700 }}>
+          ⚠ {errores.length ? `${errores.length} error${errores.length === 1 ? '' : 'es'}` : `${avisosProg.length} aviso${avisosProg.length === 1 ? '' : 's'}`}
+        </span>
+      )}
+    </>
+  )
+
+  return (
+    <>
+      <SubnavUnidad nombre="CNC" seccion={seccion} onSeccion={setSeccion} />
+      {seccion === 'laboratorio' ? (
+        <BancoDividido<PestanaCNC>
+          clave="neumalab.cnc.banco"
+          barra={barra}
+          izquierda={{ id: 'programa', titulo: 'Programa', contenido: areaPrograma }}
+          derecha={{ id: 'maquina', titulo: 'Máquina', contenido: areaMaquina }}
+          inferior={{ etiqueta: 'Preparación, trayectoria y tablas', pestanas, estado: panel }}
+          estado={barraEstado}
+        />
+      ) : (
+        <PaginaEstudiar
+          etiqueta="Estudiar CNC"
+          titulo="Estudiar · CNC"
+          descripcion="Teoría de la unidad. Los programas de ejemplo se abren en el Laboratorio."
+          pie="NeumaLab · MEC275 — Unidad 3: Control numérico computacional · código G"
+          secciones={SECCIONES_CNC}
+        />
+      )}
+      {aviso && (
+        <p role="status" style={avisoOk}>
+          {aviso}
+        </p>
+      )}
+    </>
   )
 }
+
+type PestanaCNC = 'preparacion' | 'plano' | 'explicar' | 'coordenadas'
+
+const SECCIONES_CNC: SeccionEstudio[] = [
+  { id: 'que-es', indice: '¿Qué es el CNC?', titulo: '¿Qué es el CNC?', contenido: <QueEsCNC /> },
+  { id: 'ventajas', indice: 'Ventajas y aplicaciones', titulo: 'Ventajas, limitaciones y aplicaciones', contenido: <VentajasCNC /> },
+  { id: 'organizar', indice: 'Organizar la programación', titulo: 'Cómo organizar la programación', contenido: <OrganizarPrograma /> },
+  { id: 'coordenadas', indice: 'Coordenadas', titulo: 'Coordenadas absolutas e incrementales (con práctica)', contenido: <Coordenadas /> },
+  { id: 'bloque', indice: 'Estructura de un bloque', titulo: 'Estructura de un bloque de código G', contenido: <EstructuraBloque /> },
+  { id: 'codigos', indice: 'Códigos G y M', titulo: 'Códigos G y M', contenido: <CodigosGM /> },
+  { id: 'arcos', indice: 'Arcos G02 y G03', titulo: 'Arcos: G02 y G03', contenido: <Arcos /> },
+  { id: 'torno', indice: 'El torno CNC', titulo: 'El torno CNC y sus operaciones', contenido: <Torno /> },
+  { id: 'insertos', indice: 'Herramientas de corte', titulo: 'Herramientas de corte: código de los insertos', contenido: <Insertos /> },
+  { id: 'como-usar', indice: 'Cómo usar el simulador', titulo: 'Cómo usar este simulador (y entregar tu trabajo)', contenido: <ComoUsar /> },
+]
 
 // ---------------------------------------------------------------------------
 function Preparacion({
@@ -657,9 +702,8 @@ function Preparacion({
   )
   const herramientas = torno ? torretaDe(config) : almacenDe(config)
   return (
-    <section style={{ ...tarjeta, marginTop: 0 }}>
+    <section aria-label="Preparación">
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-        <h2 style={{ ...subtitulo, margin: 0, alignSelf: 'center' }}>Preparación</h2>
         <label style={{ ...rotulo, flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
           <span>Material</span>
           <select value={config.material} disabled={bloqueado} onChange={(e) => setConfig((c) => ({ ...c, material: e.target.value }))} style={selector}>
@@ -698,7 +742,7 @@ function Preparacion({
             {num(config.fresa.alto, (v) => setConfig((c) => ({ ...c, fresa: { ...c.fresa, alto: v } })), 3, 100, 'Alto Z (mm)')}
           </>
         )}
-        <p style={{ margin: 0, fontSize: '0.8rem', color: '#5a6b7d', flex: '1 1 260px' }}>
+        <p style={{ margin: 0, fontSize: '0.8rem', color: '#51606f', flex: '1 1 260px' }}>
           {torno
             ? modoCero === 'cara'
               ? `Cero del programa: en la cara frontal, sobre el eje. El bruto va de Z${config.torno.sobremetal} a Z${config.torno.sobremetal - config.torno.largo}; las garras llegan hasta Z${config.torno.sobremetal - config.torno.largo + config.torno.agarre}. X se programa en diámetro.`
@@ -952,16 +996,6 @@ function ComoUsar() {
 }
 
 // ---------------------------------------------------------------------------
-const tarjeta: React.CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #e0e5eb',
-  borderRadius: 10,
-  padding: '1rem 1.25rem',
-  marginTop: 12,
-  boxShadow: '0 1px 3px rgba(28, 39, 51, 0.06)',
-  minWidth: 0,
-}
-const subtitulo: React.CSSProperties = { margin: '0 0 0.6rem', fontSize: '1.05rem', color: '#33475c' }
 // ---------------------------------------------------------------------------
 // Herramientas propias: se pueden editar, agregar y quitar
 // ---------------------------------------------------------------------------
@@ -1092,7 +1126,6 @@ function EditorHerramientas({ config, setConfig, bloqueado }: { config: ConfigCN
   )
 }
 
-const boton: React.CSSProperties = { border: 'none', color: '#fff', padding: '0.45rem 0.9rem', borderRadius: 8, fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer' }
 const botonSuave: React.CSSProperties = {
   border: '1px solid #c6ced6',
   background: '#fff',

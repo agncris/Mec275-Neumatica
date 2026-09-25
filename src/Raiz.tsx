@@ -56,6 +56,20 @@ export default function Raiz() {
             : 'NeumaLab — Laboratorio virtual de neumática'
   }, [unidad])
 
+  // Otra unidad empieza en su laboratorio: la sección y el ancla de la anterior no valen.
+  const cambiarUnidad = (id: Unidad) => {
+    if (id === unidad) return
+    try {
+      const url = new URL(window.location.href)
+      url.searchParams.delete('vista')
+      url.hash = ''
+      window.history.replaceState(null, '', url)
+    } catch {
+      /* sin historial */
+    }
+    setUnidad(id)
+  }
+
   const pestanas: Array<[Unidad, string, string, string]> = [
     ['neumatica', '1', 'Neumática', 'Circuitos neumáticos, método cascada y banco 3D'],
     ['plc', '2', 'PLC', 'Programación Ladder y plantas del laboratorio en 3D'],
@@ -70,7 +84,7 @@ export default function Raiz() {
             href="?"
             onClick={(e) => {
               e.preventDefault()
-              setUnidad('neumatica')
+              cambiarUnidad('neumatica')
             }}
             style={{ display: 'flex', alignItems: 'baseline', gap: 8, textDecoration: 'none', color: '#1c2733', flexShrink: 0 }}
             title="NeumaLab · laboratorio virtual del curso MEC275"
@@ -83,7 +97,7 @@ export default function Raiz() {
           </a>
           <nav aria-label="Unidades del curso" className="pestanas-unidad">
             {pestanas.map(([id, n, texto, titulo]) => (
-              <button key={id} title={titulo} aria-current={unidad === id ? 'page' : undefined} onClick={() => setUnidad(id)} className="pestana-unidad">
+              <button key={id} title={titulo} aria-current={unidad === id ? 'page' : undefined} onClick={() => cambiarUnidad(id)} className="pestana-unidad">
                 <span className="pestana-unidad__n">{n}</span>
                 {texto}
               </button>

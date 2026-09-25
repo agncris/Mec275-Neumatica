@@ -575,3 +575,116 @@ button:disabled:hover {
     border-bottom-color: #1668c7;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Banco dividido (PLC, CNC, Robótica): dos áreas lado a lado + panel acoplado
+   --------------------------------------------------------------------------- */
+.banco__dividido {
+  gap: 0;
+}
+.banco__dividido > .divisor-areas {
+  flex: 0 0 10px;
+  cursor: col-resize;
+  position: relative;
+  touch-action: none;
+}
+.divisor-areas::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 3px;
+  width: 4px;
+  height: 36px;
+  margin-top: -18px;
+  border-radius: 2px;
+  background: #c6ced6;
+}
+.divisor-areas:hover::after,
+.divisor-areas:focus-visible::after {
+  background: #1668c7;
+  top: 0;
+  height: 100%;
+  margin-top: 0;
+}
+.divisor-areas:focus-visible {
+  outline: none;
+}
+.banco__area {
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  padding: 8px 12px 10px;
+  min-width: 0;
+}
+.banco__area--sin-relleno {
+  padding: 0;
+}
+/* Lo que ocupa el alto que sobra del área (vista 3D, lienzo, editor). */
+.banco__area .relleno {
+  flex: 1 1 auto;
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+.banco__area .relleno > * {
+  flex: 1;
+  min-height: 0;
+}
+.titulo-area {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 0 6px;
+  flex: none;
+}
+.titulo-area h2 {
+  margin: 0;
+  font-size: 1rem;
+  color: #1c2733;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.banco__area > * {
+  flex-shrink: 0;
+}
+.banco__area > .relleno {
+  flex-shrink: 1;
+}
+.pestanas-movil {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  flex: none;
+  scrollbar-width: none;
+}
+.pestanas-movil button {
+  flex: none;
+  border: 1px solid #c6ced6;
+  background: #fff;
+  color: #33475c;
+  border-radius: 999px;
+  padding: 0 12px;
+  min-height: 36px;
+  font-weight: 600;
+  font-size: 0.86rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.pestanas-movil button[aria-selected='true'] {
+  background: #33475c;
+  border-color: #33475c;
+  color: #fff;
+}
+@media (max-width: 900px) {
+  .banco--dividido {
+    height: calc(100dvh - var(--alto-barra-superior) - 45px);
+  }
+  .banco__area .relleno {
+    min-height: 220px;
+  }
+}

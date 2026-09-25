@@ -67,7 +67,8 @@ interface Props {
   diagnosticos: Diagnostico[]
   onCursor: (n: number) => void
   soloLectura?: boolean
-  alto?: number
+  /** En píxeles, o '100%' para llenar el área. */
+  alto?: number | string
 }
 
 const EditorGcode = forwardRef<EditorGcodeRef, Props>(function EditorGcode(

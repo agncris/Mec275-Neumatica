@@ -254,7 +254,7 @@ function lineasPrevia(p: Previa, base: Plano, color: number, tamPlano: number): 
 
 type Vista = 'iso' | 'frente' | 'arriba' | 'lado'
 
-export default function Robot3D({ vista, alto = 480, onCanvas }: { vista: MutableRefObject<VistaRobot>; alto?: number; onCanvas?: (c: HTMLCanvasElement | null) => void }) {
+export default function Robot3D({ vista, alto = 480, onCanvas }: { vista: MutableRefObject<VistaRobot>; alto?: number | string; onCanvas?: (c: HTMLCanvasElement | null) => void }) {
   const contRef = useRef<HTMLDivElement>(null)
   const [sinWebGL, setSinWebGL] = useState(false)
   const accion = useRef<((v: Vista) => void) | null>(null)
@@ -517,7 +517,7 @@ export default function Robot3D({ vista, alto = 480, onCanvas }: { vista: Mutabl
 
   if (sinWebGL) return <p style={{ padding: 20, color: '#8a5b00' }}>Este navegador no tiene WebGL: la vista 3D no está disponible.</p>
   return (
-    <div style={{ position: 'relative' }}>
+    <div style={{ position: 'relative', height: typeof alto === 'string' ? alto : undefined }}>
       <div ref={contRef} style={{ width: '100%', height: alto, borderRadius: 8, overflow: 'hidden', background: '#dfe3e8' }} />
       <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 4 }}>
         {(

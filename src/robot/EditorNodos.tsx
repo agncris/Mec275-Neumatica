@@ -72,7 +72,8 @@ interface Props {
   onCambiar: (d: Definicion) => void
   seleccion: string | null
   onSeleccionar: (id: string | null) => void
-  alto?: number
+  /** En píxeles, o '100%' para llenar el área. */
+  alto?: number | string
 }
 
 type Arrastre =
@@ -286,7 +287,7 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
     : []
 
   return (
-    <div data-editor-nodos="si">
+    <div data-editor-nodos="si" style={typeof alto === 'string' ? { display: 'flex', flexDirection: 'column', height: alto, minHeight: 0 } : undefined}>
       {/* Cinta de componentes, por pestañas como en Grasshopper. */}
       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 4 }}>
         {PESTANAS.map((p) => (
@@ -336,12 +337,12 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
           </span>
         ))}
       </div>
-      <div style={{ position: 'relative' }}>
+      <div style={{ position: 'relative', ...(typeof alto === 'string' ? { flex: 1, minHeight: 200 } : {}) }}>
         <svg
           ref={svgRef}
           tabIndex={0}
           width="100%"
-          height={alto}
+          height={typeof alto === 'string' ? '100%' : alto}
           data-lienzo-nodos="si"
           data-arrastre={arrastre?.tipo ?? ""}
           style={{

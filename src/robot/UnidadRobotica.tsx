@@ -4,9 +4,12 @@
  * de alcance, límites y singularidades, y exportar el código KRL. Funciona en
  * el navegador: no hace falta Windows ni licencias.
  */
-import { BarraHerramientas, botonSecundario, botonTerciario, CabeceraUnidad, estiloAviso, Etiquetado, Menu } from '../components/ui'
+import { botonPrimario, botonSecundario, estiloAviso, Menu, useEsEstrecha } from '../components/ui'
+import BancoDividido, { TituloArea } from '../components/banco/BancoDividido'
+import { usePanelAcoplado, type PestanaPanel } from '../components/banco/PanelAcoplado'
+import PaginaEstudiar, { type SeccionEstudio } from '../components/banco/PaginaEstudiar'
+import SubnavUnidad, { useSeccionUnidad } from '../components/banco/SubnavUnidad'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Seccion } from '../components/Seccion'
 import { exportarPng, nombreSeguro } from '../exportar'
 import { croquisPieza, croquisPosicion } from './croquis'
 import { Historial } from '../historial'
@@ -92,6 +95,9 @@ export default function UnidadRobotica() {
     setHist((n) => n + 1)
   }
   const [modo, setModo] = useState<Modo>('visual')
+  const estrecha = useEsEstrecha()
+  const [seccion, setSeccion] = useSeccionUnidad(SECCIONES_ROBOT.map((x) => x.id))
+  const panel = usePanelAcoplado<PestanaRobot>('neumalab.robot.panel', 'analisis', false)
   const [seleccion, setSeleccion] = useState<string | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
   const [reproduciendo, setReproduciendo] = useState(false)
@@ -441,348 +447,393 @@ export default function UnidadRobotica() {
   const modeloVista = modo === 'visual' ? robotVista.modelo : modeloM
   const qVista = vista.current.q
 
-  return (
-    <main style={{ maxWidth: 1320, margin: '0 auto', padding: '0.8rem clamp(0.75rem, 3vw, 1.5rem) 1.25rem' }}>
-      <CabeceraUnidad titulo="Unidad 4 · Robótica" descripcion="Programa un robot KUKA con nodos (como Grasshopper + KUKA|prc) o con el mando, y simúlalo en 3D" />
+  const itemsArchivo = [
+    { texto: 'Nueva definición', ayuda: 'Empieza con el lienzo vacío', onClick: () => cargarEjemplo('vacio') },
+    { texto: 'Abrir definición…', ayuda: 'Una definición guardada (.json), con su plano', onClick: () => inputDef.current?.click() },
+    { texto: 'Guardar definición', ayuda: 'Descarga la definición y el plano DXF', onClick: () => descargar(JSON.stringify(def, null, 2), nombreSeguro(def.nombre || 'definicion', 'json'), 'application/json') },
+    { texto: 'Abrir plano DXF…', ayuda: 'Trae las curvas de tu plano', onClick: () => inputDXF.current?.click(), separar: true },
+  ]
+  const itemsExportar = [
+    { texto: 'Programa KRL (.src)', ayuda: 'Para el controlador KUKA', onClick: exportarKRL },
+    ...(modo === 'visual'
+      ? [
+          { texto: 'Croquis de la pieza (PNG)', ayuda: 'La pieza acotada, con el cero de la pieza', onClick: () => void exportarCroquis('pieza-png'), separar: true },
+          { texto: 'Croquis de la pieza (SVG)', onClick: () => void exportarCroquis('pieza-svg') },
+          { texto: 'Posicionamiento del robot (PNG)', ayuda: 'Planta y elevación: robot, mesón y alcance', onClick: () => void exportarCroquis('posicion-png') },
+          { texto: 'Posicionamiento del robot (SVG)', onClick: () => void exportarCroquis('posicion-svg') },
+        ]
+      : []),
+    {
+      texto: 'Grabar video de la simulación',
+      ayuda: 'Graba la vista 3D; se descarga al detener',
+      onClick: alternarGrabacion,
+      deshabilitado: !puedeGrabar || grabando,
+      porque: grabando ? 'Ya está grabando' : 'Tu navegador no permite grabar video',
+      separar: true,
+    },
+  ]
 
-      <BarraHerramientas
-        derecha={
-          <>
-            {grabando && (
-              <button onClick={alternarGrabacion} style={{ ...botonSecundario, color: '#fff', background: '#c62828', borderColor: '#c62828' }}>
-                ■ Detener grabación
-              </button>
-            )}
-            {modo === 'visual' && (
-              <Menu
-                etiqueta="Archivo"
-                items={[
-                  { texto: 'Nueva definición', ayuda: 'Empieza con el lienzo vacío', onClick: () => cargarEjemplo('vacio') },
-                  { texto: 'Abrir definición…', ayuda: 'Una definición guardada (.json), con su plano', onClick: () => inputDef.current?.click() },
-                  { texto: 'Guardar definición', ayuda: 'Descarga la definición y el plano DXF', onClick: () => descargar(JSON.stringify(def, null, 2), nombreSeguro(def.nombre || 'definicion', 'json'), 'application/json') },
-                  { texto: 'Abrir plano DXF…', ayuda: 'Trae las curvas de tu plano', onClick: () => inputDXF.current?.click(), separar: true },
-                ]}
-              />
-            )}
-            <Menu
-              etiqueta="Exportar"
-              ancho={300}
-              items={[
-                { texto: 'Programa KRL (.src)', ayuda: 'Para el controlador KUKA', onClick: exportarKRL },
-                ...(modo === 'visual'
-                  ? [
-                      { texto: 'Croquis de la pieza (PNG)', ayuda: 'La pieza acotada, con el cero de la pieza', onClick: () => void exportarCroquis('pieza-png'), separar: true },
-                      { texto: 'Croquis de la pieza (SVG)', onClick: () => void exportarCroquis('pieza-svg') },
-                      { texto: 'Posicionamiento del robot (PNG)', ayuda: 'Planta y elevación: robot, mesón y alcance', onClick: () => void exportarCroquis('posicion-png') },
-                      { texto: 'Posicionamiento del robot (SVG)', onClick: () => void exportarCroquis('posicion-svg') },
-                    ]
-                  : []),
-                {
-                  texto: 'Grabar video de la simulación',
-                  ayuda: 'Graba la vista 3D; se descarga al detener',
-                  onClick: alternarGrabacion,
-                  deshabilitado: !puedeGrabar || grabando,
-                  porque: grabando ? 'Ya está grabando' : 'Tu navegador no permite grabar video',
-                  separar: true,
-                },
-              ]}
-            />
-          </>
-        }
-      >
-        <span role="tablist" aria-label="Forma de programar" style={{ display: 'inline-flex', border: '1px solid #c6ced6', borderRadius: 9, padding: 2, background: '#fff' }}>
-          {(
-            [
-              ['visual', 'Programación visual'],
-              ['mando', 'Mando manual'],
-            ] as Array<[Modo, string]>
-          ).map(([m, t]) => (
-            <button
-              key={m}
-              role="tab"
-              aria-selected={modo === m}
-              onClick={() => {
-                setReproduciendo(false)
-                setModo(m)
-              }}
-              data-modo={m}
-              title={m === 'mando' ? 'Mover el robot a mano y grabar puntos (teach-in)' : 'Armar el programa con nodos, como Grasshopper + KUKA|prc'}
-              style={{ border: 'none', borderRadius: 7, padding: '0.4rem 0.8rem', minHeight: 34, fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer', background: modo === m ? '#33475c' : 'transparent', color: modo === m ? '#fff' : '#33475c' }}
-            >
-              {t}
+  const barra = (
+    <>
+      <span className="segmentado" role="radiogroup" aria-label="Forma de programar">
+        {(
+          [
+            ['visual', estrecha ? 'Nodos' : 'Programación visual'],
+            ['mando', estrecha ? 'Mando' : 'Mando manual'],
+          ] as Array<[Modo, string]>
+        ).map(([m, t]) => (
+          <button
+            key={m}
+            role="radio"
+            aria-checked={modo === m}
+            onClick={() => {
+              setReproduciendo(false)
+              setModo(m)
+            }}
+            data-modo={m}
+            title={m === 'mando' ? 'Mover el robot a mano y grabar puntos (teach-in)' : 'Armar el programa con nodos, como Grasshopper + KUKA|prc'}
+            style={{ minHeight: 34 }}
+          >
+            {t}
+          </button>
+        ))}
+      </span>
+      {modo === 'visual' && (
+        <>
+          <span style={{ display: 'inline-flex', gap: 2 }}>
+            <button onClick={deshacer} disabled={!historial.current.puedeDeshacer} aria-label="Deshacer" className="boton-icono" style={{ opacity: historial.current.puedeDeshacer ? 1 : 0.4 }} title="Deshacer (Ctrl+Z)">
+              ↶
             </button>
-          ))}
-        </span>
-        {modo === 'visual' && (
-          <>
-            <Etiquetado texto="Ejemplos">
-              <select
-                value=""
-                onChange={(e) => {
-                  const x = e.target.value
-                  e.target.value = ''
-                  cargarEjemplo(x)
-                }}
-                style={{ padding: '0.35rem 0.4rem', minHeight: 36, maxWidth: 'min(320px, calc(100vw - 120px))' }}
-                data-ejemplos-robot="si"
-              >
-                <option value="">— elige una definición —</option>
-                {EJEMPLOS_ROBOT.map((e) => (
-                  <option key={e.id} value={e.id}>
-                    {e.titulo}
-                  </option>
-                ))}
-              </select>
-            </Etiquetado>
+            <button onClick={rehacer} disabled={!historial.current.puedeRehacer} aria-label="Rehacer" className="boton-icono" style={{ opacity: historial.current.puedeRehacer ? 1 : 0.4 }} title="Rehacer (Ctrl+Shift+Z)">
+              ↷
+            </button>
+          </span>
+          <select
+            value=""
+            onChange={(e) => {
+              const x = e.target.value
+              e.target.value = ''
+              cargarEjemplo(x)
+            }}
+            style={{ padding: '0.35rem 0.4rem', minHeight: 36, width: estrecha ? '25vw' : 220 }}
+            data-ejemplos-robot="si"
+            aria-label="Ejemplos"
+          >
+            <option value="">Ejemplos…</option>
+            {EJEMPLOS_ROBOT.map((e) => (
+              <option key={e.id} value={e.id}>
+                {e.titulo}
+              </option>
+            ))}
+          </select>
+          {!estrecha && (
             <button onClick={() => inputDXF.current?.click()} style={botonSecundario} title="Traer un plano DXF para usar sus curvas">
               Abrir DXF
             </button>
-            <span style={{ display: 'flex', gap: 2 }}>
-              <button onClick={deshacer} disabled={!historial.current.puedeDeshacer} aria-label="Deshacer" style={{ ...botonTerciario, opacity: historial.current.puedeDeshacer ? 1 : 0.4 }} title="Deshacer (Ctrl+Z)">
-                ↶ Deshacer
-              </button>
-              <button onClick={rehacer} disabled={!historial.current.puedeRehacer} aria-label="Rehacer" style={{ ...botonTerciario, opacity: historial.current.puedeRehacer ? 1 : 0.4 }} title="Rehacer (Ctrl+Shift+Z)">
-                ↷
-              </button>
-            </span>
+          )}
+        </>
+      )}
+      <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
+        {grabando && (
+          <button onClick={alternarGrabacion} style={{ ...botonSecundario, color: '#fff', background: '#c62828', borderColor: '#c62828' }}>
+            ■ {estrecha ? 'Detener' : 'Detener grabación'}
+          </button>
+        )}
+        {estrecha ? (
+          <Menu etiqueta="⋯" datos="mas" ancho={300} items={[...(modo === 'visual' ? itemsArchivo : []), ...itemsExportar.map((it, i) => (i === 0 && modo === 'visual' ? { ...it, separar: true } : it))]} />
+        ) : (
+          <>
+            {modo === 'visual' && <Menu etiqueta="Archivo" items={itemsArchivo} />}
+            <Menu etiqueta="Exportar" ancho={300} items={itemsExportar} />
           </>
         )}
-      </BarraHerramientas>
-      <div>
-        <input ref={inputDXF} type="file" accept=".dxf" style={{ display: 'none' }} onChange={(e) => (void abrirDXF(e.target.files?.[0]), (e.target.value = ''))} />
-        <input ref={inputDef} type="file" accept=".json,application/json" style={{ display: 'none' }} onChange={(e) => (void abrirDef(e.target.files?.[0]), (e.target.value = ''))} />
-      </div>
+      </span>
+      <input ref={inputDXF} type="file" accept=".dxf" style={{ display: 'none' }} onChange={(e) => (void abrirDXF(e.target.files?.[0]), (e.target.value = ''))} />
+      <input ref={inputDef} type="file" accept=".json,application/json" style={{ display: 'none' }} onChange={(e) => (void abrirDef(e.target.files?.[0]), (e.target.value = ''))} />
+    </>
+  )
 
+  const areaPrograma =
+    modo === 'visual' ? (
+      <>
+        <TituloArea>
+          Definición · {def.nombre}
+          {def.dxf ? <span style={{ fontWeight: 400, fontSize: '0.8rem', color: '#51606f' }}>· plano: {def.dxf.nombre}</span> : null}
+        </TituloArea>
+        <div className="relleno" style={{ minHeight: 300 }}>
+          <EditorNodos def={def} evaluacion={evaluacion} onCambiar={setDef} seleccion={seleccion} onSeleccionar={setSeleccion} alto="100%" />
+        </div>
+        {evaluacion.ciclo && <p style={{ color: '#b3261e', fontSize: '0.86rem', margin: '6px 0 0' }}>⚠ Hay un ciclo en los cables.</p>}
+        <div style={{ maxHeight: '42%', overflow: 'auto', flexShrink: 0 }}>
+          <Propiedades
+            key={nodoSel?.id ?? 'nada'}
+            nodo={nodoSel}
+            evaluacion={evaluacion}
+            onParam={(clave, valor) => nodoSel && setDef({ ...def, nodos: def.nodos.map((n) => (n.id === nodoSel.id ? { ...n, params: { ...n.params, [clave]: valor } } : n)) })}
+            onBorrar={() => {
+              if (!nodoSel) return
+              setDef({ ...def, nodos: def.nodos.filter((n) => n.id !== nodoSel.id), cables: def.cables.filter((c) => c.de !== nodoSel.id && c.a !== nodoSel.id) })
+              setSeleccion(null)
+            }}
+            onDuplicar={() => {
+              if (!nodoSel) return
+              let k = 1
+              while (def.nodos.some((n) => n.id === `${nodoSel.id}_${k}`)) k++
+              const id = `${nodoSel.id}_${k}`
+              setDef({ ...def, nodos: [...def.nodos, { ...nodoSel, id, x: nodoSel.x + 30, y: nodoSel.y + 30, params: { ...nodoSel.params } }] })
+              setSeleccion(id)
+            }}
+            capas={dxf?.capas ?? []}
+            cables={nodoSel ? def.cables.filter((c) => c.a === nodoSel.id) : []}
+            onDesconectar={(c) => setDef({ ...def, cables: def.cables.filter((k) => k !== c) })}
+          />
+        </div>
+      </>
+    ) : (
+      <Mando
+        modelo={modeloM}
+        herramienta={herrMando}
+        pedestal={0}
+        q={qMando}
+        onQ={(q) => {
+          setReproduciendo(false)
+          setQMando(q)
+        }}
+        puntos={puntos}
+        onPuntos={(p) => {
+          setReproduciendo(false)
+          setPuntos(p)
+        }}
+        onModelo={(id) => {
+          setModeloMando(id)
+          setQMando([0, -80, 100, 0, 60, 0])
+          setPuntos([])
+        }}
+        reproduciendo={reproduciendo}
+        onReproducir={() => {
+          if (reproduciendo) return setReproduciendo(false)
+          tRef.current = 0
+          setReproduciendo(true)
+        }}
+        onExportar={exportarKRL}
+      />
+    )
+
+  const abrirAnalisis = () => {
+    panel.onPestana('analisis')
+    panel.onAbrir(true)
+  }
+
+  const areaSimulacion = (
+    <>
+      <TituloArea>
+        Simulación · {modeloVista.nombre}
+        {simActiva && (
+          <button
+            onClick={abrirAnalisis}
+            title="Ver el análisis de la simulación"
+            style={{ ...estadoChip, border: 'none', cursor: 'pointer', background: errores.length ? '#b3261e' : avisosSim.length ? '#a35200' : '#0e7a43' }}
+            data-analisis={errores.length ? 'error' : avisosSim.length ? 'aviso' : 'ok'}
+          >
+            {errores.length ? `${errores.length} error(es)` : avisosSim.length ? `${avisosSim.length} aviso(s)` : 'sin problemas'}
+          </button>
+        )}
+      </TituloArea>
+      <div className="relleno">
+        <Suspense fallback={<p style={{ padding: 20, color: '#51606f' }}>Montando la celda…</p>}>
+          <Robot3D vista={vista} onCanvas={(c) => (canvasRef.current = c)} alto="100%" />
+        </Suspense>
+      </div>
+      {simActiva ? (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8, flexWrap: 'wrap' }} data-reproductor="si">
+          <button
+            onClick={() => {
+              if (!reproduciendo && tRef.current >= simActiva.tiempo - 1e-6) tRef.current = 0
+              setReproduciendo((r) => !r)
+            }}
+            style={{ ...botonPrimario(false, reproduciendo ? '#ffa726' : undefined), color: reproduciendo ? '#1c2733' : '#fff', padding: '0.4rem 0.9rem' }}
+            aria-label={reproduciendo ? 'Pausa' : 'Reproducir'}
+            data-play="si"
+          >
+            {reproduciendo ? '❚❚' : '▶'}
+          </button>
+          <input
+            type="range"
+            min={0}
+            max={simActiva.tiempo}
+            step={0.01}
+            value={Math.min(tiempo, simActiva.tiempo)}
+            onChange={(e) => {
+              tRef.current = Number(e.target.value)
+              setTick((n) => n + 1)
+            }}
+            style={{ flex: 1, minWidth: 140 }}
+            aria-label="Tiempo de la simulación"
+          />
+          <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: '0.85rem' }}>
+            {tiempo.toFixed(1)} / {simActiva.tiempo.toFixed(1)} s
+          </span>
+          <select value={velocidad} onChange={(e) => setVelocidad(Number(e.target.value))} style={{ padding: '0.2rem', minHeight: 32 }} aria-label="Velocidad">
+            {[0.5, 1, 2, 5, 10].map((x) => (
+              <option key={x} value={x}>
+                ×{x}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : (
+        <p style={{ margin: '8px 0 0', fontSize: '0.84rem', color: '#51606f' }}>
+          {modo === 'visual'
+            ? 'Cuando el Core tenga comandos, robot y herramienta, aquí aparece el reproductor (como KUKA|play).'
+            : 'Mueve el robot con el mando; graba puntos y pulsa «Reproducir».'}
+        </p>
+      )}
+      <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: '0.84rem', marginTop: 6 }}>
+        <input type="checkbox" checked={alcance} onChange={(e) => setAlcance(e.target.checked)} /> Mostrar el alcance máximo del robot
+      </label>
+      <Ejes modelo={modeloVista} q={qVista} uso={simActiva?.uso ?? null} />
+    </>
+  )
+
+  const pestanas: Array<PestanaPanel<PestanaRobot>> = [
+    {
+      id: 'analisis',
+      titulo: 'Análisis',
+      contador: simActiva ? errores.length + avisosSim.length : undefined,
+      contenido: simActiva ? (
+        <Analisis
+          sim={simActiva}
+          onIr={(p) => {
+            tRef.current = p.t
+            if (p.nodo && modo === 'visual') setSeleccion(p.nodo)
+            setTick((n) => n + 1)
+          }}
+        />
+      ) : (
+        <p style={{ margin: 0, fontSize: '0.86rem', color: '#51606f' }}>Cuando haya una simulación, aquí se revisan los límites de los ejes, las singularidades y el alcance, punto por punto.</p>
+      ),
+    },
+    {
+      id: 'krl',
+      titulo: 'Código KRL',
+      contenido:
+        modo === 'visual' && sim ? (
+          <>
+            <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: '#51606f' }}>El programa que se genera para el controlador KUKA ({sim.krl.split('\n').length} líneas). Descárgalo desde Exportar.</p>
+            <pre style={{ margin: 0, overflow: 'auto', background: '#1f2328', color: '#e8eaed', padding: 10, borderRadius: 8, fontSize: '0.78rem' }} data-krl="si">
+              {sim.krl}
+            </pre>
+          </>
+        ) : (
+          <p style={{ margin: 0, fontSize: '0.86rem', color: '#51606f' }}>
+            {modo === 'visual' ? 'Todavía no hay programa: conecta comandos, robot y herramienta al Core.' : 'En el mando manual, el programa KRL de tus puntos se descarga desde Exportar.'}
+          </p>
+        ),
+    },
+    {
+      id: 'ficha',
+      titulo: `Ficha técnica · ${modeloVista.nombre}`,
+      contenido: (
+        <>
+          <table style={{ fontSize: '0.85rem', borderCollapse: 'collapse' }}>
+            <tbody>
+              {(
+                [
+                  ['Carga', `${modeloVista.carga} kg`],
+                  ['Alcance máximo', `${modeloVista.alcance} mm`],
+                  ['Repetibilidad', `± ${modeloVista.repetibilidad} mm`],
+                  ['Número de ejes', '6'],
+                  ['Peso', `${modeloVista.peso} kg`],
+                  ['Montaje', modeloVista.montaje],
+                  ['Rango de los ejes', modeloVista.limites.map((l, k) => `A${k + 1} ${l[0]}°/${l[1]}°`).join(' · ')],
+                  ['Uso típico', modeloVista.descripcion],
+                ] as Array<[string, string]>
+              ).map(([x, y]) => (
+                <tr key={x}>
+                  <td style={{ padding: '3px 8px', fontWeight: 600, verticalAlign: 'top' }}>{x}</td>
+                  <td style={{ padding: '3px 8px' }}>{y}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p style={{ fontSize: '0.78rem', color: '#5f6b78' }}>Datos de las fichas técnicas publicadas de cada modelo. Para un trabajo formal, cita la ficha oficial de KUKA.</p>
+        </>
+      ),
+    },
+  ]
+
+  const barraEstado = (
+    <>
+      <span>
+        {modo === 'mando'
+          ? 'Mando manual: mueve los ejes, graba puntos y pulsa «Reproducir».'
+          : simActiva
+            ? reproduciendo
+              ? 'Reproduciendo la simulación.'
+              : 'Pulsa ▶ para ver el recorrido del robot · selecciona un componente para ver y cambiar sus valores.'
+            : 'Arrastra desde una salida (derecha) hasta una entrada (izquierda) para conectar · doble clic en el fondo para buscar un componente.'}
+      </span>
+      {simActiva && (errores.length > 0 || avisosSim.length > 0) && (
+        <button onClick={abrirAnalisis} style={{ marginLeft: 'auto', border: 'none', background: 'transparent', color: errores.length ? '#b3261e' : '#7a4f00', fontWeight: 700, cursor: 'pointer', fontSize: '0.82rem' }}>
+          ⚠ {errores.length ? `${errores.length} error(es)` : `${avisosSim.length} aviso(s)`}
+        </button>
+      )}
+    </>
+  )
+
+  return (
+    <>
+      <SubnavUnidad nombre="Robótica" seccion={seccion} onSeccion={setSeccion} />
+      {seccion === 'laboratorio' ? (
+        <BancoDividido<PestanaRobot>
+          clave="neumalab.robot.banco"
+          barra={barra}
+          izquierda={{ id: 'programa', titulo: modo === 'visual' ? 'Definición' : 'Mando', contenido: areaPrograma }}
+          derecha={{ id: 'simulacion', titulo: 'Simulación', contenido: areaSimulacion }}
+          inferior={{ etiqueta: 'Análisis, código y ficha', pestanas, estado: panel }}
+          estado={barraEstado}
+        />
+      ) : (
+        <PaginaEstudiar
+          etiqueta="Estudiar robótica"
+          titulo="Estudiar · Robótica"
+          descripcion="Teoría de la unidad. Las definiciones de ejemplo se abren en el Laboratorio."
+          pie="NeumaLab · MEC275 — Unidad 4: Robótica industrial"
+          secciones={SECCIONES_ROBOT}
+        />
+      )}
       {aviso && (
         <p role="status" style={avisoOk}>
           {aviso}
         </p>
       )}
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 560px), 1fr))', gap: 14, alignItems: 'start' }}>
-        <section style={tarjeta}>
-          {modo === 'visual' ? (
-            <>
-              <h2 style={subtitulo}>
-                Definición · {def.nombre}
-                {def.dxf ? <span style={{ fontWeight: 400, fontSize: '0.8rem', color: '#5a6b7d' }}> · plano: {def.dxf.nombre}</span> : null}
-              </h2>
-              <EditorNodos def={def} evaluacion={evaluacion} onCambiar={setDef} seleccion={seleccion} onSeleccionar={setSeleccion} />
-              {evaluacion.ciclo && <p style={{ color: '#c62828', fontSize: '0.86rem' }}>⚠ Hay un ciclo en los cables.</p>}
-              <Propiedades
-                key={nodoSel?.id ?? 'nada'}
-                nodo={nodoSel}
-                evaluacion={evaluacion}
-                onParam={(clave, valor) => nodoSel && setDef({ ...def, nodos: def.nodos.map((n) => (n.id === nodoSel.id ? { ...n, params: { ...n.params, [clave]: valor } } : n)) })}
-                onBorrar={() => {
-                  if (!nodoSel) return
-                  setDef({ ...def, nodos: def.nodos.filter((n) => n.id !== nodoSel.id), cables: def.cables.filter((c) => c.de !== nodoSel.id && c.a !== nodoSel.id) })
-                  setSeleccion(null)
-                }}
-                onDuplicar={() => {
-                  if (!nodoSel) return
-                  let k = 1
-                  while (def.nodos.some((n) => n.id === `${nodoSel.id}_${k}`)) k++
-                  const id = `${nodoSel.id}_${k}`
-                  setDef({ ...def, nodos: [...def.nodos, { ...nodoSel, id, x: nodoSel.x + 30, y: nodoSel.y + 30, params: { ...nodoSel.params } }] })
-                  setSeleccion(id)
-                }}
-                capas={dxf?.capas ?? []}
-                cables={nodoSel ? def.cables.filter((c) => c.a === nodoSel.id) : []}
-                onDesconectar={(c) => setDef({ ...def, cables: def.cables.filter((k) => k !== c) })}
-              />
-            </>
-          ) : (
-            <Mando
-              modelo={modeloM}
-              herramienta={herrMando}
-              pedestal={0}
-              q={qMando}
-              onQ={(q) => {
-                setReproduciendo(false)
-                setQMando(q)
-              }}
-              puntos={puntos}
-              onPuntos={(p) => {
-                setReproduciendo(false)
-                setPuntos(p)
-              }}
-              onModelo={(id) => {
-                setModeloMando(id)
-                setQMando([0, -80, 100, 0, 60, 0])
-                setPuntos([])
-              }}
-              reproduciendo={reproduciendo}
-              onReproducir={() => {
-                if (reproduciendo) return setReproduciendo(false)
-                tRef.current = 0
-                setReproduciendo(true)
-              }}
-              onExportar={exportarKRL}
-            />
-          )}
-        </section>
-
-        <section style={tarjeta}>
-          <h2 style={subtitulo}>
-            Simulación · {modeloVista.nombre}
-            {simActiva && (
-              <span style={{ ...estadoChip, background: errores.length ? '#c62828' : avisosSim.length ? '#e08a00' : '#0e7a43' }} data-analisis={errores.length ? 'error' : avisosSim.length ? 'aviso' : 'ok'}>
-                {errores.length ? `${errores.length} error(es)` : avisosSim.length ? `${avisosSim.length} aviso(s)` : 'sin problemas'}
-              </span>
-            )}
-          </h2>
-          <Suspense fallback={<p style={{ padding: 20, color: '#5a6b7d' }}>Montando la celda…</p>}>
-            <Robot3D vista={vista} onCanvas={(c) => (canvasRef.current = c)} />
-          </Suspense>
-          {simActiva ? (
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8, flexWrap: 'wrap' }} data-reproductor="si">
-              <button
-                onClick={() => {
-                  if (!reproduciendo && tRef.current >= simActiva.tiempo - 1e-6) tRef.current = 0
-                  setReproduciendo((r) => !r)
-                }}
-                style={{ ...boton, background: reproduciendo ? '#ffa726' : '#0e7a43', color: reproduciendo ? '#1c2733' : '#fff' }}
-                data-play="si"
-              >
-                {reproduciendo ? '❚❚' : '▶'}
-              </button>
-              <input
-                type="range"
-                min={0}
-                max={simActiva.tiempo}
-                step={0.01}
-                value={Math.min(tiempo, simActiva.tiempo)}
-                onChange={(e) => {
-                  tRef.current = Number(e.target.value)
-                  setTick((n) => n + 1)
-                }}
-                style={{ flex: 1, minWidth: 160 }}
-                aria-label="Tiempo de la simulación"
-              />
-              <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: '0.85rem' }}>
-                {tiempo.toFixed(1)} / {simActiva.tiempo.toFixed(1)} s
-              </span>
-              <select value={velocidad} onChange={(e) => setVelocidad(Number(e.target.value))} style={{ padding: '0.2rem' }} aria-label="Velocidad">
-                {[0.5, 1, 2, 5, 10].map((x) => (
-                  <option key={x} value={x}>
-                    ×{x}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : (
-            <p style={{ margin: '8px 0 0', fontSize: '0.84rem', color: '#5a6b7d' }}>
-              {modo === 'visual'
-                ? 'Cuando el Core tenga comandos, robot y herramienta, aquí aparece el reproductor (como KUKA|play).'
-                : 'Mueve el robot con el mando; graba puntos y pulsa «Reproducir».'}
-            </p>
-          )}
-          <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: '0.84rem', marginTop: 6 }}>
-            <input type="checkbox" checked={alcance} onChange={(e) => setAlcance(e.target.checked)} /> Mostrar el alcance máximo del robot
-          </label>
-          <Ejes modelo={modeloVista} q={qVista} uso={simActiva?.uso ?? null} />
-          {simActiva && (
-            <Analisis
-              sim={simActiva}
-              onIr={(p) => {
-                tRef.current = p.t
-                if (p.nodo && modo === 'visual') setSeleccion(p.nodo)
-                setTick((n) => n + 1)
-              }}
-            />
-          )}
-          <details style={{ marginTop: 10 }}>
-            <summary style={{ cursor: 'pointer', fontWeight: 600, color: '#33475c' }}>Ficha técnica · {modeloVista.nombre}</summary>
-            <table style={{ fontSize: '0.85rem', marginTop: 6, borderCollapse: 'collapse' }}>
-              <tbody>
-                {(
-                  [
-                    ['Carga', `${modeloVista.carga} kg`],
-                    ['Alcance máximo', `${modeloVista.alcance} mm`],
-                    ['Repetibilidad', `± ${modeloVista.repetibilidad} mm`],
-                    ['Número de ejes', '6'],
-                    ['Peso', `${modeloVista.peso} kg`],
-                    ['Montaje', modeloVista.montaje],
-                    ['Rango de los ejes', modeloVista.limites.map((l, k) => `A${k + 1} ${l[0]}°/${l[1]}°`).join(' · ')],
-                    ['Uso típico', modeloVista.descripcion],
-                  ] as Array<[string, string]>
-                ).map(([a, b]) => (
-                  <tr key={a}>
-                    <td style={{ padding: '3px 8px', fontWeight: 600, verticalAlign: 'top' }}>{a}</td>
-                    <td style={{ padding: '3px 8px' }}>{b}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <p style={{ fontSize: '0.78rem', color: '#5f6b78' }}>Datos de las fichas técnicas publicadas de cada modelo. Para un trabajo formal, cita la ficha oficial de KUKA.</p>
-          </details>
-          {modo === 'visual' && sim && (
-            <details style={{ marginTop: 8 }}>
-              <summary style={{ cursor: 'pointer', fontWeight: 600, color: '#33475c' }}>Código KRL generado ({sim.krl.split('\n').length} líneas)</summary>
-              <pre style={{ maxHeight: 260, overflow: 'auto', background: '#1f2328', color: '#e8eaed', padding: 10, borderRadius: 8, fontSize: '0.78rem' }} data-krl="si">
-                {sim.krl}
-              </pre>
-            </details>
-          )}
-        </section>
-      </div>
-
-      <section style={{ ...tarjeta, marginTop: 14 }}>
-        <Seccion titulo="Tipos de robots de base fija (en 3D)">
-          <Suspense fallback={<p>Cargando…</p>}>
-            <TiposRobot />
-          </Suspense>
-        </Seccion>
-      </section>
-      <section style={tarjeta}>
-        <Seccion titulo="¿Qué es un robot industrial?">
-          <QueEsRobot />
-        </Seccion>
-      </section>
-      <section style={tarjeta}>
-        <Seccion titulo="Fabricación en serie y robótica industrial">
-          <SerieVsRobotica />
-        </Seccion>
-      </section>
-      <section style={tarjeta}>
-        <Seccion titulo="Tipos de robots">
-          <TiposGenerales />
-        </Seccion>
-      </section>
-      <section style={tarjeta}>
-        <Seccion titulo="Componentes de un robot de base fija">
-          <Componentes />
-        </Seccion>
-      </section>
-      <section style={tarjeta}>
-        <Seccion titulo="Grados de libertad y singularidades">
-          <GradosLibertad />
-        </Seccion>
-      </section>
-      <section style={tarjeta}>
-        <Seccion titulo="Ficha técnica: cómo elegir el robot">
-          <FichaTecnica />
-        </Seccion>
-      </section>
-      <section style={tarjeta}>
-        <Seccion titulo="Programación paramétrica: Rhino, Grasshopper y KUKA|prc">
-          <ProgramacionParametrica />
-        </Seccion>
-      </section>
-      <section style={tarjeta}>
-        <Seccion titulo="Instalar el software del curso (sin crackear)">
-          <InstalarSoftware />
-        </Seccion>
-      </section>
-      <section style={tarjeta}>
-        <Seccion titulo="Cómo usar esta unidad">
-          <ComoUsar />
-        </Seccion>
-      </section>
-    </main>
+    </>
   )
 }
+
+type PestanaRobot = 'analisis' | 'krl' | 'ficha'
+
+const SECCIONES_ROBOT: SeccionEstudio[] = [
+  {
+    id: 'tipos-3d',
+    indice: 'Tipos de robots en 3D',
+    titulo: 'Tipos de robots de base fija (en 3D)',
+    contenido: (
+      <Suspense fallback={<p>Cargando…</p>}>
+        <TiposRobot />
+      </Suspense>
+    ),
+  },
+  { id: 'que-es', indice: '¿Qué es un robot industrial?', titulo: '¿Qué es un robot industrial?', contenido: <QueEsRobot /> },
+  { id: 'serie', indice: 'Fabricación en serie', titulo: 'Fabricación en serie y robótica industrial', contenido: <SerieVsRobotica /> },
+  { id: 'tipos', indice: 'Tipos de robots', titulo: 'Tipos de robots', contenido: <TiposGenerales /> },
+  { id: 'componentes', indice: 'Componentes', titulo: 'Componentes de un robot de base fija', contenido: <Componentes /> },
+  { id: 'grados', indice: 'Grados de libertad', titulo: 'Grados de libertad y singularidades', contenido: <GradosLibertad /> },
+  { id: 'ficha-tecnica', indice: 'Ficha técnica', titulo: 'Ficha técnica: cómo elegir el robot', contenido: <FichaTecnica /> },
+  { id: 'parametrica', indice: 'Programación paramétrica', titulo: 'Programación paramétrica: Rhino, Grasshopper y KUKA|prc', contenido: <ProgramacionParametrica /> },
+  { id: 'instalar', indice: 'Instalar el software', titulo: 'Instalar el software del curso (sin crackear)', contenido: <InstalarSoftware /> },
+  { id: 'como-usar', indice: 'Cómo usar esta unidad', titulo: 'Cómo usar esta unidad', contenido: <ComoUsar /> },
+]
 
 /** Posiciones de los puntos enseñados (para marcarlos en 3D). */
 const cacheMarcas = new WeakMap<PuntoEnsenado[], V3[]>()
@@ -1030,17 +1081,6 @@ function ComoUsar() {
   )
 }
 
-const tarjeta: React.CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #e0e5eb',
-  borderRadius: 10,
-  padding: '1rem 1.25rem',
-  marginTop: 12,
-  boxShadow: '0 1px 3px rgba(28, 39, 51, 0.06)',
-  minWidth: 0,
-}
-const subtitulo: React.CSSProperties = { margin: '0 0 0.6rem', fontSize: '1.05rem', color: '#33475c', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }
-const boton: React.CSSProperties = { border: 'none', color: '#fff', padding: '0.4rem 0.9rem', borderRadius: 8, fontSize: '0.95rem', fontWeight: 700, cursor: 'pointer' }
 const botonSuave: React.CSSProperties = { border: '1px solid #c6ced6', background: '#fff', color: '#33475c', padding: '0.35rem 0.75rem', borderRadius: 7, fontSize: '0.85rem', cursor: 'pointer' }
 const rotulo: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.85rem', color: '#5a6b7d' }
 const estadoChip: React.CSSProperties = { color: '#fff', borderRadius: 6, padding: '1px 8px', fontSize: '0.75rem', fontWeight: 700 }

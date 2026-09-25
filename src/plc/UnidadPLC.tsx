@@ -6,9 +6,12 @@
  * ejecuta en ciclos de scan contra la planta, las salidas mueven la máquina
  * y los sensores de la máquina vuelven a las entradas.
  */
-import { BarraHerramientas, CabeceraUnidad, estiloAviso, Etiquetado, Menu } from '../components/ui'
+import { botonPrimario, estiloAviso, Etiquetado, Menu, useEsEstrecha } from '../components/ui'
+import BancoDividido, { TituloArea } from '../components/banco/BancoDividido'
+import { usePanelAcoplado, type PestanaPanel } from '../components/banco/PanelAcoplado'
+import PaginaEstudiar, { type SeccionEstudio } from '../components/banco/PaginaEstudiar'
+import SubnavUnidad, { useSeccionUnidad } from '../components/banco/SubnavUnidad'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Seccion } from '../components/Seccion'
 import { exportarPng, nombreSeguro } from '../exportar'
 import EditorLadder from './EditorLadder'
 import { EJEMPLOS_PLC } from './ejemplos'
@@ -86,6 +89,10 @@ export default function UnidadPLC() {
   const [version, setVersion] = useState(0)
   const [, setFotograma] = useState(0)
   const [aviso, setAviso] = useState<string | null>(null)
+  const estrecha = useEsEstrecha()
+  const [seccion, setSeccion] = useSeccionUnidad(SECCIONES_PLC.map((x) => x.id))
+  const panel = usePanelAcoplado<PestanaPLC>('neumalab.plc.panel', 'es', typeof window !== 'undefined' && window.innerHeight >= 860)
+  const [movil, setMovil] = useState('programa')
   const [notacion, setNotacion] = useState<Notacion>(() => {
     try {
       return localStorage.getItem('neumalab.plc.notacion') === 'ab' ? 'ab' : 'siemens'
@@ -309,310 +316,338 @@ export default function UnidadPLC() {
     }
   }
 
-  const eventos = eventosRef.current.slice(-8).reverse()
+  const eventos = eventosRef.current
+  const hayForzados = Object.keys(forzados).length > 0
 
-  return (
-    <main style={{ maxWidth: 1320, margin: '0 auto', padding: '0.8rem clamp(0.75rem, 3vw, 1.5rem) 1.25rem' }}>
-      <CabeceraUnidad titulo="Unidad 2 · PLC" descripcion="Programa en Ladder y pruébalo en la planta del laboratorio" />
+  const panelES = (parte: 'mandos' | 'tabla') => (
+    <PanelES
+      parte={parte}
+      mandos={descripcion.mandos}
+      simbolos={programa.simbolos}
+      cableado={descripcion.cableado.map((c) => c.dir)}
+      estado={estado}
+      mandosActivos={sim.mandos}
+      pulsar={pulsar}
+      notacion={notacion}
+      tiposLibres={tiposLibres}
+      onTipoLibre={(dir, tipo) => {
+        setTiposLibres((t) => ({ ...t, [dir]: tipo }))
+        // Un pulsador NC da 1 en reposo.
+        pulsar(dir, tipo === 'NC')
+      }}
+      forzados={forzados}
+      onForzar={(dir, v) =>
+        setForzados((f) => {
+          const n = { ...f }
+          if (v === null) delete n[dir]
+          else n[dir] = v
+          return n
+        })
+      }
+    />
+  )
 
-      <BarraHerramientas
-        derecha={
-          <>
-            <Menu
-              etiqueta="Archivo"
-              items={[
-                { texto: 'Nuevo programa', ayuda: 'Empieza con el diagrama vacío', onClick: nuevo },
-                { texto: 'Abrir…', ayuda: 'Un programa guardado (.json)', onClick: () => inputArchivo.current?.click() },
-                { texto: 'Guardar', ayuda: 'Descarga el programa para volver a abrirlo', onClick: guardar },
-              ]}
-            />
-            <Menu etiqueta="Exportar" items={[{ texto: 'Diagrama Ladder (PNG)', ayuda: 'Imagen del programa para tu informe', onClick: () => void exportarLadder() }]} />
-            <input
-              ref={inputArchivo}
-              type="file"
-              accept="application/json,.json"
-              style={{ display: 'none' }}
-              onChange={(e) => {
-                void abrir(e.target.files?.[0])
-                e.target.value = ''
-              }}
-            />
-          </>
-        }
+  const selectorPlanta = (
+    <select
+      value={programa.planta}
+      onChange={(e) => cambiarPlanta(e.target.value as IdPlanta)}
+      aria-label="Planta"
+      style={{ padding: '0.35rem 0.4rem', minHeight: 36, width: estrecha ? '100%' : 220, maxWidth: 320 }}
+      data-planta="si"
+    >
+      {Object.values(PLANTAS).map((p) => (
+        <option key={p.id} value={p.id}>
+          {p.nombre}
+        </option>
+      ))}
+    </select>
+  )
+  const itemsArchivo = [
+    { texto: 'Nuevo programa', ayuda: 'Empieza con el diagrama vacío', onClick: nuevo },
+    { texto: 'Abrir…', ayuda: 'Un programa guardado (.json)', onClick: () => inputArchivo.current?.click() },
+    { texto: 'Guardar', ayuda: 'Descarga el programa para volver a abrirlo', onClick: guardar },
+  ]
+  const itemExportar = { texto: 'Diagrama Ladder (PNG)', ayuda: 'Imagen del programa para tu informe', onClick: () => void exportarLadder() }
+
+  const barra = (
+    <>
+      {/* RUN / STOP: la acción principal. */}
+      <button onClick={() => setCorriendo((c) => !c)} title="Atajo: barra espaciadora" aria-pressed={corriendo} style={botonPrimario(corriendo)} data-run="si">
+        {corriendo ? '■ STOP' : '▶ RUN'}
+      </button>
+      <span style={{ display: 'inline-flex', gap: 2 }}>
+        <button onClick={deshacer} disabled={corriendo || !historialRef.current.puedeDeshacer} title="Deshacer (Ctrl+Z)" aria-label="Deshacer" className="boton-icono" style={{ opacity: corriendo || !historialRef.current.puedeDeshacer ? 0.4 : 1 }}>
+          ↶
+        </button>
+        <button onClick={rehacer} disabled={corriendo || !historialRef.current.puedeRehacer} title="Rehacer (Ctrl+Shift+Z)" aria-label="Rehacer" className="boton-icono" style={{ opacity: corriendo || !historialRef.current.puedeRehacer ? 0.4 : 1 }}>
+          ↷
+        </button>
+      </span>
+      <select
+        value=""
+        aria-label="Ejemplos y ejercicios"
+        title="Abrir un ejemplo resuelto o un ejercicio para resolver"
+        onChange={(e) => {
+          const valor = e.target.value
+          e.target.value = ''
+          const ejercicio = EJERCICIOS_PLC.find((x) => `ejercicio:${x.id}` === valor)
+          if (ejercicio) {
+            if (!confirmar(`¿Empezar «${ejercicio.titulo}»?`)) return
+            setCorriendo(false)
+            setPrograma(programaDeEjercicio(ejercicio))
+            return
+          }
+          const ej = EJEMPLOS_PLC.find((x) => x.id === valor)
+          if (!ej || !confirmar(`¿Cargar «${ej.etiqueta}»?`)) return
+          setCorriendo(false)
+          setPrograma(clonarPrograma(ej.programa))
+        }}
+        style={{ padding: '0.35rem 0.4rem', width: estrecha ? '32vw' : 210, minHeight: 36 }}
+        data-ejemplos-plc="si"
       >
-        <Etiquetado texto="Ejemplos">
-          <select
-            value=""
-            onChange={(e) => {
-              const valor = e.target.value
-              e.target.value = ''
-              const ejercicio = EJERCICIOS_PLC.find((x) => `ejercicio:${x.id}` === valor)
-              if (ejercicio) {
-                if (!confirmar(`¿Empezar «${ejercicio.titulo}»?`)) return
-                setCorriendo(false)
-                setPrograma(programaDeEjercicio(ejercicio))
-                return
-              }
-              const ej = EJEMPLOS_PLC.find((x) => x.id === valor)
-              if (!ej || !confirmar(`¿Cargar «${ej.etiqueta}»?`)) return
-              setCorriendo(false)
-              setPrograma(clonarPrograma(ej.programa))
-            }}
-            style={{ padding: '0.35rem 0.4rem', maxWidth: 'min(280px, calc(100vw - 120px))', minHeight: 36 }}
-          >
-            <option value="">— elige un programa —</option>
-            <optgroup label="Ejercicios para resolver (sin solución)">
-              {EJERCICIOS_PLC.map((e) => (
-                <option key={e.id} value={`ejercicio:${e.id}`}>
-                  📝 {e.titulo}
-                </option>
-              ))}
-            </optgroup>
-            <optgroup label="Ejemplos resueltos">
-              {EJEMPLOS_PLC.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.etiqueta}
-                </option>
-              ))}
-            </optgroup>
-          </select>
-        </Etiquetado>
-        <Etiquetado texto="Planta">
-          <select value={programa.planta} onChange={(e) => cambiarPlanta(e.target.value as IdPlanta)} style={{ padding: '0.35rem 0.4rem', minHeight: 36, maxWidth: 'min(260px, calc(100vw - 120px))' }}>
-            {Object.values(PLANTAS).map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nombre}
-              </option>
-            ))}
-          </select>
-        </Etiquetado>
+        <option value="">Ejemplos y ejercicios…</option>
+        <optgroup label="Ejercicios para resolver (sin solución)">
+          {EJERCICIOS_PLC.map((e) => (
+            <option key={e.id} value={`ejercicio:${e.id}`}>
+              📝 {e.titulo}
+            </option>
+          ))}
+        </optgroup>
+        <optgroup label="Ejemplos resueltos">
+          {EJEMPLOS_PLC.map((e) => (
+            <option key={e.id} value={e.id}>
+              {e.etiqueta}
+            </option>
+          ))}
+        </optgroup>
+      </select>
+      {!estrecha && <Etiquetado texto="Planta">{selectorPlanta}</Etiquetado>}
+      {!estrecha && (
         <Etiquetado texto="Direcciones" titulo="Cómo se escriben las direcciones: como en el apunte o como en LogixPro / RSLogix">
-          <select value={notacion} onChange={(e) => setNotacion(e.target.value as Notacion)} style={{ padding: '0.35rem 0.4rem', minHeight: 36, maxWidth: 'min(260px, calc(100vw - 120px))' }}>
-            <option value="siemens">Apunte (I0.3, Q0.1)</option>
-            <option value="ab">LogixPro (I:1/03, O:2/01)</option>
+          <select value={notacion} onChange={(e) => setNotacion(e.target.value as Notacion)} style={{ padding: '0.35rem 0.4rem', minHeight: 36, width: 172 }}>
+            <option value="siemens">Apunte (I0.3)</option>
+            <option value="ab">LogixPro (I:1/03)</option>
           </select>
         </Etiquetado>
-      </BarraHerramientas>
+      )}
+      <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
+        {estrecha ? (
+          <Menu
+            etiqueta="⋯"
+            datos="mas"
+            items={[
+              ...itemsArchivo,
+              { ...itemExportar, texto: 'Exportar Ladder (PNG)', separar: true },
+              {
+                texto: notacion === 'ab' ? 'Direcciones como en el apunte' : 'Direcciones como en LogixPro',
+                ayuda: notacion === 'ab' ? 'I0.3, Q0.1' : 'I:1/03, O:2/01',
+                onClick: () => setNotacion(notacion === 'ab' ? 'siemens' : 'ab'),
+                separar: true,
+              },
+            ]}
+          />
+        ) : (
+          <>
+            <Menu etiqueta="Archivo" items={itemsArchivo} />
+            <Menu etiqueta="Exportar" items={[itemExportar]} />
+          </>
+        )}
+      </span>
+      <input
+        ref={inputArchivo}
+        type="file"
+        accept="application/json,.json"
+        style={{ display: 'none' }}
+        onChange={(e) => {
+          void abrir(e.target.files?.[0])
+          e.target.value = ''
+        }}
+      />
+    </>
+  )
 
-      {aviso && <p role="status" style={avisoOk}>{aviso}</p>}
-
+  const areaPrograma = (
+    <>
       {ejercicioActual && <TarjetaEjercicio ejercicio={ejercicioActual} programa={programa} notacion={notacion} />}
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 520px), 1fr))', gap: 14, alignItems: 'start' }}>
-        <section style={{ ...tarjeta, marginTop: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: '0.6rem' }}>
-            {/* RUN / STOP junto al programa: se prueba sin salir del diagrama. */}
-            <button
-              onClick={() => setCorriendo((c) => !c)}
-              title="Atajo: barra espaciadora"
-              aria-pressed={corriendo}
-              style={{ ...boton, background: corriendo ? '#33475c' : '#0e7a43', padding: '0.5rem 1.2rem', fontSize: '0.98rem' }}
-            >
-              {corriendo ? '■ STOP' : '▶ RUN'}
-            </button>
-            {!corriendo && (
-              <span style={{ display: 'flex', gap: 4 }}>
-                <button
-                  onClick={deshacer}
-                  disabled={!historialRef.current.puedeDeshacer}
-                  title="Deshacer (Ctrl+Z)"
-                  style={{ ...botonSuave, opacity: historialRef.current.puedeDeshacer ? 1 : 0.45 }}
-                >
-                  ↶ Deshacer
-                </button>
-                <button
-                  onClick={rehacer}
-                  disabled={!historialRef.current.puedeRehacer}
-                  title="Rehacer (Ctrl+Shift+Z)"
-                  style={{ ...botonSuave, opacity: historialRef.current.puedeRehacer ? 1 : 0.45 }}
-                >
-                  ↷
-                </button>
-              </span>
-            )}
-            <h2 style={{ ...subtitulo, margin: 0 }}>
-              Programa Ladder{programa.nombre ? ` · ${programa.nombre}` : ''}
-              <span style={{ ...estadoPLC, background: corriendo ? '#0e7a43' : '#a35200' }}>{corriendo ? 'RUN' : 'STOP'}</span>
-            </h2>
-          </div>
-          {corriendo && (
-            <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: '#5a6b7d' }}>
-              El PLC está ejecutando el programa. Pásalo a STOP para editarlo.
+      <TituloArea>
+        Programa Ladder{programa.nombre ? ` · ${programa.nombre}` : ''}
+        <span style={{ ...estadoPLC, background: corriendo ? '#0e7a43' : '#a35200' }}>{corriendo ? 'RUN' : 'STOP'}</span>
+      </TituloArea>
+      {corriendo && <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: '#51606f' }}>El PLC está ejecutando el programa. Pásalo a STOP para editarlo.</p>}
+      <EditorLadder
+        programa={programa}
+        onCambiar={setPrograma}
+        flujos={corriendo ? flujosRef.current : null}
+        estado={corriendo ? estado : null}
+        editable={!corriendo}
+        notacion={notacion}
+      />
+      {avisos.length > 0 && (
+        <div style={{ marginTop: 8 }} data-avisos-plc="si">
+          {avisos.map((a, i) => (
+            <p key={i} style={{ color: '#7a4f00', margin: '3px 0', fontSize: '0.86rem' }}>
+              ⚠ {a}
             </p>
-          )}
-          <EditorLadder
-            programa={programa}
-            onCambiar={setPrograma}
-            flujos={corriendo ? flujosRef.current : null}
-            estado={corriendo ? estado : null}
-            editable={!corriendo}
-            notacion={notacion}
-          />
-          {avisos.length > 0 && (
-            <div style={{ marginTop: 8 }}>
-              {avisos.map((a, i) => (
-                <p key={i} style={{ color: '#8a5b00', margin: '3px 0', fontSize: '0.86rem' }}>
-                  ⚠ {a}
-                </p>
-              ))}
-            </div>
-          )}
-        </section>
+          ))}
+        </div>
+      )}
+    </>
+  )
 
-        <section style={{ ...tarjeta, marginTop: 0 }}>
-          <h2 style={subtitulo}>Planta · {descripcion.nombre}</h2>
-          <p style={{ margin: '0 0 8px', fontSize: '0.86rem', color: '#5a6b7d' }}>{descripcion.resumen}</p>
-          <Suspense fallback={<p style={{ padding: 20, color: '#5a6b7d' }}>Montando la planta…</p>}>
-            <Planta3D
-              sim={simRef}
-              version={version}
-              acciones={[]}
-              onAccion={(id) => {
-                sim.planta.accion(id)
-                setFotograma((f) => f + 1)
-              }}
-              notacion={notacion}
-            />
-          </Suspense>
-          {avisoPlantaRef.current && avisoPlantaRef.current.hasta > Date.now() && (
-            <p
-              role="alert"
-              style={{
-                margin: '8px 0 0',
-                padding: '0.45rem 0.7rem',
-                background: '#fff4e5',
-                border: '1px solid #f0c98a',
-                borderRadius: 8,
-                color: '#8a3b00',
-                fontSize: '0.86rem',
-              }}
-            >
-              ⚠ {avisoPlantaRef.current.mensaje}
-            </p>
-          )}
-          {sim.planta.acciones().length > 0 && (
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginTop: 8 }}>
-              <span style={{ fontSize: '0.8rem', color: '#5a6b7d' }}>En la planta:</span>
-              {sim.planta.acciones().map((a) => (
-                <button
-                  key={a.id}
-                  title={a.titulo}
-                  style={{ ...botonSuave, borderColor: '#1668c7', color: '#1668c7', fontWeight: 600 }}
-                  onClick={() => {
-                    sim.planta.accion(a.id)
-                    setFotograma((f) => f + 1)
-                  }}
-                >
-                  {a.etiqueta}
-                </button>
-              ))}
-            </div>
-          )}
-          <PanelES
-            mandos={descripcion.mandos}
-            simbolos={programa.simbolos}
-            cableado={descripcion.cableado.map((c) => c.dir)}
-            estado={estado}
-            mandosActivos={sim.mandos}
-            pulsar={pulsar}
-            notacion={notacion}
-            tiposLibres={tiposLibres}
-            onTipoLibre={(dir, tipo) => {
-              setTiposLibres((t) => ({ ...t, [dir]: tipo }))
-              // Un pulsador NC da 1 en reposo.
-              pulsar(dir, tipo === 'NC')
-            }}
-            forzados={forzados}
-            onForzar={(dir, v) =>
-              setForzados((f) => {
-                const n = { ...f }
-                if (v === null) delete n[dir]
-                else n[dir] = v
-                return n
-              })
-            }
-          />
-        </section>
-      </div>
-
-      <div style={{ display: 'flex', gap: 14, alignItems: 'stretch', flexWrap: 'wrap' }}>
-        <section style={{ ...tarjeta, flex: '2 1 460px', minWidth: 0 }}>
-          <h2 style={subtitulo}>Tabla de símbolos · asignación de entradas y salidas</h2>
-          <TablaSimbolos programa={programa} onCambiar={setPrograma} editable={!corriendo} notacion={notacion} />
-        </section>
-        <section style={{ ...tarjeta, flex: '1 1 320px', minWidth: 0 }}>
-          <h2 style={subtitulo}>¿Qué está pasando?</h2>
-          {eventos.length === 0 ? (
-            <p style={{ color: '#5a6b7d', margin: 0 }}>Pulsa ▶ RUN y acciona la planta para ver qué hace el programa.</p>
-          ) : (
-            <ul style={{ margin: 0, paddingLeft: '1.1rem', lineHeight: 1.55, fontSize: '0.9rem' }}>
-              {eventos.map((e, i) => (
-                <li key={`${e.t}-${i}`} style={{ opacity: i === 0 ? 1 : 0.7, color: e.aviso ? '#8a3b00' : undefined }}>
-                  <code>t={e.t.toFixed(1)}s</code> — {e.aviso ? '⚠ ' : ''}
-                  {e.mensaje}
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
-
-      <section style={tarjeta}>
-        <Seccion titulo="Tabla de datos · la memoria del PLC por dentro">
-          <TablaDatos
-            estado={estado}
-            programa={programa}
-            notacion={notacion}
-            onPalabra={(d, v) => {
-              simRef.current.estado.palabras[d] = v
+  const areaPlanta = (
+    <>
+      {estrecha && <div style={{ marginBottom: 6 }}>{selectorPlanta}</div>}
+      <TituloArea>
+        Planta · {descripcion.nombre}
+        <span title={descripcion.resumen} style={{ fontWeight: 400, fontSize: '0.8rem', color: '#51606f' }}>
+          ⓘ
+        </span>
+      </TituloArea>
+      <div className="relleno">
+        <Suspense fallback={<p style={{ padding: 20, color: '#51606f' }}>Montando la planta…</p>}>
+          <Planta3D
+            sim={simRef}
+            version={version}
+            acciones={[]}
+            onAccion={(id) => {
+              sim.planta.accion(id)
               setFotograma((f) => f + 1)
             }}
+            notacion={notacion}
+            alto="100%"
           />
-        </Seccion>
-      </section>
+        </Suspense>
+      </div>
+      {avisoPlantaRef.current && avisoPlantaRef.current.hasta > Date.now() && (
+        <p role="alert" style={{ margin: '8px 0 0', padding: '0.45rem 0.7rem', background: '#fff4e5', border: '1px solid #f0c98a', borderRadius: 8, color: '#8a3b00', fontSize: '0.86rem' }}>
+          ⚠ {avisoPlantaRef.current.mensaje}
+        </p>
+      )}
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginTop: 8 }}>
+        {panelES('mandos')}
+        {sim.planta.acciones().length > 0 && (
+          <>
+            <span style={{ fontSize: '0.8rem', color: '#51606f', marginLeft: 6 }}>En la planta:</span>
+            {sim.planta.acciones().map((a) => (
+              <button
+                key={a.id}
+                title={a.titulo}
+                style={{ ...botonSuave, borderColor: '#1668c7', color: '#1668c7', fontWeight: 600 }}
+                onClick={() => {
+                  sim.planta.accion(a.id)
+                  setFotograma((f) => f + 1)
+                }}
+              >
+                {a.etiqueta}
+              </button>
+            ))}
+          </>
+        )}
+      </div>
+    </>
+  )
 
-      <section style={tarjeta}>
-        <Seccion titulo="¿Qué es un PLC y para qué se usa?">
-          <QueEsPLC />
-        </Seccion>
-      </section>
-      <section style={tarjeta}>
-        <Seccion titulo="Componentes de un PLC">
-          <ComponentesPLC />
-        </Seccion>
-      </section>
-      <section style={tarjeta}>
-        <Seccion titulo="Entradas, salidas y direcciones">
-          <EntradasSalidas />
-        </Seccion>
-      </section>
-      <section style={tarjeta}>
-        <Seccion titulo="¿Cómo elegir un PLC?">
-          <ElegirPLC />
-        </Seccion>
-      </section>
-      <section style={tarjeta}>
-        <Seccion titulo="Sensores que se conectan al PLC">
-          <Sensores />
-        </Seccion>
-      </section>
-      <section style={tarjeta}>
-        <Seccion titulo="Programación Ladder · contactos y bobinas">
-          <SimbolosLadder />
-        </Seccion>
-      </section>
-      <section style={tarjeta}>
-        <Seccion titulo="Cómo ejecuta el PLC tu programa: el ciclo de scan">
-          <CicloScan />
-        </Seccion>
-      </section>
+  const registro =
+    eventos.length === 0 ? (
+      <p style={{ color: '#51606f', margin: 0, fontSize: '0.88rem' }}>Pulsa ▶ RUN y acciona la planta: aquí aparece lo que va ocurriendo, en orden.</p>
+    ) : (
+      <ol style={{ margin: 0, paddingLeft: 0, listStyle: 'none', lineHeight: 1.55, fontSize: '0.88rem' }} data-registro="si">
+        {eventos.map((e, i) => (
+          <li key={`${e.t}-${i}`} style={{ opacity: i === eventos.length - 1 ? 1 : 0.8, color: e.aviso ? '#8a3b00' : undefined }}>
+            <code style={{ color: '#51606f', marginRight: 8 }}>t={e.t.toFixed(1)} s</code>
+            {e.aviso ? '⚠ ' : ''}
+            {e.mensaje}
+          </li>
+        ))}
+      </ol>
+    )
 
-      <footer style={{ margin: '1.5rem 0 0.5rem', color: '#5f6b78', fontSize: '0.8rem', textAlign: 'center' }}>
-        NeumaLab · MEC275 — Unidad 2: Controlador Lógico Programable · Ladder
-      </footer>
-    </main>
+  const pestanas: Array<PestanaPanel<PestanaPLC>> = [
+    { id: 'es', titulo: 'Entradas y salidas', contenido: panelES('tabla') },
+    { id: 'simbolos', titulo: 'Tabla de símbolos', contenido: <TablaSimbolos programa={programa} onCambiar={setPrograma} editable={!corriendo} notacion={notacion} /> },
+    {
+      id: 'datos',
+      titulo: 'Tabla de datos',
+      contenido: (
+        <TablaDatos
+          estado={estado}
+          programa={programa}
+          notacion={notacion}
+          onPalabra={(d, v) => {
+            simRef.current.estado.palabras[d] = v
+            setFotograma((f) => f + 1)
+          }}
+        />
+      ),
+    },
+    { id: 'registro', titulo: '¿Qué está pasando?', contador: eventos.length, contenido: registro, seguirFinal: true },
+  ]
+
+  const barraEstado = (
+    <>
+      <span>
+        {corriendo
+          ? 'RUN: el PLC ejecuta el programa contra la planta · pulsa los mandos o los botones de la máquina · Espacio pasa a STOP.'
+          : 'STOP: elige una herramienta y haz clic en una casilla para editar · Espacio pasa a RUN.'}
+      </span>
+      {hayForzados && (
+        <button
+          onClick={() => {
+            panel.onPestana('es')
+            panel.onAbrir(true)
+          }}
+          style={{ border: 'none', background: 'transparent', color: '#8e1c1c', fontWeight: 700, cursor: 'pointer', fontSize: '0.82rem' }}
+        >
+          ⚠ E/S forzadas
+        </button>
+      )}
+      {avisos.length > 0 && <span style={{ marginLeft: hayForzados ? 0 : 'auto', color: '#7a4f00', fontWeight: 700 }}>⚠ {avisos.length} {avisos.length === 1 ? 'aviso' : 'avisos'}</span>}
+    </>
+  )
+
+  return (
+    <>
+      <SubnavUnidad nombre="PLC" seccion={seccion} onSeccion={setSeccion} />
+      {seccion === 'laboratorio' ? (
+        <BancoDividido<PestanaPLC>
+          clave="neumalab.plc.banco"
+          barra={barra}
+          izquierda={{ id: 'programa', titulo: 'Programa', contenido: areaPrograma }}
+          derecha={{ id: 'planta', titulo: 'Planta', contenido: areaPlanta }}
+          inferior={{ etiqueta: 'Entradas, tablas y registro', pestanas, estado: panel }}
+          estado={barraEstado}
+          movil={movil}
+          onMovil={setMovil}
+        />
+      ) : (
+        <PaginaEstudiar
+          etiqueta="Estudiar PLC"
+          titulo="Estudiar · PLC"
+          descripcion="Teoría de la unidad. Los programas de ejemplo y los ejercicios se abren en el Laboratorio."
+          pie="NeumaLab · MEC275 — Unidad 2: Controlador Lógico Programable · Ladder"
+          secciones={SECCIONES_PLC}
+        />
+      )}
+      {aviso && (
+        <p role="status" style={avisoOk}>
+          {aviso}
+        </p>
+      )}
+    </>
   )
 }
+
+type PestanaPLC = 'es' | 'simbolos' | 'datos' | 'registro'
+
+const SECCIONES_PLC: SeccionEstudio[] = [
+  { id: 'que-es', indice: '¿Qué es un PLC?', titulo: '¿Qué es un PLC y para qué se usa?', contenido: <QueEsPLC /> },
+  { id: 'componentes', indice: 'Componentes', titulo: 'Componentes de un PLC', contenido: <ComponentesPLC /> },
+  { id: 'entradas-salidas', indice: 'Entradas y salidas', titulo: 'Entradas, salidas y direcciones', contenido: <EntradasSalidas /> },
+  { id: 'elegir', indice: 'Cómo elegir un PLC', titulo: '¿Cómo elegir un PLC?', contenido: <ElegirPLC /> },
+  { id: 'sensores', indice: 'Sensores', titulo: 'Sensores que se conectan al PLC', contenido: <Sensores /> },
+  { id: 'ladder', indice: 'Ladder', titulo: 'Programación Ladder · contactos y bobinas', contenido: <SimbolosLadder /> },
+  { id: 'scan', indice: 'Ciclo de scan', titulo: 'Cómo ejecuta el PLC tu programa: el ciclo de scan', contenido: <CicloScan /> },
+]
 
 type TipoLibre = 'interruptor' | 'NA' | 'NC'
 
@@ -634,7 +669,10 @@ function PanelES({
   onTipoLibre,
   forzados,
   onForzar,
+  parte,
 }: {
+  /** Sólo los mandos de la planta (bajo la vista 3D) o sólo la tabla de E/S. */
+  parte: 'mandos' | 'tabla'
   mandos: Mando[]
   simbolos: ProgramaPLC['simbolos']
   cableado: string[]
@@ -674,7 +712,7 @@ function PanelES({
       </button>
     )
   }
-  const colores: Record<string, string> = { verde: '#19a34e', rojo: '#c62828', negro: '#2b3036', amarillo: '#d4a017' }
+  const colores: Record<string, string> = { verde: '#0e7a43', rojo: '#c62828', negro: '#2b3036', amarillo: '#8a6500' }
   const nombre = (d: string) => simbolos.find((s) => s.dir === d)?.nombre ?? ''
   const fmt = (d: string) => formatear(d, notacion)
   const botonMando = (dir: string, texto: string, tipo: 'pulsador' | 'interruptor' | 'NC', color: string) => {
@@ -736,14 +774,15 @@ function PanelES({
     )
   }
   const deMandos = new Set(mandos.map((m) => m.dir))
+  if (parte === 'mandos')
+    return mandos.length > 0 ? (
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+        <span style={{ fontSize: '0.8rem', color: '#51606f' }}>Mandos de la planta:</span>
+        {mandos.map((m) => botonMando(m.dir, m.nombre, m.tipo, colores[m.color]))}
+      </div>
+    ) : null
   return (
-    <div style={{ marginTop: 10 }}>
-      {mandos.length > 0 && (
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 8 }}>
-          <span style={{ fontSize: '0.8rem', color: '#5a6b7d' }}>Mandos de la planta:</span>
-          {mandos.map((m) => botonMando(m.dir, m.nombre, m.tipo, colores[m.color]))}
-        </div>
-      )}
+    <div>
       {Object.keys(forzados).length > 0 && (
         <p style={{ margin: '0 0 8px', padding: '4px 8px', background: '#fdecea', border: '1px solid #f1b0ab', borderRadius: 6, color: '#8e1c1c', fontSize: '0.8rem' }} data-aviso-forzado="si">
           ⚠ Hay E/S forzadas ({Object.entries(forzados).map(([d, v]) => `${formatear(d, notacion)}=${v ? 1 : 0}`).join(', ')}): valen eso sin importar el programa ni la planta. Úsalo sólo para probar y quítalo después.{' '}
@@ -826,7 +865,7 @@ function TablaDatos({
   const nombre = (d: string) => programa.simbolos.find((s) => s.dir === d)?.nombre ?? ''
   const celda: React.CSSProperties = { border: '1px solid #e0e5eb', padding: '3px 6px', textAlign: 'center', fontFamily: 'ui-monospace, monospace', fontSize: '0.82rem' }
   const bit = (v: boolean | undefined) => (
-    <td style={{ ...celda, background: v ? '#d8f3e5' : '#fff', color: v ? '#0a6b3c' : '#8a97a5', fontWeight: 700 }}>{v ? 1 : 0}</td>
+    <td style={{ ...celda, background: v ? '#d8f3e5' : '#fff', color: v ? '#0a6b3c' : '#5f6b78', fontWeight: 700 }}>{v ? 1 : 0}</td>
   )
   const filaBits = (titulo: string, dirs: string[]) => (
     <tr>
@@ -1062,25 +1101,6 @@ function TablaSimbolos({
   )
 }
 
-const tarjeta: React.CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #e0e5eb',
-  borderRadius: 10,
-  padding: '1rem 1.25rem',
-  marginTop: 12,
-  boxShadow: '0 1px 3px rgba(28, 39, 51, 0.06)',
-  minWidth: 0,
-}
-const subtitulo: React.CSSProperties = { margin: '0 0 0.6rem', fontSize: '1rem', color: '#33475c', display: 'flex', alignItems: 'center', gap: 8 }
-const boton: React.CSSProperties = {
-  border: 'none',
-  color: '#fff',
-  padding: '0.45rem 0.9rem',
-  borderRadius: 8,
-  fontSize: '0.9rem',
-  fontWeight: 600,
-  cursor: 'pointer',
-}
 const botonSuave: React.CSSProperties = {
   border: '1px solid #c6ced6',
   background: '#fff',

@@ -695,7 +695,8 @@ export default function Maquina3D({
   onCanvas,
 }: {
   vista: MutableRefObject<VistaCNC>
-  alto?: number
+  /** En píxeles, o '100%' para llenar el área. */
+  alto?: number | string
   onCanvas?: (c: HTMLCanvasElement | null) => void
 }) {
   const contRef = useRef<HTMLDivElement>(null)
@@ -830,7 +831,7 @@ export default function Maquina3D({
     return <p style={{ padding: 20, color: '#8a5b00' }}>Este navegador no tiene WebGL: la vista 3D no está disponible. El editor y la vista 2D siguen funcionando.</p>
   }
   return (
-    <div style={{ position: 'relative' }}>
+    <div style={{ position: 'relative', height: typeof alto === 'string' ? alto : undefined }}>
       <div ref={contRef} style={{ width: '100%', height: alto, borderRadius: 8, overflow: 'hidden', background: '#dde2e7' }} />
       <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 4 }}>
         {(

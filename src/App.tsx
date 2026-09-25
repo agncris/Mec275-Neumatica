@@ -6,7 +6,7 @@
  *  - Simular: el motor corre a 30 Hz; se accionan las válvulas y se ve el aire
  *    circular, las correderas conmutar y los vástagos moverse.
  */
-import { botonPrimario, estiloAviso, Menu, usePersistente, useTactil } from './components/ui'
+import { botonPrimario, estiloAviso, Menu, useEsEstrecha, usePersistente, useTactil } from './components/ui'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import DiagramaEspacioFase, { hayDiagramaFase, registrarFase } from './components/DiagramaEspacioFase'
@@ -14,6 +14,7 @@ import { DT_POR_DEFECTO, Motor, validarCircuito } from './engine'
 import Paleta from './components/Paleta'
 import Pizarra, { type ControlesPizarra, type Vista } from './components/Pizarra'
 import Inspector, { type PestanaInspector } from './components/banco/Inspector'
+import PaginaEstudiar from './components/banco/PaginaEstudiar'
 import PanelInferior, { type PestanaInferior } from './components/banco/PanelInferior'
 import AyudaAtajos from './components/banco/AyudaAtajos'
 
@@ -41,20 +42,6 @@ import { esEntrega, normalizarRespuestas } from './entrega'
 const EJEMPLOS: Array<{ n: NumeroEjemplo; etiqueta: string }> = ([1, 2, 3, 4, 5, 6, 7] as NumeroEjemplo[]).map((n) => ({ n, etiqueta: NOMBRES_EJEMPLO[n] }))
 
 const CLAVE_CIRCUITO = 'neumalab.circuito-abierto'
-
-/** Detecta pantallas estrechas para reordenar la interfaz en tablet/móvil. */
-function useEsEstrecha(): boolean {
-  const [estrecha, setEstrecha] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches,
-  )
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 900px)')
-    const alCambiar = (e: MediaQueryListEvent) => setEstrecha(e.matches)
-    mq.addEventListener('change', alCambiar)
-    return () => mq.removeEventListener('change', alCambiar)
-  }, [])
-  return estrecha
-}
 
 export default function App() {
   const piezas = useStore((s) => s.piezas)
@@ -90,6 +77,7 @@ export default function App() {
   const [pestanaInspector, setPestanaInspector] = useState<PestanaInspector>('propiedades')
   const [inferiorAbierto, setInferiorAbierto] = usePersistente('neumalab.banco.inferior', false)
   const [altoInferior, setAltoInferior] = usePersistente('neumalab.banco.alto-inferior', typeof window === 'undefined' ? 200 : Math.round(Math.min(200, Math.max(130, window.innerHeight * 0.2))))
+  const [inferiorAmpliado, setInferiorAmpliado] = usePersistente('neumalab.banco.inferior-ampliado', false)
   const [pestanaInferior, setPestanaInferior] = useState<PestanaInferior>('registro')
   const [hoja, setHoja] = useState<'paleta' | 'inspector' | 'registro' | null>(null)
   // Laboratorio (el banco) o Estudiar; «Mi entrega» es un cajón sobre el laboratorio.
@@ -538,6 +526,8 @@ export default function App() {
       onAbrir={setInferiorAbierto}
       alto={altoInferior}
       onAlto={setAltoInferior}
+      ampliado={inferiorAmpliado}
+      onAmpliar={setInferiorAmpliado}
       pestana={pestanaInferior}
       onPestana={setPestanaInferior}
       motor={motor}
@@ -717,6 +707,7 @@ export default function App() {
               {hoja === 'registro' && (
                 <PanelInferior
                   abierto
+                  fijo
                   onAbrir={() => undefined}
                   alto={Math.round(window.innerHeight * 0.6)}
                   onAlto={() => undefined}
@@ -735,7 +726,7 @@ export default function App() {
 
         </>
       ) : (
-        <PaginaEstudiar alCargarCircuito={() => setSeccion('laboratorio')} />
+        <PaginaNeumaticaEstudiar alCargarCircuito={() => setSeccion('laboratorio')} />
       )}
 
       {entregaAbierta && (
@@ -761,93 +752,22 @@ export default function App() {
 }
 
 /** «Estudiar»: la teoría y las autoevaluaciones de la unidad, con índice. */
-function PaginaEstudiar({ alCargarCircuito }: { alCargarCircuito: () => void }) {
-  const secciones: Array<[string, string, React.ReactNode]> = [
-    ['cascada', 'Método cascada', <MetodoCascada alCargar={alCargarCircuito} />],
-    ['vdi', 'Simbología VDI 2860', <SimbologiaVDI />],
-    ['iso', 'Simbología ISO 1219-1', <SimbologiaISO />],
-    ['vias', 'Nº de vías y posiciones', <TablaNomenclatura />],
-  ]
-  const titulos: Record<string, string> = {
-    cascada: 'Método cascada · secuencias con señales bloqueantes',
-    vdi: 'Simbología VDI 2860 · funciones de manipulación',
-    iso: 'Simbología ISO 1219-1 · componentes neumáticos',
-    vias: 'Nº de vías y posiciones · nomenclatura de los orificios',
-  }
-  const [actual, setActual] = useState(() => (typeof window !== 'undefined' ? window.location.hash.slice(1) : '') || 'cascada')
-  // Ir a la sección del enlace (#cascada, #vdi…) al entrar.
-  useEffect(() => {
-    const id = window.location.hash.slice(1)
-    if (id && document.getElementById(id)) document.getElementById(id)!.scrollIntoView()
-    else window.scrollTo({ top: 0 })
-  }, [])
-  // Marcar en el índice la sección que se está leyendo.
-  useEffect(() => {
-    const obs = new IntersectionObserver(
-      (entradas) => {
-        const visible = entradas.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0]
-        if (visible) setActual(visible.target.id)
-      },
-      { rootMargin: '-60px 0px -60% 0px' },
-    )
-    for (const [id] of secciones) {
-      const el = document.getElementById(id)
-      if (el) obs.observe(el)
-    }
-    return () => obs.disconnect()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+function PaginaNeumaticaEstudiar({ alCargarCircuito }: { alCargarCircuito: () => void }) {
   return (
-    <main className="estudiar" aria-label="Estudiar neumática">
-      <nav className="estudiar__indice" aria-label="Índice">
-        {secciones.map(([id, t]) => (
-          <a
-            key={id}
-            href={`#${id}`}
-            aria-current={actual === id ? 'true' : undefined}
-            onClick={(e) => {
-              e.preventDefault()
-              document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
-              try {
-                window.history.replaceState(null, '', `#${id}`)
-              } catch {
-                /* sin historial */
-              }
-              setActual(id)
-            }}
-          >
-            {t}
-          </a>
-        ))}
-      </nav>
-      <div>
-        <h1 style={{ margin: '0 0 4px', fontSize: '1.4rem' }}>Estudiar · Neumática</h1>
-        <p style={{ margin: '0 0 12px', color: '#51606f' }}>Teoría y autoevaluaciones de la unidad. Los circuitos de ejemplo se abren en el Laboratorio.</p>
-        {secciones.map(([id, , contenido]) => (
-          <section key={id} id={id} style={tarjeta} aria-labelledby={`t-${id}`}>
-            <h2 id={`t-${id}`} style={{ margin: '0 0 10px', fontSize: '1.1rem', color: '#1c2733' }}>
-              {titulos[id]}
-            </h2>
-            {contenido}
-          </section>
-        ))}
-        <footer style={{ margin: '1.5rem 0 0.5rem', color: '#5f6b78', fontSize: '0.8rem', textAlign: 'center' }}>
-          NeumaLab · MEC275 — Neumática industrial · Simbología ISO 1219-1
-        </footer>
-      </div>
-    </main>
+    <PaginaEstudiar
+      etiqueta="Estudiar neumática"
+      titulo="Estudiar · Neumática"
+      descripcion="Teoría y autoevaluaciones de la unidad. Los circuitos de ejemplo se abren en el Laboratorio."
+      pie="NeumaLab · MEC275 — Neumática industrial · Simbología ISO 1219-1"
+      secciones={[
+        { id: 'cascada', indice: 'Método cascada', titulo: 'Método cascada · secuencias con señales bloqueantes', contenido: <MetodoCascada alCargar={alCargarCircuito} /> },
+        { id: 'vdi', indice: 'Simbología VDI 2860', titulo: 'Simbología VDI 2860 · funciones de manipulación', contenido: <SimbologiaVDI /> },
+        { id: 'iso', indice: 'Simbología ISO 1219-1', titulo: 'Simbología ISO 1219-1 · componentes neumáticos', contenido: <SimbologiaISO /> },
+        { id: 'vias', indice: 'Nº de vías y posiciones', titulo: 'Nº de vías y posiciones · nomenclatura de los orificios', contenido: <TablaNomenclatura /> },
+      ]}
+    />
   )
 }
-
-const tarjeta: React.CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #e0e5eb',
-  borderRadius: 10,
-  padding: '1rem 1.25rem',
-  marginTop: 12,
-  boxShadow: '0 1px 3px rgba(28, 39, 51, 0.06)',
-}
-
 
 const rotuloVista: React.CSSProperties = {
   position: 'absolute',
