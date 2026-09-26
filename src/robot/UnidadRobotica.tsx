@@ -11,6 +11,7 @@ import PaginaEstudiar, { type SeccionEstudio } from '../components/banco/PaginaE
 import SubnavUnidad, { useSeccionUnidad } from '../components/banco/SubnavUnidad'
 import CajonEntregar from '../components/banco/CajonEntregar'
 import MisTrabajos from '../components/banco/MisTrabajos'
+import GuiaInicio, { GUIA_ROBOT, useGuia } from '../components/banco/GuiaInicio'
 import Autoevaluacion from '../components/Autoevaluacion'
 import FichaRobot from './FichaRobot'
 import { PREGUNTAS_ROBOT } from './preguntasRobot'
@@ -106,6 +107,7 @@ export default function UnidadRobotica() {
   const panel = usePanelAcoplado<PestanaRobot>('neumalab.robot.panel', 'analisis', false)
   const [entregaAbierta, setEntregaAbierta] = useState(false)
   const [misTrabajos, setMisTrabajos] = useState(false)
+  const guia = useGuia('robotica')
   const nombreVideo = useRef<string | null>(null)
   const [seleccion, setSeleccion] = useState<string | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
@@ -562,6 +564,9 @@ export default function UnidadRobotica() {
         </>
       )}
       <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
+        <button onClick={guia.abrir} className="boton-icono" title="Guía de inicio" aria-label="Guía de inicio" data-abrir-guia="si">
+          ?
+        </button>
         {grabando && (
           <button onClick={alternarGrabacion} style={{ ...botonSecundario, color: '#fff', background: '#c62828', borderColor: '#c62828' }}>
             ■ {estrecha ? 'Detener' : 'Detener grabación'}
@@ -831,6 +836,7 @@ export default function UnidadRobotica() {
           secciones={SECCIONES_ROBOT}
         />
       )}
+      {guia.visible && seccion === 'laboratorio' && <GuiaInicio unidad="Robótica" pasos={GUIA_ROBOT} onCerrar={guia.cerrar} />}
       {misTrabajos && (
         <MisTrabajos
           unidad="robotica"

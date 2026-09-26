@@ -34,6 +34,17 @@ function unidadInicial(): Unidad {
 
 export default function Raiz() {
   const [unidad, setUnidad] = useState<Unidad>(unidadInicial)
+  // Sin internet la app sigue funcionando (service worker): se avisa para que nadie se preocupe.
+  const [sinConexion, setSinConexion] = useState(() => typeof navigator !== 'undefined' && navigator.onLine === false)
+  useEffect(() => {
+    const cambiar = () => setSinConexion(!navigator.onLine)
+    window.addEventListener('online', cambiar)
+    window.addEventListener('offline', cambiar)
+    return () => {
+      window.removeEventListener('online', cambiar)
+      window.removeEventListener('offline', cambiar)
+    }
+  }, [])
   useEffect(() => {
     try {
       localStorage.setItem(CLAVE, unidad)
@@ -111,6 +122,11 @@ export default function Raiz() {
           <div id="barra-unidad" className="barra-superior__extra" />
         </div>
       </div>
+      {sinConexion && (
+        <p role="status" data-sin-conexion="si" style={{ position: 'fixed', right: 12, bottom: 12, zIndex: 90, margin: 0, padding: '0.35rem 0.7rem', background: '#33475c', color: '#fff', borderRadius: 8, fontSize: '0.82rem', boxShadow: '0 4px 14px rgba(0,0,0,0.2)' }}>
+          Sin conexión: la app funciona igual y tu trabajo se guarda en este navegador.
+        </p>
+      )}
       {unidad === 'neumatica' ? (
         <App />
       ) : (

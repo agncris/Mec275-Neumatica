@@ -751,3 +751,18 @@ button:disabled:hover {
     font-size: 10pt;
   }
 }
+
+/* Guía de inicio de cada unidad (tarjeta flotante, no tapa la barra). */
+.guia-inicio {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 44px;
+  width: min(390px, calc(100vw - 32px));
+  z-index: 65;
+  background: #fff;
+  border: 1px solid #c6ced6;
+  border-radius: 12px;
+  box-shadow: 0 14px 40px rgba(28, 39, 51, 0.22);
+  padding: 12px 14px;
+}

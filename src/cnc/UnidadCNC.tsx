@@ -13,6 +13,7 @@ import PaginaEstudiar, { type SeccionEstudio } from '../components/banco/PaginaE
 import SubnavUnidad, { useSeccionUnidad } from '../components/banco/SubnavUnidad'
 import CajonEntregar from '../components/banco/CajonEntregar'
 import MisTrabajos from '../components/banco/MisTrabajos'
+import GuiaInicio, { GUIA_CNC, useGuia } from '../components/banco/GuiaInicio'
 import Autoevaluacion from '../components/Autoevaluacion'
 import FichaCNC from './FichaCNC'
 import { PREGUNTAS_CNC } from './preguntasCNC'
@@ -91,6 +92,7 @@ export default function UnidadCNC() {
   const panel = usePanelAcoplado<PestanaCNC>('neumalab.cnc.panel', 'preparacion', typeof window !== 'undefined' && window.innerHeight >= 860)
   const [entregaAbierta, setEntregaAbierta] = useState(false)
   const [misTrabajos, setMisTrabajos] = useState(false)
+  const guia = useGuia('cnc')
   /** Nombre del próximo video (desde «Entregar» se nombra como pide el enunciado). */
   const nombreVideo = useRef<string | null>(null)
   const inicial = useMemo(leerGuardado, [])
@@ -479,6 +481,9 @@ export default function UnidadCNC() {
         </optgroup>
       </select>
       <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
+        <button onClick={guia.abrir} className="boton-icono" title="Guía de inicio" aria-label="Guía de inicio" data-abrir-guia="si">
+          ?
+        </button>
         {grabando && (
           <button onClick={alternarGrabacion} style={{ ...botonSecundario, color: '#fff', background: '#c62828', borderColor: '#c62828' }}>
             ■ {estrecha ? 'Detener' : 'Detener grabación'}
@@ -673,6 +678,7 @@ export default function UnidadCNC() {
           secciones={SECCIONES_CNC}
         />
       )}
+      {guia.visible && seccion === 'laboratorio' && <GuiaInicio unidad="CNC" pasos={GUIA_CNC} onCerrar={guia.cerrar} />}
       {misTrabajos && (
         <MisTrabajos
           unidad="cnc"

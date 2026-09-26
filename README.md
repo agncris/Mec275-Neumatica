@@ -46,6 +46,16 @@ Todo el contenido y la interfaz están en español.
    *Compartir* copia un enlace con el circuito dentro (no necesita servidor ni cuenta).
    Además la pizarra se conserva sola en el navegador entre sesiones.
 
+**Para partir**, cada unidad muestra una guía de inicio de cuatro pasos la primera vez
+que se abre; se vuelve a ver con el botón **?**.
+
+**Mis trabajos** (menú Archivo, en las cuatro unidades) guarda varios trabajos con nombre
+en el navegador; el **respaldo** los lleva todos en un solo archivo a otro computador.
+
+**Sin conexión:** después de la primera visita la app funciona sin internet (se puede
+instalar como aplicación desde el navegador). Cada unidad guarda sola lo que tiene
+abierto.
+
 **Atajos:** `Espacio` simular/detener · `Supr` borrar lo seleccionado · `Esc` cancelar cableado · `Ctrl+Z` deshacer · `Ctrl+Shift+Z` (o `Ctrl+Y`) rehacer. En la unidad de PLC: `Espacio` RUN/STOP y los mismos atajos de deshacer en el programa Ladder.
 
 ## La entrega
@@ -87,7 +97,11 @@ Para informes con imágenes, la barra superior descarga:
 
 ## Secciones de estudio
 
-Bajo el banco hay secciones plegables con el material de apoyo:
+Cada unidad tiene su página **Estudiar** (arriba a la derecha), con índice y enlaces
+directos. En PLC, CNC y Robótica empieza con una **autoevaluación** de preguntas
+generadas al azar (no son las de los controles ni de las tareas), con la respuesta
+explicada; las cuatro unidades tienen una **ficha de repaso** de una página para
+imprimir o guardar como PDF. En Neumática:
 
 - **Método cascada** — explicador animado paso a paso, divisor de grupos interactivo
   para cualquier secuencia, y dos circuitos de demostración: el que se bloquea por
@@ -225,6 +239,9 @@ como en el PLC real, con un aviso mientras haya algo forzado.
 **Ciclo de scan.** El programa se ejecuta como en un PLC real, ~50 barridos por
 segundo: lee las entradas, resuelve los escalones de arriba abajo (lo que escribe un
 escalón ya lo lee el siguiente) y actualiza las salidas. En STOP las salidas quedan a 0.
+Con el PLC en RUN, **❚❚ Pausar** congela el PLC y la planta y **⏭ Un barrido** ejecuta
+un solo barrido: se cambian las entradas y se ve, escalón por escalón, qué resuelve el
+PLC en ese barrido (el título muestra el número de barrido).
 
 **Plantas** (el cableado es fijo, como en el banco; el alumno programa):
 
@@ -437,7 +454,12 @@ diagonales y que las barras queden en pasillos libres y en el orden correcto.
 - **Actuadores:** cilindro de simple efecto (retorno por muelle), de doble efecto y
   **actuador giratorio** (unidad de volteo, 90/180/270°).
 - **Distribuidoras:** 3/2 NC y NA, 4/2 y 5/2 en versión monoestable (muelle) y biestable
-  (memoria), con accionamiento por pulsador o pilotaje neumático (12 / 14).
+  (memoria), con accionamiento por pulsador o pilotaje neumático (12 / 14; 10 en la 3/2 NA).
+- **Válvula de inicio:** 3/2 con pulsador con enclavamiento, que queda accionada hasta
+  volver a pulsarla (para dejar corriendo un ciclo automático).
+- **Rótulos:** cada pieza puede llevar su nombre en la máquina («Elevador») y cada
+  actuador su letra en la secuencia (A, B…); los finales de carrera muestran su señal
+  (a0, a1) y el diagrama de fase usa esas letras y nombres.
 - **Finales de carrera** de rodillo, accionados por el vástago del cilindro que se les asigne.
 - **Auxiliares:** regulador de caudal unidireccional, válvula selectora «O», válvula de
   simultaneidad «Y», válvula de escape rápido y temporizador neumático.
@@ -529,7 +551,7 @@ npm run dev        # http://localhost:5173
 ```
 
 ```bash
-npm test           # 320 pruebas: motor, análisis, entregas, plano, símbolos, banco 3D, PLC, CNC, robótica y utilidades
+npm test           # 344 pruebas: motor, análisis, entregas, trabajos, autoevaluaciones, plano, símbolos, banco 3D, PLC, CNC, robótica y utilidades
 npm run typecheck  # comprobación de tipos
 npm run build      # compila a /dist
 ```

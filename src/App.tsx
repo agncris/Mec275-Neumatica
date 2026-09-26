@@ -27,6 +27,7 @@ import SimbologiaVDI from './components/SimbologiaVDI'
 import SimbologiaISO from './components/SimbologiaISO'
 import EntregaNeumatica from './components/EntregaNeumatica'
 import MisTrabajos from './components/banco/MisTrabajos'
+import GuiaInicio, { GUIA_NEUMATICA, useGuia } from './components/banco/GuiaInicio'
 import FichaNeumatica from './components/estudio/FichaNeumatica'
 import { circuitoDesdeStore, useStore, type NumeroEjemplo } from './store'
 import { NOMBRES_EJEMPLO } from './circuitos/ejemplos'
@@ -107,6 +108,7 @@ export default function App() {
   }, [seccion, entregaAbierta])
   const [ayuda, setAyuda] = useState(false)
   const [misTrabajos, setMisTrabajos] = useState(false)
+  const guia = useGuia('neumatica')
   const [zoom, setZoom] = useState(100)
   const controles = useRef<ControlesPizarra | null>(null)
   const seleccion = useStore((s) => s.seleccion)
@@ -727,7 +729,17 @@ export default function App() {
         </>
       )}
 
-      {ayuda && <AyudaAtajos tactil={tactil} onCerrar={() => setAyuda(false)} />}
+      {ayuda && (
+        <AyudaAtajos
+          tactil={tactil}
+          onCerrar={() => setAyuda(false)}
+          onGuia={() => {
+            setAyuda(false)
+            guia.abrir()
+          }}
+        />
+      )}
+      {guia.visible && seccion === 'laboratorio' && !ayuda && <GuiaInicio unidad="Neumática" pasos={GUIA_NEUMATICA} onCerrar={guia.cerrar} />}
       {misTrabajos && (
         <MisTrabajos
           unidad="neumatica"

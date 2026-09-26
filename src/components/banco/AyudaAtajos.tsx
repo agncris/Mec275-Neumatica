@@ -1,7 +1,7 @@
 /** Hoja de atajos y gestos del banco (botón «?»). */
 import { useEffect, useRef } from 'react'
 
-export default function AyudaAtajos({ onCerrar, tactil }: { onCerrar: () => void; tactil: boolean }) {
+export default function AyudaAtajos({ onCerrar, tactil, onGuia }: { onCerrar: () => void; tactil: boolean; onGuia?: () => void }) {
   const caja = useRef<HTMLDivElement>(null)
   const cerrar = useRef(onCerrar)
   cerrar.current = onCerrar
@@ -67,6 +67,11 @@ export default function AyudaAtajos({ onCerrar, tactil }: { onCerrar: () => void
             ))}
           </tbody>
         </table>
+        {onGuia && (
+          <button onClick={onGuia} style={{ marginTop: 12, border: '1px solid #1668c7', background: '#fff', color: '#1668c7', borderRadius: 8, padding: '0.35rem 0.8rem', fontWeight: 600, cursor: 'pointer', minHeight: 36 }} data-abrir-guia="si">
+            Ver la guía de inicio
+          </button>
+        )}
       </div>
     </div>
   )

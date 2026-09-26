@@ -13,6 +13,7 @@ import PaginaEstudiar, { type SeccionEstudio } from '../components/banco/PaginaE
 import SubnavUnidad, { useSeccionUnidad } from '../components/banco/SubnavUnidad'
 import CajonEntregar from '../components/banco/CajonEntregar'
 import MisTrabajos from '../components/banco/MisTrabajos'
+import GuiaInicio, { GUIA_PLC, useGuia } from '../components/banco/GuiaInicio'
 import Autoevaluacion from '../components/Autoevaluacion'
 import FichaPLC from './FichaPLC'
 import { PREGUNTAS_PLC } from './preguntasPLC'
@@ -101,6 +102,7 @@ export default function UnidadPLC() {
   const [movil, setMovil] = useState('programa')
   const [entregaAbierta, setEntregaAbierta] = useState(false)
   const [misTrabajos, setMisTrabajos] = useState(false)
+  const guia = useGuia('plc')
   const [notacion, setNotacion] = useState<Notacion>(() => {
     try {
       return localStorage.getItem('neumalab.plc.notacion') === 'ab' ? 'ab' : 'siemens'
@@ -206,40 +208,58 @@ export default function UnidadPLC() {
     if (lista.length > 60) lista.splice(0, lista.length - 60)
   }
 
-  // El bucle: scan del PLC + física de la planta, 50 veces por segundo.
+  // Paso a paso: en RUN se puede pausar y ejecutar un barrido a la vez.
+  const [pausado, setPausado] = useState(false)
+  const pausadoRef = useRef(false)
+  pausadoRef.current = pausado
+  const barridosRef = useRef(0)
+  useEffect(() => {
+    if (!corriendo) setPausado(false)
+    barridosRef.current = 0
+  }, [corriendo])
+
+  // Un paso del bucle: un barrido del PLC (en RUN) y 20 ms de física de la planta.
+  const pasoRef = useRef<() => void>(() => {})
+  pasoRef.current = () => {
+    const sim = simRef.current
+    const estado = sim.estado
+    const antes = { ...estado.bits }
+    const entradas = { ...sim.mandos, ...sim.planta.sensores() }
+    // Los pulsadores NC de la planta dan 1 en reposo y 0 al pulsarlos.
+    for (const m of PLANTAS[sim.planta.id].mandos) if (m.nc) entradas[m.dir] = !sim.mandos[m.dir]
+    if (sim.corriendo) {
+      const r = scan(programaRef.current, estado, entradas, DT, forzadosRef.current)
+      flujosRef.current = r.flujos
+      barridosRef.current++
+    } else {
+      // En STOP las entradas se siguen viendo, pero las salidas están a 0.
+      const fz = forzadosRef.current
+      for (const d of ENTRADAS) estado.bits[d] = d in fz ? fz[d] : !!entradas[d]
+      for (const d of SALIDAS) estado.bits[d] = d in fz ? fz[d] : false
+      estado.t += DT
+    }
+    const salidas: Record<string, boolean> = {}
+    for (const d of SALIDAS) salidas[d] = estado.bits[d]
+    sim.planta.paso(salidas, DT)
+    // Qué cambió, contado con los nombres de la tabla de símbolos.
+    for (const d of [...ENTRADAS, ...SALIDAS]) {
+      if (antes[d] !== estado.bits[d]) {
+        const n = nombre(d)
+        registrar(`${n} ${estado.bits[d] ? 'se activa (1)' : 'se desactiva (0)'}`)
+      }
+    }
+    for (const e of sim.planta.eventos.splice(0)) {
+      registrar(`🏭 ${e.mensaje}`, e.aviso)
+      if (e.aviso) avisoPlantaRef.current = { mensaje: e.mensaje, hasta: Date.now() + 7000 }
+    }
+  }
+
+  // El bucle: scan del PLC + física de la planta, 50 veces por segundo (se detiene en pausa).
   useEffect(() => {
     let tiempo = 0
     const id = setInterval(() => {
-      const sim = simRef.current
-      const estado = sim.estado
-      const antes = { ...estado.bits }
-      const entradas = { ...sim.mandos, ...sim.planta.sensores() }
-      // Los pulsadores NC de la planta dan 1 en reposo y 0 al pulsarlos.
-      for (const m of PLANTAS[sim.planta.id].mandos) if (m.nc) entradas[m.dir] = !sim.mandos[m.dir]
-      if (sim.corriendo) {
-        const r = scan(programaRef.current, estado, entradas, DT, forzadosRef.current)
-        flujosRef.current = r.flujos
-      } else {
-        // En STOP las entradas se siguen viendo, pero las salidas están a 0.
-        const fz = forzadosRef.current
-        for (const d of ENTRADAS) estado.bits[d] = d in fz ? fz[d] : !!entradas[d]
-        for (const d of SALIDAS) estado.bits[d] = d in fz ? fz[d] : false
-        estado.t += DT
-      }
-      const salidas: Record<string, boolean> = {}
-      for (const d of SALIDAS) salidas[d] = estado.bits[d]
-      sim.planta.paso(salidas, DT)
-      // Qué cambió, contado con los nombres de la tabla de símbolos.
-      for (const d of [...ENTRADAS, ...SALIDAS]) {
-        if (antes[d] !== estado.bits[d]) {
-          const n = nombre(d)
-          registrar(`${n} ${estado.bits[d] ? 'se activa (1)' : 'se desactiva (0)'}`)
-        }
-      }
-      for (const e of sim.planta.eventos.splice(0)) {
-        registrar(`🏭 ${e.mensaje}`, e.aviso)
-        if (e.aviso) avisoPlantaRef.current = { mensaje: e.mensaje, hasta: Date.now() + 7000 }
-      }
+      if (simRef.current.corriendo && pausadoRef.current) return
+      pasoRef.current()
       tiempo += DT
       if (tiempo >= 0.066) {
         tiempo = 0
@@ -248,6 +268,11 @@ export default function UnidadPLC() {
     }, DT * 1000)
     return () => clearInterval(id)
   }, [nombre])
+
+  const unBarrido = () => {
+    pasoRef.current()
+    setFotograma((f) => f + 1)
+  }
 
   // Espacio: RUN / STOP.
   useEffect(() => {
@@ -398,6 +423,16 @@ export default function UnidadPLC() {
       <button onClick={() => setCorriendo((c) => !c)} title="Atajo: barra espaciadora" aria-pressed={corriendo} style={botonPrimario(corriendo)} data-run="si">
         {corriendo ? '■ STOP' : '▶ RUN'}
       </button>
+      {corriendo && (
+        <span className="grupo-zoom" role="group" aria-label="Paso a paso">
+          <button onClick={() => setPausado((p) => !p)} aria-pressed={pausado} title={pausado ? 'Seguir corriendo' : 'Pausar el PLC y la planta para ver barrido a barrido'} data-pausar-plc="si" style={{ padding: '0 8px', minWidth: 'auto', fontWeight: 600 }}>
+            {pausado ? '▶ Seguir' : '❚❚ Pausar'}
+          </button>
+          <button onClick={unBarrido} disabled={!pausado} style={{ opacity: pausado ? 1 : 0.4, padding: '0 8px', minWidth: 'auto', fontWeight: 600 }} title="Ejecuta un solo barrido (lee entradas, resuelve los escalones, escribe salidas)" data-un-barrido="si">
+            ⏭ Un barrido
+          </button>
+        </span>
+      )}
       <span style={{ display: 'inline-flex', gap: 2 }}>
         <button onClick={deshacer} disabled={corriendo || !historialRef.current.puedeDeshacer} title="Deshacer (Ctrl+Z)" aria-label="Deshacer" className="boton-icono" style={{ opacity: corriendo || !historialRef.current.puedeDeshacer ? 0.4 : 1 }}>
           ↶
@@ -454,6 +489,9 @@ export default function UnidadPLC() {
         </Etiquetado>
       )}
       <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
+        <button onClick={guia.abrir} className="boton-icono" title="Guía de inicio" aria-label="Guía de inicio" data-abrir-guia="si">
+          ?
+        </button>
         {estrecha ? (
           <Menu
             etiqueta="⋯"
@@ -494,7 +532,12 @@ export default function UnidadPLC() {
       {ejercicioActual && <TarjetaEjercicio ejercicio={ejercicioActual} programa={programa} notacion={notacion} />}
       <TituloArea>
         Programa Ladder{programa.nombre ? ` · ${programa.nombre}` : ''}
-        <span style={{ ...estadoPLC, background: corriendo ? '#0e7a43' : '#a35200' }}>{corriendo ? 'RUN' : 'STOP'}</span>
+        <span style={{ ...estadoPLC, background: corriendo ? '#0e7a43' : '#a35200' }}>{corriendo ? (pausado ? 'RUN · en pausa' : 'RUN') : 'STOP'}</span>
+        {corriendo && pausado && (
+          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#33475c' }} data-barridos="si">
+            Barrido nº {barridosRef.current}
+          </span>
+        )}
       </TituloArea>
       {corriendo && <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: '#51606f' }}>El PLC está ejecutando el programa. Pásalo a STOP para editarlo.</p>}
       <EditorLadder
@@ -609,7 +652,9 @@ export default function UnidadPLC() {
   const barraEstado = (
     <>
       <span>
-        {corriendo
+        {corriendo && pausado
+          ? 'En pausa: cambia las entradas (mandos, forzados) y pulsa «⏭ Un barrido» para ver qué hace el PLC en un solo barrido.'
+          : corriendo
           ? 'RUN: el PLC ejecuta el programa contra la planta · pulsa los mandos o los botones de la máquina · Espacio pasa a STOP.'
           : 'STOP: elige una herramienta y haz clic en una casilla para editar · Espacio pasa a RUN.'}
       </span>
@@ -652,6 +697,7 @@ export default function UnidadPLC() {
           secciones={SECCIONES_PLC}
         />
       )}
+      {guia.visible && seccion === 'laboratorio' && <GuiaInicio unidad="PLC" pasos={GUIA_PLC} onCerrar={guia.cerrar} />}
       {misTrabajos && (
         <MisTrabajos
           unidad="plc"
