@@ -29,6 +29,8 @@ import EntregaNeumatica from './components/EntregaNeumatica'
 import MisTrabajos from './components/banco/MisTrabajos'
 import GuiaInicio, { GUIA_NEUMATICA, useGuia } from './components/banco/GuiaInicio'
 import FichaNeumatica from './components/estudio/FichaNeumatica'
+import Autoevaluacion from './components/Autoevaluacion'
+import { PREGUNTAS_NEUMATICA } from './components/estudio/preguntasNeumatica'
 import { circuitoDesdeStore, useStore, type NumeroEjemplo } from './store'
 import { NOMBRES_EJEMPLO } from './circuitos/ejemplos'
 import {
@@ -612,16 +614,17 @@ export default function App() {
                   { texto: aire ? 'Cortar el aire' : 'Dar el aire', ayuda: `Aire: ${aire ? 'encendido' : 'cortado'}`, onClick: alternarAire },
                   ...itemsArchivo.map((it, i) => ({ ...it, separar: i === 0 })),
                   ...itemsExportar.map((it, i) => ({ ...it, separar: i === 0 })),
-                  { texto: 'Gestos del banco', onClick: () => setAyuda(true), separar: true },
+                  { texto: 'Guía de inicio', ayuda: 'Los cuatro pasos para partir', onClick: guia.abrir, separar: true },
+                  { texto: 'Gestos del banco', onClick: () => setAyuda(true) },
                 ]}
               />
             ) : (
               <>
-                <Menu etiqueta="Archivo" items={itemsArchivo} />
-                <Menu etiqueta="Exportar" items={itemsExportar} />
-                <button onClick={() => setAyuda(true)} className="boton-icono" style={{ border: '1px solid #c6ced6', background: '#fff', minWidth: 36, minHeight: 36 }} title="Atajos y gestos" aria-label="Atajos y gestos" data-ayuda="si">
+                <button onClick={() => setAyuda(true)} className="boton-icono" title="Ayuda: guía de inicio, atajos y gestos" aria-label="Ayuda" data-ayuda="si">
                   ?
                 </button>
+                <Menu etiqueta="Archivo" items={itemsArchivo} />
+                <Menu etiqueta="Exportar" items={itemsExportar} />
               </>
             )}
             {inputOculto}
@@ -780,11 +783,12 @@ function PaginaNeumaticaEstudiar({ alCargarCircuito }: { alCargarCircuito: () =>
       descripcion="Teoría y autoevaluaciones de la unidad. Los circuitos de ejemplo se abren en el Laboratorio."
       pie="NeumaLab · MEC275 — Neumática industrial · Simbología ISO 1219-1"
       secciones={[
+        { id: 'practica', indice: 'Autoevaluación', titulo: 'Autoevaluación · practica con preguntas al azar', contenido: <Autoevaluacion generadores={PREGUNTAS_NEUMATICA} /> },
+        { id: 'ficha', indice: 'Ficha de repaso', titulo: 'Ficha de repaso · para imprimir', contenido: <FichaNeumatica /> },
         { id: 'cascada', indice: 'Método cascada', titulo: 'Método cascada · secuencias con señales bloqueantes', contenido: <MetodoCascada alCargar={alCargarCircuito} /> },
         { id: 'vdi', indice: 'Simbología VDI 2860', titulo: 'Simbología VDI 2860 · funciones de manipulación', contenido: <SimbologiaVDI /> },
         { id: 'iso', indice: 'Simbología ISO 1219-1', titulo: 'Simbología ISO 1219-1 · componentes neumáticos', contenido: <SimbologiaISO /> },
         { id: 'vias', indice: 'Nº de vías y posiciones', titulo: 'Nº de vías y posiciones · nomenclatura de los orificios', contenido: <TablaNomenclatura /> },
-        { id: 'ficha', indice: 'Ficha de repaso', titulo: 'Ficha de repaso · para imprimir', contenido: <FichaNeumatica /> },
       ]}
     />
   )

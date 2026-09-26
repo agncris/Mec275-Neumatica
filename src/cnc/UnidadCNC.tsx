@@ -6,7 +6,7 @@
  * sus coordenadas, explicación de cada bloque y exportación del .cnc y del
  * video de la simulación.
  */
-import { acercar, botonPrimario, botonSecundario, estiloAviso, Etiquetado, Menu, useEsEstrecha, useTactil } from '../components/ui'
+import { acercar, botonPrimario, botonSecundario, estiloAviso, Menu, useEsEstrecha, useTactil } from '../components/ui'
 import BancoDividido, { TituloArea } from '../components/banco/BancoDividido'
 import { usePanelAcoplado, type PestanaPanel } from '../components/banco/PanelAcoplado'
 import PaginaEstudiar, { type SeccionEstudio } from '../components/banco/PaginaEstudiar'
@@ -43,6 +43,7 @@ import {
   type TipoMaquina,
 } from './maquinas'
 import Plano2D, { textoPunto } from './Plano2D'
+import SelectorMaquina, { MAQUINAS } from './SelectorMaquina'
 import { SimuladorCNC, volumenPieza } from './simulador'
 import type { VistaCNC } from './Maquina3D'
 import { Arcos, CodigosGM, Coordenadas, EstructuraBloque, Insertos, OrganizarPrograma, QueEsCNC, Torno, VentajasCNC } from './TeoriaCNC'
@@ -102,6 +103,7 @@ export default function UnidadCNC() {
   const maquina = config.maquina
   const codigo = codigos[maquina]
   const setCodigo = (c: string) => setCodigos((x) => ({ ...x, [maquina]: c }))
+  const [eligiendoMaquina, setEligiendoMaquina] = useState(false)
   const [estado, setEstado] = useState<Estado>('listo')
   const [velocidad, setVelocidad] = useState(5)
   const [trayectoria, setTrayectoria] = useState(true)
@@ -251,10 +253,10 @@ export default function UnidadCNC() {
 
   const cargarEjemplo = (id: string) => {
     const ej = EJEMPLOS_CNC.find((e) => e.id === id)
-    if (!ej) return
+    if (!ej) return false
     const actual = codigos[ej.maquina]
     const sinCambios = EJEMPLOS_CNC.some((e) => e.codigo === actual) || actual === programaNuevo(ej.maquina) || !actual.trim()
-    if (!sinCambios && !window.confirm(`¿Cargar «${ej.titulo}»? Se reemplaza tu programa de ${ej.maquina === 'torno' ? 'torno' : 'fresadora'}.`)) return
+    if (!sinCambios && !window.confirm(`¿Cargar «${ej.titulo}»? Se reemplaza tu programa de ${ej.maquina === 'torno' ? 'torno' : 'fresadora'}.`)) return false
     setConfig((c) => ({
       ...c,
       maquina: ej.maquina,
@@ -265,13 +267,17 @@ export default function UnidadCNC() {
     setCodigos((x) => ({ ...x, [ej.maquina]: ej.codigo }))
     setNombres((x) => ({ ...x, [ej.maquina]: ej.titulo }))
     setAviso(`Ejemplo cargado: ${ej.titulo}. Pulsa ▶ Ciclo para mecanizar.`)
+    return true
   }
 
-  const nuevo = () => {
-    const sinCambios = EJEMPLOS_CNC.some((e) => e.codigo === codigo) || codigo === programaNuevo(maquina) || !codigo.trim()
-    if (!sinCambios && !window.confirm('¿Empezar un programa nuevo? Se reemplaza el programa del editor.')) return
-    setCodigo(programaNuevo(maquina))
-    setNombres((x) => ({ ...x, [maquina]: 'Mi programa' }))
+  const nuevo = (m: TipoMaquina = maquina) => {
+    const actual = codigos[m]
+    const sinCambios = EJEMPLOS_CNC.some((e) => e.codigo === actual) || actual === programaNuevo(m) || !actual.trim()
+    if (!sinCambios && !window.confirm(`¿Empezar un programa nuevo? Se reemplaza tu programa de ${m === 'torno' ? 'torno' : 'fresadora'}.`)) return false
+    if (m !== maquina) cambiarMaquina(m)
+    setCodigos((x) => ({ ...x, [m]: programaNuevo(m) }))
+    setNombres((x) => ({ ...x, [m]: 'Mi programa' }))
+    return true
   }
 
   const guardarCnc = () => {
@@ -388,14 +394,36 @@ export default function UnidadCNC() {
   const bloqueado = estado === 'corriendo' || estado === 'bloque'
   const nombreMaquina = torno ? 'Centro de torneado' : 'Fresadora de 3 ejes'
 
-  const selectorMaquina = (
-    <select value={maquina} onChange={(e) => cambiarMaquina(e.target.value as TipoMaquina)} style={{ ...selector, minHeight: 36, width: estrecha ? '100%' : 196 }} data-selector-maquina="si" aria-label="Máquina">
-      <option value="torno">Centro de torneado (torno)</option>
-      <option value="fresadora">Fresadora de 3 ejes</option>
-    </select>
+  const selectorVelocidad = (
+    <label style={{ ...rotulo }} title="Velocidad de la simulación">
+      Velocidad
+      <select value={velocidad} onChange={(e) => setVelocidad(Number(e.target.value))} style={{ ...selector, minHeight: estrecha ? 32 : 36 }} aria-label="Velocidad" data-velocidad-cnc="si">
+        {VELOCIDADES.map((v) => (
+          <option key={v} value={v}>
+            ×{v}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+  const botonMaquina = (
+    <button
+      onClick={() => setEligiendoMaquina(true)}
+      className="boton-planta"
+      title="Elegir la máquina o abrir un ejemplo"
+      aria-label={`Máquina: ${MAQUINAS[maquina].nombre}. Elegir máquina o ejemplo`}
+      data-boton-maquina="si"
+      style={{ maxWidth: 360, padding: estrecha ? '0 0.5rem' : undefined }}
+    >
+      {!estrecha && <span style={{ color: '#51606f' }}>Máquina:</span>}
+      <span style={{ fontWeight: 600 }}>{estrecha ? MAQUINAS[maquina].corto : MAQUINAS[maquina].nombre}</span>
+      <span aria-hidden style={{ fontSize: '0.7rem', flex: 'none' }}>
+        ▾
+      </span>
+    </button>
   )
   const itemsArchivo = [
-    { texto: 'Nuevo programa', ayuda: 'Un programa en blanco para esta máquina', onClick: nuevo },
+    { texto: 'Nuevo programa', ayuda: 'Un programa en blanco para esta máquina', onClick: () => void nuevo() },
     { texto: 'Abrir…', ayuda: '.cnc, .nc, .gcode o .txt (también de CNC Simulator Pro)', onClick: () => inputArchivo.current?.click() },
     { texto: 'Guardar .cnc', ayuda: 'El archivo de texto que se entrega', onClick: guardarCnc },
     { texto: 'Mis trabajos…', ayuda: 'Guarda varios programas con nombre (con su preparación)', onClick: () => setMisTrabajos(true), separar: true },
@@ -442,44 +470,8 @@ export default function UnidadCNC() {
           {'⟲\uFE0E'}
         </button>
       </span>
-      <label style={{ ...rotulo }} title="Velocidad de la simulación">
-        {!estrecha && 'Velocidad'}
-        <select value={velocidad} onChange={(e) => setVelocidad(Number(e.target.value))} style={{ ...selector, minHeight: 36 }} aria-label="Velocidad">
-          {VELOCIDADES.map((v) => (
-            <option key={v} value={v}>
-              ×{v}
-            </option>
-          ))}
-        </select>
-      </label>
-      {!estrecha && <Etiquetado texto="Máquina">{selectorMaquina}</Etiquetado>}
-      <select
-        value=""
-        onChange={(e) => {
-          const v = e.target.value
-          e.target.value = ''
-          cargarEjemplo(v)
-        }}
-        style={{ ...selector, minHeight: 36, width: estrecha ? '30vw' : 200 }}
-        data-ejemplos-cnc="si"
-        aria-label="Ejemplos"
-      >
-        <option value="">Ejemplos…</option>
-        <optgroup label="Centro de torneado">
-          {EJEMPLOS_CNC.filter((e) => e.maquina === 'torno').map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.titulo}
-            </option>
-          ))}
-        </optgroup>
-        <optgroup label="Fresadora">
-          {EJEMPLOS_CNC.filter((e) => e.maquina === 'fresadora').map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.titulo}
-            </option>
-          ))}
-        </optgroup>
-      </select>
+      {!estrecha && selectorVelocidad}
+      {botonMaquina}
       <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
         {!estrecha && (
           <button onClick={guia.abrir} className="boton-icono" title="Guía de inicio" aria-label="Guía de inicio" data-abrir-guia="si">
@@ -515,7 +507,6 @@ export default function UnidadCNC() {
 
   const areaPrograma = (
     <>
-      {estrecha && <div style={{ marginBottom: 6 }}>{selectorMaquina}</div>}
       <TituloArea>
         Programa · {nombres[maquina]}
         <span style={{ ...estadoChip, background: textoEstado[estado][1] }} data-estado-cnc={estado}>
@@ -571,6 +562,7 @@ export default function UnidadCNC() {
         <label style={{ display: 'flex', gap: 5, alignItems: 'center' }} title="Husillo, corte y ejes; se activa al hacer clic en la vista 3D">
           <input type="checkbox" checked={sonido} onChange={(e) => setSonido(e.target.checked)} /> Sonido
         </label>
+        {estrecha && selectorVelocidad}
         <span style={{ color: '#51606f' }}>Arrastra para girar la vista · {acercar(tactil)}.</span>
       </div>
       <Tablero sim={sim} torno={torno} paso={paso} ultimo={ultimo} modal={estadoModal} tiempoTotal={resultado.tiempoTotal} volumen={volumen} volumenInicial={volumenInicial} />
@@ -681,6 +673,19 @@ export default function UnidadCNC() {
         />
       )}
       {guia.visible && seccion === 'laboratorio' && <GuiaInicio unidad="CNC" pasos={GUIA_CNC} onCerrar={guia.cerrar} />}
+      {eligiendoMaquina && (
+        <SelectorMaquina
+          actual={maquina}
+          nombres={nombres}
+          onUsar={(m) => {
+            cambiarMaquina(m)
+            setEligiendoMaquina(false)
+          }}
+          onNuevo={(m) => nuevo(m) && setEligiendoMaquina(false)}
+          onEjemplo={(e) => cargarEjemplo(e.id) && setEligiendoMaquina(false)}
+          onCerrar={() => setEligiendoMaquina(false)}
+        />
+      )}
       {misTrabajos && (
         <MisTrabajos
           unidad="cnc"

@@ -86,8 +86,8 @@ export const GUIA_PLC: PasoGuia[] = [
 ]
 
 export const GUIA_CNC: PasoGuia[] = [
-  { titulo: '1 · Prepara la máquina', texto: 'Elige torno o fresadora. Abajo, en «Preparación», pon el material y las medidas del bruto (y cuánto toman las garras).' },
-  { titulo: '2 · Escribe el programa', texto: 'Escribe el código G en el editor, con un comentario entre paréntesis en cada línea, o abre un ejemplo. Los errores se marcan en la misma línea.' },
+  { titulo: '1 · Prepara la máquina', texto: 'Pulsa «Máquina ▾» en la barra: eliges torno o fresadora y ahí mismo ves sus ejemplos resueltos. Abajo, en «Preparación», pones el material y las medidas del bruto (y cuánto toman las garras).' },
+  { titulo: '2 · Escribe el programa', texto: 'Escribe el código G en el editor, con un comentario entre paréntesis en cada línea. Los errores se marcan en la misma línea.' },
   { titulo: '3 · Mecaniza', texto: '▶ Ciclo corre todo el programa; ⏭ avanza bloque a bloque. Si la herramienta choca o entra en rápido al material, salta una ALARMA con la línea.' },
   { titulo: '4 · Revisa y entrega', texto: 'Abajo: la trayectoria 2D con sus puntos, qué hace cada bloque y la tabla de coordenadas. «Entregar» te da todo eso, el .cnc y el video.' },
 ]

@@ -6,6 +6,8 @@ import { describe, expect, it } from 'vitest'
 import { PREGUNTAS_PLC } from '../plc/preguntasPLC'
 import { PREGUNTAS_CNC } from '../cnc/preguntasCNC'
 import { PREGUNTAS_ROBOT } from '../robot/preguntasRobot'
+import { PREGUNTAS_NEUMATICA } from '../components/estudio/preguntasNeumatica'
+import { analizarSecuencia } from '../secuencias'
 
 /** Números pseudoaleatorios repetibles. */
 function semilla(s: number) {
@@ -19,6 +21,7 @@ describe.each([
   ['PLC', PREGUNTAS_PLC],
   ['CNC', PREGUNTAS_CNC],
   ['Robótica', PREGUNTAS_ROBOT],
+  ['Neumática', PREGUNTAS_NEUMATICA],
 ])('autoevaluación de %s', (_, bancos) => {
   it.each(bancos.map((b) => [b.tema, b]))('%s: 300 preguntas bien formadas', (_t, b) => {
     const azar = semilla(7)
@@ -35,6 +38,18 @@ describe.each([
 })
 
 describe('preguntas con cálculo', () => {
+  it('método cascada: la opción correcta es la cuenta de grupos (o grupos − 1)', () => {
+    const cas = PREGUNTAS_NEUMATICA.find((b) => b.tema === 'Método cascada')!
+    const azar = semilla(11)
+    for (let i = 0; i < 200; i++) {
+      const q = cas.generar(azar)
+      const secuencia = q.enunciado.match(/secuencia (.+?),/)![1]
+      const grupos = analizarSecuencia(secuencia.replace(/−/g, '-')).grupos.length
+      const esperado = q.enunciado.includes('válvulas') ? grupos - 1 : grupos
+      expect(q.opciones[q.correcta]).toBe(String(esperado))
+    }
+  })
+
   it('absolutas e incrementales: la opción correcta cumple la cuenta', () => {
     const inc = PREGUNTAS_CNC.find((b) => b.tema === 'Absolutas e incrementales')!
     const azar = semilla(3)

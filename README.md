@@ -98,7 +98,7 @@ Para informes con imágenes, la barra superior descarga:
 ## Secciones de estudio
 
 Cada unidad tiene su página **Estudiar** (arriba a la derecha), con índice y enlaces
-directos. En PLC, CNC y Robótica empieza con una **autoevaluación** de preguntas
+directos. Las cuatro empiezan con una **autoevaluación** de preguntas
 generadas al azar (no son las de los controles ni de las tareas), con la respuesta
 explicada; las cuatro unidades tienen una **ficha de repaso** de una página para
 imprimir o guardar como PDF. En Neumática:
@@ -293,7 +293,9 @@ herramienta arranca el material.
 
 **Máquinas.** *Centro de torneado* (ejes X en diámetro y Z; cero pieza en la cara,
 sobre el eje; plato de tres garras) y *fresadora de 3 ejes* (cero pieza en la esquina
-delantera izquierda de la cara superior; prensa y mesa). En **Preparación** se elige
+delantera izquierda de la cara superior; prensa y mesa). Se elige con «Máquina ▾», que
+muestra cómo trabaja cada una y sus ejemplos; cada máquina guarda su propio programa.
+En **Preparación** se elige
 el material (latón, aluminio, acero, acrílico, madera) y las medidas del bruto (en el
 torno también lo que toman las garras y el sobremetal de la cara); la lista de
 herramientas muestra la torreta del torno (desbaste y afinado izquierda/derecha,
@@ -551,7 +553,7 @@ npm run dev        # http://localhost:5173
 ```
 
 ```bash
-npm test           # 344 pruebas: motor, análisis, entregas, trabajos, autoevaluaciones, plano, símbolos, banco 3D, PLC, CNC, robótica y utilidades
+npm test           # 349 pruebas: motor, análisis, entregas, trabajos, autoevaluaciones, plano, símbolos, banco 3D, PLC, CNC, robótica y utilidades
 npm run typecheck  # comprobación de tipos
 npm run build      # compila a /dist
 ```

@@ -933,6 +933,32 @@ button:disabled:hover {
 .ap .ap-baja { animation-name: ap-baja; opacity: 0.15; }
 @keyframes ap-baja { 0%, 60% { opacity: 0.15 } 61%, 90% { opacity: 1 } 91%, 100% { opacity: 0.15 } }
 
+/* Máquinas CNC en su selector (SelectorMaquina.tsx). */
+.ap .ap-giro { animation-name: ap-giro; animation-duration: 0.5s; }
+@keyframes ap-giro { from { transform: translateX(0) } to { transform: translateX(8px) } }
+.ap .ap-herramienta { animation-name: ap-herramienta; }
+@keyframes ap-herramienta {
+  0%, 10% { transform: translate(0, 0) }
+  60% { transform: translate(-80px, 0) }
+  68% { transform: translate(-80px, -12px) }
+  88% { transform: translate(0, -12px) }
+  96%, 100% { transform: translate(0, 0) }
+}
+.ap .ap-desbaste { animation-name: ap-desbaste; transform-origin: right; }
+@keyframes ap-desbaste { 0%, 10% { transform: scaleX(0) } 60%, 95% { transform: scaleX(1) } 96%, 100% { transform: scaleX(0) } }
+.ap .ap-contorno { animation-name: ap-contorno; }
+@keyframes ap-contorno { 0% { stroke-dashoffset: 100 } 90%, 100% { stroke-dashoffset: 0 } }
+.ap .ap-fresa { animation-name: ap-fresa; transform-box: view-box; }
+@keyframes ap-fresa {
+  0% { transform: translate(0, 0) }
+  27.2% { transform: translate(70px, 0) }
+  45% { transform: translate(70px, 46px) }
+  72.2% { transform: translate(0, 46px) }
+  90%, 100% { transform: translate(0, 0) }
+}
+.ap .ap-giro-fresa { animation-name: ap-giro-fresa; animation-duration: 0.4s; transform-origin: center; }
+@keyframes ap-giro-fresa { to { transform: rotate(360deg) } }
+
 /* En la lista, sólo se mueve la planta elegida o la que está bajo el puntero. */
 .selector-planta__opcion:not([aria-selected='true']):not(:hover) .ap * {
   animation-play-state: paused;
