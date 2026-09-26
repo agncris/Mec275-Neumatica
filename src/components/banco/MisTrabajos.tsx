@@ -62,7 +62,7 @@ export default function MisTrabajos({ unidad, nombreActual, actual, abrir, onCer
       if (!esRespaldo(d)) throw new Error('Ese archivo no es un respaldo de NeumaLab.')
       const n = restaurarRespaldo(d)
       refrescar()
-      setMensaje(`Respaldo cargado: ${n} trabajo(s) de las cuatro unidades.`)
+      setMensaje(`Respaldo cargado: ${n} trabajo(s) de todas las unidades.`)
     } catch (e) {
       setMensaje(`⚠ ${e instanceof Error ? e.message : 'No se pudo leer el archivo.'}`)
     }
@@ -161,7 +161,7 @@ export default function MisTrabajos({ unidad, nombreActual, actual, abrir, onCer
         )}
 
         <h3 style={{ margin: '18px 0 4px', fontSize: '0.95rem' }}>Respaldo de todo</h3>
-        <p style={pie}>Un solo archivo con tus trabajos de las cuatro unidades y lo que tienes abierto en cada una.</p>
+        <p style={pie}>Un solo archivo con tus trabajos de todas las unidades y lo que tienes abierto en cada una.</p>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           <button
             onClick={() => {

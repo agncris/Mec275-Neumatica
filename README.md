@@ -15,6 +15,12 @@
 
 Todo el contenido y la interfaz están en español.
 
+**Unidades ocultas.** Por ahora los alumnos sólo ven Neumática y PLC; CNC y Robótica
+están listas pero ocultas hasta llegar a esas clases. Para publicarlas, se sacan de
+`UNIDADES_OCULTAS` en [`src/unidades.ts`](src/unidades.ts). Para revisarlas antes,
+se abre la app con `?ver=todas` (por ejemplo `…/?unidad=cnc&ver=todas`), que las
+muestra mientras esa pestaña del navegador siga abierta.
+
 ---
 
 ## Guía rápida para el alumno

@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import Raiz from './Raiz'
+import { unidadVisible } from './unidades'
 import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
@@ -19,12 +20,16 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
         // para que funcionen sin internet aunque todavía no se hayan abierto.
         const precargar = () => {
           void import('./plc/UnidadPLC')
-          void import('./cnc/UnidadCNC')
-          void import('./robot/UnidadRobotica')
           void import('./plc/Planta3D')
-          void import('./cnc/Maquina3D')
-          void import('./robot/Robot3D')
-          void import('./robot/TiposRobot')
+          if (unidadVisible('cnc')) {
+            void import('./cnc/UnidadCNC')
+            void import('./cnc/Maquina3D')
+          }
+          if (unidadVisible('robotica')) {
+            void import('./robot/UnidadRobotica')
+            void import('./robot/Robot3D')
+            void import('./robot/TiposRobot')
+          }
           void import('./vista3d/Banco3D')
         }
         const w = window as Window & { requestIdleCallback?: (f: () => void) => void }

@@ -5,13 +5,13 @@
  */
 import { lazy, Suspense, useEffect, useState } from 'react'
 import App from './App'
+import { unidadVisible, type Unidad } from './unidades'
 
 const UnidadPLC = lazy(() => import('./plc/UnidadPLC'))
 const UnidadCNC = lazy(() => import('./cnc/UnidadCNC'))
 const UnidadRobotica = lazy(() => import('./robot/UnidadRobotica'))
 
-type Unidad = 'neumatica' | 'plc' | 'cnc' | 'robotica'
-const UNIDADES: Unidad[] = ['neumatica', 'plc', 'cnc', 'robotica']
+const UNIDADES = (['neumatica', 'plc', 'cnc', 'robotica'] as Unidad[]).filter(unidadVisible)
 const CLAVE = 'neumalab.unidad'
 
 function unidadInicial(): Unidad {
@@ -20,8 +20,8 @@ function unidadInicial(): Unidad {
   if (/[#&]c=/.test(window.location.hash)) return 'neumatica'
   // Los enlaces con un trabajo de otra unidad abren esa unidad.
   if (/[#&]plc=/.test(window.location.hash)) return 'plc'
-  if (/[#&]cnc=/.test(window.location.hash)) return 'cnc'
-  if (/[#&]rob=/.test(window.location.hash)) return 'robotica'
+  if (/[#&]cnc=/.test(window.location.hash) && unidadVisible('cnc')) return 'cnc'
+  if (/[#&]rob=/.test(window.location.hash) && unidadVisible('robotica')) return 'robotica'
   const param = new URLSearchParams(window.location.search).get('unidad')
   if (UNIDADES.includes(param as Unidad)) return param as Unidad
   try {
@@ -90,7 +90,7 @@ export default function Raiz() {
     ['plc', '2', 'PLC', 'Programación Ladder y plantas del laboratorio en 3D'],
     ['cnc', '3', 'CNC', 'Código G, torno y fresadora con simulación de mecanizado en 3D'],
     ['robotica', '4', 'Robótica', 'Robots KUKA: programación por nodos (como Grasshopper + KUKA|prc), mando y simulación 3D'],
-  ]
+  ].filter(([id]) => UNIDADES.includes(id as Unidad)) as Array<[Unidad, string, string, string]>
   return (
     <>
       <div className="barra-superior">
