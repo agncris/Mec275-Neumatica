@@ -9,6 +9,7 @@ import { PLANTAS } from './plantas'
 import { EJEMPLOS_PLC, type EjemploPLC } from './ejemplos'
 import { EJERCICIOS_PLC, type EjercicioPLC } from './ejercicios'
 import { formatear, type Notacion } from './notacion'
+import AnimacionPlanta from './AnimacionPlanta'
 
 interface Props {
   actual: IdPlanta
@@ -84,15 +85,21 @@ export default function SelectorPlanta({ actual, notacion, ejercicioActual, onUs
                 className="selector-planta__opcion"
                 data-planta-opcion={p.id}
               >
-                <span style={{ fontWeight: 600 }}>{p.nombre}</span>
-                <span style={{ fontSize: '0.76rem', color: '#51606f' }}>
-                  {p.id === actual ? 'En uso · ' : ''}
-                  {cuenta(p.id) ? `${cuenta(p.id)} ejemplo${cuenta(p.id) === 1 ? '' : 's'} o ejercicio${cuenta(p.id) === 1 ? '' : 's'}` : 'Para programar libre'}
+                <AnimacionPlanta id={p.id} ancho={60} />
+                <span style={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 }}>
+                  <span style={{ fontWeight: 600 }}>{p.nombre}</span>
+                  <span style={{ fontSize: '0.76rem', color: '#51606f' }}>
+                    {p.id === actual ? 'En uso · ' : ''}
+                    {cuenta(p.id) ? `${cuenta(p.id)} ejemplo${cuenta(p.id) === 1 ? '' : 's'} o ejercicio${cuenta(p.id) === 1 ? '' : 's'}` : 'Para programar libre'}
+                  </span>
                 </span>
               </button>
             ))}
           </nav>
           <section className="selector-planta__detalle" aria-label={planta.nombre}>
+            <div className="selector-planta__animacion" data-animacion-planta={vista}>
+              <AnimacionPlanta key={vista} id={vista} ancho="100%" />
+            </div>
             <h3 style={{ margin: '0 0 4px', fontSize: '1.02rem' }}>
               {planta.nombre}
               {vista === actual && <span style={{ marginLeft: 8, fontSize: '0.74rem', fontWeight: 700, color: '#fff', background: '#0e7a43', borderRadius: 6, padding: '1px 7px', verticalAlign: 'middle' }}>EN USO</span>}

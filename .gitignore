@@ -12,3 +12,4 @@ scripts/exportar-cascada-abc.mts
 scripts/diag-layout.mts
 scripts/verificar-cruces.mts
 scripts/exportar-svg-layout.mts
+*.tsbuildinfo

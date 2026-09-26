@@ -6,7 +6,7 @@
  * ejecuta en ciclos de scan contra la planta, las salidas mueven la máquina
  * y los sensores de la máquina vuelven a las entradas.
  */
-import { botonPrimario, estiloAviso, Etiquetado, Menu, useEsEstrecha } from '../components/ui'
+import { botonPrimario, estiloAviso, Menu, useEsEstrecha } from '../components/ui'
 import BancoDividido, { TituloArea } from '../components/banco/BancoDividido'
 import { usePanelAcoplado, type PestanaPanel } from '../components/banco/PanelAcoplado'
 import PaginaEstudiar, { type SeccionEstudio } from '../components/banco/PaginaEstudiar'
@@ -405,6 +405,12 @@ export default function UnidadPLC() {
       </span>
     </button>
   )
+  /** La notación de LogixPro sólo sirve a quien use ese simulador: queda en el menú, no en la barra. */
+  const itemNotacion = {
+    texto: notacion === 'ab' ? 'Direcciones como en el apunte' : 'Direcciones como en LogixPro',
+    ayuda: notacion === 'ab' ? 'Volver a I0.3, Q0.1' : 'I:1/03, O:2/01 (sólo si usas LogixPro)',
+    onClick: () => setNotacion(notacion === 'ab' ? 'siemens' : 'ab'),
+  }
   const itemsArchivo = [
     { texto: 'Nuevo programa', ayuda: 'Empieza con el diagrama vacío', onClick: nuevo },
     { texto: 'Abrir…', ayuda: 'Un programa guardado (.json)', onClick: () => inputArchivo.current?.click() },
@@ -438,14 +444,6 @@ export default function UnidadPLC() {
         </button>
       </span>
       {botonPlanta}
-      {!estrecha && (
-        <Etiquetado texto="Direcciones" titulo="Cómo se escriben las direcciones: como en el apunte o como en LogixPro / RSLogix">
-          <select value={notacion} onChange={(e) => setNotacion(e.target.value as Notacion)} style={{ padding: '0.35rem 0.4rem', minHeight: 36, width: 172 }}>
-            <option value="siemens">Apunte (I0.3)</option>
-            <option value="ab">LogixPro (I:1/03)</option>
-          </select>
-        </Etiquetado>
-      )}
       <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
         {!estrecha && (
           <button onClick={guia.abrir} className="boton-icono" title="Guía de inicio" aria-label="Guía de inicio" data-abrir-guia="si">
@@ -459,18 +457,13 @@ export default function UnidadPLC() {
             items={[
               ...itemsArchivo,
               { ...itemExportar, texto: 'Exportar Ladder (PNG)', separar: true },
-              {
-                texto: notacion === 'ab' ? 'Direcciones como en el apunte' : 'Direcciones como en LogixPro',
-                ayuda: notacion === 'ab' ? 'I0.3, Q0.1' : 'I:1/03, O:2/01',
-                onClick: () => setNotacion(notacion === 'ab' ? 'siemens' : 'ab'),
-                separar: true,
-              },
+              { ...itemNotacion, separar: true },
               { texto: 'Guía de inicio', ayuda: 'Los cuatro pasos para partir', onClick: guia.abrir },
             ]}
           />
         ) : (
           <>
-            <Menu etiqueta="Archivo" items={itemsArchivo} />
+            <Menu etiqueta="Archivo" items={[...itemsArchivo, { ...itemNotacion, separar: true }]} />
             <Menu etiqueta="Exportar" items={[itemExportar]} />
           </>
         )}
