@@ -1,7 +1,7 @@
 {
   "name": "NeumaLab · MEC275",
   "short_name": "NeumaLab",
-  "description": "Laboratorio virtual del curso MEC275: neumática, PLC, CNC y robótica.",
+  "description": "Laboratorio virtual del curso MEC275: neumática y PLC.",
   "lang": "es",
   "start_url": "/",
   "scope": "/",

@@ -5,11 +5,12 @@
  */
 import { lazy, Suspense, useEffect, useState } from 'react'
 import App from './App'
-import { unidadVisible, type Unidad } from './unidades'
+import { unidadVisible, VER_CNC, VER_ROBOTICA, type Unidad } from './unidades'
 
 const UnidadPLC = lazy(() => import('./plc/UnidadPLC'))
-const UnidadCNC = lazy(() => import('./cnc/UnidadCNC'))
-const UnidadRobotica = lazy(() => import('./robot/UnidadRobotica'))
+// Las unidades no publicadas quedan fuera de la compilación (ver unidades.ts).
+const UnidadCNC = VER_CNC ? lazy(() => import('./cnc/UnidadCNC')) : null
+const UnidadRobotica = VER_ROBOTICA ? lazy(() => import('./robot/UnidadRobotica')) : null
 
 const UNIDADES = (['neumatica', 'plc', 'cnc', 'robotica'] as Unidad[]).filter(unidadVisible)
 const CLAVE = 'neumalab.unidad'
@@ -131,7 +132,7 @@ export default function Raiz() {
         <App />
       ) : (
         <Suspense fallback={<p style={{ padding: 24, color: '#5a6b7d', textAlign: 'center' }}>Abriendo la unidad…</p>}>
-          {unidad === 'plc' ? <UnidadPLC /> : unidad === 'cnc' ? <UnidadCNC /> : <UnidadRobotica />}
+          {unidad === 'plc' ? <UnidadPLC /> : unidad === 'cnc' && UnidadCNC ? <UnidadCNC /> : unidad === 'robotica' && UnidadRobotica ? <UnidadRobotica /> : null}
         </Suspense>
       )}
     </>

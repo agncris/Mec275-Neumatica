@@ -1,7 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import Raiz from './Raiz'
-import { unidadVisible } from './unidades'
+import { VER_CNC, VER_ROBOTICA } from './unidades'
 import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
@@ -21,11 +21,11 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
         const precargar = () => {
           void import('./plc/UnidadPLC')
           void import('./plc/Planta3D')
-          if (unidadVisible('cnc')) {
+          if (VER_CNC) {
             void import('./cnc/UnidadCNC')
             void import('./cnc/Maquina3D')
           }
-          if (unidadVisible('robotica')) {
+          if (VER_ROBOTICA) {
             void import('./robot/UnidadRobotica')
             void import('./robot/Robot3D')
             void import('./robot/TiposRobot')
