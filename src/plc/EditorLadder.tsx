@@ -103,17 +103,20 @@ const SIGNO: Partial<Record<TipoBobina, string>> = { ADD: '+', SUB: '−', MUL: 
 /** Las instrucciones que se dibujan como caja (no como bobina redonda). */
 const esCaja = (t: TipoBobina) => esTemporizador(t) || esContador(t) || esDatos(t)
 
+/** El mnemónico de LogixPro, sólo si se eligió esa notación. */
+const ab = (n: Notacion, m: string) => (n === 'ab' ? ` (${m})` : '')
+
 const herramientas = (n: Notacion): Array<{ id: Herramienta; icono: string; texto: string; titulo: string; grupo: number }> => [
   { id: 'seleccionar', icono: '↖', texto: 'Elegir', grupo: 0, titulo: 'Seleccionar: clic en un elemento para ver y cambiar su dirección' },
-  { id: 'NA', icono: MNEMONICOS.NA[n], texto: 'Contacto NA', grupo: 1, titulo: 'Contacto normalmente abierto (XIC): deja pasar cuando su dirección está a 1' },
-  { id: 'NC', icono: MNEMONICOS.NC[n], texto: 'Contacto NC', grupo: 1, titulo: 'Contacto normalmente cerrado (XIO): deja pasar cuando su dirección está a 0' },
+  { id: 'NA', icono: MNEMONICOS.NA[n], texto: 'Contacto NA', grupo: 1, titulo: `Contacto normalmente abierto${ab(n, 'XIC')}: deja pasar cuando su dirección está a 1` },
+  { id: 'NC', icono: MNEMONICOS.NC[n], texto: 'Contacto NC', grupo: 1, titulo: `Contacto normalmente cerrado${ab(n, 'XIO')}: deja pasar cuando su dirección está a 0` },
   { id: 'cable', icono: '──', texto: 'Cable', grupo: 1, titulo: 'Cable: une dos tramos de una misma fila' },
   { id: 'rama', icono: '┃', texto: 'Rama', grupo: 1, titulo: 'Rama: une (o separa) dos filas en un nodo para hacer un paralelo' },
   { id: 'ONS', icono: 'ONS', texto: 'Un pulso', grupo: 1, titulo: 'One shot: deja pasar la corriente un solo barrido, cuando llega' },
   { id: 'CMP', icono: '≥ =', texto: 'Comparar', grupo: 1, titulo: 'Comparar: deja pasar si el acumulado de un temporizador o contador cumple la condición (EQU, GRT, LES…)' },
-  { id: 'normal', icono: MNEMONICOS.normal[n], texto: 'Bobina', grupo: 2, titulo: 'Bobina (OTE): vale 1 mientras le llega corriente' },
-  { id: 'set', icono: MNEMONICOS.set[n], texto: 'Enclavar', grupo: 2, titulo: 'Enclavar, L / Set (OTL): la pone a 1 y ahí queda hasta que la desenclaves' },
-  { id: 'reset', icono: MNEMONICOS.reset[n], texto: 'Desenclavar', grupo: 2, titulo: 'Desenclavar, U / Reset (OTU; RES en temporizadores y contadores): la pone a 0' },
+  { id: 'normal', icono: MNEMONICOS.normal[n], texto: 'Bobina', grupo: 2, titulo: `Bobina${ab(n, 'OTE')}: vale 1 mientras le llega corriente` },
+  { id: 'set', icono: MNEMONICOS.set[n], texto: 'Enclavar', grupo: 2, titulo: `Enclavar, L / Set${ab(n, 'OTL')}: la pone a 1 y ahí queda hasta que la desenclaves` },
+  { id: 'reset', icono: MNEMONICOS.reset[n], texto: 'Desenclavar', grupo: 2, titulo: `Desenclavar, U / Reset${ab(n, 'OTU; RES en temporizadores y contadores')}: la pone a 0` },
   { id: 'negada', icono: '(/)', texto: 'Negada', grupo: 2, titulo: 'Bobina negada: vale 1 mientras NO le llega corriente (al revés que la bobina normal)' },
   { id: 'flancoP', icono: '(P)', texto: 'Flanco ↑', grupo: 2, titulo: 'Flanco positivo: vale 1 un solo barrido cuando llega la corriente' },
   { id: 'flancoN', icono: '(N)', texto: 'Flanco ↓', grupo: 2, titulo: 'Flanco negativo: vale 1 un solo barrido cuando se va la corriente' },

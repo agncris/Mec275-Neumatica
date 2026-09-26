@@ -358,7 +358,7 @@ export const SILO: DescripcionPlanta = {
   id: 'silo',
   nombre: 'Silo que llena cajas en una cinta',
   resumen:
-    'La cinta trae cajas vacías bajo el silo. El sensor de proximidad detecta la caja en posición; la electroválvula deja caer el material y el sensor de nivel avisa cuando la caja está llena. Pilotos RUN, FILL y FULL. El cableado es el del simulador LogixPro; STOP es un pulsador normalmente cerrado.',
+    'La cinta trae cajas vacías bajo el silo. El sensor de proximidad detecta la caja en posición; la electroválvula deja caer el material y el sensor de nivel avisa cuando la caja está llena. Pilotos RUN, FILL y FULL. Ojo: STOP es un pulsador normalmente cerrado (vale 1 en reposo).',
   cableado: [
     { dir: 'I0.0', nombre: 'START', descripcion: 'Pulsador de marcha (NA)' },
     { dir: 'I0.1', nombre: 'STOP', descripcion: 'Pulsador de paro (NC: vale 1 en reposo, 0 al pulsarlo)' },

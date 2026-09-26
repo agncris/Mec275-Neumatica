@@ -1,9 +1,8 @@
 /**
  * Preguntas de práctica de PLC, generadas al azar: leer un escalón Ladder,
- * instrucciones, direcciones (apunte y LogixPro), ciclo de scan y sensores.
+ * instrucciones, direcciones (como en el apunte), ciclo de scan y sensores.
  */
 import { elegir, mezclar, type Generador } from '../components/Autoevaluacion'
-import { formatear } from './notacion'
 
 // ---------------------------------------------------------------------------
 // Leer un escalón: bloques en serie; cada bloque, uno o dos contactos en paralelo.
@@ -103,11 +102,11 @@ const leerEscalon: Generador = (azar) => {
 
 // ---------------------------------------------------------------------------
 export const INSTRUCCIONES: Array<[string, string]> = [
-  ['Contacto NA (XIC)', 'deja pasar la corriente cuando su dirección está a 1'],
-  ['Contacto NC (XIO)', 'deja pasar la corriente cuando su dirección está a 0'],
-  ['Bobina (OTE)', 'vale 1 mientras le llega corriente y 0 cuando deja de llegarle'],
-  ['Enclavar, Set (OTL)', 'pone su dirección a 1 y la deja así aunque ya no le llegue corriente'],
-  ['Desenclavar, Reset (OTU)', 'pone su dirección a 0 (deshace un enclavamiento)'],
+  ['Contacto NA', 'deja pasar la corriente cuando su dirección está a 1'],
+  ['Contacto NC', 'deja pasar la corriente cuando su dirección está a 0'],
+  ['Bobina', 'vale 1 mientras le llega corriente y 0 cuando deja de llegarle'],
+  ['Enclavar (L, Set)', 'pone su dirección a 1 y la deja así aunque ya no le llegue corriente'],
+  ['Desenclavar (U, Reset)', 'pone su dirección a 0 (deshace un enclavamiento)'],
   ['Temporizador TON', 'se activa cuando lleva el tiempo preajustado recibiendo corriente'],
   ['Temporizador TOF', 'sigue activo un tiempo después de que deja de recibir corriente'],
   ['Temporizador RTO', 'acumula el tiempo con corriente y lo conserva sin ella, hasta un Reset'],
@@ -122,23 +121,26 @@ const instruccion: Generador = (azar) => {
   return { tema: 'Instrucciones', enunciado: `¿Qué instrucción ${que}?`, opciones, correcta, explicacion: `${nombre}: ${que}.` }
 }
 
+const TIPOS_DIRECCION: Array<[string, string]> = [
+  ['I', 'una entrada (un sensor o un pulsador)'],
+  ['Q', 'una salida (un actuador o un piloto)'],
+  ['M', 'una marca: un bit de memoria interna, sin cable afuera'],
+]
+
+/** Direcciones como en el apunte: I0.3 es la entrada 3 del byte 0, Q0.1 la salida 1… */
 const direccion: Generador = (azar) => {
-  const esEntrada = azar() < 0.5
+  const [letra, que] = elegir(TIPOS_DIRECCION, azar)
   const bit = Math.floor(azar() * 8)
-  const dir = `${esEntrada ? 'I' : 'Q'}0.${bit}`
-  const ab = formatear(dir, 'ab')
-  const haciaAb = azar() < 0.5
-  const correcta = haciaAb ? ab : dir
-  const otros = haciaAb
-    ? [formatear(`${esEntrada ? 'Q' : 'I'}0.${bit}`, 'ab'), formatear(`${esEntrada ? 'I' : 'Q'}0.${(bit + 1) % 8}`, 'ab'), `${esEntrada ? 'I' : 'O'}:${esEntrada ? 2 : 1}/${String(bit).padStart(2, '0')}`]
-    : [`${esEntrada ? 'Q' : 'I'}0.${bit}`, `${esEntrada ? 'I' : 'Q'}0.${(bit + 1) % 8}`, `${esEntrada ? 'I' : 'Q'}1.${bit}`]
-  const m = mezclar(correcta, otros, azar)
-  return {
-    tema: 'Direcciones',
-    enunciado: haciaAb ? `La ${esEntrada ? 'entrada' : 'salida'} ${dir} del apunte, ¿cómo se escribe en LogixPro?` : `La dirección ${ab} de LogixPro, ¿cómo se escribe en la notación del apunte?`,
-    ...m,
-    explicacion: `En LogixPro las entradas van en el archivo I:1 y las salidas en O:2, con el bit en dos cifras: ${dir} = ${ab}.`,
+  const dir = `${letra}0.${bit}`
+  const explicacion = `${dir}: la letra dice qué es (I entrada, Q salida, M marca), el 0 es el byte y el ${bit} el bit dentro de ese byte (de 0 a 7).`
+  if (azar() < 0.5) {
+    const m = mezclar(que, TIPOS_DIRECCION.filter((t) => t[0] !== letra).map((t) => t[1]).concat('un temporizador'), azar)
+    return { tema: 'Direcciones', enunciado: `En el programa aparece ${dir}. ¿Qué es?`, ...m, explicacion }
   }
+  const nombre = letra === 'I' ? 'la entrada' : letra === 'Q' ? 'la salida' : 'la marca'
+  const otros = TIPOS_DIRECCION.filter((t) => t[0] !== letra).map((t) => `${t[0]}0.${bit}`).concat(`${letra}${bit}.0`)
+  const m = mezclar(dir, otros, azar)
+  return { tema: 'Direcciones', enunciado: `¿Cómo se escribe ${nombre} ${bit} del byte 0?`, ...m, explicacion }
 }
 
 const SCAN: Array<{ p: string; ok: string; mal: string[]; porque: string }> = [

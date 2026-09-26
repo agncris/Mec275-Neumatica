@@ -107,7 +107,8 @@ export default function UnidadPLC() {
   const guia = useGuia('plc')
   const [notacion, setNotacion] = useState<Notacion>(() => {
     try {
-      return localStorage.getItem('neumalab.plc.notacion') === 'ab' ? 'ab' : 'siemens'
+      // Clave nueva: quien había elegido LogixPro vuelve a partir con la notación del apunte.
+      return localStorage.getItem('neumalab.plc.direcciones') === 'ab' ? 'ab' : 'siemens'
     } catch {
       return 'siemens'
     }
@@ -116,7 +117,7 @@ export default function UnidadPLC() {
   notacionRef.current = notacion
   useEffect(() => {
     try {
-      localStorage.setItem('neumalab.plc.notacion', notacion)
+      localStorage.setItem('neumalab.plc.direcciones', notacion)
     } catch {
       /* sin almacenamiento */
     }

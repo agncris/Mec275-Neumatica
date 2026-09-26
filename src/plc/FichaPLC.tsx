@@ -1,6 +1,5 @@
 /** Ficha de repaso de PLC: instrucciones, ciclo de scan, direcciones y sensores. */
 import FichaRepaso, { TablaFicha } from '../components/estudio/FichaRepaso'
-import { formatear } from './notacion'
 import { INSTRUCCIONES, SENSORES } from './preguntasPLC'
 
 export default function FichaPLC() {
@@ -17,13 +16,13 @@ export default function FichaPLC() {
       <p style={{ margin: '0 0 6px' }}>Si una salida tiene bobina en dos escalones, manda la de más abajo.</p>
       <h4>Direcciones</h4>
       <TablaFicha
-        cabeza={['', 'Apunte', 'LogixPro']}
+        cabeza={['Qué es', 'Se escribe', 'Ejemplo']}
         filas={[
-          ['Entrada', 'I0.3', formatear('I0.3', 'ab')],
-          ['Salida', 'Q0.1', formatear('Q0.1', 'ab')],
-          ['Marca', 'M0.2', formatear('M0.2', 'ab')],
-          ['Temporizador (hecho)', 'T0.DN', formatear('T0.DN', 'ab')],
-          ['Contador', 'C1', formatear('C1', 'ab')],
+          ['Entrada (sensor, pulsador)', 'I byte.bit', 'I0.3'],
+          ['Salida (actuador, piloto)', 'Q byte.bit', 'Q0.1'],
+          ['Marca (memoria interna)', 'M byte.bit', 'M0.2'],
+          ['Temporizador', 'T número', 'T0 (terminó: T0.DN)'],
+          ['Contador', 'C número', 'C1'],
         ]}
       />
       <h4>Sensores</h4>

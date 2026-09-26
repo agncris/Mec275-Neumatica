@@ -228,8 +228,9 @@ cada temporizador y contador. La aplicación avisa de los errores típicos: un c
 sin dirección, una bobina sobre una entrada, la misma salida con bobina en dos
 escalones (manda la última).
 
-**Notación de direcciones.** Se elige en la barra: la del apunte (`I0.3`, `Q0.1`,
-`M0.1`, `T0`) o la de **LogixPro / RSLogix** (`I:1/03`, `O:2/01`, `B3:0/1`,
+**Notación de direcciones.** Por defecto, la del apunte y de las clases (`I0.3`, `Q0.1`,
+`M0.1`, `T0`); la autoevaluación y la ficha de repaso usan sólo esa. Quien use el
+simulador LogixPro puede cambiarla en **Archivo** a la de **LogixPro / RSLogix** (`I:1/03`, `O:2/01`, `B3:0/1`,
 `T4:0/DN`, `C5:0.ACC`); en esa notación las bobinas se rotulan L / U y RES. Cambia
 todo a la vez: el diagrama, la tabla de símbolos, el simulador de E/S, la tabla de
 datos y los rótulos de la planta 3D.
