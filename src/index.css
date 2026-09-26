@@ -766,3 +766,101 @@ button:disabled:hover {
   box-shadow: 0 14px 40px rgba(28, 39, 51, 0.22);
   padding: 12px 14px;
 }
+
+/* Selector de planta (PLC): lista de plantas a la izquierda, detalle a la derecha. */
+.selector-planta {
+  background: #fff;
+  border-radius: 12px;
+  width: min(900px, 100%);
+  max-height: 88dvh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 50px rgba(28, 39, 51, 0.3);
+  outline: none;
+}
+.selector-planta__cuerpo {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  min-height: 0;
+  flex: 1;
+}
+.selector-planta__lista {
+  border-right: 1px solid #e0e5eb;
+  padding: 8px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.selector-planta__opcion {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  text-align: left;
+  border: none;
+  border-left: 3px solid transparent;
+  background: transparent;
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  color: #1c2733;
+  font-size: 0.9rem;
+}
+.selector-planta__opcion:hover {
+  background: #f1f4f7;
+  filter: none;
+}
+.selector-planta__opcion[aria-selected='true'] {
+  background: #eef4fd;
+  border-left-color: #1668c7;
+}
+.selector-planta__detalle {
+  padding: 12px 16px 16px;
+  overflow-y: auto;
+}
+.boton-planta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #c6ced6;
+  background: #fff;
+  color: #1c2733;
+  border-radius: 8px;
+  padding: 0 0.7rem;
+  min-height: 36px;
+  font-size: 0.88rem;
+  cursor: pointer;
+  max-width: 100%;
+}
+.boton-planta span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 700px) {
+  .selector-planta__cuerpo {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .selector-planta__lista {
+    flex-direction: row;
+    overflow-x: auto;
+    border-right: none;
+    border-bottom: 1px solid #e0e5eb;
+  }
+  .selector-planta__opcion {
+    flex: none;
+    border-left: none;
+    border-bottom: 3px solid transparent;
+  }
+  .selector-planta__opcion[aria-selected='true'] {
+    border-bottom-color: #1668c7;
+  }
+}
+@media (max-width: 900px) {
+  /* En el celular la subnavegación mide lo mismo con o sin «Entregar» (el banco reserva 45 px). */
+  .subnav .subnav__entrega {
+    margin: 5px 0 5px 6px;
+    min-height: 34px;
+  }
+}

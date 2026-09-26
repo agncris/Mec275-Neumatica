@@ -79,7 +79,7 @@ export const GUIA_NEUMATICA: PasoGuia[] = [
 ]
 
 export const GUIA_PLC: PasoGuia[] = [
-  { titulo: '1 · Elige la planta', texto: 'La planta es la máquina que vas a controlar (estanque, silo, semáforo…). También puedes abrir un ejemplo resuelto o un ejercicio para resolver.' },
+  { titulo: '1 · Elige la planta', texto: 'Pulsa «Planta ▾» en la barra: eliges la máquina que vas a controlar (estanque, silo, semáforo…) y ahí mismo ves sus ejercicios para resolver y sus ejemplos resueltos.' },
   { titulo: '2 · Arma el programa Ladder', texto: 'Elige una herramienta (Contacto NA, Bobina, TON…) y haz clic en una casilla del escalón. Con «Elegir» seleccionas un elemento para cambiar su dirección (I0.1, Q0.0…).' },
   { titulo: '3 · Pásalo a RUN', texto: '▶ RUN (o Espacio) y acciona la planta con sus mandos (START, STOP) o con los botones de la máquina en 3D. Con ❚❚ Pausar puedes ir un barrido a la vez.' },
   { titulo: '4 · Revisa y entrega', texto: 'Abajo tienes las entradas y salidas, la tabla de símbolos y qué va pasando. «Entregar» te da el Ladder, la tabla de E/S y el enlace a tu programa.' },

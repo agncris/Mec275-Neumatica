@@ -24,6 +24,7 @@ import EditorLadder from './EditorLadder'
 import { EJEMPLOS_PLC } from './ejemplos'
 import { EJERCICIOS_PLC, programaDeEjercicio } from './ejercicios'
 import TarjetaEjercicio from './TarjetaEjercicio'
+import SelectorPlanta from './SelectorPlanta'
 import { Historial } from '../historial'
 import {
   ENTRADAS,
@@ -102,6 +103,7 @@ export default function UnidadPLC() {
   const [movil, setMovil] = useState('programa')
   const [entregaAbierta, setEntregaAbierta] = useState(false)
   const [misTrabajos, setMisTrabajos] = useState(false)
+  const [eligiendoPlanta, setEligiendoPlanta] = useState(false)
   const guia = useGuia('plc')
   const [notacion, setNotacion] = useState<Notacion>(() => {
     try {
@@ -394,20 +396,14 @@ export default function UnidadPLC() {
     />
   )
 
-  const selectorPlanta = (
-    <select
-      value={programa.planta}
-      onChange={(e) => cambiarPlanta(e.target.value as IdPlanta)}
-      aria-label="Planta"
-      style={{ padding: '0.35rem 0.4rem', minHeight: 36, width: estrecha ? '100%' : 220, maxWidth: 320 }}
-      data-planta="si"
-    >
-      {Object.values(PLANTAS).map((p) => (
-        <option key={p.id} value={p.id}>
-          {p.nombre}
-        </option>
-      ))}
-    </select>
+  const botonPlanta = (
+    <button onClick={() => setEligiendoPlanta(true)} className="boton-planta" title="Elegir la planta, o empezar un ejercicio o un ejemplo" aria-label={`Planta: ${descripcion.nombre}. Elegir planta, ejercicio o ejemplo`} data-boton-planta="si" style={{ width: estrecha ? '31vw' : 'auto', maxWidth: 360 }}>
+      {!estrecha && <span style={{ color: '#51606f' }}>Planta:</span>}
+      <span style={{ fontWeight: 600 }}>{descripcion.nombre}</span>
+      <span aria-hidden style={{ fontSize: '0.7rem', flex: 'none' }}>
+        ▾
+      </span>
+    </button>
   )
   const itemsArchivo = [
     { texto: 'Nuevo programa', ayuda: 'Empieza con el diagrama vacío', onClick: nuevo },
@@ -441,45 +437,7 @@ export default function UnidadPLC() {
           ↷
         </button>
       </span>
-      <select
-        value=""
-        aria-label="Ejemplos y ejercicios"
-        title="Abrir un ejemplo resuelto o un ejercicio para resolver"
-        onChange={(e) => {
-          const valor = e.target.value
-          e.target.value = ''
-          const ejercicio = EJERCICIOS_PLC.find((x) => `ejercicio:${x.id}` === valor)
-          if (ejercicio) {
-            if (!confirmar(`¿Empezar «${ejercicio.titulo}»?`)) return
-            setCorriendo(false)
-            setPrograma(programaDeEjercicio(ejercicio))
-            return
-          }
-          const ej = EJEMPLOS_PLC.find((x) => x.id === valor)
-          if (!ej || !confirmar(`¿Cargar «${ej.etiqueta}»?`)) return
-          setCorriendo(false)
-          setPrograma(clonarPrograma(ej.programa))
-        }}
-        style={{ padding: '0.35rem 0.4rem', width: estrecha ? '32vw' : 210, minHeight: 36 }}
-        data-ejemplos-plc="si"
-      >
-        <option value="">Ejemplos y ejercicios…</option>
-        <optgroup label="Ejercicios para resolver (sin solución)">
-          {EJERCICIOS_PLC.map((e) => (
-            <option key={e.id} value={`ejercicio:${e.id}`}>
-              📝 {e.titulo}
-            </option>
-          ))}
-        </optgroup>
-        <optgroup label="Ejemplos resueltos">
-          {EJEMPLOS_PLC.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.etiqueta}
-            </option>
-          ))}
-        </optgroup>
-      </select>
-      {!estrecha && <Etiquetado texto="Planta">{selectorPlanta}</Etiquetado>}
+      {botonPlanta}
       {!estrecha && (
         <Etiquetado texto="Direcciones" titulo="Cómo se escriben las direcciones: como en el apunte o como en LogixPro / RSLogix">
           <select value={notacion} onChange={(e) => setNotacion(e.target.value as Notacion)} style={{ padding: '0.35rem 0.4rem', minHeight: 36, width: 172 }}>
@@ -489,9 +447,11 @@ export default function UnidadPLC() {
         </Etiquetado>
       )}
       <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
-        <button onClick={guia.abrir} className="boton-icono" title="Guía de inicio" aria-label="Guía de inicio" data-abrir-guia="si">
-          ?
-        </button>
+        {!estrecha && (
+          <button onClick={guia.abrir} className="boton-icono" title="Guía de inicio" aria-label="Guía de inicio" data-abrir-guia="si">
+            ?
+          </button>
+        )}
         {estrecha ? (
           <Menu
             etiqueta="⋯"
@@ -505,6 +465,7 @@ export default function UnidadPLC() {
                 onClick: () => setNotacion(notacion === 'ab' ? 'siemens' : 'ab'),
                 separar: true,
               },
+              { texto: 'Guía de inicio', ayuda: 'Los cuatro pasos para partir', onClick: guia.abrir },
             ]}
           />
         ) : (
@@ -562,12 +523,11 @@ export default function UnidadPLC() {
 
   const areaPlanta = (
     <>
-      {estrecha && <div style={{ marginBottom: 6 }}>{selectorPlanta}</div>}
       <TituloArea>
         Planta · {descripcion.nombre}
-        <span title={descripcion.resumen} style={{ fontWeight: 400, fontSize: '0.8rem', color: '#51606f' }}>
-          ⓘ
-        </span>
+        <button onClick={() => setEligiendoPlanta(true)} style={{ border: 'none', background: 'transparent', color: '#1668c7', fontWeight: 600, fontSize: '0.84rem', cursor: 'pointer', padding: '2px 4px' }} title={descripcion.resumen}>
+          Cambiar
+        </button>
       </TituloArea>
       <div className="relleno">
         <Suspense fallback={<p style={{ padding: 20, color: '#51606f' }}>Montando la planta…</p>}>
@@ -698,6 +658,36 @@ export default function UnidadPLC() {
         />
       )}
       {guia.visible && seccion === 'laboratorio' && <GuiaInicio unidad="PLC" pasos={GUIA_PLC} onCerrar={guia.cerrar} />}
+      {eligiendoPlanta && (
+        <SelectorPlanta
+          actual={programa.planta}
+          notacion={notacion}
+          ejercicioActual={programa.ejercicio}
+          onCerrar={() => setEligiendoPlanta(false)}
+          onUsarPlanta={(id) => {
+            cambiarPlanta(id)
+            setEligiendoPlanta(false)
+          }}
+          onProgramaVacio={(id) => {
+            if (!confirmar(`¿Empezar un programa vacío con «${PLANTAS[id].nombre}»?`)) return
+            setCorriendo(false)
+            setPrograma(programaVacio(id, PLANTAS[id].cableado.map((x) => ({ ...x }))))
+            setEligiendoPlanta(false)
+          }}
+          onEjercicio={(e) => {
+            if (!confirmar(`¿Empezar «${e.titulo}»?`)) return
+            setCorriendo(false)
+            setPrograma(programaDeEjercicio(e))
+            setEligiendoPlanta(false)
+          }}
+          onEjemplo={(e) => {
+            if (!confirmar(`¿Abrir el ejemplo «${e.etiqueta}»?`)) return
+            setCorriendo(false)
+            setPrograma(clonarPrograma(e.programa))
+            setEligiendoPlanta(false)
+          }}
+        />
+      )}
       {misTrabajos && (
         <MisTrabajos
           unidad="plc"
