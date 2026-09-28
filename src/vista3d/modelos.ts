@@ -107,7 +107,10 @@ export function etiqueta(texto: string, ancho = 0.034): THREE.Mesh {
   const tex = new THREE.CanvasTexture(lienzo)
   tex.colorSpace = THREE.SRGBColorSpace
   tex.anisotropy = 4
-  return new THREE.Mesh(plano, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.7 }))
+  const m = new THREE.Mesh(plano, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.7 }))
+  // Para que la planta PLC la oculte cuando muestra el rótulo grande de la misma pieza.
+  m.userData.sello = texto
+  return m
 }
 
 /** Racor instantáneo: cuerpo de latón con la pinza azul donde entra el tubo. */

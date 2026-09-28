@@ -107,7 +107,10 @@ function placa(linea1: string, linea2 = '', ancho = 0.05, grande = false) {
   })
   // Sensores y actuadores (S0, Y1, V2, MOTOR…) llevan además una etiqueta grande que
   // siempre se lee. Los pulsadores y pilotos no: ya están juntos en su panel.
-  if (grande) m.add(insignia(linea1, linea2))
+  if (grande) {
+    m.add(insignia(linea1, linea2))
+    m.userData.sello = linea1
+  }
   return m
 }
 
@@ -160,7 +163,7 @@ export function insignia(nombre: string, dir = ''): THREE.Object3D {
   const alto = dir ? 0.04 : 0.032
   sprite.scale.set((alto * W) / H, alto, 1)
   sprite.renderOrder = 10
-  sprite.userData.insignia = true
+  sprite.userData.insignia = nombre
   sprite.name = `insignia-${nombre}`
   return sprite
 }
@@ -1406,9 +1409,15 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
   })
   const conRotulosRef = useRef(conRotulos)
   conRotulosRef.current = conRotulos
-  const insigniasRef = useRef<THREE.Object3D[]>([])
+  /** Rótulos grandes y, de las mismas piezas, la pegatina o placa chica: se ve uno u otro, nunca los dos. */
+  const insigniasRef = useRef<{ grandes: THREE.Object3D[]; chicos: THREE.Mesh[] }>({ grandes: [], chicos: [] })
+  const aplicarRotulos = (con: boolean) => {
+    for (const o of insigniasRef.current.grandes) o.visible = con
+    // Sólo el material: la placa chica es la madre de su rótulo grande y no puede ocultarse entera.
+    for (const m of insigniasRef.current.chicos) (m.material as THREE.Material).visible = !con
+  }
   useEffect(() => {
-    for (const o of insigniasRef.current) o.visible = conRotulos
+    aplicarRotulos(conRotulos)
     try {
       localStorage.setItem('neumalab.plc.rotulos3d', conRotulos ? 'si' : 'no')
     } catch {
@@ -1548,12 +1557,17 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
     }
     encuadrar()
     encuadrarRef.current = encuadrar
-    const insignias: THREE.Object3D[] = []
+    const grandes: THREE.Object3D[] = []
     escena.traverse((o) => {
-      if (o.userData.insignia) insignias.push(o)
+      if (o.userData.insignia) grandes.push(o)
     })
-    for (const o of insignias) o.visible = conRotulosRef.current
-    insigniasRef.current = insignias
+    const nombres = new Set(grandes.map((o) => o.userData.insignia as string))
+    const chicos: THREE.Mesh[] = []
+    escena.traverse((o) => {
+      if (o.userData.sello && nombres.has(o.userData.sello) && (o as THREE.Mesh).material) chicos.push(o as THREE.Mesh)
+    })
+    insigniasRef.current = { grandes, chicos }
+    aplicarRotulos(conRotulosRef.current)
 
     // Pulsar los mandos de la máquina.
     const raycaster = new THREE.Raycaster()
