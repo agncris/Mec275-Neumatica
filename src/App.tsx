@@ -448,14 +448,14 @@ export default function App() {
       ))}
     </select>
   )
+  const guardarJson = () => {
+    const base = baseArchivo()
+    descargarJson({ version: 1, nombre: ejercicio || undefined, piezas, mangueras }, nombreSeguro(base === 'circuito' ? base : `${base}_circuito`, 'json'))
+  }
   const itemsArchivo = [
     { texto: 'Nuevo diagrama', ayuda: 'Deja el tablero en blanco', onClick: () => confirmarDescarte('¿Empezar un diagrama nuevo?') && limpiarPizarra() },
     { texto: 'Abrir…', ayuda: 'Un circuito o una entrega (.json)', onClick: () => inputArchivo.current?.click() },
-    {
-      texto: 'Guardar',
-      ayuda: 'Descarga el circuito para seguir editándolo',
-      onClick: () => descargarJson({ version: 1, nombre: ejercicio || undefined, piezas, mangueras }, nombreSeguro(`${baseArchivo()}_circuito`, 'json')),
-    },
+    { texto: 'Guardar', ayuda: 'Descarga el circuito para seguir editándolo', onClick: guardarJson },
     { texto: 'Mis trabajos…', ayuda: 'Guarda varios circuitos con nombre y cámbiate entre ellos', onClick: () => setMisTrabajos(true), separar: true },
     { texto: 'Copiar enlace para compartir', ayuda: 'El circuito viaja dentro del enlace', onClick: () => void compartir() },
   ]
@@ -469,6 +469,7 @@ export default function App() {
       deshabilitado: !hayDiagramaFase(),
       porque: 'Simula y acciona el circuito hasta que un cilindro complete una carrera',
     },
+    { texto: 'Circuito (JSON)', ayuda: 'El archivo del circuito: se vuelve a abrir en la app con «Abrir…»', onClick: guardarJson, separar: true, deshabilitado: bancoVacio, porque: 'Primero coloca fichas en el tablero' },
   ]
   const zoomHabilitado = vista !== 'banco3d'
   const grupoZoom = (

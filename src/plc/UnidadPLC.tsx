@@ -422,6 +422,7 @@ export default function UnidadPLC() {
     { texto: 'Mis trabajos…', ayuda: 'Guarda varios programas con nombre y cámbiate entre ellos', onClick: () => setMisTrabajos(true), separar: true },
   ]
   const itemExportar = { texto: 'Diagrama Ladder (PNG)', ayuda: 'Imagen del programa para tu informe', onClick: () => void exportarLadder() }
+  const itemJson = { texto: 'Programa (JSON)', ayuda: 'El archivo del programa: se vuelve a abrir en la app con «Abrir…»', onClick: guardar }
 
   const barra = (
     <>
@@ -465,6 +466,7 @@ export default function UnidadPLC() {
               { texto: 'Rehacer', onClick: rehacer, deshabilitado: corriendo || !historialRef.current.puedeRehacer, porque: corriendo ? 'Pasa el PLC a STOP para editar' : 'No hay nada que rehacer' },
               ...itemsArchivo.map((it, i) => ({ ...it, separar: i === 0 })),
               { ...itemExportar, texto: 'Exportar Ladder (PNG)', separar: true },
+              { ...itemJson, texto: 'Exportar programa (JSON)' },
               { ...itemNotacion, separar: true },
               { texto: 'Guía de inicio', ayuda: 'Los cuatro pasos para partir', onClick: guia.abrir },
             ]}
@@ -472,7 +474,7 @@ export default function UnidadPLC() {
         ) : (
           <>
             <Menu etiqueta="Archivo" items={[...itemsArchivo, { ...itemNotacion, separar: true }]} />
-            <Menu etiqueta="Exportar" items={[itemExportar]} />
+            <Menu etiqueta="Exportar" items={[itemExportar, itemJson]} />
           </>
         )}
       </span>

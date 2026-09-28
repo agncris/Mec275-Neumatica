@@ -485,6 +485,7 @@ export default function UnidadRobotica() {
   ]
   const itemsExportar = [
     { texto: 'Programa KRL (.src)', ayuda: 'Para el controlador KUKA', onClick: exportarKRL },
+    { texto: 'Definición (JSON)', ayuda: 'El archivo de la definición: se vuelve a abrir en la app', onClick: () => descargar(JSON.stringify(def, null, 2), nombreSeguro(def.nombre || 'definicion', 'json'), 'application/json') },
     ...(modo === 'visual'
       ? [
           { texto: 'Croquis de la pieza (PNG)', ayuda: 'La pieza acotada, con el cero de la pieza', onClick: () => void exportarCroquis('pieza-png'), separar: true },
