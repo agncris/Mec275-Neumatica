@@ -28,8 +28,6 @@ import SelectorPlanta from './SelectorPlanta'
 import { Historial } from '../historial'
 import {
   ENTRADAS,
-  MARCAS,
-  PALABRAS,
   SALIDAS,
   areaDe,
   clonarPrograma,
@@ -100,6 +98,11 @@ export default function UnidadPLC() {
   const estrecha = useEsEstrecha()
   const [seccion, setSeccion] = useSeccionUnidad(SECCIONES_PLC.map((x) => x.id))
   const panel = usePanelAcoplado<PestanaPLC>('neumalab.plc.panel', 'es', typeof window !== 'undefined' && window.innerHeight >= 860)
+  // Quien tenía abierta una pestaña que ya no existe (la tabla de datos) vuelve a Entradas y salidas.
+  useEffect(() => {
+    if (!['es', 'simbolos', 'registro'].includes(panel.pestana)) panel.onPestana('es')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const [movil, setMovil] = useState('programa')
   const [entregaAbierta, setEntregaAbierta] = useState(false)
   const [misTrabajos, setMisTrabajos] = useState(false)
@@ -585,21 +588,6 @@ export default function UnidadPLC() {
   const pestanas: Array<PestanaPanel<PestanaPLC>> = [
     { id: 'es', titulo: 'Entradas y salidas', contenido: panelES('tabla') },
     { id: 'simbolos', titulo: 'Tabla de símbolos', contenido: <TablaSimbolos programa={programa} onCambiar={setPrograma} editable={!corriendo} notacion={notacion} /> },
-    {
-      id: 'datos',
-      titulo: 'Tabla de datos',
-      contenido: (
-        <TablaDatos
-          estado={estado}
-          programa={programa}
-          notacion={notacion}
-          onPalabra={(d, v) => {
-            simRef.current.estado.palabras[d] = v
-            setFotograma((f) => f + 1)
-          }}
-        />
-      ),
-    },
     { id: 'registro', titulo: '¿Qué está pasando?', contador: eventos.length, contenido: registro, seguirFinal: true },
   ]
 
@@ -785,7 +773,7 @@ export default function UnidadPLC() {
   )
 }
 
-type PestanaPLC = 'es' | 'simbolos' | 'datos' | 'registro'
+type PestanaPLC = 'es' | 'simbolos' | 'registro'
 
 const SECCIONES_PLC: SeccionEstudio[] = [
   { id: 'practica', indice: 'Autoevaluación', titulo: 'Autoevaluación · practica con preguntas al azar', contenido: <Autoevaluacion generadores={PREGUNTAS_PLC} /> },
@@ -995,161 +983,6 @@ function PanelES({
 
 const subRotulo: React.CSSProperties = { margin: '0 0 4px', fontSize: '0.8rem', color: '#5a6b7d', fontWeight: 700 }
 const filaES: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.82rem', color: '#33475c', minHeight: 28 }
-
-/**
- * Tabla de datos, como la de LogixPro: los bits de entradas, salidas y
- * marcas, y cada temporizador y contador con su preset, acumulado y bits.
- */
-function TablaDatos({
-  estado,
-  programa,
-  notacion,
-  onPalabra,
-}: {
-  estado: EstadoPLC
-  programa: ProgramaPLC
-  notacion: Notacion
-  onPalabra: (d: string, v: number) => void
-}) {
-  const fmt = (d: string) => formatear(d, notacion)
-  const nombre = (d: string) => programa.simbolos.find((s) => s.dir === d)?.nombre ?? ''
-  const celda: React.CSSProperties = { border: '1px solid #e0e5eb', padding: '3px 6px', textAlign: 'center', fontFamily: 'ui-monospace, monospace', fontSize: '0.82rem' }
-  const bit = (v: boolean | undefined) => (
-    <td style={{ ...celda, background: v ? '#d8f3e5' : '#fff', color: v ? '#0a6b3c' : '#5f6b78', fontWeight: 700 }}>{v ? 1 : 0}</td>
-  )
-  const filaBits = (titulo: string, dirs: string[]) => (
-    <tr>
-      <th style={{ ...celda, textAlign: 'left', background: '#f4f7fb' }}>{titulo}</th>
-      {dirs.map((d) => (
-        <td key={d} style={{ ...celda, padding: 0 }} title={`${fmt(d)}${nombre(d) ? ` · ${nombre(d)}` : ''}`}>
-          <table style={{ borderCollapse: 'collapse', width: '100%' }}>
-            <tbody>
-              <tr>
-                <td style={{ fontSize: '0.66rem', color: '#5f6b78', textAlign: 'center' }}>{fmt(d).replace(/^.*[./]/, '')}</td>
-              </tr>
-              <tr>{bit(estado.bits[d])}</tr>
-            </tbody>
-          </table>
-        </td>
-      ))}
-    </tr>
-  )
-  const usados = (letra: 'T' | 'C') => {
-    const s = new Set<string>()
-    for (const e of programa.escalones) for (const b of e.bobinas) if (b?.dir.startsWith(letra)) s.add(b.dir)
-    return [...s].sort()
-  }
-  const temporizadores = usados('T')
-  const contadores = usados('C')
-  return (
-    <div style={{ display: 'grid', gap: 12 }}>
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ borderCollapse: 'collapse' }}>
-          <tbody>
-            {filaBits(notacion === 'ab' ? 'I:1' : 'I0', ENTRADAS)}
-            {filaBits(notacion === 'ab' ? 'O:2' : 'Q0', SALIDAS)}
-            {filaBits(notacion === 'ab' ? 'B3:0' : 'M0', MARCAS.slice(0, 8))}
-            {filaBits(notacion === 'ab' ? 'B3:0 (8–15)' : 'M1', MARCAS.slice(8))}
-          </tbody>
-        </table>
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 12 }}>
-        <table style={{ borderCollapse: 'collapse', width: '100%' }}>
-          <thead>
-            <tr style={{ background: '#33475c', color: '#fff' }}>
-              {['Temporizador', 'Tipo', 'PRE (s)', 'ACC (s)', 'EN', 'TT', 'DN'].map((h) => (
-                <th key={h} style={{ ...celda, color: '#fff' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {temporizadores.length === 0 && (
-              <tr>
-                <td colSpan={7} style={{ ...celda, fontFamily: 'inherit', color: '#5f6b78' }}>El programa no usa temporizadores.</td>
-              </tr>
-            )}
-            {temporizadores.map((d) => {
-              const tm = estado.temporizadores[d]
-              const b = programa.escalones.flatMap((e) => e.bobinas).find((x) => x?.dir === d && /TON|TOF|RTO/.test(x.tipo))
-              return (
-                <tr key={d}>
-                  <td style={{ ...celda, textAlign: 'left' }}>
-                    {fmt(d)} {nombre(d) && <span style={{ fontFamily: 'inherit', color: '#5a6b7d' }}>· {nombre(d)}</span>}
-                  </td>
-                  <td style={celda}>{b?.tipo ?? '—'}</td>
-                  <td style={celda}>{(tm?.preset ?? b?.preset ?? 0).toFixed(1)}</td>
-                  <td style={celda}>{(tm?.acumulado ?? 0).toFixed(2)}</td>
-                  {bit(tm?.activo)}
-                  {bit(tm?.contando)}
-                  {bit(tm?.hecho)}
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-        <table style={{ borderCollapse: 'collapse', width: '100%' }}>
-          <thead>
-            <tr style={{ background: '#33475c', color: '#fff' }}>
-              {['Contador', 'Tipo', 'PRE', 'ACC', 'CU', 'DN'].map((h) => (
-                <th key={h} style={{ ...celda, color: '#fff' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {contadores.length === 0 && (
-              <tr>
-                <td colSpan={6} style={{ ...celda, fontFamily: 'inherit', color: '#5f6b78' }}>El programa no usa contadores.</td>
-              </tr>
-            )}
-            {contadores.map((d) => {
-              const ct = estado.contadores[d]
-              const b = programa.escalones.flatMap((e) => e.bobinas).find((x) => x?.dir === d && /CTU|CTD/.test(x.tipo))
-              return (
-                <tr key={d}>
-                  <td style={{ ...celda, textAlign: 'left' }}>
-                    {fmt(d)} {nombre(d) && <span style={{ fontFamily: 'inherit', color: '#5a6b7d' }}>· {nombre(d)}</span>}
-                  </td>
-                  <td style={celda}>{b?.tipo ?? '—'}</td>
-                  <td style={celda}>{ct?.preset ?? b?.preset ?? 0}</td>
-                  <td style={celda}>{ct?.valor ?? (b?.tipo === 'CTD' ? b.preset ?? 0 : 0)}</td>
-                  {bit(ct?.anterior)}
-                  {bit(ct?.hecho)}
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ borderCollapse: 'collapse' }} data-tabla-registros="si">
-          <tbody>
-            <tr>
-              <th style={{ ...celda, textAlign: 'left', background: '#f4f7fb' }}>{notacion === 'ab' ? 'N7 (enteros)' : 'MW (enteros)'}</th>
-              {PALABRAS.map((d) => (
-                <td key={d} style={{ ...celda, padding: 2 }} title={`${fmt(d)}${nombre(d) ? ` · ${nombre(d)}` : ''} — puedes escribir un valor`}>
-                  <div style={{ fontSize: '0.66rem', color: '#5f6b78' }}>{fmt(d).replace(/^.*[:W]/, '')}</div>
-                  <input
-                    type="number"
-                    value={estado.palabras?.[d] ?? 0}
-                    onChange={(e) => onPalabra(d, Math.max(-32767, Math.min(32767, Math.round(Number(e.target.value) || 0))))}
-                    style={{ width: 52, fontFamily: 'ui-monospace, monospace', fontSize: '0.8rem', textAlign: 'center', border: '1px solid #e0e5eb' }}
-                  />
-                </td>
-              ))}
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      {Object.values(estado.fallas ?? {}).length > 0 && (
-        <p style={{ margin: 0, color: '#c62828', fontSize: '0.82rem' }}>⚠ {Object.values(estado.fallas).join(' · ')}</p>
-      )}
-      <p style={{ margin: 0, fontSize: '0.8rem', color: '#5a6b7d' }}>
-        EN: la instrucción tiene corriente · TT: el temporizador está contando · DN: terminó (su contacto se cierra) · CU:
-        el contador tiene corriente. Estos bits se pueden usar como contactos (por ejemplo {fmt('T0.DN')} o {fmt('T0.TT')}).
-      </p>
-    </div>
-  )
-}
 
 function TablaSimbolos({
   programa,

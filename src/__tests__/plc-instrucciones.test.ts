@@ -81,9 +81,18 @@ describe('instrucciones', () => {
 
 describe('instrucciones de datos y forzado', () => {
   it('ADD con ONS cuenta pulsaciones; MUL, DIV y comparaciones entre registros', async () => {
-    const { EJEMPLOS_PLC } = await import('../plc/ejemplos')
+    // Ya no está en la paleta (no se ve en el curso), pero el simulador sigue abriendo programas que lo usan.
     const { estadoInicial, scan, revisarPrograma } = await import('../plc/ladder')
-    const p = EJEMPLOS_PLC.find((e) => e.id === 'datos')!.programa
+    const W: Celda = { tipo: 'cable' }
+    const p = prog(
+      [[NA('I0.0'), { tipo: 'ons' }], { tipo: 'ADD', dir: 'N0', a: 'N0', b: '1' }],
+      [[NA('I0.1'), { tipo: 'ons' }], { tipo: 'SUB', dir: 'N0', a: 'N0', b: '1' }],
+      [[NA('I0.3')], { tipo: 'MOV', dir: 'N0', a: '0' }],
+      [[W], { tipo: 'MUL', dir: 'N1', a: 'N0', b: '10' }],
+      [[W], { tipo: 'DIV', dir: 'N2', a: 'N0', b: '2' }],
+      [[{ tipo: 'comparar', op: 'GEQ', fuente: 'N0', valor: 5 }], { tipo: 'normal', dir: 'Q0.0' }],
+      [[{ tipo: 'comparar', op: 'GRT', fuente: 'N1', valor: 0, fuenteB: 'N2' }], { tipo: 'normal', dir: 'Q0.1' }],
+    )
     expect(revisarPrograma(p)).toEqual([])
     const e = estadoInicial()
     const pulso = (dir: string) => {

@@ -211,14 +211,13 @@ estanque rebalsa, la plataforma choca con el vástago.
 **Editor Ladder.** Las dos barras de tensión y los escalones, numerados como en el
 apunte (000, 001…). Se elige una herramienta y se hace clic en la casilla: contacto
 NA ┤ ├, NC ┤/├, cable, rama (une dos filas en un nodo para hacer un paralelo) y, en la
-columna de la derecha, bobinas ( ), (/), Set (S / OTL), Reset (R / OTU / RES),
-flancos (P) y (N), temporizadores **TON / TOF / RTO** y contadores **CTU / CTD**;
-además **ONS** (un solo pulso) y **comparaciones** EQU, NEQ, GRT, LES, GEQ, LEQ sobre
-el acumulado de un temporizador o contador, una constante o un registro. Las
-**instrucciones de datos** MOV, ADD, SUB, MUL y DIV trabajan con 16 registros enteros
-`N0…N15` (`N7:0…` en LogixPro, `MW0…` en Siemens), con aviso de desborde y de división
-por cero. Los temporizadores y contadores tienen
-sus bits como en LogixPro (`.EN`, `.TT`, `.DN`, `.CU`), que se usan como contactos.
+columna de la derecha, las bobinas de la tabla del apunte: normal ( ), inversa (/),
+transición positiva (↑) y negativa (↓), Set (L) y Reset (U); además temporizadores
+**TON / TOF** y contadores **CTU / CTD**. La paleta trae sólo lo que se usa en el curso
+(apunte, ejercicios, tareas y controles). El simulador todavía entiende otras
+instrucciones (ONS, comparaciones, RTO, MOV y operaciones), para abrir programas que
+ya las tengan, pero no se ofrecen en la paleta. El bit de «terminado» de un
+temporizador o contador (`T0.DN`, `C0.DN`) se usa como contacto.
 Cada elemento lleva su dirección (`I0.0…I0.7`, `Q0.0…Q0.7`, marcas `M0.0…M1.7`,
 `T0…T7`, `C0…C7`) y se
 muestra con el nombre de la **tabla de símbolos** (simbología · asignación ·
@@ -232,15 +231,12 @@ escalones (manda la última).
 `M0.1`, `T0`); la autoevaluación y la ficha de repaso usan sólo esa. Quien use el
 simulador LogixPro puede cambiarla en **Archivo** a la de **LogixPro / RSLogix** (`I:1/03`, `O:2/01`, `B3:0/1`,
 `T4:0/DN`, `C5:0.ACC`); en esa notación las bobinas se rotulan L / U y RES. Cambia
-todo a la vez: el diagrama, la tabla de símbolos, el simulador de E/S, la tabla de
-datos y los rótulos de la planta 3D.
+todo a la vez: el diagrama, la tabla de símbolos, el simulador de E/S y los rótulos
+de la planta 3D.
 
-**Simulador de E/S y tabla de datos** (como en LogixPro). Siempre están las 8
+**Simulador de E/S.** Siempre están las 8
 entradas y las 8 salidas: las que no usa la planta quedan libres, cada una con un
-interruptor o un pulsador NA / NC para probar cualquier programa. La **tabla de
-datos** muestra la memoria del PLC en vivo: los bits de E/S y marcas, y cada
-temporizador (PRE, ACC, EN, TT, DN) y contador (PRE, ACC, CU, DN), y los registros
-N, que se pueden escribir a mano. Cada entrada o salida se puede **forzar** (F1 / F0),
+interruptor o un pulsador NA / NC para probar cualquier programa. Cada entrada o salida se puede **forzar** (F1 / F0),
 como en el PLC real, con un aviso mientras haya algo forzado.
 
 **Ciclo de scan.** El programa se ejecuta como en un PLC real, ~50 barridos por
@@ -281,7 +277,7 @@ enunciado cumple y en cuál falla, sin mostrar cómo resolverlo.
 **Ejemplos resueltos:** el ejercicio 1 del apunte (llenado y vaciado de tanque) y una
 serie de programas básicos en el tablero: Y / O / NO,
 marcha y paro con autorretención, Set y Reset, temporizador TON, intermitente con dos
-TON, contador CTU, y ONS con comparaciones y RTO; además el semáforo con temporizadores
+TON y contador CTU; además el semáforo con temporizadores
 encadenados y el portón con enclavamiento y fotocelda. **＋ Nuevo programa** deja el editor en blanco con el cableado de la
 planta elegida; el programa se guarda solo en el navegador y se puede descargar,
 abrir y exportar como imagen para el informe.

@@ -109,10 +109,8 @@ export const INSTRUCCIONES: Array<[string, string]> = [
   ['Desenclavar (U, Reset)', 'pone su dirección a 0 (deshace un enclavamiento)'],
   ['Temporizador TON', 'se activa cuando lleva el tiempo preajustado recibiendo corriente'],
   ['Temporizador TOF', 'sigue activo un tiempo después de que deja de recibir corriente'],
-  ['Temporizador RTO', 'acumula el tiempo con corriente y lo conserva sin ella, hasta un Reset'],
   ['Contador CTU', 'suma uno en cada flanco de subida de su entrada'],
   ['Contador CTD', 'resta uno en cada flanco de subida de su entrada'],
-  ['One shot (ONS)', 'deja pasar la corriente un solo barrido, justo cuando llega'],
 ]
 
 const instruccion: Generador = (azar) => {

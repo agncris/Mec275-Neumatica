@@ -273,16 +273,14 @@ export function SimbolosLadder() {
   const bobinas: Array<[ReactNode, string, string]> = [
     [bobina(), 'Bobina (salida)', 'Con corriente: la dirección a 1. Sin corriente: a 0.'],
     [bobina('/'), 'Bobina inversa', 'Con corriente: a 0. Sin corriente: a 1.'],
-    [bobina('P'), 'Transición positiva', 'Al pasar de sin corriente a con corriente: a 1 durante un barrido.'],
-    [bobina('N'), 'Transición negativa', 'Al pasar de con corriente a sin corriente: a 1 durante un barrido.'],
+    [bobina('↑'), 'Transición positiva', 'Al pasar de sin corriente a con corriente: a 1 durante un barrido.'],
+    [bobina('↓'), 'Transición negativa', 'Al pasar de con corriente a sin corriente: a 1 durante un barrido.'],
     [bobina('L'), 'Enclavar: L, latch (Set)', 'Con corriente: a 1, y se queda así hasta que un Reset la apague. Sin corriente: sigue igual.'],
     [bobina('U'), 'Desenclavar: U, unlatch (Reset)', 'Con corriente: a 0, y se queda así hasta un Set. Sin corriente: sigue igual.'],
     [caja('TON'), 'Temporizador a la conexión', 'Su contacto se cierra cuando lleva el tiempo PT con corriente; al perderla vuelve a cero.'],
     [caja('TOF'), 'Temporizador a la desconexión', 'Su contacto se cierra con corriente y se abre cuando lleva el tiempo PT sin ella.'],
     [caja('CTU'), 'Contador ascendente', 'Suma uno en cada flanco de subida; su contacto se cierra al llegar a PV. Se reinicia con Reset.'],
     [caja('CTD'), 'Contador descendente', 'Parte de PV y resta uno en cada flanco; su contacto se cierra al llegar a 0.'],
-    [caja('MOV'), 'Mover (MOV)', 'Con corriente, copia un valor (constante, registro o acumulado) en un registro N. En cada barrido, mientras tenga corriente: para hacerlo una sola vez, pon antes un ONS.'],
-    [caja('ADD'), 'Cálculo: ADD, SUB, MUL, DIV', 'Con corriente, guarda en un registro N la suma, resta, multiplicación o división (entera) de A y B. Un resultado mayor que 32767 se desborda y dividir por cero no cambia nada: el PLC marca la falla.'],
   ]
   const fila = ([s, n, d]: [ReactNode, string, string]) => (
     <tr key={n}>

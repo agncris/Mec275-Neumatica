@@ -170,35 +170,6 @@ const PORTON = programa(
   ],
 )
 
-const COMPARAR = programa('Básico · ONS, contador y comparaciones', 'tablero', T, [
-  escalon([[NA('I0.2'), { tipo: 'ons' }]], [B('CTU', 'C0', 10)], [], 'Cada pulsación de P3 suma uno; el ONS asegura un solo pulso por pulsación.'),
-  escalon([[{ tipo: 'comparar', op: 'GEQ', fuente: 'C0.ACC', valor: 3 }]], [B('normal', 'Q0.0')], [], 'H1 se enciende cuando la cuenta es mayor o igual a 3 (GEQ).'),
-  escalon([[{ tipo: 'comparar', op: 'EQU', fuente: 'C0.ACC', valor: 5 }]], [B('normal', 'Q0.1')], [], 'H2 sólo mientras la cuenta vale exactamente 5 (EQU).'),
-  escalon([[NA('I0.4')]], [B('RTO', 'T0', 4)], [], 'RTO: SEL1 acumula tiempo; si lo apagas guarda lo contado.'),
-  escalon([[NA('T0.DN')]], [B('normal', 'Q0.2')], [], 'H3 al completar 4 s de SEL1 activado, sumando todas las veces.'),
-  escalon([[NA('I0.3')], [NA('I0.3')]], [B('reset', 'C0'), B('reset', 'T0')], [], 'P4 reinicia el contador y el temporizador (RES).'),
-])
-
-const DATOS = programa('Básico · Registros: MOV, ADD, SUB, MUL y DIV', 'tablero', T, [
-  escalon(
-    [[NA('I0.0'), { tipo: 'ons' }]],
-    [{ tipo: 'ADD', dir: 'N0', a: 'N0', b: '1' }],
-    [],
-    'Cada pulsación de P1 suma 1 al registro N0 (el ONS hace que sume una sola vez por pulsación).',
-  ),
-  escalon(
-    [[NA('I0.1'), { tipo: 'ons' }]],
-    [{ tipo: 'SUB', dir: 'N0', a: 'N0', b: '1' }],
-    [],
-    'P2 resta 1.',
-  ),
-  escalon([[NA('I0.3')]], [{ tipo: 'MOV', dir: 'N0', a: '0' }], [], 'P4 pone el registro en 0 (MOV 0).'),
-  escalon([[W]], [{ tipo: 'MUL', dir: 'N1', a: 'N0', b: '10' }], [], 'Siempre: N1 = N0 × 10.'),
-  escalon([[W]], [{ tipo: 'DIV', dir: 'N2', a: 'N0', b: '2' }], [], 'Siempre: N2 = N0 ÷ 2 (sin decimales).'),
-  escalon([[{ tipo: 'comparar', op: 'GEQ', fuente: 'N0', valor: 5 }]], [B('normal', 'Q0.0')], [], 'H1 se enciende cuando N0 ≥ 5.'),
-  escalon([[{ tipo: 'comparar', op: 'GRT', fuente: 'N1', valor: 0, fuenteB: 'N2' }]], [B('normal', 'Q0.1')], [], 'H2: compara dos registros (N1 > N2).'),
-])
-
 export interface EjemploPLC {
   id: string
   etiqueta: string
@@ -213,8 +184,6 @@ export const EJEMPLOS_PLC: EjemploPLC[] = [
   { id: 'ton', etiqueta: 'Básico · Temporizador TON', programa: TEMPORIZADOR },
   { id: 'intermitente', etiqueta: 'Básico · Intermitente con dos TON', programa: INTERMITENTE },
   { id: 'contador', etiqueta: 'Básico · Contador CTU', programa: CONTADOR },
-  { id: 'comparar', etiqueta: 'Básico · ONS, contador y comparaciones (RTO)', programa: COMPARAR },
-  { id: 'datos', etiqueta: 'Básico · Registros: MOV, ADD, SUB, MUL y DIV', programa: DATOS },
   { id: 'semaforo', etiqueta: 'Semáforo con temporizadores encadenados', programa: SEMAFORO },
   { id: 'porton', etiqueta: 'Portón con enclavamiento y fotocelda', programa: PORTON },
 ]
