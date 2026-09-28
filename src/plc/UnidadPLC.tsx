@@ -693,7 +693,7 @@ export default function UnidadPLC() {
         <CajonEntregar
           unidad="PLC"
           clave="neumalab.plc.entrega"
-          trabajoSugerido="Trabajo-2"
+          trabajoSugerido="Tarea-2"
           onCerrar={() => setEntregaAbierta(false)}
           revisar={() => {
             const usadas = new Set<string>()

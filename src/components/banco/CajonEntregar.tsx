@@ -53,7 +53,9 @@ const BOTON: Record<AccionEntrega['tipo'], string> = {
 
 export default function CajonEntregar({ unidad, clave, trabajoSugerido, onCerrar, presentacion, archivos, revisar, extra }: Props) {
   const [alumno, setAlumno] = useAlumno()
-  const [trabajo, setTrabajo] = usePersistente(`${clave}.trabajo`, trabajoSugerido)
+  const [guardado, setTrabajo] = usePersistente(`${clave}.trabajo`, trabajoSugerido)
+  // Antes se sugería «Trabajo-N»; ahora las evaluaciones se llaman «Tarea N».
+  const trabajo = /^Trabajo-?\d$/.test(guardado) ? trabajoSugerido : guardado
   const [mensajes, setMensajes] = useState<Record<string, string>>({})
   const [revision, setRevision] = useState<PuntoRevision[] | null>(null)
   const base = baseArchivo(alumno, trabajo)
@@ -115,7 +117,7 @@ export default function CajonEntregar({ unidad, clave, trabajoSugerido, onCerrar
             <input value={alumno.companero} onChange={(e) => setAlumno({ ...alumno, companero: e.target.value })} placeholder="Ej.: Nombre Apellido" style={entrada} />
           </label>
           <label style={campo}>
-            Trabajo (como lo nombra el enunciado)
+            Tarea (como la nombra el enunciado)
             <input value={trabajo} onChange={(e) => setTrabajo(e.target.value)} placeholder={`Ej.: ${trabajoSugerido}`} style={entrada} data-trabajo="si" />
           </label>
         </div>

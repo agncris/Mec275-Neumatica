@@ -171,7 +171,7 @@ export default function EntregaNeumatica({ onCerrar, capturarCircuito, capturarF
     <CajonEntregar
       unidad="Neumática"
       clave="neumalab.neumatica.entrega"
-      trabajoSugerido="Trabajo-1"
+      trabajoSugerido="Tarea-1"
       onCerrar={onCerrar}
       revisar={revisar}
       extra={{ titulo: 'Diagrama de funcionamiento VDI 2860', contenido: armadorVdi }}

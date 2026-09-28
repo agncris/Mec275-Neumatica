@@ -317,6 +317,7 @@ export class PlantaElevador implements Planta {
   acciones(): Accion[] {
     return [
       { id: 'pieza', etiqueta: '＋ Poner pieza', titulo: 'Deja una pieza en la plataforma del elevador' },
+      { id: 'quitar', etiqueta: '− Quitar pieza', titulo: 'Saca a mano la pieza de la plataforma o de la banda' },
       {
         id: 'auto',
         etiqueta: this.automatico ? '✓ Alimentación automática' : 'Alimentación automática',
@@ -326,6 +327,20 @@ export class PlantaElevador implements Planta {
   }
 
   accion(id: string) {
+    if (id === 'quitar') {
+      if (this.pieza === 'ninguna') {
+        this.contar('no hay ninguna pieza que quitar')
+        return
+      }
+      const estaba = this.pieza
+      this.pieza = 'ninguna'
+      this.empuje = 0
+      this.enBanda = 0
+      // Con la alimentación automática, la siguiente llega después de una pausa.
+      this.esperaNueva = 1.5
+      this.contar(estaba === 'plataforma' ? 'se saca la pieza de la plataforma: S0 deja de detectarla' : 'se saca la pieza de la banda')
+      return
+    }
     if (id === 'auto') {
       this.automatico = !this.automatico
       this.esperaNueva = 0
@@ -356,7 +371,7 @@ export class PlantaElevador implements Planta {
 // ---------------------------------------------------------------------------
 export const SILO: DescripcionPlanta = {
   id: 'silo',
-  nombre: 'Silo que llena cajas en una cinta',
+  nombre: 'Silo que llena cajas (Tarea 2)',
   resumen:
     'La cinta trae cajas vacías bajo el silo. El sensor de proximidad detecta la caja en posición; la electroválvula deja caer el material y el sensor de nivel avisa cuando la caja está llena. Pilotos RUN, FILL y FULL. Ojo: STOP es un pulsador normalmente cerrado (vale 1 en reposo).',
   cableado: [
@@ -466,10 +481,23 @@ export class PlantaSilo implements Planta {
   }
 
   acciones(): Accion[] {
-    return [{ id: 'limpiar', etiqueta: 'Limpiar la cinta', titulo: 'Quita el material derramado y deja cajas vacías' }]
+    return [
+      { id: 'quitar', etiqueta: '− Quitar caja', titulo: 'Saca a mano la caja que está bajo el silo' },
+      { id: 'limpiar', etiqueta: 'Limpiar la cinta', titulo: 'Quita el material derramado y deja cajas vacías' },
+    ]
   }
 
   accion(id: string) {
+    if (id === 'quitar') {
+      const b = this.bajoSilo()
+      if (!b) {
+        this.contar('no hay una caja bajo el silo que quitar')
+        return
+      }
+      this.cajas = this.cajas.filter((c) => c !== b)
+      this.contar('se saca a mano la caja bajo el silo: PROX deja de detectarla')
+      return
+    }
     if (id === 'limpiar') {
       this.derrame = 0
       this.cajas = [{ x: 0.2, llenado: 0, id: this.siguiente++ }]

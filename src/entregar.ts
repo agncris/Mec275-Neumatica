@@ -1,6 +1,6 @@
 /**
  * Utilidades para entregar una tarea: nombre de los archivos como lo piden
- * los enunciados («Nombre_Apellido_Trabajo-2»), descargas, tablas que se
+ * los enunciados («Nombre_Apellido_Tarea-2»), descargas, tablas que se
  * pegan en PowerPoint como tabla y enlaces que llevan el trabajo dentro.
  */
 import { useEffect, useState } from 'react'
@@ -44,7 +44,7 @@ export function paraArchivo(texto: string): string {
     .replace(/^_+|_+$/g, '')
 }
 
-/** Base del nombre de los archivos: Nombre_Apellido[_Compañero]_Trabajo-N. */
+/** Base del nombre de los archivos: Nombre_Apellido[_Compañero]_Tarea-N. */
 export function baseArchivo(alumno: DatosAlumno, trabajo: string): string {
   const partes = [alumno.nombre, alumno.companero, trabajo].map(paraArchivo).filter(Boolean)
   return partes.join('_') || 'mi_trabajo'

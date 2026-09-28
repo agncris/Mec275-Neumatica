@@ -60,8 +60,8 @@ describe('mis trabajos', () => {
 describe('entregar', () => {
   it('nombra los archivos como piden los enunciados', () => {
     expect(paraArchivo('Ana María Pérez')).toBe('Ana_Maria_Perez')
-    expect(baseArchivo({ nombre: 'Ana Pérez', companero: '' }, 'Trabajo-2')).toBe('Ana_Perez_Trabajo-2')
-    expect(baseArchivo({ nombre: 'Ana Pérez', companero: 'Luis Soto' }, 'Trabajo-3')).toBe('Ana_Perez_Luis_Soto_Trabajo-3')
+    expect(baseArchivo({ nombre: 'Ana Pérez', companero: '' }, 'Tarea-2')).toBe('Ana_Perez_Tarea-2')
+    expect(baseArchivo({ nombre: 'Ana Pérez', companero: 'Luis Soto' }, 'Tarea-3')).toBe('Ana_Perez_Luis_Soto_Tarea-3')
   })
 
   it('un trabajo va y vuelve por un enlace', async () => {

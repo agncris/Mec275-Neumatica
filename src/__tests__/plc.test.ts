@@ -212,6 +212,25 @@ describe('elevador y ejercicio 2 para resolver', () => {
     expect(planta.eventos.filter((e) => e.aviso)).toEqual([])
   })
 
+  it('«Quitar pieza» saca la pieza de la plataforma y S0 deja de verla', () => {
+    const planta = new PlantaElevador()
+    planta.accion('pieza')
+    expect(planta.sensores()['I0.0']).toBe(true)
+    planta.accion('quitar')
+    expect(planta.pieza).toBe('ninguna')
+    expect(planta.sensores()['I0.0']).toBe(false)
+  })
+
+  it('«Quitar caja» en el silo saca la caja bajo el silo y PROX deja de verla', async () => {
+    const { PlantaSilo, X_SILO } = await import('../plc/plantas')
+    const planta = new PlantaSilo()
+    planta.cajas = [{ x: X_SILO, llenado: 0.3, id: 9 }]
+    expect(planta.sensores()['I0.3']).toBe(true)
+    planta.accion('quitar')
+    expect(planta.cajas).toHaveLength(0)
+    expect(planta.sensores()['I0.3']).toBe(false)
+  })
+
   it('el ejercicio viene sin solución: programa en blanco con la tabla de conexiones', () => {
     const ej = EJERCICIOS_PLC.find((e) => e.id === 'ejercicio2')!
     const p = programaDeEjercicio(ej)

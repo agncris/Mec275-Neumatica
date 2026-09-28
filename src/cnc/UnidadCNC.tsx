@@ -708,7 +708,7 @@ export default function UnidadCNC() {
         <CajonEntregar
           unidad="CNC"
           clave="neumalab.cnc.entrega"
-          trabajoSugerido="Trabajo-3"
+          trabajoSugerido="Tarea-3"
           onCerrar={() => setEntregaAbierta(false)}
           revisar={() => {
             const prueba = new SimuladorCNC(resultado, config, casa)

@@ -860,7 +860,7 @@ export default function UnidadRobotica() {
         <CajonEntregar
           unidad="Robótica"
           clave="neumalab.robot.entrega"
-          trabajoSugerido="Trabajo4"
+          trabajoSugerido="Tarea-4"
           onCerrar={() => setEntregaAbierta(false)}
           revisar={() => {
             const errs = sim?.problemas.filter((p) => p.nivel === 'error') ?? []

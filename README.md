@@ -72,7 +72,7 @@ junto con el archivo de su trabajo. Cada unidad tiene un botón **«Entregar»**
 la derecha) que abre un cajón con cuatro pasos:
 
 1. **Tus datos**: nombre (y el de la pareja, si hay) y el trabajo. Todos los archivos
-   salen con el nombre que piden los enunciados: `Nombre_Apellido_Trabajo-2`.
+   salen con el nombre que piden los enunciados: `Nombre_Apellido_Tarea-2`.
 2. **Revisa tu trabajo**: avisa de lo que conviene arreglar antes de entregar (piezas
    sueltas, líneas de código sin comentario, alarmas, E/S forzadas…). No corrige ni
    califica.
@@ -250,7 +250,7 @@ semáforo sigue en el código pero no se ofrece, porque necesita temporizadores:
 | Tablero de pruebas | 4 pulsadores y 4 selectores (`I0.0…I0.7`) | 6 pilotos, zumbador y ventilador (`Q0.0…Q0.7`) |
 | Estanque con dos electroválvulas | START, STOP y los flotadores S1 (abajo) y S2 (arriba) | V1 llenado, V2 vaciado |
 | Elevador de piezas | S0 (pieza en la plataforma) y los finales de carrera S1…S4 de Z1 y Z2 | Y1 y Y2 (electroválvulas de Z1 y Z2) |
-| Silo que llena cajas (como el *Silo Simulator* de LogixPro) | START, STOP (NC), PROX, LEVEL | MOTOR de la cinta, SOLENOID, pilotos RUN / FILL / FULL |
+| Silo que llena cajas (Tarea 2) | START, STOP (NC), PROX, LEVEL | MOTOR de la cinta, SOLENOID, pilotos RUN / FILL / FULL |
 | Portón automático (como el *Door Simulator* de LogixPro) | ABRIR, CERRAR, PARO, finales de carrera arriba y abajo, fotocelda | SUBIR, BAJAR, pilotos abierto / cerrado / moviendo |
 
 El silo no trae programa: es la planta para que la programes tú. Las plantas avisan
