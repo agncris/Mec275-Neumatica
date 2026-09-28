@@ -69,6 +69,30 @@ export function useEsEstrecha(): boolean {
   return estrecha
 }
 
+/** ¿Se cumple esta consulta de medios? Se actualiza al cambiar el tamaño de la ventana. */
+export function useConsulta(consulta: string): boolean {
+  const [si, setSi] = useState(() => typeof window !== 'undefined' && !!window.matchMedia?.(consulta).matches)
+  useEffect(() => {
+    const mq = window.matchMedia?.(consulta)
+    if (!mq) return
+    setSi(mq.matches)
+    const alCambiar = (e: MediaQueryListEvent) => setSi(e.matches)
+    mq.addEventListener?.('change', alCambiar)
+    return () => mq.removeEventListener?.('change', alCambiar)
+  }, [consulta])
+  return si
+}
+
+/**
+ * Ventana mediana (un computador con la ventana achicada, una tablet): en vez
+ * de poner las zonas lado a lado, apretadas, se apilan una bajo otra y se baja
+ * con la barra de desplazamiento. En el celular (≤ 600 px) se usan pestañas.
+ */
+export const CONSULTA_APILADO = '(min-width: 601px) and (max-width: 1100px)'
+export const useApilado = () => useConsulta(CONSULTA_APILADO)
+/** Celular: una zona a la vez, con pestañas. */
+export const useCelular = () => useConsulta('(max-width: 600px)')
+
 /** «rueda» o «dos dedos», según el dispositivo. */
 export const acercar = (tactil: boolean) => (tactil ? 'pellizca con dos dedos para acercar' : 'rueda para acercar')
 
@@ -100,7 +124,7 @@ export function BotonNuevo({ onClick, que, compacto = false, deshabilitado = fal
       <span aria-hidden style={{ fontSize: '1.05rem', lineHeight: 1 }}>
         ＋
       </span>
-      {!compacto && 'Nuevo'}
+      {!compacto && <span className="boton-nuevo__texto">Nuevo</span>}
     </button>
   )
 }

@@ -764,8 +764,64 @@ body.arrastrando-borde * {
   border-color: #33475c;
   color: #fff;
 }
+/* Ventana mediana: las zonas se apilan y la página se desplaza; la barra de
+   herramientas queda a mano, pegada arriba. */
+.banco.banco--apilado {
+  height: auto;
+  min-height: calc(100dvh - var(--alto-barra-superior));
+  padding-bottom: 10px;
+}
+.banco--apilado > .banco__barra,
+.banco--neumatica-apilado > .banco__barra {
+  position: sticky;
+  top: var(--alto-barra-superior);
+  z-index: 30;
+  background: #f6f7f9;
+  padding: 4px 0;
+  margin: -4px 0;
+}
+/* Neumática en ventana mediana: paleta y tablero arriba; el inspector, a lo ancho, debajo. */
+.banco.banco--neumatica-apilado {
+  height: auto;
+  min-height: calc(100dvh - var(--alto-barra-superior));
+  padding-bottom: 10px;
+}
+.banco--neumatica-apilado .banco__cuerpo {
+  flex: none;
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+.banco--neumatica-apilado .banco__paleta,
+.banco--neumatica-apilado .banco__centro {
+  height: max(480px, 76dvh);
+}
+.banco--neumatica-apilado .banco__inspector {
+  flex: 1 0 100%;
+  width: 100% !important;
+  height: 400px;
+}
+.banco--neumatica-apilado .banco__inspector--plegado {
+  height: 44px;
+}
+.banco--neumatica-apilado .borde-ancho[data-borde-ancho='derecha'] {
+  display: none;
+}
+/* «Esquema+Taller»: uno sobre otro en vez de lado a lado. */
+.banco--neumatica-apilado .banco__lienzo[data-vista='ambos'] {
+  flex-direction: column;
+}
+/* Con poco ancho, «＋ Nuevo» queda sólo como «＋». */
+@media (max-width: 1180px) {
+  .boton-nuevo__texto {
+    display: none;
+  }
+  .boton-nuevo {
+    padding: 0;
+    width: 36px;
+  }
+}
 @media (max-width: 900px) {
-  .banco--dividido {
+  .banco--dividido:not(.banco--apilado) {
     height: calc(100dvh - var(--alto-barra-superior) - 45px);
   }
   .banco__area .relleno {

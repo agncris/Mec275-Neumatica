@@ -3,11 +3,13 @@
  * ventana (sin desplazar la página), con la barra de herramientas arriba, dos
  * áreas lado a lado (lo que se programa y lo que se simula) separadas por un
  * divisor que se arrastra, un panel acoplado abajo con pestañas y una barra
- * de estado. En el celular las áreas y las pestañas del panel pasan a ser
- * pestañas que ocupan toda la pantalla, una a la vez.
+ * de estado. En una ventana mediana las áreas se apilan (lo que se programa
+ * arriba, lo que se simula abajo) y se baja con la barra de desplazamiento.
+ * En el celular las áreas y las pestañas del panel pasan a ser pestañas que
+ * ocupan toda la pantalla, una a la vez.
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { useEsEstrecha, usePersistente } from '../ui'
+import { useApilado, useCelular, usePersistente } from '../ui'
 import PanelAcoplado, { type PestanaPanel } from './PanelAcoplado'
 
 export interface AreaBanco {
@@ -54,7 +56,8 @@ const ANCHO_MIN = 320
 const capa = (visible: boolean): React.CSSProperties => ({ position: 'absolute', inset: 0, visibility: visible ? 'visible' : 'hidden', zIndex: visible ? 1 : 0 })
 
 export default function BancoDividido<T extends string>({ clave, barra, izquierda, derecha, inferior, estado, encabezado, movil, onMovil, conCajon }: Props<T>) {
-  const estrecha = useEsEstrecha()
+  const estrecha = useCelular()
+  const apilado = useApilado()
   const [division, setDivision] = usePersistente(`${clave}.division`, 0.5)
   const [movilPropio, setMovilPropio] = useState(izquierda.id)
   const vistaMovil = movil ?? movilPropio
@@ -126,6 +129,23 @@ export default function BancoDividido<T extends string>({ clave, barra, izquierd
             </section>
           )}
         </div>
+        {estado && <div className="banco__estado">{estado}</div>}
+      </main>
+    )
+  }
+
+  if (apilado) {
+    // Una zona bajo otra, con su alto propio; la página se desplaza. El panel
+    // de abajo no se «amplía» (ya hay espacio bajando).
+    return (
+      <main className="banco banco--dividido banco--apilado" style={conCajon ? { marginRight: 480 } : undefined}>
+        <div className="banco__barra" role="toolbar" aria-label="Herramientas">
+          {barra}
+        </div>
+        {encabezado}
+        {area(izquierda, { flex: 'none', height: 'max(460px, 74dvh)' })}
+        {area(derecha, { flex: 'none', height: 'max(420px, 70dvh)' })}
+        {inferior && <PanelAcoplado<T> etiqueta={inferior.etiqueta} pestanas={inferior.pestanas} {...inferior.estado} ampliado={false} onAmpliar={undefined} />}
         {estado && <div className="banco__estado">{estado}</div>}
       </main>
     )

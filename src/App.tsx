@@ -6,7 +6,7 @@
  *  - Simular: el motor corre a 30 Hz; se accionan las válvulas y se ve el aire
  *    circular, las correderas conmutar y los vástagos moverse.
  */
-import { BotonNuevo, botonPrimario, estiloAviso, Menu, useEsEstrecha, usePersistente, useTactil } from './components/ui'
+import { BotonNuevo, botonPrimario, estiloAviso, Menu, useApilado, useEsEstrecha, usePersistente, useTactil } from './components/ui'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import DiagramaEspacioFase, { hayDiagramaFase, registrarFase } from './components/DiagramaEspacioFase'
@@ -134,6 +134,8 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modo])
   const estrecha = useEsEstrecha()
+  // Ventana mediana: el tablero arriba y el inspector debajo, bajando con la barra de desplazamiento.
+  const apilado = useApilado() && !estrecha
   const tactil = useTactil()
   const inputArchivo = useRef<HTMLInputElement>(null)
 
@@ -430,7 +432,7 @@ export default function App() {
         if (confirmarDescarte(`¿Cargar el ejemplo «${etiqueta}»?`)) cargarEjemplo(n)
         e.target.value = circuito ? 'actual' : ''
       }}
-      style={{ padding: '0.3rem 0.4rem', width: estrecha ? '27vw' : 172, minHeight: 34, fontSize: '0.86rem' }}
+      style={{ padding: '0.3rem 0.4rem', width: estrecha ? '27vw' : apilado ? 140 : 172, minHeight: 34, fontSize: '0.86rem' }}
     >
       <option value="">— Ejemplos —</option>
       {circuito && (
@@ -587,7 +589,7 @@ export default function App() {
 
       {seccion === 'laboratorio' ? (
         <>
-      <main className="banco" aria-label="Laboratorio de neumática" style={estrecha ? { height: 'calc(100dvh - var(--alto-barra-superior) - 45px)' } : entregaAbierta ? { marginRight: 480 } : undefined}>
+      <main className={`banco${apilado ? ' banco--neumatica-apilado' : ''}`} aria-label="Laboratorio de neumática" style={estrecha ? { height: 'calc(100dvh - var(--alto-barra-superior) - 45px)' } : entregaAbierta ? { marginRight: 480 } : undefined}>
         <h1 className="solo-lector">Unidad 1 · Neumática — laboratorio</h1>
         <div className="banco__barra" role="toolbar" aria-label="Herramientas del banco">
           {botonSimular}
@@ -627,8 +629,15 @@ export default function App() {
                 <button onClick={() => setAyuda(true)} className="boton-icono" title="Ayuda: guía de inicio, atajos y gestos" aria-label="Ayuda" data-ayuda="si">
                   ?
                 </button>
-                <Menu etiqueta="Archivo" items={itemsArchivo} />
-                <Menu etiqueta="Exportar" items={itemsExportar} />
+                {apilado ? (
+                  // Ventana mediana: Archivo y Exportar juntos, para que la barra quepa en una línea.
+                  <Menu etiqueta="⋯" datos="Mas" items={[...itemsArchivo, ...itemsExportar.map((it, i) => ({ ...it, separar: i === 0 }))]} />
+                ) : (
+                  <>
+                    <Menu etiqueta="Archivo" items={itemsArchivo} />
+                    <Menu etiqueta="Exportar" items={itemsExportar} />
+                  </>
+                )}
               </>
             )}
             {inputOculto}

@@ -78,10 +78,11 @@ function lienzo(ancho: number, alto: number, dibujar: (c: CanvasRenderingContext
 }
 
 /** Placa de rótulo blanca con una o dos líneas. */
-function placa(linea1: string, linea2 = '', ancho = 0.05) {
+/** Con `grande`, además lleva una etiqueta que siempre se lee (sensores y actuadores). */
+function placa(linea1: string, linea2 = '', ancho = 0.05, grande = false) {
   linea2 = rotular(linea2)
   const alto = linea2 ? ancho * 0.42 : ancho * 0.3
-  return lienzo(ancho, alto, (c, w, h) => {
+  const m = lienzo(ancho, alto, (c, w, h) => {
     c.fillStyle = '#f7f7f2'
     c.fillRect(0, 0, w, h)
     c.strokeStyle = '#9aa3ad'
@@ -104,6 +105,64 @@ function placa(linea1: string, linea2 = '', ancho = 0.05) {
       ajustar(linea2, h * 0.28, h * 0.74, '600')
     } else ajustar(linea1, h * 0.6, h * 0.54)
   })
+  // Sensores y actuadores (S0, Y1, V2, MOTOR…) llevan además una etiqueta grande que
+  // siempre se lee. Los pulsadores y pilotos no: ya están juntos en su panel.
+  if (grande) m.add(insignia(linea1, linea2))
+  return m
+}
+
+/**
+ * Etiqueta que mira siempre a la cámara, del mismo tamaño en pantalla esté
+ * cerca o lejos, y que se ve aunque quede detrás de una pieza: el nombre
+ * grande (S0, Y1, Z1…) y la dirección debajo. Azul para entradas, naranja para
+ * salidas, gris para actuadores sin dirección.
+ */
+export function insignia(nombre: string, dir = ''): THREE.Object3D {
+  const tipo = dir.startsWith('I') ? 'entrada' : dir.startsWith('Q') || dir.startsWith('O:') ? 'salida' : 'actuador'
+  const fondo = { entrada: '#1668c7', salida: '#b35a00', actuador: '#33475c' }[tipo]
+  const W = 256
+  const H = dir ? 150 : 110
+  if (typeof document === 'undefined') return new THREE.Group()
+  const cv = document.createElement('canvas')
+  cv.width = W
+  cv.height = H
+  const c = cv.getContext('2d')!
+  const r = 26
+  c.fillStyle = fondo
+  c.beginPath()
+  c.roundRect(6, 6, W - 12, H - 12, r)
+  c.fill()
+  c.lineWidth = 6
+  c.strokeStyle = '#ffffff'
+  c.stroke()
+  c.fillStyle = '#ffffff'
+  c.textAlign = 'center'
+  c.textBaseline = 'middle'
+  let s = 78
+  do {
+    c.font = `800 ${s}px system-ui, sans-serif`
+    s -= 4
+  } while (c.measureText(nombre).width > W - 40 && s > 20)
+  c.fillText(nombre, W / 2, dir ? 62 : H / 2 + 2)
+  if (dir) {
+    let t = 36
+    do {
+      c.font = `600 ${t}px ui-monospace, monospace`
+      t -= 2
+    } while (c.measureText(dir).width > W - 36 && t > 14)
+    c.fillText(dir, W / 2, 116)
+  }
+  const tex = new THREE.CanvasTexture(cv)
+  tex.colorSpace = THREE.SRGBColorSpace
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, sizeAttenuation: false, depthTest: false, depthWrite: false, transparent: true }))
+  // Sin atenuación y con la cámara de 32°, 1 unidad ≈ 1,75 veces el alto de la
+  // vista: 0,04 son unos 30 px en una vista de 450 px.
+  const alto = dir ? 0.04 : 0.032
+  sprite.scale.set((alto * W) / H, alto, 1)
+  sprite.renderOrder = 10
+  sprite.userData.insignia = true
+  sprite.name = `insignia-${nombre}`
+  return sprite
 }
 
 interface Led {
@@ -535,7 +594,7 @@ function escenaEstanque(): Escena {
     const l = led(0x2ee06d)
     l.malla.position.set(xF, Y0 + ALTO + 0.012, 0.1 + R * 0.35 + 0.011)
     raiz.add(l.malla)
-    const r = placa(f.nombre, f.dir, 0.03)
+    const r = placa(f.nombre, f.dir, 0.03, true)
     r.position.set(xF - 0.052 + i * 0.012, Y0 + f.nivel * ALTO, 0.1 + R + 0.004)
     raiz.add(r)
     // Línea de nivel donde conmuta.
@@ -563,7 +622,7 @@ function escenaEstanque(): Escena {
     bobina.position.copy(pos).add(new THREE.Vector3(0, 0.027, 0))
     const l = led(0xffa726, 0.0026)
     l.malla.position.copy(pos).add(new THREE.Vector3(0, 0.03, 0.012))
-    const r = placa(nombre, dir, 0.034)
+    const r = placa(nombre, dir, 0.034, true)
     r.position.copy(pos).add(new THREE.Vector3(0, 0.058, 0))
     raiz.add(cuerpo, bobina, l.malla, r)
     return l
@@ -687,6 +746,12 @@ function escenaElevador(): Escena {
   // Una placa de empuje en la punta del vástago.
   const empujador = caja(0.006, 0.04, 0.05, MAT.aluminioOscuro, 0.001)
   raiz.add(empujador)
+  // Rótulos grandes de los cilindros.
+  const iz1 = insignia('Z1')
+  iz1.position.set(0.075, 0.05, 0.06)
+  const iz2 = insignia('Z2')
+  iz2.position.set(z2.grupo.position.x + 0.03, alturaEmpuje - 0.04, 0.06)
+  raiz.add(iz1, iz2)
 
   // Banda de salida, a la altura de la plataforma arriba.
   const xBanda0 = 0.055
@@ -720,7 +785,7 @@ function escenaElevador(): Escena {
     cuerpo.position.copy(pos)
     const l = led(0x2ee06d, 0.0026)
     l.malla.position.copy(pos).add(new THREE.Vector3(0, 0, 0.011))
-    const r = placa(nombre, dir, 0.03)
+    const r = placa(nombre, dir, 0.03, true)
     r.position.copy(placaEn)
     raiz.add(cuerpo, l.malla, r)
     return { dir, l }
@@ -759,7 +824,7 @@ function escenaElevador(): Escena {
     const l = led(0xffa726, 0.003)
     l.malla.position.copy(v.pos).add(new THREE.Vector3(-0.06 * E * 0.8 - 0.006, 0.0, 0.03 * E * 0.8))
     raiz.add(l.malla)
-    const r = placa(v.id, v.dir, 0.03)
+    const r = placa(v.id, v.dir, 0.03, true)
     r.position.copy(v.pos).add(new THREE.Vector3(-0.1, 0, 0.03))
     raiz.add(r)
     return { ...v, m, l }
@@ -925,7 +990,7 @@ function escenaSilo(): Escena {
   }
   ventilador.position.set(aX(1) + 0.03, yCinta - 0.04, zC + 0.137)
   raiz.add(ventilador)
-  const rMotor = placa('MOTOR', 'Q0.0', 0.04)
+  const rMotor = placa('MOTOR', 'Q0.0', 0.04, true)
   rMotor.position.set(aX(1) + 0.03, yCinta - 0.085, zC + 0.1)
   raiz.add(rMotor)
 
@@ -956,7 +1021,7 @@ function escenaSilo(): Escena {
   const ledSol = led(0xffa726, 0.0028)
   ledSol.malla.position.set(xs - 0.03, 0.165, zC + 0.011)
   raiz.add(valv, bobina, ledSol.malla)
-  const rSol = placa('SOLENOID', 'Q0.1', 0.05)
+  const rSol = placa('SOLENOID', 'Q0.1', 0.05, true)
   rSol.position.set(xs - 0.075, 0.165, zC + 0.012)
   raiz.add(rSol)
   const chorro = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.01, 1, 14), GRANO)
@@ -966,7 +1031,7 @@ function escenaSilo(): Escena {
   nivel.position.set(xs + 0.03, 0.155, zC + 0.02)
   const ledNivel = led(0x2ee06d, 0.0026)
   ledNivel.malla.position.set(xs + 0.03, 0.172, zC + 0.028)
-  const rNivel = placa('LEVEL', 'I0.4', 0.04)
+  const rNivel = placa('LEVEL', 'I0.4', 0.04, true)
   rNivel.position.set(xs + 0.08, 0.16, zC + 0.02)
   raiz.add(nivel, ledNivel.malla, rNivel)
   // Sensor de proximidad, al costado de la cinta.
@@ -975,7 +1040,7 @@ function escenaSilo(): Escena {
   prox.position.set(xs, yCinta + 0.02, zC + 0.075)
   const ledProx = led(0x2ee06d, 0.0026)
   ledProx.malla.position.set(xs, yCinta + 0.02, zC + 0.092)
-  const rProx = placa('PROX', 'I0.3', 0.04)
+  const rProx = placa('PROX', 'I0.3', 0.04, true)
   rProx.position.set(xs, yCinta - 0.01, zC + 0.092)
   raiz.add(prox, ledProx.malla, rProx)
   // Material derramado sobre la cinta.
@@ -1217,7 +1282,7 @@ function escenaPorton(): Escena {
   const motor = caja(0.1, 0.05, 0.06, new THREE.MeshStandardMaterial({ color: 0x1f3fa8, metalness: 0.3, roughness: 0.4 }), 0.006)
   motor.position.set(xc, ALTO + 0.11, 0.08)
   raiz.add(motor)
-  const rMotor = placa('MOTOR', 'Q0.0 sube · Q0.1 baja', 0.1)
+  const rMotor = placa('MOTOR', 'Q0.0 sube · Q0.1 baja', 0.1, true)
   rMotor.position.set(xc, ALTO + 0.155, 0.1105)
   raiz.add(rMotor)
   // Finales de carrera arriba y abajo.
@@ -1226,7 +1291,7 @@ function escenaPorton(): Escena {
     cuerpo.position.set(xc + ANCHO / 2 - 0.015, y, 0.13)
     const l = led(0x2ee06d, 0.0026)
     l.malla.position.set(xc + ANCHO / 2 - 0.015, y, 0.141)
-    const r = placa(nombre, dir, 0.05)
+    const r = placa(nombre, dir, 0.05, true)
     r.position.set(xc + ANCHO / 2 + 0.03, y, 0.1005)
     raiz.add(cuerpo, l.malla, r)
     return l
@@ -1246,7 +1311,7 @@ function escenaPorton(): Escena {
   haz.position.set(xc, 0.04, 0.2)
   const ledFoto = led(0x2ee06d, 0.0026)
   ledFoto.malla.position.set(xc - ANCHO / 2 + 0.02, 0.055, 0.2)
-  const rFoto = placa('FOTOCELDA', 'I0.5', 0.06)
+  const rFoto = placa('FOTOCELDA', 'I0.5', 0.06, true)
   rFoto.position.set(xc - ANCHO / 2 - 0.02, 0.03, 0.21)
   raiz.add(haz, ledFoto.malla, rFoto)
   // Obstáculo.
@@ -1331,6 +1396,25 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
   const sonidoRef = useRef<SonidoBanco | null>(null)
   const sonido = () => (sonidoRef.current ??= new SonidoBanco())
   const encuadrarRef = useRef<() => void>(() => {})
+  // Rótulos grandes (S0, Y1, Z1…): se pueden ocultar si tapan algo.
+  const [conRotulos, setConRotulos] = useState(() => {
+    try {
+      return localStorage.getItem('neumalab.plc.rotulos3d') !== 'no'
+    } catch {
+      return true
+    }
+  })
+  const conRotulosRef = useRef(conRotulos)
+  conRotulosRef.current = conRotulos
+  const insigniasRef = useRef<THREE.Object3D[]>([])
+  useEffect(() => {
+    for (const o of insigniasRef.current) o.visible = conRotulos
+    try {
+      localStorage.setItem('neumalab.plc.rotulos3d', conRotulos ? 'si' : 'no')
+    } catch {
+      /* sin almacenamiento */
+    }
+  }, [conRotulos])
 
   useEffect(() => {
     try {
@@ -1431,6 +1515,13 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
     escena.add(relleno)
 
     const camara = new THREE.PerspectiveCamera(32, cont.clientWidth / Math.max(1, cont.clientHeight), 0.01, 20)
+    // Con las zonas apiladas (ventana mediana) la rueda baja por la página; para
+    // acercar se usa Ctrl + rueda (o el gesto de pellizcar del trackpad). Va antes
+    // que los controles para poder quitarles la rueda.
+    const alGirarRueda = (e: WheelEvent) => {
+      if (!e.ctrlKey && cont.closest('.banco--apilado')) e.stopImmediatePropagation()
+    }
+    renderer.domElement.addEventListener('wheel', alGirarRueda)
     const controles = new OrbitControls(camara, renderer.domElement)
     controles.enableDamping = true
     controles.dampingFactor = 0.08
@@ -1457,6 +1548,12 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
     }
     encuadrar()
     encuadrarRef.current = encuadrar
+    const insignias: THREE.Object3D[] = []
+    escena.traverse((o) => {
+      if (o.userData.insignia) insignias.push(o)
+    })
+    for (const o of insignias) o.visible = conRotulosRef.current
+    insigniasRef.current = insignias
 
     // Pulsar los mandos de la máquina.
     const raycaster = new THREE.Raycaster()
@@ -1521,6 +1618,7 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
       vivo = false
       observador.disconnect()
       renderer.domElement.removeEventListener('pointerdown', onDown)
+      renderer.domElement.removeEventListener('wheel', alGirarRueda)
       window.removeEventListener('pointerup', onUp)
       controles.dispose()
       escena.traverse((o) => {
@@ -1578,6 +1676,15 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
           title="Relés, válvulas, agua, cilindros y zumbador"
         >
           {conSonido ? '🔊 Sonido' : '🔇 Sonido'}
+        </button>
+        <button
+          style={{ ...boton, background: conRotulos ? '#1668c7' : '#fff', color: conRotulos ? '#fff' : '#33475c' }}
+          onClick={() => setConRotulos((v) => !v)}
+          aria-pressed={conRotulos}
+          title="Muestra u oculta los rótulos grandes de sensores y actuadores (S0, Y1, Z1…)"
+          data-rotulos-3d="si"
+        >
+          Rótulos
         </button>
         {typeof document !== 'undefined' && document.fullscreenEnabled && (
           <button
