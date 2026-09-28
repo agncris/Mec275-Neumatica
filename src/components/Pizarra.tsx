@@ -15,6 +15,7 @@ import { useStore, type Pieza } from '../store'
 import { enrutarManguera, enrutarPorCarril } from '../routing'
 import { planificarCarriles } from '../carriles'
 import { calcularAreaConMargen } from '../layout'
+import { useEsEstrecha } from './ui'
 
 /** Dimensiones por defecto del viewport en el espacio del circuito. */
 const VW_BASE = 1200
@@ -125,6 +126,7 @@ function puertoMundo(pieza: Pieza, idPuerto: string): Punto | null {
 }
 
 export default function Pizarra({ motor, vista = 'esquema', soloLectura = false, id = 'pizarra-svg', llenar = false, sinBarra = false, controles, onZoom }: Props) {
+  const estrecha = useEsEstrecha()
   const svgRef = useRef<SVGSVGElement>(null)
   const contenedorRef = useRef<HTMLDivElement>(null)
   // Ancho del tablero: al medirlo se vuelve a dibujar el porcentaje de zoom.
@@ -853,7 +855,7 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
               <text x={cx} y={cy - 78 * k} textAnchor="middle" fontSize={22 * k} fontWeight={700} fill="#33475c" pointerEvents="none">
                 Tu banco está vacío
               </text>
-              {['1 · Arrastra una ficha desde la paleta', '2 · Une los puertos con mangueras', '3 · Pulsa ▶ Simular y acciona las válvulas'].map((t, i) => (
+              {[estrecha ? '1 · Toca ＋ y elige un componente' : '1 · Arrastra una ficha desde la paleta', '2 · Une los puertos con mangueras', '3 · Pulsa ▶ Simular y acciona las válvulas'].map((t, i) => (
                 <text key={i} x={cx} y={cy + (i * 22 - 40) * k} textAnchor="middle" fontSize={15 * k} fill="#51606f" pointerEvents="none">
                   {t}
                 </text>

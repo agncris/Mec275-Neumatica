@@ -401,7 +401,7 @@ export default function UnidadPLC() {
   )
 
   const botonPlanta = (
-    <button onClick={() => setEligiendoPlanta(true)} className="boton-planta" title="Elegir la planta, o empezar un ejercicio o un ejemplo" aria-label={`Planta: ${descripcion.nombre}. Elegir planta, ejercicio o ejemplo`} data-boton-planta="si" style={{ width: estrecha ? '31vw' : 'auto', maxWidth: 360 }}>
+    <button onClick={() => setEligiendoPlanta(true)} className="boton-planta" title="Elegir la planta, o empezar un ejercicio o un ejemplo" aria-label={`Planta: ${descripcion.nombre}. Elegir planta, ejercicio o ejemplo`} data-boton-planta="si" style={{ width: estrecha ? '28vw' : 'auto', maxWidth: 360 }}>
       {!estrecha && <span style={{ color: '#51606f' }}>Planta:</span>}
       <span style={{ fontWeight: 600 }}>{descripcion.nombre}</span>
       <span aria-hidden style={{ fontSize: '0.7rem', flex: 'none' }}>
@@ -592,9 +592,9 @@ export default function UnidadPLC() {
     )
 
   const pestanas: Array<PestanaPanel<PestanaPLC>> = [
-    { id: 'es', titulo: 'Entradas y salidas', contenido: panelES('tabla') },
-    { id: 'simbolos', titulo: 'Tabla de símbolos', contenido: <TablaSimbolos programa={programa} onCambiar={setPrograma} editable={!corriendo} notacion={notacion} /> },
-    { id: 'registro', titulo: '¿Qué está pasando?', contador: eventos.length, contenido: registro, seguirFinal: true },
+    { id: 'es', titulo: 'Entradas y salidas', tituloCorto: 'E/S', contenido: panelES('tabla') },
+    { id: 'simbolos', titulo: 'Tabla de símbolos', tituloCorto: 'Símbolos', contenido: <TablaSimbolos programa={programa} onCambiar={setPrograma} editable={!corriendo} notacion={notacion} /> },
+    { id: 'registro', titulo: '¿Qué está pasando?', tituloCorto: 'Registro', contador: eventos.length, contenido: registro, seguirFinal: true },
   ]
 
   const barraEstado = (

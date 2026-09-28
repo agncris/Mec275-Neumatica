@@ -16,6 +16,8 @@ export interface AreaBanco {
   id: string
   /** Nombre corto (pestaña del celular y lectores de pantalla). */
   titulo: string
+  /** Nombre para la pestaña del celular, si el largo no cabe. */
+  tituloCorto?: string
   contenido: ReactNode
   /** Sin relleno interior (p. ej. un lienzo que ocupa todo el área). */
   sinRelleno?: boolean
@@ -103,7 +105,7 @@ export default function BancoDividido<T extends string>({ clave, barra, izquierd
   )
 
   if (estrecha) {
-    const pestanas: Array<{ id: string; titulo: string }> = [izquierda, derecha, ...(inferior?.pestanas ?? [])]
+    const pestanas: Array<{ id: string; titulo: string; tituloCorto?: string }> = [izquierda, derecha, ...(inferior?.pestanas ?? [])]
     const deInferior = inferior?.pestanas.find((p) => p.id === vistaMovil)
     return (
       <main className="banco banco--dividido">
@@ -113,8 +115,8 @@ export default function BancoDividido<T extends string>({ clave, barra, izquierd
         {encabezado}
         <div role="tablist" aria-label="Qué ver" className="pestanas-movil">
           {pestanas.map((p) => (
-            <button key={p.id} role="tab" aria-selected={vistaMovil === p.id} onClick={() => elegirMovil(p.id)} data-pestana-movil={p.id}>
-              {p.titulo}
+            <button key={p.id} role="tab" aria-selected={vistaMovil === p.id} onClick={() => elegirMovil(p.id)} data-pestana-movil={p.id} title={p.titulo}>
+              {p.tituloCorto ?? p.titulo}
             </button>
           ))}
         </div>

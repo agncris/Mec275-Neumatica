@@ -494,7 +494,13 @@ body.arrastrando-borde * {
   gap: 6px;
   padding: 0 0 6px;
 }
-.banco__acciones-movil button {
+.banco__acciones-barra {
+  display: flex;
+  gap: 4px;
+  min-width: 0;
+}
+.banco__acciones-movil button,
+.banco__acciones-barra button {
   flex: 1;
   min-height: 44px;
   white-space: nowrap;
@@ -505,6 +511,10 @@ body.arrastrando-borde * {
   font-weight: 600;
   font-size: 0.9rem;
   color: #33475c;
+}
+.banco__acciones-barra button {
+  flex: 0 1 auto;
+  padding: 0 10px !important;
 }
 @media (max-width: 1399px) {
   .banco__paleta {
@@ -822,7 +832,7 @@ body.arrastrando-borde * {
 }
 @media (max-width: 900px) {
   .banco--dividido:not(.banco--apilado) {
-    height: calc(100dvh - var(--alto-barra-superior) - 45px);
+    height: calc(100dvh - var(--alto-barra-superior) - var(--alto-subnav));
   }
   .banco__area .relleno {
     min-height: 220px;
@@ -1168,5 +1178,141 @@ body.arrastrando-borde * {
   .subnav .subnav__entrega {
     margin: 5px 0 5px 6px;
     min-height: 34px;
+  }
+}
+
+/* ===========================================================================
+   Celular y pantallas táctiles
+   =========================================================================== */
+/* Alto de la fila de «Laboratorio · Estudiar · Entregar» cuando va aparte (celular vertical). */
+:root {
+  --alto-subnav: 0px;
+}
+@media (max-width: 900px) {
+  :root {
+    --alto-subnav: 45px;
+  }
+}
+
+/* Con el dedo: todo lo que se toca mide al menos 44 px (recomendación de Apple
+   y Google), sin la espera del doble toque, sin el destello gris, y los campos
+   con letra de 16 px para que el iPhone no haga zoom al escribir. */
+@media (pointer: coarse) {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  button,
+  select,
+  summary,
+  [role='tab'],
+  [role='menuitem'],
+  [role='option'],
+  input:not([type='checkbox']):not([type='radio']):not([type='range']) {
+    min-height: 44px !important;
+    touch-action: manipulation;
+  }
+  button,
+  .boton-nuevo {
+    min-width: 44px !important;
+  }
+  .estudiar__indice a {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+  /* «Entregar» ocupa el alto de la fila (44 px) para que la fila no crezca. */
+  .subnav .subnav__entrega {
+    margin: 0 0 0 6px !important;
+  }
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+  input[type='checkbox'],
+  input[type='radio'] {
+    width: 22px;
+    height: 22px;
+  }
+  .boton-icono {
+    min-width: 44px;
+  }
+  /* Lo que se desplaza por dentro no arrastra la página (ni recarga con «tirar hacia abajo»). */
+  .banco__area,
+  .banco-panel,
+  .hoja,
+  .panel-acoplado__contenido {
+    overscroll-behavior: contain;
+  }
+}
+/* En el laboratorio del celular la página no se mueve: sólo lo de adentro. */
+body:has(.banco:not(.banco--apilado):not(.banco--neumatica-apilado)) {
+  overscroll-behavior: none;
+}
+
+/* Pestañas del celular: todas a la vista, repartidas en el ancho. */
+@media (max-width: 900px), (orientation: landscape) and (max-height: 500px) {
+  .pestanas-movil button {
+    flex: 1 1 auto;
+    padding: 0 10px;
+  }
+}
+
+/* Barra de estado del celular: una sola línea. */
+@media (max-width: 600px) {
+  .banco__estado {
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .banco__estado > * {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+/* Celular acostado: poca altura. Una sola fila arriba (unidades y Laboratorio ·
+   Estudiar · Entregar juntas), sin barra de estado, y respetando la muesca. */
+@media (orientation: landscape) and (max-height: 500px) {
+  :root {
+    --alto-barra-superior: 45px;
+    --alto-subnav: 0px;
+  }
+  .barra-superior__fila {
+    min-height: 44px;
+    gap: 6px;
+    padding: 0 max(8px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left));
+  }
+  .barra-superior__marca {
+    display: none !important;
+  }
+  .pestana-unidad,
+  .subnav button {
+    padding: 0 0.55rem;
+  }
+  .subnav .subnav__entrega {
+    margin: 4px 0 4px 4px;
+  }
+  .banco {
+    padding-left: max(8px, env(safe-area-inset-left));
+    padding-right: max(8px, env(safe-area-inset-right));
+    gap: 4px;
+  }
+  .banco__estado {
+    display: none;
+  }
+}
+
+/* Listas que se desplazan de lado en el celular: un degradado avisa que hay más. */
+@media (max-width: 900px) {
+  .estudiar__indice,
+  .selector-planta__lista,
+  .pestanas-unidad {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  }
+}
+@media (max-width: 600px) {
+  .banco__barra {
+    gap: 4px;
   }
 }

@@ -34,6 +34,7 @@ import {
   type TipoBobina,
 } from './ladder'
 import { MNEMONICOS, formatear, type Notacion } from './notacion'
+import { useCelular } from '../components/ui'
 
 type Herramienta =
   | 'seleccionar'
@@ -106,6 +107,9 @@ const esCaja = (t: TipoBobina) => esTemporizador(t) || esContador(t) || esDatos(
 /** El mnemónico de LogixPro, sólo si se eligió esa notación. */
 const ab = (n: Notacion, m: string) => (n === 'ab' ? ` (${m})` : '')
 
+/** Nombres cortos para la paleta del celular (la cuadrícula es angosta). */
+const CORTO: Partial<Record<Herramienta, string>> = { NA: 'NA', NC: 'NC', reset: 'Desencl.', set: 'Enclavar' }
+
 const herramientas = (n: Notacion): Array<{ id: Herramienta; icono: string; texto: string; titulo: string; grupo: number }> => [
   { id: 'seleccionar', icono: '↖', texto: 'Elegir', grupo: 0, titulo: 'Seleccionar: clic en un elemento para ver y cambiar su dirección' },
   { id: 'NA', icono: MNEMONICOS.NA[n], texto: 'Contacto NA', grupo: 1, titulo: `Contacto normalmente abierto${ab(n, 'XIC')}: deja pasar cuando su dirección está a 1` },
@@ -129,6 +133,8 @@ const altoEscalon = (filas: number) => CAB + filas * FH
 
 export default function EditorLadder({ programa, onCambiar, flujos, estado, editable, notacion }: Props) {
   const [herramienta, setHerramienta] = useState<Herramienta>('seleccionar')
+  // En el celular: paleta en cuadrícula pareja y el diagrama más grande (se desplaza de lado).
+  const celular = useCelular()
   const [sel, setSel] = useState<Seleccion | null>(null)
   const [escalonSel, setEscalonSel] = useState<number | null>(null)
   /** Aviso breve cuando se usa una herramienta en la columna que no le toca. */
@@ -300,7 +306,8 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
         </text>
       </g>,
     )
-    if (editable) {
+    // En el celular estos botones van en una barra aparte, del tamaño de un dedo.
+    if (editable && !celular) {
       const botones: Array<[string, string, () => void]> = [
         ['＋ rama', 'Añade una fila para montar un paralelo', () => agregarFila(i)],
         ['− rama', 'Quita la última fila', () => quitarFila(i)],
@@ -484,10 +491,23 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
   return (
     <div>
       {editable && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 6, position: 'sticky', top: -8, zIndex: 2, background: '#fff', padding: '4px 0' }} role="toolbar" aria-label="Herramientas Ladder">
+        <div
+          style={{
+            ...(celular ? { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(54px, 1fr))' } : { display: 'flex', flexWrap: 'wrap' }),
+            gap: 4,
+            marginBottom: 6,
+            position: 'sticky',
+            top: -8,
+            zIndex: 2,
+            background: '#fff',
+            padding: '4px 0',
+          }}
+          role="toolbar"
+          aria-label="Herramientas Ladder"
+        >
           {herramientas(notacion).map((h, i, todas) => (
             <span key={h.id} style={{ display: 'contents' }}>
-              {i > 0 && todas[i - 1].grupo !== h.grupo && <span style={{ width: 6 }} aria-hidden />}
+              {!celular && i > 0 && todas[i - 1].grupo !== h.grupo && <span style={{ width: 6 }} aria-hidden />}
               <button
                 title={h.titulo}
                 onClick={() => setHerramienta(h.id)}
@@ -498,7 +518,8 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
                   flexDirection: 'column',
                   alignItems: 'center',
                   gap: 1,
-                  minWidth: 52,
+                  minWidth: celular ? 0 : 52,
+                  justifyContent: 'center',
                   padding: '0.2rem 0.35rem',
                   borderRadius: 6,
                   cursor: 'pointer',
@@ -508,10 +529,34 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
                 }}
               >
                 <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: '0.84rem', fontWeight: 700 }}>{h.icono}</span>
-                <span style={{ fontSize: '0.64rem', lineHeight: 1.1, whiteSpace: 'nowrap' }}>{h.texto}</span>
+                <span style={{ fontSize: '0.64rem', lineHeight: 1.1, whiteSpace: 'nowrap' }}>{celular ? (CORTO[h.id] ?? h.texto) : h.texto}</span>
               </button>
             </span>
           ))}
+          {celular && (
+            <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap', fontSize: '0.8rem', color: '#51606f' }} data-barra-escalon="si">
+              {escalonSel !== null && programa.escalones[escalonSel] ? (
+                <>
+                  <strong style={{ color: TINTA }}>Escalón {String(escalonSel).padStart(3, '0')}:</strong>
+                  {(
+                    [
+                      ['＋ rama', 'Añade una fila para montar un paralelo', () => agregarFila(escalonSel)],
+                      ['− rama', 'Quita la última fila', () => quitarFila(escalonSel)],
+                      ['↑', 'Sube el escalón', () => moverEscalon(escalonSel, -1)],
+                      ['↓', 'Baja el escalón', () => moverEscalon(escalonSel, 1)],
+                      ['✕', 'Borra el escalón', () => borrarEscalon(escalonSel)],
+                    ] as Array<[string, string, () => void]>
+                  ).map(([txt, titulo, fn]) => (
+                    <button key={txt} onClick={fn} title={titulo} aria-label={titulo} style={{ border: '1px solid #c6ced6', background: '#fff', color: TINTA, borderRadius: 6, padding: '0 10px', fontWeight: 600 }}>
+                      {txt}
+                    </button>
+                  ))}
+                </>
+              ) : (
+                <span>Toca el fondo de un escalón para agregarle ramas, moverlo o borrarlo.</span>
+              )}
+            </div>
+          )}
         </div>
       )}
       <div style={{ overflowX: 'auto', border: '1px solid #e0e5eb', borderRadius: 8, background: '#fff' }}>
@@ -519,7 +564,7 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
           id="ladder-svg"
           viewBox={`0 0 ${ANCHO} ${altoTotal}`}
           width="100%"
-          style={{ minWidth: 560, display: 'block', fontFamily: 'system-ui, sans-serif' }}
+          style={{ minWidth: celular ? 720 : 560, display: 'block', fontFamily: 'system-ui, sans-serif' }}
           role="img"
           aria-label="Diagrama Ladder"
         >

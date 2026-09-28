@@ -10,6 +10,8 @@ import { usePersistente } from '../ui'
 export interface PestanaPanel<T extends string = string> {
   id: T
   titulo: string
+  /** Nombre para la pestaña del celular, si el largo no cabe. */
+  tituloCorto?: string
   /** Un número junto al título (p. ej. cuántos eventos hay). */
   contador?: number
   contenido: ReactNode

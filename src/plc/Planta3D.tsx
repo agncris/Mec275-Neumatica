@@ -8,7 +8,7 @@
  * (`sim.current`) y se pone al día. Los botones de la máquina se pulsan con
  * el ratón o el dedo, igual que en el banco.
  */
-import { acercar, useTactil } from '../components/ui'
+import { acercar, useCelular, useTactil } from '../components/ui'
 import { useEffect, useRef, useState, type MutableRefObject } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
@@ -1399,6 +1399,8 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
   const sonidoRef = useRef<SonidoBanco | null>(null)
   const sonido = () => (sonidoRef.current ??= new SonidoBanco())
   const encuadrarRef = useRef<() => void>(() => {})
+  // En el celular los botones de la vista 3D van sólo con su ícono, para no tapar la escena.
+  const celular = useCelular()
   // Rótulos grandes (S0, Y1, Z1…): se pueden ocultar si tapan algo.
   const [conRotulos, setConRotulos] = useState(() => {
     try {
@@ -1677,8 +1679,8 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
         </p>
       )}
       <div style={barra}>
-        <button style={boton} onClick={() => encuadrarRef.current()} title="Volver a ver la planta entera">
-          Encuadrar
+        <button style={boton} onClick={() => encuadrarRef.current()} title="Volver a ver la planta entera" aria-label="Encuadrar">
+          {celular ? '⌖' : 'Encuadrar'}
         </button>
         <button
           style={{ ...boton, background: conSonido ? '#1668c7' : '#fff', color: conSonido ? '#fff' : '#33475c' }}
@@ -1688,8 +1690,9 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
           }}
           aria-pressed={conSonido}
           title="Relés, válvulas, agua, cilindros y zumbador"
+          aria-label="Sonido"
         >
-          {conSonido ? '🔊 Sonido' : '🔇 Sonido'}
+          {celular ? (conSonido ? '🔊' : '🔇') : conSonido ? '🔊 Sonido' : '🔇 Sonido'}
         </button>
         <button
           style={{ ...boton, background: conRotulos ? '#1668c7' : '#fff', color: conRotulos ? '#fff' : '#33475c' }}
@@ -1697,12 +1700,14 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
           aria-pressed={conRotulos}
           title="Muestra u oculta los rótulos grandes de sensores y actuadores (S0, Y1, Z1…)"
           data-rotulos-3d="si"
+          aria-label="Rótulos"
         >
-          Rótulos
+          {celular ? 'S0' : 'Rótulos'}
         </button>
         {typeof document !== 'undefined' && document.fullscreenEnabled && (
           <button
             style={boton}
+            aria-label={pantallaCompleta ? 'Salir de pantalla completa' : 'Pantalla completa'}
             onClick={() => {
               const c = contRef.current
               if (!c) return
@@ -1710,7 +1715,7 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
               else void c.requestFullscreen?.()
             }}
           >
-            {pantallaCompleta ? '⤡ Salir' : '⤢ Pantalla completa'}
+            {celular ? (pantallaCompleta ? '⤡' : '⤢') : pantallaCompleta ? '⤡ Salir' : '⤢ Pantalla completa'}
           </button>
         )}
       </div>

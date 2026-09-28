@@ -6,7 +6,7 @@
  *  - Simular: el motor corre a 30 Hz; se accionan las válvulas y se ve el aire
  *    circular, las correderas conmutar y los vástagos moverse.
  */
-import { BotonNuevo, botonPrimario, estiloAviso, Menu, useApilado, useEsEstrecha, usePersistente, useTactil } from './components/ui'
+import { BotonNuevo, botonPrimario, estiloAviso, Menu, useApaisado, useApilado, useEsEstrecha, usePersistente, useTactil } from './components/ui'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import DiagramaEspacioFase, { hayDiagramaFase, registrarFase } from './components/DiagramaEspacioFase'
@@ -136,6 +136,9 @@ export default function App() {
   const estrecha = useEsEstrecha()
   // Ventana mediana: el tablero arriba y el inspector debajo, bajando con la barra de desplazamiento.
   const apilado = useApilado() && !estrecha
+  // Celular acostado: «Laboratorio · Estudiar · Entregar» van en la fila de las unidades.
+  const apaisado = useApaisado()
+  const subnavAparte = estrecha && !apaisado
   const tactil = useTactil()
   const inputArchivo = useRef<HTMLInputElement>(null)
 
@@ -432,7 +435,7 @@ export default function App() {
         if (confirmarDescarte(`¿Cargar el ejemplo «${etiqueta}»?`)) cargarEjemplo(n)
         e.target.value = circuito ? 'actual' : ''
       }}
-      style={{ padding: '0.3rem 0.4rem', width: estrecha ? '27vw' : apilado ? 140 : 172, minHeight: 34, fontSize: '0.86rem' }}
+      style={{ padding: '0.3rem 0.4rem', width: estrecha ? '25vw' : apilado ? 140 : 172, minHeight: 34, fontSize: '0.86rem' }}
     >
       <option value="">— Ejemplos —</option>
       {circuito && (
@@ -560,8 +563,20 @@ export default function App() {
     />
   )
 
+  // Componentes, propiedades y registro en el celular: abajo en vertical; acostado
+  // van en la barra de herramientas para dejarle más alto al tablero.
+  const accionesMovil = (
+    <>
+      <button onClick={() => setHoja('paleta')} disabled={simulando} title={simulando ? 'Detén la simulación para editar' : 'Agregar componentes'}>
+        {apaisado ? '＋ Agregar' : '＋ Componentes'}
+      </button>
+      <button onClick={() => setHoja('inspector')}>Propiedades{avisosCircuito.length ? ` ⚠${avisosCircuito.length}` : ''}</button>
+      <button onClick={() => setHoja('registro')}>Registro</button>
+    </>
+  )
+
   const subnav = (
-    <nav className="subnav" aria-label="Neumática" style={estrecha ? { borderBottom: '1px solid #e0e5eb', margin: '0 -10px', padding: '0 10px', background: '#fff' } : undefined}>
+    <nav className="subnav" aria-label="Neumática" style={subnavAparte ? { borderBottom: '1px solid #e0e5eb', margin: '0 -10px', padding: '0 10px', background: '#fff' } : undefined}>
       <button aria-current={seccion === 'laboratorio' ? 'page' : undefined} onClick={() => setSeccion('laboratorio')} data-seccion="laboratorio">
         Laboratorio
       </button>
@@ -585,18 +600,19 @@ export default function App() {
 
   return (
     <>
-      {ranura && !estrecha && createPortal(subnav, ranura)}
-      {estrecha && <div style={{ padding: '0 10px' }}>{subnav}</div>}
+      {ranura && !subnavAparte && createPortal(subnav, ranura)}
+      {subnavAparte && <div style={{ padding: '0 10px' }}>{subnav}</div>}
 
       {seccion === 'laboratorio' ? (
         <>
-      <main className={`banco${apilado ? ' banco--neumatica-apilado' : ''}`} aria-label="Laboratorio de neumática" style={estrecha ? { height: 'calc(100dvh - var(--alto-barra-superior) - 45px)' } : entregaAbierta ? { marginRight: 480 } : undefined}>
+      <main className={`banco${apilado ? ' banco--neumatica-apilado' : ''}`} aria-label="Laboratorio de neumática" style={estrecha ? { height: 'calc(100dvh - var(--alto-barra-superior) - var(--alto-subnav))' } : entregaAbierta ? { marginRight: 480 } : undefined}>
         <h1 className="solo-lector">Unidad 1 · Neumática — laboratorio</h1>
         <div className="banco__barra" role="toolbar" aria-label="Herramientas del banco">
           {botonSimular}
           <BotonNuevo que="un diagrama" compacto={estrecha} deshabilitado={simulando} onClick={() => confirmarDescarte('¿Empezar un diagrama nuevo?') && limpiarPizarra()} />
           {deshacerRehacer}
           {selectorEjemplos}
+          {estrecha && apaisado && <span className="banco__acciones-barra">{accionesMovil}</span>}
           {!estrecha && (
             <span className="segmentado" role="radiogroup" aria-label="Vista">
               {zonaVista.map(([v, t, ayuda]) => (
@@ -654,13 +670,7 @@ export default function App() {
         {estrecha ? (
           <>
             {lienzo}
-            <div className="banco__acciones-movil">
-              <button onClick={() => setHoja('paleta')} disabled={simulando} title={simulando ? 'Detén la simulación para editar' : undefined}>
-                ＋ Componentes
-              </button>
-              <button onClick={() => setHoja('inspector')}>Propiedades{avisosCircuito.length ? ` ⚠${avisosCircuito.length}` : ''}</button>
-              <button onClick={() => setHoja('registro')}>Registro</button>
-            </div>
+            {!apaisado && <div className="banco__acciones-movil">{accionesMovil}</div>}
           </>
         ) : (
           <div className="banco__cuerpo">

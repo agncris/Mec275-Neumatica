@@ -6,7 +6,7 @@
  */
 import { useEffect, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { useEsEstrecha } from '../ui'
+import { useApaisado, useEsEstrecha } from '../ui'
 
 export type SeccionUnidad = 'laboratorio' | 'estudiar'
 
@@ -41,7 +41,10 @@ interface PropsSubnav {
 }
 
 export default function SubnavUnidad({ nombre, seccion, onSeccion, extra, entregar }: PropsSubnav) {
-  const estrecha = useEsEstrecha()
+  // Acostado, la subnavegación va en la misma fila que las unidades (se ahorra una fila de alto).
+  const angosta = useEsEstrecha()
+  const apaisado = useApaisado()
+  const estrecha = angosta && !apaisado
   const [ranura, setRanura] = useState<HTMLElement | null>(null)
   useEffect(() => setRanura(document.getElementById('barra-unidad')), [])
   const nav = (

@@ -55,9 +55,12 @@ export function useTactil(): boolean {
   return t
 }
 
-/** Pantalla estrecha (celular o tablet vertical): la interfaz se reordena. */
+/** Celular en horizontal: poca altura; todo se compacta para dejar espacio al trabajo. */
+export const CONSULTA_APAISADO = '(orientation: landscape) and (max-height: 500px)'
+
+/** Pantalla estrecha (celular vertical u horizontal, tablet vertical): la interfaz se reordena. */
 export function useEsEstrecha(): boolean {
-  const consulta = '(max-width: 900px)'
+  const consulta = `(max-width: 900px), ${CONSULTA_APAISADO}`
   const [estrecha, setEstrecha] = useState(() => typeof window !== 'undefined' && !!window.matchMedia?.(consulta).matches)
   useEffect(() => {
     const mq = window.matchMedia?.(consulta)
@@ -86,12 +89,13 @@ export function useConsulta(consulta: string): boolean {
 /**
  * Ventana mediana (un computador con la ventana achicada, una tablet): en vez
  * de poner las zonas lado a lado, apretadas, se apilan una bajo otra y se baja
- * con la barra de desplazamiento. En el celular (≤ 600 px) se usan pestañas.
+ * con la barra de desplazamiento. En el celular (≤ 600 px, o acostado) se usan pestañas.
  */
-export const CONSULTA_APILADO = '(min-width: 601px) and (max-width: 1100px)'
+export const CONSULTA_APILADO = '(min-width: 601px) and (max-width: 1100px) and (min-height: 501px)'
 export const useApilado = () => useConsulta(CONSULTA_APILADO)
-/** Celular: una zona a la vez, con pestañas. */
-export const useCelular = () => useConsulta('(max-width: 600px)')
+/** Celular (vertical u horizontal): una zona a la vez, con pestañas. */
+export const useCelular = () => useConsulta(`(max-width: 600px), ${CONSULTA_APAISADO}`)
+export const useApaisado = () => useConsulta(CONSULTA_APAISADO)
 
 /** «rueda» o «dos dedos», según el dispositivo. */
 export const acercar = (tactil: boolean) => (tactil ? 'pellizca con dos dedos para acercar' : 'rueda para acercar')
@@ -158,6 +162,9 @@ export function Menu({ etiqueta, items, ancho = 280, datos }: { etiqueta: string
   const [abierto, setAbierto] = useState(false)
   // Se abre hacia donde haya espacio (en el celular el botón puede quedar a la izquierda).
   const [izquierda, setIzquierda] = useState(0)
+  // Alto disponible bajo el botón: si el menú es más largo, se desplaza por dentro
+  // (en el celular acostado no cabe entero y sus opciones quedaban fuera de la pantalla).
+  const [altoMax, setAltoMax] = useState(600)
   const raiz = useRef<HTMLSpanElement>(null)
   const lista = useRef<HTMLDivElement>(null)
   const id = useId()
@@ -199,6 +206,7 @@ export function Menu({ etiqueta, items, ancho = 280, datos }: { etiqueta: string
           const w = Math.min(ancho, window.innerWidth - 32)
           const ideal = r.width - w // alineado al borde derecho del botón
           setIzquierda(Math.max(16 - r.left, Math.min(ideal, window.innerWidth - 16 - w - r.left)))
+          setAltoMax(Math.max(160, window.innerHeight - r.bottom - 12))
           setAbierto((a) => !a)
         }}
         style={{ ...botonSecundario, background: abierto ? '#eef2f6' : '#fff' }}
@@ -217,6 +225,9 @@ export function Menu({ etiqueta, items, ancho = 280, datos }: { etiqueta: string
             top: 'calc(100% + 4px)',
             zIndex: 50,
             width: `min(${ancho}px, calc(100vw - 32px))`,
+            maxHeight: altoMax,
+            overflowY: 'auto',
+            overscrollBehavior: 'contain',
             background: '#fff',
             border: `1px solid ${COLOR.borde}`,
             borderRadius: 10,
