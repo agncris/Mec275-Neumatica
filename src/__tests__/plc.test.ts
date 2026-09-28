@@ -16,6 +16,7 @@ import {
   type ProgramaPLC,
 } from '../plc/ladder'
 import { EJEMPLOS_PLC } from '../plc/ejemplos'
+import { PROGRAMAS_PRUEBA } from './programasPrueba'
 import { PlantaElevador, PlantaEstanque, crearPlanta, type Planta } from '../plc/plantas'
 import { EJERCICIOS_PLC, programaDeEjercicio } from '../plc/ejercicios'
 
@@ -23,7 +24,7 @@ const NA = (dir: string): Celda => ({ tipo: 'contacto', modo: 'NA', dir })
 const NC = (dir: string): Celda => ({ tipo: 'contacto', modo: 'NC', dir })
 const _: Celda = { tipo: 'vacio' }
 const fila = (...c: Celda[]) => [...c, ...Array(COLUMNAS - c.length).fill(_)] as Celda[]
-const ejemplo = (id: string) => structuredClone(EJEMPLOS_PLC.find((e) => e.id === id)!.programa)
+const ejemplo = (id: string) => structuredClone(EJEMPLOS_PLC.find((e) => e.id === id)?.programa ?? PROGRAMAS_PRUEBA[id])
 
 /** Corre programa + planta juntos, como la aplicación. */
 function correr(p: ProgramaPLC, planta: Planta, segundos: number, mandos: Record<string, boolean> = {}, dt = 0.02) {

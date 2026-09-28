@@ -107,7 +107,7 @@ export function EntradasSalidas() {
         Cada entrada y cada salida es un <strong>borne</strong> del PLC con su dirección. En esta aplicación (como en
         los PLC del laboratorio) las entradas son <code>I0.0 … I0.7</code> y las salidas <code>Q0.0 … Q0.7</code>. Además
         el PLC tiene memoria interna que no sale a ningún borne: las <strong>marcas</strong> <code>M0.0 … M1.7</code>,
-        los <strong>temporizadores</strong> <code>T0 … T7</code> y los <strong>contadores</strong> <code>C0 … C7</code>.
+        que sirven para recordar un estado (como M1 en los ejercicios del apunte).
       </p>
       <p style={p}>
         En el borne de entrada llega la señal del pulsador o sensor (con su común, <em>COM</em>); una barrera de
@@ -254,17 +254,6 @@ const bobina = (letra = '') => (
   </Simbolo>
 )
 
-const caja = (t: string) => (
-  <Simbolo>
-    <line x1={0} y1={20} x2={22} y2={20} stroke={TINTA} strokeWidth={2} />
-    <line x1={68} y1={20} x2={90} y2={20} stroke={TINTA} strokeWidth={2} />
-    <rect x={22} y={4} width={46} height={32} rx={3} fill="#fff" stroke={TINTA} strokeWidth={2} />
-    <text x={45} y={25} fontSize={12} fontWeight={700} textAnchor="middle" fill={TINTA}>
-      {t}
-    </text>
-  </Simbolo>
-)
-
 export function SimbolosLadder() {
   const contactos: Array<[ReactNode, string, string]> = [
     [contacto(), 'Normalmente abierto (NA)', 'Pasa corriente cuando la dirección está a 1 (ON).'],
@@ -277,10 +266,6 @@ export function SimbolosLadder() {
     [bobina('↓'), 'Transición negativa', 'Al pasar de con corriente a sin corriente: a 1 durante un barrido.'],
     [bobina('L'), 'Enclavar: L, latch (Set)', 'Con corriente: a 1, y se queda así hasta que un Reset la apague. Sin corriente: sigue igual.'],
     [bobina('U'), 'Desenclavar: U, unlatch (Reset)', 'Con corriente: a 0, y se queda así hasta un Set. Sin corriente: sigue igual.'],
-    [caja('TON'), 'Temporizador a la conexión', 'Su contacto se cierra cuando lleva el tiempo PT con corriente; al perderla vuelve a cero.'],
-    [caja('TOF'), 'Temporizador a la desconexión', 'Su contacto se cierra con corriente y se abre cuando lleva el tiempo PT sin ella.'],
-    [caja('CTU'), 'Contador ascendente', 'Suma uno en cada flanco de subida; su contacto se cierra al llegar a PV. Se reinicia con Reset.'],
-    [caja('CTD'), 'Contador descendente', 'Parte de PV y resta uno en cada flanco; su contacto se cierra al llegar a 0.'],
   ]
   const fila = ([s, n, d]: [ReactNode, string, string]) => (
     <tr key={n}>

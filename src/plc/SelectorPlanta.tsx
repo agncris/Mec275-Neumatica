@@ -11,6 +11,13 @@ import { EJERCICIOS_PLC, type EjercicioPLC } from './ejercicios'
 import { formatear, type Notacion } from './notacion'
 import AnimacionPlanta from './AnimacionPlanta'
 
+/**
+ * Plantas que no se ofrecen porque piden instrucciones que no se ven en el
+ * curso (el semáforo necesita temporizadores). Si un programa guardado ya la
+ * usa, igual aparece para no perderla.
+ */
+const PLANTAS_FUERA_DEL_CURSO: IdPlanta[] = ['semaforo']
+
 interface Props {
   actual: IdPlanta
   notacion: Notacion
@@ -75,7 +82,9 @@ export default function SelectorPlanta({ actual, notacion, ejercicioActual, onUs
         </div>
         <div className="selector-planta__cuerpo">
           <nav aria-label="Plantas" className="selector-planta__lista" role="listbox" aria-activedescendant={`planta-${vista}`}>
-            {Object.values(PLANTAS).map((p) => (
+            {Object.values(PLANTAS)
+              .filter((p) => !PLANTAS_FUERA_DEL_CURSO.includes(p.id) || p.id === actual)
+              .map((p) => (
               <button
                 key={p.id}
                 id={`planta-${p.id}`}

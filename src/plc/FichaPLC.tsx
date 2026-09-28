@@ -21,8 +21,6 @@ export default function FichaPLC() {
           ['Entrada (sensor, pulsador)', 'I byte.bit', 'I0.3'],
           ['Salida (actuador, piloto)', 'Q byte.bit', 'Q0.1'],
           ['Marca (memoria interna)', 'M byte.bit', 'M0.2'],
-          ['Temporizador', 'T número', 'T0 (terminó: T0.DN)'],
-          ['Contador', 'C número', 'C1'],
         ]}
       />
       <h4>Sensores</h4>

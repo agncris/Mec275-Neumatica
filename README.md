@@ -212,23 +212,19 @@ estanque rebalsa, la plataforma choca con el vástago.
 apunte (000, 001…). Se elige una herramienta y se hace clic en la casilla: contacto
 NA ┤ ├, NC ┤/├, cable, rama (une dos filas en un nodo para hacer un paralelo) y, en la
 columna de la derecha, las bobinas de la tabla del apunte: normal ( ), inversa (/),
-transición positiva (↑) y negativa (↓), Set (L) y Reset (U); además temporizadores
-**TON / TOF** y contadores **CTU / CTD**. La paleta trae sólo lo que se usa en el curso
-(apunte, ejercicios, tareas y controles). El simulador todavía entiende otras
-instrucciones (ONS, comparaciones, RTO, MOV y operaciones), para abrir programas que
-ya las tengan, pero no se ofrecen en la paleta. El bit de «terminado» de un
-temporizador o contador (`T0.DN`, `C0.DN`) se usa como contacto.
-Cada elemento lleva su dirección (`I0.0…I0.7`, `Q0.0…Q0.7`, marcas `M0.0…M1.7`,
-`T0…T7`, `C0…C7`) y se
+transición positiva (↑) y negativa (↓), Set (L) y Reset (U). La paleta trae sólo lo
+que se ve en el curso (clases, tareas y controles): contactos y bobinas. El simulador
+todavía entiende otras instrucciones (temporizadores, contadores, ONS, comparaciones,
+MOV y operaciones) para abrir programas que ya las tengan, pero no se ofrecen.
+Cada elemento lleva su dirección (`I0.0…I0.7`, `Q0.0…Q0.7`, marcas `M0.0…M1.7`) y se
 muestra con el nombre de la **tabla de símbolos** (simbología · asignación ·
 descripción). Con el PLC en RUN se ve la corriente: tramos con tensión en verde,
-contactos cerrados rellenos, bobinas activas encendidas y el tiempo o la cuenta de
-cada temporizador y contador. La aplicación avisa de los errores típicos: un contacto
+contactos cerrados rellenos y bobinas activas encendidas. La aplicación avisa de los errores típicos: un contacto
 sin dirección, una bobina sobre una entrada, la misma salida con bobina en dos
 escalones (manda la última).
 
 **Notación de direcciones.** Por defecto, la del apunte y de las clases (`I0.3`, `Q0.1`,
-`M0.1`, `T0`); la autoevaluación y la ficha de repaso usan sólo esa. Quien use el
+`M0.1`); la autoevaluación y la ficha de repaso usan sólo esa. Quien use el
 simulador LogixPro puede cambiarla en **Archivo** a la de **LogixPro / RSLogix** (`I:1/03`, `O:2/01`, `B3:0/1`,
 `T4:0/DN`, `C5:0.ACC`); en esa notación las bobinas se rotulan L / U y RES. Cambia
 todo a la vez: el diagrama, la tabla de símbolos, el simulador de E/S y los rótulos
@@ -246,7 +242,8 @@ Con el PLC en RUN, **❚❚ Pausar** congela el PLC y la planta y **⏭ Un barri
 un solo barrido: se cambian las entradas y se ve, escalón por escalón, qué resuelve el
 PLC en ese barrido (el título muestra el número de barrido).
 
-**Plantas** (el cableado es fijo, como en el banco; el alumno programa):
+**Plantas** (el cableado es fijo, como en el banco; el alumno programa). La del
+semáforo sigue en el código pero no se ofrece, porque necesita temporizadores:
 
 | Planta | Entradas | Salidas |
 |---|---|---|
@@ -254,12 +251,11 @@ PLC en ese barrido (el título muestra el número de barrido).
 | Estanque con dos electroválvulas | START, STOP y los flotadores S1 (abajo) y S2 (arriba) | V1 llenado, V2 vaciado |
 | Elevador de piezas | S0 (pieza en la plataforma) y los finales de carrera S1…S4 de Z1 y Z2 | Y1 y Y2 (electroválvulas de Z1 y Z2) |
 | Silo que llena cajas (como el *Silo Simulator* de LogixPro) | START, STOP (NC), PROX, LEVEL | MOTOR de la cinta, SOLENOID, pilotos RUN / FILL / FULL |
-| Semáforos de un cruce | MARCHA, PARO, botón de peatón | rojo / amarillo / verde Norte-Sur y Este-Oeste |
 | Portón automático (como el *Door Simulator* de LogixPro) | ABRIR, CERRAR, PARO, finales de carrera arriba y abajo, fotocelda | SUBIR, BAJAR, pilotos abierto / cerrado / moviendo |
 
 El silo no trae programa: es la planta para que la programes tú. Las plantas avisan
 de los errores típicos: la caja que rebalsa o pasa sin llenar, el material que cae
-sobre la cinta, las dos calles con paso a la vez, el motor del portón con las dos
+sobre la cinta, el motor del portón con las dos
 órdenes, forzando contra el tope o bajando sobre un obstáculo.
 
 En 3D se ve el PLC en su riel, con fuente, CPU (memoria y puerto de comunicación) y
@@ -276,15 +272,14 @@ enunciado cumple y en cuál falla, sin mostrar cómo resolverlo.
 
 **Ejemplos resueltos:** el ejercicio 1 del apunte (llenado y vaciado de tanque) y una
 serie de programas básicos en el tablero: Y / O / NO,
-marcha y paro con autorretención, Set y Reset, temporizador TON, intermitente con dos
-TON y contador CTU; además el semáforo con temporizadores
-encadenados y el portón con enclavamiento y fotocelda. **＋ Nuevo programa** deja el editor en blanco con el cableado de la
+marcha y paro con autorretención y Set y Reset; además el portón con enclavamiento y
+fotocelda. **＋ Nuevo programa** deja el editor en blanco con el cableado de la
 planta elegida; el programa se guarda solo en el navegador y se puede descargar,
 abrir y exportar como imagen para el informe.
 
 **Teoría** (secciones plegables): qué es un PLC y para qué se usa, sus componentes,
 entradas / salidas y direcciones, cómo elegirlo, los sensores, los símbolos Ladder
-(contactos, bobinas, temporizadores, contadores) y el ciclo de scan.
+(contactos y bobinas, como en la tabla del apunte) y el ciclo de scan.
 
 La unidad no incluye soluciones de evaluaciones: el silo viene como planta, sin programa.
 

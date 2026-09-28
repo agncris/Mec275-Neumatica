@@ -118,10 +118,6 @@ const herramientas = (n: Notacion): Array<{ id: Herramienta; icono: string; text
   { id: 'negada', icono: '(/)', texto: 'Inversa', grupo: 2, titulo: 'Bobina inversa: vale 1 mientras NO le llega corriente (al revés que la bobina normal)' },
   { id: 'flancoP', icono: '(↑)', texto: 'Positiva', grupo: 2, titulo: 'Transición positiva: vale 1 durante un barrido cuando la corriente llega (no → sí)' },
   { id: 'flancoN', icono: '(↓)', texto: 'Negativa', grupo: 2, titulo: 'Transición negativa: vale 1 durante un barrido cuando la corriente se va (sí → no)' },
-  { id: 'TON', icono: 'TON', texto: 'Retardo', grupo: 3, titulo: 'Temporizador a la conexión: se activa tras el tiempo con corriente' },
-  { id: 'TOF', icono: 'TOF', texto: 'Retardo off', grupo: 3, titulo: 'Temporizador a la desconexión: sigue activo un tiempo tras perder la corriente' },
-  { id: 'CTU', icono: 'CTU', texto: 'Cuenta ↑', grupo: 3, titulo: 'Contador ascendente: suma uno en cada flanco de subida' },
-  { id: 'CTD', icono: 'CTD', texto: 'Cuenta ↓', grupo: 3, titulo: 'Contador descendente: resta uno en cada flanco de subida' },
   { id: 'borrar', icono: '✕', texto: 'Borrar', grupo: 5, titulo: 'Borrar el elemento de la casilla (también con Supr)' },
 ]
 

@@ -1,6 +1,6 @@
 /**
- * Programas de ejemplo de la unidad de PLC: el ejercicio 1 del apunte y una
- * serie de programas básicos para ver cada instrucción funcionando. El
+ * Programas de ejemplo de la unidad de PLC: el ejercicio 1 del apunte y unos
+ * programas básicos con lo que se ve en clases (contactos, bobinas, Set y Reset). El
  * ejercicio 2 no está aquí: es un ejercicio para resolver (ejercicios.ts).
  */
 import {
@@ -100,53 +100,9 @@ const SET_RESET = programa('Básico · Set y Reset', 'tablero', T, [
   escalon([[NA('I0.1')]], [B('reset', 'Q0.0')], [], 'PARO lo apaga con una bobina Reset. Como va después, si pulsas los dos gana el Reset.'),
 ])
 
-const TEMPORIZADOR = programa('Básico · Temporizador TON', 'tablero', T, [
-  escalon([[NA('I0.4')]], [B('TON', 'T0', 3)], [], 'Con SEL1 activado, T0 cuenta 3 s (retardo a la conexión). Si lo sueltas antes, vuelve a cero.'),
-  escalon([[NA('T0.DN')]], [B('normal', 'Q0.0')], [], 'Cuando T0 termina, su contacto se cierra y enciende H1.'),
-])
-
-const INTERMITENTE = programa('Básico · Intermitente con dos TON', 'tablero', T, [
-  escalon([[NA('I0.4'), NC('T1.DN')]], [B('TON', 'T0', 0.5)], [], 'T0 cuenta medio segundo mientras SEL1 está activado y T1 no ha terminado.'),
-  escalon([[NA('T0.DN')]], [B('TON', 'T1', 0.5)], [], 'Cuando T0 termina, T1 cuenta otro medio segundo; al terminar corta a T0 y los dos vuelven a empezar.'),
-  escalon([[NA('T0.DN')]], [B('normal', 'Q0.2')], [], 'H3 se enciende mientras T0 está terminado: parpadea una vez por segundo.'),
-])
-
-const CONTADOR = programa('Básico · Contador CTU', 'tablero', T, [
-  escalon([[NA('I0.2')]], [B('CTU', 'C0', 5)], [], 'Cada pulsación de P3 suma uno (cuenta el flanco de subida, no el tiempo pulsado).'),
-  escalon([[NA('C0.DN')]], [B('normal', 'Q0.3')], [], 'Al llegar a 5, C0 se activa y enciende H4.'),
-  escalon([[NA('C0.DN')], [NA('I0.0')]], [B('normal', 'Q0.6')], [[0, 1]], 'El zumbador suena con el contador lleno (o mientras pulsas MARCHA, para probarlo).'),
-  escalon([[NA('I0.3')]], [B('reset', 'C0')], [], 'P4 pone el contador a cero.'),
-])
-
 // ---------------------------------------------------------------------------
-// Semáforo y portón
+// Portón
 // ---------------------------------------------------------------------------
-const SEMAFORO = programa(
-  'Semáforo con temporizadores encadenados',
-  'semaforo',
-  [
-    ...PLANTAS.semaforo.cableado,
-    { dir: 'M0.0', nombre: 'EN_MARCHA', descripcion: 'Marca: el cruce está funcionando' },
-    { dir: 'T0', nombre: 'T_VERDE_NS', descripcion: 'Tiempo de verde Norte-Sur' },
-    { dir: 'T1', nombre: 'T_AMAR_NS', descripcion: 'Tiempo de amarillo Norte-Sur' },
-    { dir: 'T2', nombre: 'T_VERDE_EO', descripcion: 'Tiempo de verde Este-Oeste' },
-    { dir: 'T3', nombre: 'T_AMAR_EO', descripcion: 'Tiempo de amarillo Este-Oeste' },
-  ],
-  [
-    escalon([[NA('I0.0'), NC('I0.1')], [NA('M0.0')]], [B('normal', 'M0.0')], [[0, 1]], 'Marcha y paro con autorretención.'),
-    escalon([[NA('M0.0'), NC('T3.DN')]], [B('TON', 'T0', 5)], [], 'Primer tiempo: verde Norte-Sur. Cuando termina el último temporizador, T0 se reinicia y el ciclo vuelve a empezar.'),
-    escalon([[NA('T0.DN')]], [B('TON', 'T1', 2)], [], 'Al terminar T0 empieza el amarillo Norte-Sur.'),
-    escalon([[NA('T1.DN')]], [B('TON', 'T2', 5)], [], 'Luego el verde Este-Oeste…'),
-    escalon([[NA('T2.DN')]], [B('TON', 'T3', 2)], [], '…y el amarillo Este-Oeste.'),
-    escalon([[NA('M0.0'), NC('T0.DN')]], [B('normal', 'Q0.2')], [], 'Verde NS mientras corre T0.'),
-    escalon([[NA('T0.DN'), NC('T1.DN')]], [B('normal', 'Q0.1')], [], 'Amarillo NS mientras corre T1.'),
-    escalon([[NA('T1.DN')], [NC('M0.0')]], [B('normal', 'Q0.0')], [[0, 1]], 'Rojo NS mientras la otra calle tiene paso, o con el cruce detenido.'),
-    escalon([[NA('T1.DN'), NC('T2.DN')]], [B('normal', 'Q0.5')], [], 'Verde EO mientras corre T2.'),
-    escalon([[NA('T2.DN'), NC('T3.DN')]], [B('normal', 'Q0.4')], [], 'Amarillo EO mientras corre T3.'),
-    escalon([[NC('T1.DN')]], [B('normal', 'Q0.3')], [], 'Rojo EO mientras Norte-Sur tiene verde o amarillo (y con el cruce detenido).'),
-  ],
-)
-
 const PORTON = programa(
   'Portón con enclavamiento y fotocelda',
   'porton',
@@ -181,9 +137,5 @@ export const EJEMPLOS_PLC: EjemploPLC[] = [
   { id: 'logica', etiqueta: 'Básico · Y, O, NO', programa: LOGICA },
   { id: 'marcha', etiqueta: 'Básico · Marcha y paro con autorretención', programa: MARCHA_PARO },
   { id: 'setreset', etiqueta: 'Básico · Set y Reset', programa: SET_RESET },
-  { id: 'ton', etiqueta: 'Básico · Temporizador TON', programa: TEMPORIZADOR },
-  { id: 'intermitente', etiqueta: 'Básico · Intermitente con dos TON', programa: INTERMITENTE },
-  { id: 'contador', etiqueta: 'Básico · Contador CTU', programa: CONTADOR },
-  { id: 'semaforo', etiqueta: 'Semáforo con temporizadores encadenados', programa: SEMAFORO },
   { id: 'porton', etiqueta: 'Portón con enclavamiento y fotocelda', programa: PORTON },
 ]

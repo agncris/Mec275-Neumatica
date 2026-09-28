@@ -107,10 +107,9 @@ export const INSTRUCCIONES: Array<[string, string]> = [
   ['Bobina', 'vale 1 mientras le llega corriente y 0 cuando deja de llegarle'],
   ['Enclavar (L, Set)', 'pone su dirección a 1 y la deja así aunque ya no le llegue corriente'],
   ['Desenclavar (U, Reset)', 'pone su dirección a 0 (deshace un enclavamiento)'],
-  ['Temporizador TON', 'se activa cuando lleva el tiempo preajustado recibiendo corriente'],
-  ['Temporizador TOF', 'sigue activo un tiempo después de que deja de recibir corriente'],
-  ['Contador CTU', 'suma uno en cada flanco de subida de su entrada'],
-  ['Contador CTD', 'resta uno en cada flanco de subida de su entrada'],
+  ['Bobina inversa (/)', 'vale 0 mientras le llega corriente y 1 cuando no le llega'],
+  ['Transición positiva (↑)', 'pone su dirección a 1 durante un solo barrido, cuando la corriente llega'],
+  ['Transición negativa (↓)', 'pone su dirección a 1 durante un solo barrido, cuando la corriente se va'],
 ]
 
 const instruccion: Generador = (azar) => {
@@ -132,7 +131,7 @@ const direccion: Generador = (azar) => {
   const dir = `${letra}0.${bit}`
   const explicacion = `${dir}: la letra dice qué es (I entrada, Q salida, M marca), el 0 es el byte y el ${bit} el bit dentro de ese byte (de 0 a 7).`
   if (azar() < 0.5) {
-    const m = mezclar(que, TIPOS_DIRECCION.filter((t) => t[0] !== letra).map((t) => t[1]).concat('un temporizador'), azar)
+    const m = mezclar(que, TIPOS_DIRECCION.filter((t) => t[0] !== letra).map((t) => t[1]).concat('el número del escalón'), azar)
     return { tema: 'Direcciones', enunciado: `En el programa aparece ${dir}. ¿Qué es?`, ...m, explicacion }
   }
   const nombre = letra === 'I' ? 'la entrada' : letra === 'Q' ? 'la salida' : 'la marca'
