@@ -10,14 +10,14 @@ import { BotonNuevo, botonPrimario, estiloAviso, Menu, useEsEstrecha } from '../
 import BancoDividido, { TituloArea } from '../components/banco/BancoDividido'
 import { usePanelAcoplado, type PestanaPanel } from '../components/banco/PanelAcoplado'
 import PaginaEstudiar, { type SeccionEstudio } from '../components/banco/PaginaEstudiar'
-import SubnavUnidad, { useSeccionUnidad } from '../components/banco/SubnavUnidad'
+import SubnavUnidad, { seccionDeLaUrl, useSeccionUnidad, type SeccionUnidad } from '../components/banco/SubnavUnidad'
 import CajonEntregar from '../components/banco/CajonEntregar'
 import MisTrabajos from '../components/banco/MisTrabajos'
 import GuiaInicio, { GUIA_PLC, useGuia } from '../components/banco/GuiaInicio'
 import Autoevaluacion from '../components/Autoevaluacion'
 import FichaPLC from './FichaPLC'
 import { PREGUNTAS_PLC } from './preguntasPLC'
-import { copiarTabla, copiarTexto, descargarTexto, enlaceTrabajo, limpiarEnlace, trabajoDelEnlace } from '../entregar'
+import { copiarTabla, descargarTexto, limpiarEnlace, trabajoDelEnlace } from '../entregar'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { exportarPng, nombreSeguro } from '../exportar'
 import EditorLadder from './EditorLadder'
@@ -52,17 +52,49 @@ const Planta3D = lazy(() => import('./Planta3D'))
 const CLAVE = 'neumalab.plc.programa'
 const DT = 0.02
 
-function leerGuardado(): ProgramaPLC {
+/**
+ * La Tarea 2 se trabaja en su propia sección, con su planta (el silo) y su
+ * programa guardado aparte. El enunciado lo entrega el profesor: la app sólo
+ * pone la planta.
+ */
+const CLAVE_TAREA = 'neumalab.plc.tarea'
+const PLANTA_TAREA: IdPlanta = 'silo'
+const NOMBRE_TAREA = 'Tarea 2'
+
+function leerJson(clave: string): ProgramaPLC | null {
   try {
-    const crudo = localStorage.getItem(CLAVE)
+    const crudo = localStorage.getItem(clave)
     if (crudo) {
       const p = JSON.parse(crudo)
       if (esProgramaPLC(p)) return p
     }
   } catch {
-    /* sin almacenamiento o dato roto: se empieza por el ejercicio 1 */
+    /* sin almacenamiento o dato roto */
+  }
+  return null
+}
+
+function tareaVacia(): ProgramaPLC {
+  return { ...programaVacio(PLANTA_TAREA, PLANTAS[PLANTA_TAREA].cableado.map((s) => ({ ...s }))), nombre: NOMBRE_TAREA }
+}
+
+function leerGuardado(): ProgramaPLC {
+  const p = leerJson(CLAVE)
+  if (p && p.planta !== PLANTA_TAREA) return p
+  // Quien ya trabajaba el silo en el laboratorio lo encuentra ahora en la sección de la tarea.
+  if (p && !leerJson(CLAVE_TAREA)) {
+    try {
+      localStorage.setItem(CLAVE_TAREA, JSON.stringify(p))
+    } catch {
+      /* sin almacenamiento */
+    }
   }
   return clonarPrograma(EJEMPLOS_PLC[0].programa)
+}
+
+function leerTarea(): ProgramaPLC {
+  const p = leerJson(CLAVE_TAREA)
+  return p && p.planta === PLANTA_TAREA ? p : tareaVacia()
 }
 
 interface Evento {
@@ -72,7 +104,7 @@ interface Evento {
 }
 
 export default function UnidadPLC() {
-  const [programa, setProgramaCrudo] = useState<ProgramaPLC>(leerGuardado)
+  const [programa, setProgramaCrudo] = useState<ProgramaPLC>(() => (seccionDeLaUrl() === 'tarea' ? leerTarea() : leerGuardado()))
   // Deshacer / rehacer: cada cambio del programa pasa por aquí.
   const historialRef = useRef(new Historial<ProgramaPLC>())
   const [, setHayHistoria] = useState(0)
@@ -96,7 +128,8 @@ export default function UnidadPLC() {
   const [, setFotograma] = useState(0)
   const [aviso, setAviso] = useState<string | null>(null)
   const estrecha = useEsEstrecha()
-  const [seccion, setSeccion] = useSeccionUnidad(SECCIONES_PLC.map((x) => x.id))
+  const [seccion, setSeccionCruda] = useSeccionUnidad(SECCIONES_PLC.map((x) => x.id))
+  const enTarea = seccion === 'tarea'
   const panel = usePanelAcoplado<PestanaPLC>('neumalab.plc.panel', 'es', typeof window !== 'undefined' && window.innerHeight >= 860)
   // Quien tenía abierta una pestaña que ya no existe (la tabla de datos) vuelve a Entradas y salidas.
   useEffect(() => {
@@ -108,6 +141,16 @@ export default function UnidadPLC() {
   const [misTrabajos, setMisTrabajos] = useState(false)
   const [eligiendoPlanta, setEligiendoPlanta] = useState(false)
   const guia = useGuia('plc')
+  /** Entrar o salir de la tarea cambia de programa: cada uno se guarda por su lado. */
+  const setSeccion = (s: SeccionUnidad) => {
+    if ((s === 'tarea') !== enTarea) {
+      setCorriendo(false)
+      historialRef.current = new Historial<ProgramaPLC>()
+      setProgramaCrudo(s === 'tarea' ? leerTarea() : leerGuardado())
+      setEntregaAbierta(false)
+    }
+    setSeccionCruda(s)
+  }
   const [notacion, setNotacion] = useState<Notacion>(() => {
     try {
       // Clave nueva: quien había elegido LogixPro vuelve a partir con la notación del apunte.
@@ -154,11 +197,11 @@ export default function UnidadPLC() {
   // Guardado automático del programa.
   useEffect(() => {
     try {
-      localStorage.setItem(CLAVE, JSON.stringify(programa))
+      localStorage.setItem(enTarea ? CLAVE_TAREA : CLAVE, JSON.stringify(programa))
     } catch {
       /* sin almacenamiento */
     }
-  }, [programa])
+  }, [programa, enTarea])
 
   // Un enlace con un programa (#plc=…) lo abre, avisando si reemplaza el que había.
   useEffect(() => {
@@ -167,8 +210,7 @@ export default function UnidadPLC() {
       limpiarEnlace()
       if (!esProgramaPLC(dato)) return setAviso('El enlace no trae un programa de PLC válido.')
       if (!window.confirm('¿Abrir el programa que viene en el enlace? Reemplaza el programa que tienes en el editor.')) return
-      setCorriendo(false)
-      setPrograma(dato)
+      cargar(dato)
       setAviso(`Programa del enlace abierto${dato.nombre ? `: «${dato.nombre}»` : ''}.`)
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -326,9 +368,24 @@ export default function UnidadPLC() {
     setPrograma({ ...clonarPrograma(programa), planta: id, simbolos: [...cableado.map((s) => ({ ...s })), ...propios] })
   }
 
+  /** Abre un programa en la sección que le corresponde: los del silo van a la tarea. */
+  const cargar = (p: ProgramaPLC) => {
+    setCorriendo(false)
+    const deTarea = p.planta === PLANTA_TAREA
+    if (deTarea !== enTarea) {
+      historialRef.current = new Historial<ProgramaPLC>()
+      setEntregaAbierta(false)
+      setSeccionCruda(deTarea ? 'tarea' : 'laboratorio')
+      setProgramaCrudo(p)
+      return
+    }
+    setPrograma(p)
+  }
+
   const nuevo = () => {
     if (!confirmar('¿Empezar un programa nuevo?')) return
     setCorriendo(false)
+    if (enTarea) return setPrograma(tareaVacia())
     // En un ejercicio, «nuevo» vuelve a empezarlo (se conserva el enunciado).
     const ej = EJERCICIOS_PLC.find((e) => e.id === programa.ejercicio)
     setPrograma(ej ? programaDeEjercicio(ej) : programaVacio(programa.planta, PLANTAS[programa.planta].cableado.map((s) => ({ ...s }))))
@@ -349,9 +406,8 @@ export default function UnidadPLC() {
     try {
       const p = JSON.parse(await archivo.text())
       if (!esProgramaPLC(p)) throw new Error('Ese archivo no es un programa de PLC de NeumaLab.')
-      setCorriendo(false)
-      setPrograma(p)
-      setAviso(`Programa «${archivo.name}» abierto.`)
+      cargar(p)
+      setAviso(`Programa «${archivo.name}» abierto${p.planta === PLANTA_TAREA && !enTarea ? ` en ${NOMBRE_TAREA}` : ''}.`)
     } catch (e) {
       setAviso(e instanceof Error ? e.message : 'No se pudo leer el archivo.')
     }
@@ -400,7 +456,12 @@ export default function UnidadPLC() {
     />
   )
 
-  const botonPlanta = (
+  const botonPlanta = enTarea ? (
+    <span className="boton-planta" title="El enunciado de la tarea está en Aula" data-planta-tarea="si" style={{ width: estrecha ? '28vw' : 'auto', maxWidth: 360, cursor: 'default' }}>
+      {!estrecha && <span style={{ color: '#9a4a00', fontWeight: 700 }}>{NOMBRE_TAREA}:</span>}
+      <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis' }}>{descripcion.nombre.replace(` (${NOMBRE_TAREA})`, '')}</span>
+    </span>
+  ) : (
     <button onClick={() => setEligiendoPlanta(true)} className="boton-planta" title="Elegir la planta, o empezar un ejercicio o un ejemplo" aria-label={`Planta: ${descripcion.nombre}. Elegir planta, ejercicio o ejemplo`} data-boton-planta="si" style={{ width: estrecha ? '28vw' : 'auto', maxWidth: 360 }}>
       {!estrecha && <span style={{ color: '#51606f' }}>Planta:</span>}
       <span style={{ fontWeight: 600 }}>{descripcion.nombre}</span>
@@ -528,9 +589,11 @@ export default function UnidadPLC() {
     <>
       <TituloArea>
         Planta · {descripcion.nombre}
+        {!enTarea && (
         <button onClick={() => setEligiendoPlanta(true)} style={{ border: 'none', background: 'transparent', color: '#1668c7', fontWeight: 600, fontSize: '0.84rem', cursor: 'pointer', padding: '2px 4px' }} title={descripcion.resumen}>
           Cambiar
         </button>
+        )}
       </TituloArea>
       <div className="relleno">
         <Suspense fallback={<p style={{ padding: 20, color: '#51606f' }}>Montando la planta…</p>}>
@@ -623,9 +686,16 @@ export default function UnidadPLC() {
 
   return (
     <>
-      <SubnavUnidad nombre="PLC" seccion={seccion} onSeccion={setSeccion} entregar={{ abierto: entregaAbierta, onAlternar: () => setEntregaAbierta((a) => !a) }} />
-      {seccion === 'laboratorio' ? (
+      <SubnavUnidad
+        nombre="PLC"
+        seccion={seccion}
+        onSeccion={setSeccion}
+        tarea={NOMBRE_TAREA}
+        entregar={enTarea ? { abierto: entregaAbierta, onAlternar: () => setEntregaAbierta((a) => !a), etiqueta: 'Entregar Tarea PLC', etiquetaCorta: 'Entregar' } : undefined}
+      />
+      {seccion !== 'estudiar' ? (
         <BancoDividido<PestanaPLC>
+          key={seccion}
           clave="neumalab.plc.banco"
           barra={barra}
           izquierda={{ id: 'programa', titulo: 'Programa', contenido: areaPrograma }}
@@ -645,7 +715,7 @@ export default function UnidadPLC() {
           secciones={SECCIONES_PLC}
         />
       )}
-      {guia.visible && seccion === 'laboratorio' && <GuiaInicio unidad="PLC" pasos={GUIA_PLC} onCerrar={guia.cerrar} />}
+      {guia.visible && seccion !== 'estudiar' && <GuiaInicio unidad="PLC" pasos={GUIA_PLC} onCerrar={guia.cerrar} />}
       {eligiendoPlanta && (
         <SelectorPlanta
           actual={programa.planta}
@@ -683,13 +753,12 @@ export default function UnidadPLC() {
           actual={() => programa}
           abrir={(dato) => {
             if (!esProgramaPLC(dato)) return 'Ese trabajo no es un programa de PLC válido.'
-            setCorriendo(false)
-            setPrograma(dato)
+            cargar(dato)
           }}
           onCerrar={() => setMisTrabajos(false)}
         />
       )}
-      {entregaAbierta && (
+      {entregaAbierta && enTarea && (
         <CajonEntregar
           unidad="PLC"
           clave="neumalab.plc.entrega"
@@ -748,20 +817,10 @@ export default function UnidadPLC() {
           ]}
           archivos={[
             {
-              id: 'enlace',
-              tipo: 'enlace',
-              titulo: 'Enlace a tu programa',
-              detalle: 'Pégalo en tu PDF: quien lo abra ve tu programa en la app y lo puede correr.',
-              hacer: async () => {
-                const url = await enlaceTrabajo('plc', 'plc', programa)
-                return (await copiarTexto(url)) ? 'Enlace copiado: pégalo en tu presentación.' : `Copia este enlace: ${url}`
-              },
-            },
-            {
               id: 'programa',
               tipo: 'archivo',
-              titulo: 'Tu programa (NeumaLab)',
-              detalle: 'Se abre en la app con Archivo › Abrir.',
+              titulo: 'Tu programa (.json)',
+              detalle: 'Adjúntalo en Aula junto con tu PDF. Se abre en la app con Archivo › Abrir.',
               hacer: (base) => {
                 descargarTexto(JSON.stringify(programa, null, 2), `${base}.json`, 'application/json')
                 return `Descargado: ${base}.json`

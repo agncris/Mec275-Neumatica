@@ -101,7 +101,7 @@ export default function CajonEntregar({ unidad, clave, trabajoSugerido, onCerrar
       <div style={{ overflowY: 'auto', flex: 1, padding: '10px 14px 20px' }}>
         <p style={parrafo}>
           Respondes las preguntas en la <strong>plantilla que te entregó el profesor</strong> (PPT) y la guardas como PDF. Desde aquí sacas lo que pegas en ella y el
-          archivo de la app que subes junto con tu PDF: quien lo abra en NeumaLab ve tu trabajo y lo puede simular.
+          archivo de la app (.json) que subes a Aula junto con tu PDF.
         </p>
 
         <h3 style={titulo}>1 · Tus datos</h3>
@@ -159,7 +159,7 @@ export default function CajonEntregar({ unidad, clave, trabajoSugerido, onCerrar
 
         <h3 style={titulo}>{revisar ? '4' : '3'} · Archivos que subes junto con tu PDF</h3>
         <ul style={lista}>{archivos.map(fila)}</ul>
-        <p style={{ ...pie, marginTop: 10 }}>Envíalo todo como indique el enunciado (correo o página del ramo), con el asunto que pida.</p>
+        <p style={{ ...pie, marginTop: 10 }}>Sube tu PDF y estos archivos a la tarea en Aula.</p>
       </div>
     </aside>
   )

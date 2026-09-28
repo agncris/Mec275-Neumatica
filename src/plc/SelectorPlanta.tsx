@@ -17,6 +17,8 @@ import AnimacionPlanta from './AnimacionPlanta'
  * usa, igual aparece para no perderla.
  */
 const PLANTAS_FUERA_DEL_CURSO: IdPlanta[] = ['semaforo']
+/** La planta de la Tarea 2 tiene su propia sección («Tarea 2», junto a Laboratorio). */
+const PLANTA_DE_TAREA: IdPlanta = 'silo'
 
 interface Props {
   actual: IdPlanta
@@ -83,7 +85,7 @@ export default function SelectorPlanta({ actual, notacion, ejercicioActual, onUs
         <div className="selector-planta__cuerpo">
           <nav aria-label="Plantas" className="selector-planta__lista" role="listbox" aria-activedescendant={`planta-${vista}`}>
             {Object.values(PLANTAS)
-              .filter((p) => !PLANTAS_FUERA_DEL_CURSO.includes(p.id) || p.id === actual)
+              .filter((p) => p.id !== PLANTA_DE_TAREA && (!PLANTAS_FUERA_DEL_CURSO.includes(p.id) || p.id === actual))
               .map((p) => (
               <button
                 key={p.id}

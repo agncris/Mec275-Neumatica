@@ -573,6 +573,19 @@ body.arrastrando-borde * {
   color: #1c2733;
   border-bottom-color: #1c2733;
 }
+/* La tarea de la unidad: se distingue del resto de la navegación. */
+.subnav .subnav__tarea {
+  color: #9a4a00;
+}
+.subnav .subnav__tarea::before {
+  content: '★ ';
+  font-size: 0.8em;
+}
+.subnav .subnav__tarea[aria-current='page'] {
+  color: #7a3a00;
+  border-bottom-color: #c25e00;
+  background: #fff6ec;
+}
 .subnav .subnav__entrega {
   margin: 8px 0 8px 6px;
   min-height: 34px;

@@ -68,8 +68,10 @@ abierto.
 
 La aplicación no trae enunciados ni soluciones: el enunciado y la plantilla (PPT) los
 reparte el profesor. El alumno responde en la plantilla, la guarda como PDF y la sube
-junto con el archivo de su trabajo. Cada unidad tiene un botón **«Entregar»** (arriba a
-la derecha) que abre un cajón con cuatro pasos:
+en Aula junto con el archivo `.json` de su trabajo. En PLC, la Tarea 2 tiene su propia
+sección (**«★ Tarea 2»**, junto a Laboratorio) con la planta del silo; el botón
+**«Entregar Tarea PLC»** aparece sólo dentro de ella. El botón de entrega (arriba a la
+derecha) abre un cajón con cuatro pasos:
 
 1. **Tus datos**: nombre (y el de la pareja, si hay) y el trabajo. Todos los archivos
    salen con el nombre que piden los enunciados: `Nombre_Apellido_Tarea-2`.
@@ -79,13 +81,13 @@ la derecha) que abre un cajón con cuatro pasos:
 3. **Para pegar en tu presentación**: imágenes en PNG y tablas que se copian y se pegan
    en PowerPoint como tabla.
 4. **Archivos que subes junto con tu PDF**: el archivo de la app (que se vuelve a abrir
-   y a simular), el video de la simulación y, en PLC, CNC y Robótica, un enlace que
-   abre el trabajo en la app.
+   y a simular) y, en CNC y Robótica, el video de la simulación y un enlace que abre
+   el trabajo en la app.
 
 | Unidad | Para la presentación | Archivos |
 |---|---|---|
 | Neumática | Diagrama VDI 2860 (se arma en el mismo cajón), diagrama espacio-fase, elementos del circuito, imagen del circuito | Circuito `.json` |
-| PLC | Diagrama Ladder, tabla de entradas y salidas | Enlace al programa, programa `.json` |
+| PLC (Tarea 2) | Diagrama Ladder, tabla de entradas y salidas | Programa `.json` |
 | CNC | Trayectoria con los puntos, tabla de coordenadas, herramientas usadas, bruto | Programa `.cnc` (se abre también en CNC Simulator Pro), video, enlace |
 | Robótica | Croquis de la pieza, posicionamiento, definición de nodos, ficha técnica | Definición `.json`, programa KRL `.src`, video, enlace |
 
@@ -253,7 +255,8 @@ semáforo sigue en el código pero no se ofrece, porque necesita temporizadores:
 | Silo que llena cajas (Tarea 2) | START, STOP (NC), PROX, LEVEL | MOTOR de la cinta, SOLENOID, pilotos RUN / FILL / FULL |
 | Portón automático (como el *Door Simulator* de LogixPro) | ABRIR, CERRAR, PARO, finales de carrera arriba y abajo, fotocelda | SUBIR, BAJAR, pilotos abierto / cerrado / moviendo |
 
-El silo no trae programa: es la planta para que la programes tú. Las plantas avisan
+El silo no trae programa: es la planta para que la programes tú, en la sección
+«Tarea 2» (no aparece en el selector de plantas del Laboratorio). Las plantas avisan
 de los errores típicos: la caja que rebalsa o pasa sin llenar, el material que cae
 sobre la cinta, el motor del portón con las dos
 órdenes, forzando contra el tope o bajando sobre un obstáculo.
