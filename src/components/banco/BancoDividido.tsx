@@ -86,9 +86,9 @@ export default function BancoDividido<T extends string>({ clave, barra, izquierd
     const soltar = () => {
       window.removeEventListener('pointermove', mover)
       window.removeEventListener('pointerup', soltar)
-      document.body.style.cursor = ''
+      document.body.classList.remove('arrastrando-borde')
     }
-    document.body.style.cursor = 'col-resize'
+    document.body.classList.add('arrastrando-borde')
     window.addEventListener('pointermove', mover)
     window.addEventListener('pointerup', soltar)
   }

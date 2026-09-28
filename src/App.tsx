@@ -16,6 +16,7 @@ import Pizarra, { type ControlesPizarra, type Vista } from './components/Pizarra
 import Inspector, { type PestanaInspector } from './components/banco/Inspector'
 import PaginaEstudiar from './components/banco/PaginaEstudiar'
 import PanelInferior, { type PestanaInferior } from './components/banco/PanelInferior'
+import BordeAncho from './components/banco/BordeAncho'
 import AyudaAtajos from './components/banco/AyudaAtajos'
 
 // El banco 3D arrastra three.js: se carga sólo cuando alguien lo abre.
@@ -80,6 +81,8 @@ export default function App() {
   const [vista, setVista] = usePersistente<VistaApp>('neumalab.banco.vista', 'esquema')
   const [paletaPlegada, setPaletaPlegada] = usePersistente('neumalab.banco.paleta-plegada', false)
   const [inspectorAbierto, setInspectorAbierto] = usePersistente('neumalab.banco.inspector', true)
+  const [anchoPaleta, setAnchoPaleta] = usePersistente<number | null>('neumalab.banco.ancho-paleta', null)
+  const [anchoInspector, setAnchoInspector] = usePersistente<number | null>('neumalab.banco.ancho-inspector', null)
   const [pestanaInspector, setPestanaInspector] = useState<PestanaInspector>('propiedades')
   const [inferiorAbierto, setInferiorAbierto] = usePersistente('neumalab.banco.inferior', false)
   const [altoInferior, setAltoInferior] = usePersistente('neumalab.banco.alto-inferior', typeof window === 'undefined' ? 200 : Math.round(Math.min(200, Math.max(130, window.innerHeight * 0.2))))
@@ -650,15 +653,17 @@ export default function App() {
           </>
         ) : (
           <div className="banco__cuerpo">
-            <div className={`banco__paleta${paletaPlegada ? ' banco__paleta--plegada' : ''}`}>
+            <div className={`banco__paleta${paletaPlegada ? ' banco__paleta--plegada' : ''}`} style={!paletaPlegada && anchoPaleta ? { width: anchoPaleta } : undefined}>
               <Paleta plegada={paletaPlegada} onPlegar={setPaletaPlegada} deshabilitada={simulando} />
             </div>
+            {!paletaPlegada && <BordeAncho ancho={anchoPaleta} onAncho={setAnchoPaleta} min={180} max={420} lado={1} etiqueta="Cambiar el ancho de la paleta" />}
             <div className="banco__centro">
               {lienzo}
               {panelInferior}
             </div>
+            {!entregaAbierta && inspectorAbierto && <BordeAncho ancho={anchoInspector} onAncho={setAnchoInspector} min={240} max={560} lado={-1} etiqueta="Cambiar el ancho del inspector" />}
             {!entregaAbierta && (
-            <div className={`banco__inspector${inspectorAbierto ? '' : ' banco__inspector--plegado'}`}>
+            <div className={`banco__inspector${inspectorAbierto ? '' : ' banco__inspector--plegado'}`} style={inspectorAbierto && anchoInspector ? { width: anchoInspector } : undefined}>
               {inspectorAbierto ? (
                 inspector
               ) : (

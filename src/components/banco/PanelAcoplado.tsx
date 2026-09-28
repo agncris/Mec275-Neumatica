@@ -70,7 +70,9 @@ export default function PanelAcoplado<T extends string>({
     const soltar = () => {
       window.removeEventListener('pointermove', mover)
       window.removeEventListener('pointerup', soltar)
+      document.body.classList.remove('arrastrando-alto')
     }
+    document.body.classList.add('arrastrando-alto')
     window.addEventListener('pointermove', mover)
     window.addEventListener('pointerup', soltar)
   }

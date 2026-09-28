@@ -284,19 +284,93 @@ button:disabled:hover {
 .pestana-panel:disabled {
   color: #8b96a1;
 }
+/* Borde superior del panel de abajo: se agarra en una franja de 18 px (el hueco
+   entre zonas y un poco a cada lado), no sólo en la línea. */
 .tirador-panel {
   position: absolute;
   left: 0;
   right: 0;
-  top: 0;
-  height: 7px;
+  top: -13px;
+  height: 18px;
   cursor: ns-resize;
-  z-index: 2;
+  z-index: 5;
+  touch-action: none;
 }
-.tirador-panel:hover,
+.tirador-panel::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 7px;
+  width: 48px;
+  height: 4px;
+  margin-left: -24px;
+  border-radius: 2px;
+  background: #b4bec9;
+}
+.tirador-panel:hover::after,
+.tirador-panel:focus-visible::after {
+  left: 0;
+  width: 100%;
+  margin-left: 0;
+  background: #1668c7;
+}
 .tirador-panel:focus-visible {
-  background: linear-gradient(#1668c7 0, #1668c7 3px, transparent 3px);
   outline: none;
+}
+/* El tirador sobresale hacia el hueco de arriba: el panel no lo recorta
+   (sus pestañas y su contenido se desplazan solos). */
+.panel-acoplado {
+  overflow: visible;
+}
+body.arrastrando-alto,
+body.arrastrando-alto * {
+  cursor: ns-resize !important;
+  user-select: none;
+}
+/* Borde entre columnas de neumática (paleta | tablero | inspector). */
+.borde-ancho {
+  flex: none;
+  width: 0;
+  margin: 0 -3px;
+  position: relative;
+  cursor: col-resize;
+  touch-action: none;
+  z-index: 5;
+}
+.borde-ancho::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -9px;
+  width: 18px;
+}
+.borde-ancho::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: -2px;
+  width: 4px;
+  height: 44px;
+  margin-top: -22px;
+  border-radius: 2px;
+  background: #b4bec9;
+}
+.borde-ancho:hover::after,
+.borde-ancho:focus-visible::after {
+  top: 0;
+  height: 100%;
+  margin-top: 0;
+  background: #1668c7;
+}
+.borde-ancho:focus-visible {
+  outline: none;
+}
+/* Mientras se arrastra un borde, el cursor no cambia al pasar sobre otras cosas y no se selecciona texto. */
+body.arrastrando-borde,
+body.arrastrando-borde * {
+  cursor: col-resize !important;
+  user-select: none;
 }
 .segmentado {
   display: inline-flex;
@@ -587,6 +661,16 @@ button:disabled:hover {
   cursor: col-resize;
   position: relative;
   touch-action: none;
+  z-index: 5;
+}
+/* Zona de agarre de 24 px: la línea más 7 px hacia cada área. */
+.divisor-areas::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -7px;
+  right: -7px;
 }
 .divisor-areas::after {
   content: '';
@@ -594,10 +678,10 @@ button:disabled:hover {
   top: 50%;
   left: 3px;
   width: 4px;
-  height: 36px;
-  margin-top: -18px;
+  height: 44px;
+  margin-top: -22px;
   border-radius: 2px;
-  background: #c6ced6;
+  background: #b4bec9;
 }
 .divisor-areas:hover::after,
 .divisor-areas:focus-visible::after {
