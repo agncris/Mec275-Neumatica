@@ -4,7 +4,7 @@
  * de alcance, límites y singularidades, y exportar el código KRL. Funciona en
  * el navegador: no hace falta Windows ni licencias.
  */
-import { botonPrimario, botonSecundario, estiloAviso, Menu, useEsEstrecha } from '../components/ui'
+import { BotonNuevo, botonPrimario, botonSecundario, estiloAviso, Menu, useEsEstrecha } from '../components/ui'
 import BancoDividido, { TituloArea } from '../components/banco/BancoDividido'
 import { usePanelAcoplado, type PestanaPanel } from '../components/banco/PanelAcoplado'
 import PaginaEstudiar, { type SeccionEstudio } from '../components/banco/PaginaEstudiar'
@@ -530,6 +530,7 @@ export default function UnidadRobotica() {
       </span>
       {modo === 'visual' && (
         <>
+          {!estrecha && <BotonNuevo que="una definición" onClick={() => cargarEjemplo('vacio')} />}
           <span style={{ display: 'inline-flex', gap: 2 }}>
             <button onClick={deshacer} disabled={!historial.current.puedeDeshacer} aria-label="Deshacer" className="boton-icono" style={{ opacity: historial.current.puedeDeshacer ? 1 : 0.4 }} title="Deshacer (Ctrl+Z)">
               ↶

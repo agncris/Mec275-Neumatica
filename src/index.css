@@ -914,6 +914,31 @@ body.arrastrando-borde * {
     margin: 0 auto 8px;
   }
 }
+.boton-nuevo {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid #1668c7;
+  background: #fff;
+  color: #1668c7;
+  border-radius: 8px;
+  padding: 0 0.75rem;
+  min-height: 36px;
+  min-width: 36px;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  flex: none;
+}
+.boton-nuevo:hover:not(:disabled) {
+  background: #eef4fd;
+  filter: none;
+}
+.boton-nuevo:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
 .boton-planta {
   display: inline-flex;
   align-items: center;

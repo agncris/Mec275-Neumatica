@@ -90,6 +90,21 @@ export const estiloAviso: CSSProperties = {
   boxShadow: '0 6px 18px rgba(0,0,0,0.15)',
 }
 
+/**
+ * «＋ Nuevo» a la vista en la barra (no sólo en Archivo): empieza un diagrama o
+ * programa en blanco. En el celular queda sólo el «＋».
+ */
+export function BotonNuevo({ onClick, que, compacto = false, deshabilitado = false }: { onClick: () => void; que: string; compacto?: boolean; deshabilitado?: boolean }) {
+  return (
+    <button onClick={onClick} disabled={deshabilitado} className="boton-nuevo" style={compacto ? { padding: 0, width: 36 } : undefined} title={`Empezar ${que} en blanco`} aria-label={`Nuevo: empezar ${que} en blanco`} data-boton-nuevo="si">
+      <span aria-hidden style={{ fontSize: '1.05rem', lineHeight: 1 }}>
+        ＋
+      </span>
+      {!compacto && 'Nuevo'}
+    </button>
+  )
+}
+
 export function Etiquetado({ texto, children, titulo }: { texto: string; children: ReactNode; titulo?: string }) {
   return (
     <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.88rem', color: COLOR.texto2 }} title={titulo}>

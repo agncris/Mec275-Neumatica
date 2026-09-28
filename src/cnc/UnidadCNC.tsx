@@ -6,7 +6,7 @@
  * sus coordenadas, explicación de cada bloque y exportación del .cnc y del
  * video de la simulación.
  */
-import { acercar, botonPrimario, botonSecundario, estiloAviso, Menu, useEsEstrecha, useTactil } from '../components/ui'
+import { acercar, BotonNuevo, botonPrimario, botonSecundario, estiloAviso, Menu, useEsEstrecha, useTactil } from '../components/ui'
 import BancoDividido, { TituloArea } from '../components/banco/BancoDividido'
 import { usePanelAcoplado, type PestanaPanel } from '../components/banco/PanelAcoplado'
 import PaginaEstudiar, { type SeccionEstudio } from '../components/banco/PaginaEstudiar'
@@ -472,6 +472,7 @@ export default function UnidadCNC() {
       </span>
       {!estrecha && selectorVelocidad}
       {botonMaquina}
+      {!estrecha && <BotonNuevo que="un programa" deshabilitado={bloqueado} onClick={() => void nuevo()} />}
       <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
         {!estrecha && (
           <button onClick={guia.abrir} className="boton-icono" title="Guía de inicio" aria-label="Guía de inicio" data-abrir-guia="si">

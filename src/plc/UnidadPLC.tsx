@@ -6,7 +6,7 @@
  * ejecuta en ciclos de scan contra la planta, las salidas mueven la máquina
  * y los sensores de la máquina vuelven a las entradas.
  */
-import { botonPrimario, estiloAviso, Menu, useEsEstrecha } from '../components/ui'
+import { BotonNuevo, botonPrimario, estiloAviso, Menu, useEsEstrecha } from '../components/ui'
 import BancoDividido, { TituloArea } from '../components/banco/BancoDividido'
 import { usePanelAcoplado, type PestanaPanel } from '../components/banco/PanelAcoplado'
 import PaginaEstudiar, { type SeccionEstudio } from '../components/banco/PaginaEstudiar'
@@ -439,13 +439,16 @@ export default function UnidadPLC() {
           </button>
         </span>
       )}
+      <BotonNuevo que="un programa" compacto={estrecha} onClick={nuevo} />
       <span style={{ display: 'inline-flex', gap: 2 }}>
         <button onClick={deshacer} disabled={corriendo || !historialRef.current.puedeDeshacer} title="Deshacer (Ctrl+Z)" aria-label="Deshacer" className="boton-icono" style={{ opacity: corriendo || !historialRef.current.puedeDeshacer ? 0.4 : 1 }}>
           ↶
         </button>
-        <button onClick={rehacer} disabled={corriendo || !historialRef.current.puedeRehacer} title="Rehacer (Ctrl+Shift+Z)" aria-label="Rehacer" className="boton-icono" style={{ opacity: corriendo || !historialRef.current.puedeRehacer ? 0.4 : 1 }}>
-          ↷
-        </button>
+        {!estrecha && (
+          <button onClick={rehacer} disabled={corriendo || !historialRef.current.puedeRehacer} title="Rehacer (Ctrl+Shift+Z)" aria-label="Rehacer" className="boton-icono" style={{ opacity: corriendo || !historialRef.current.puedeRehacer ? 0.4 : 1 }}>
+            ↷
+          </button>
+        )}
       </span>
       {botonPlanta}
       <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -459,7 +462,8 @@ export default function UnidadPLC() {
             etiqueta="⋯"
             datos="mas"
             items={[
-              ...itemsArchivo,
+              { texto: 'Rehacer', onClick: rehacer, deshabilitado: corriendo || !historialRef.current.puedeRehacer, porque: corriendo ? 'Pasa el PLC a STOP para editar' : 'No hay nada que rehacer' },
+              ...itemsArchivo.map((it, i) => ({ ...it, separar: i === 0 })),
               { ...itemExportar, texto: 'Exportar Ladder (PNG)', separar: true },
               { ...itemNotacion, separar: true },
               { texto: 'Guía de inicio', ayuda: 'Los cuatro pasos para partir', onClick: guia.abrir },

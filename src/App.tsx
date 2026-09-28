@@ -6,7 +6,7 @@
  *  - Simular: el motor corre a 30 Hz; se accionan las válvulas y se ve el aire
  *    circular, las correderas conmutar y los vástagos moverse.
  */
-import { botonPrimario, estiloAviso, Menu, useEsEstrecha, usePersistente, useTactil } from './components/ui'
+import { BotonNuevo, botonPrimario, estiloAviso, Menu, useEsEstrecha, usePersistente, useTactil } from './components/ui'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import DiagramaEspacioFase, { hayDiagramaFase, registrarFase } from './components/DiagramaEspacioFase'
@@ -430,7 +430,7 @@ export default function App() {
         if (confirmarDescarte(`¿Cargar el ejemplo «${etiqueta}»?`)) cargarEjemplo(n)
         e.target.value = circuito ? 'actual' : ''
       }}
-      style={{ padding: '0.3rem 0.4rem', width: estrecha ? '34vw' : 172, minHeight: 34, fontSize: '0.86rem' }}
+      style={{ padding: '0.3rem 0.4rem', width: estrecha ? '27vw' : 172, minHeight: 34, fontSize: '0.86rem' }}
     >
       <option value="">— Ejemplos —</option>
       {circuito && (
@@ -591,6 +591,7 @@ export default function App() {
         <h1 className="solo-lector">Unidad 1 · Neumática — laboratorio</h1>
         <div className="banco__barra" role="toolbar" aria-label="Herramientas del banco">
           {botonSimular}
+          <BotonNuevo que="un diagrama" compacto={estrecha} deshabilitado={simulando} onClick={() => confirmarDescarte('¿Empezar un diagrama nuevo?') && limpiarPizarra()} />
           {deshacerRehacer}
           {selectorEjemplos}
           {!estrecha && (
