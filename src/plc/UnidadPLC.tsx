@@ -448,13 +448,22 @@ export default function UnidadPLC() {
         pulsar(dir, tipo === 'NC')
       }}
       editable={!corriendo}
-      soloCableadas={enTarea}
       onSimbolo={(dir, campo, valor) => {
         const p = clonarPrograma(programa)
         let s = p.simbolos.find((x) => x.dir === dir)
         if (!s) p.simbolos.push((s = { dir, nombre: '', descripcion: '' }))
         s[campo] = valor
-        if (!s.nombre && !s.descripcion) p.simbolos = p.simbolos.filter((x) => x !== s)
+        setPrograma(p)
+      }}
+      onAgregar={(dir) => {
+        if (programa.simbolos.some((x) => x.dir === dir)) return
+        const p = clonarPrograma(programa)
+        p.simbolos.push({ dir, nombre: '', descripcion: '' })
+        setPrograma(p)
+      }}
+      onQuitar={(dir) => {
+        const p = clonarPrograma(programa)
+        p.simbolos = p.simbolos.filter((x) => x.dir !== dir)
         setPrograma(p)
       }}
       forzados={forzados}
@@ -902,7 +911,8 @@ function PanelES({
   parte,
   editable,
   onSimbolo,
-  soloCableadas,
+  onAgregar,
+  onQuitar,
 }: {
   /** Sólo los mandos de la planta (bajo la vista 3D) o sólo la tabla de E/S. */
   parte: 'mandos' | 'tabla'
@@ -922,8 +932,9 @@ function PanelES({
   /** Se pueden editar el símbolo y la descripción (en STOP). */
   editable: boolean
   onSimbolo: (dir: string, campo: 'nombre' | 'descripcion', valor: string) => void
-  /** Sólo las entradas y salidas conectadas a la planta (en la tarea, para no distraer). */
-  soloCableadas?: boolean
+  /** Agrega una fila a la tabla de E/S (el alumno puso ahí un elemento de la máquina). */
+  onAgregar: (dir: string) => void
+  onQuitar: (dir: string) => void
 }) {
   /** Botón de forzado: sin forzar → forzar 1 → forzar 0 → sin forzar. */
   const forzar = (d: string) => {
@@ -1013,13 +1024,12 @@ function PanelES({
       />
     )
   }
-  const deMandos = new Set(mandos.map((m) => m.dir))
   /** Símbolo y descripción de la dirección, escritos ahí mismo, y debajo qué hay conectado en la planta. */
   const nombrar = (d: string, origen: React.ReactNode) => {
     const s = simbolos.find((x) => x.dir === d)
     return (
       <div style={{ flex: 1, minWidth: 0, display: 'grid', gap: 2 }}>
-        <div style={{ display: 'flex', gap: 4 }}>
+        <div className="campos-es">
           <input
             value={s?.nombre ?? ''}
             disabled={!editable}
@@ -1027,7 +1037,8 @@ function PanelES({
             aria-label={`Símbolo de ${fmt(d)}`}
             data-simbolo={d}
             onChange={(e) => onSimbolo(d, 'nombre', e.target.value)}
-            style={{ ...campoES, width: '36%', fontWeight: 700 }}
+            className="campos-es__simbolo"
+            style={{ ...campoES, fontWeight: 700 }}
           />
           <input
             value={s?.descripcion ?? ''}
@@ -1035,12 +1046,35 @@ function PanelES({
             placeholder="Descripción"
             aria-label={`Descripción de ${fmt(d)}`}
             onChange={(e) => onSimbolo(d, 'descripcion', e.target.value)}
-            style={{ ...campoES, flex: 1, minWidth: 0 }}
+            style={{ ...campoES, flex: 1, minWidth: 0, width: '100%', boxSizing: 'border-box' }}
           />
         </div>
         <span style={{ color: '#5f6b78', fontSize: '0.74rem', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>{origen}</span>
       </div>
     )
+  }
+  // Tabla de E/S que arma el alumno: arrastra (o toca) los elementos de la máquina a Entradas o Salidas.
+  const [arrastre, setArrastre] = useState<{ dir: string; x: number; y: number; zona: 'I' | 'Q' | null } | null>(null)
+  const [elegido, setElegido] = useState<string | null>(null)
+  const [avisoES, setAvisoES] = useState<string | null>(null)
+  const inicio = useRef<{ dir: string; x: number; y: number; movido: boolean } | null>(null)
+  const orden = (d: string) => DIRECCIONES.indexOf(d)
+  const enTabla = simbolos
+    .map((x) => x.dir)
+    .filter((d) => ['I', 'Q'].includes(areaDe(d) ?? ''))
+    .sort((a, b) => orden(a) - orden(b))
+  const pendientes = cableado.filter((d) => !enTabla.includes(d))
+  const zonaEn = (x: number, y: number) => ((document.elementFromPoint(x, y)?.closest('[data-zona-es]') as HTMLElement | null)?.dataset.zonaEs as 'I' | 'Q' | undefined) ?? null
+  const soltar = (dir: string, zona: 'I' | 'Q') => {
+    setElegido(null)
+    if (areaDe(dir) !== zona) {
+      setAvisoES(
+        `${rotulos[dir]} no va en ${zona === 'I' ? 'Entradas' : 'Salidas'}: piensa si el PLC lo lee (una señal que llega, como un pulsador o un sensor) o si lo acciona (un motor, una válvula, un piloto).`,
+      )
+      return
+    }
+    setAvisoES(null)
+    onAgregar(dir)
   }
   if (parte === 'mandos')
     return mandos.length > 0 ? (
@@ -1060,68 +1094,155 @@ function PanelES({
         </p>
       )}
       <p style={{ margin: '0 0 8px', fontSize: '0.8rem', color: '#51606f' }}>
-        Identifica qué hay conectado en cada entrada y salida (debajo de cada una ves su rótulo en la máquina) y ponle un símbolo y una descripción. Esos
-        nombres son los que aparecen en tu diagrama Ladder.
+        Arrastra cada elemento de la máquina a <strong>Entradas</strong> (lo que el PLC lee) o a <strong>Salidas</strong> (lo que el PLC acciona), o tócalo y
+        luego toca la sección. Después ponle un símbolo y una descripción: esos nombres aparecen en tu diagrama Ladder.
       </p>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 12 }}>
-        <div>
-          <p style={subRotulo}>Entradas</p>
-          {ENTRADAS.filter((d) => !soloCableadas || cableado.includes(d)).map((d) => {
-            const libre = !cableado.includes(d)
-            const tipo = tiposLibres[d] ?? 'interruptor'
-            return (
-              <div key={d} style={filaES} data-es={d} data-valor={estado.bits[d] ? 1 : 0}>
-                {led(d)}
-                <code style={{ minWidth: 48 }}>{fmt(d)}</code>
-                {nombrar(
-                  d,
-                  libre ? (
-                    <>
-                      libre, para probar:
-                      {botonMando(d, nombre(d) || 'libre', tipo === 'interruptor' ? 'interruptor' : tipo === 'NC' ? 'NC' : 'pulsador', '#1d5ea8')}
-                      <select
-                        value={tipo}
-                        title="Qué elemento hay en esta entrada libre"
-                        onChange={(e) => onTipoLibre(d, e.target.value as TipoLibre)}
-                        style={{ fontSize: '0.76rem', padding: '0.1rem' }}
-                      >
-                        <option value="interruptor">interruptor</option>
-                        <option value="NA">pulsador NA</option>
-                        <option value="NC">pulsador NC</option>
-                      </select>
-                    </>
-                  ) : (
-                    <span>
-                      En la máquina: <strong>{rotulos[d]}</strong> {deMandos.has(d) ? '· pulsador' : '· sensor'}
-                    </span>
-                  ),
-                )}
-                {forzar(d)}
-              </div>
-            )
-          })}
-        </div>
-        <div>
-          <p style={subRotulo}>Salidas</p>
-          {SALIDAS.filter((d) => !soloCableadas || cableado.includes(d)).map((d) => (
-            <div key={d} style={filaES} data-es={d} data-valor={estado.bits[d] ? 1 : 0}>
-              {led(d)}
-              <code style={{ minWidth: 48 }}>{fmt(d)}</code>
-              {nombrar(
-                d,
-                cableado.includes(d) ? (
-                  <span>
-                    En la máquina: <strong>{rotulos[d]}</strong>
-                  </span>
-                ) : (
-                  'libre (sin nada conectado)'
-                ),
-              )}
-              {forzar(d)}
-            </div>
-          ))}
-        </div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 10 }} data-fichas-es="si">
+        <span style={{ fontSize: '0.8rem', color: '#5a6b7d', fontWeight: 700 }}>Elementos de la máquina:</span>
+        {pendientes.length === 0 ? (
+          <span style={{ fontSize: '0.8rem', color: '#0a6b3c' }}>✓ Ya están todos en la tabla.</span>
+        ) : (
+          pendientes.map((d) => (
+            <button
+              key={d}
+              data-ficha-es={d}
+              aria-pressed={elegido === d}
+              disabled={!editable}
+              title="Arrástralo a Entradas o a Salidas (o tócalo y luego toca la sección)"
+              onPointerDown={(e) => {
+                if (!editable) return
+                try {
+                  e.currentTarget.setPointerCapture(e.pointerId)
+                } catch {
+                  /* puntero sintético */
+                }
+                inicio.current = { dir: d, x: e.clientX, y: e.clientY, movido: false }
+              }}
+              onPointerMove={(e) => {
+                const a = inicio.current
+                if (!a) return
+                if (!a.movido && Math.hypot(e.clientX - a.x, e.clientY - a.y) < 6) return
+                a.movido = true
+                setArrastre({ dir: a.dir, x: e.clientX, y: e.clientY, zona: zonaEn(e.clientX, e.clientY) })
+              }}
+              onPointerUp={(e) => {
+                const a = inicio.current
+                inicio.current = null
+                setArrastre(null)
+                if (!a) return
+                if (!a.movido) return setElegido((x) => (x === a.dir ? null : a.dir))
+                const z = zonaEn(e.clientX, e.clientY)
+                if (z) soltar(a.dir, z)
+              }}
+              onPointerCancel={() => {
+                inicio.current = null
+                setArrastre(null)
+              }}
+              style={{
+                border: `2px solid ${elegido === d ? '#1668c7' : '#8a96a3'}`,
+                background: elegido === d ? '#e8f1fc' : '#fff',
+                color: '#1c2733',
+                borderRadius: 8,
+                padding: '0.3rem 0.7rem',
+                fontWeight: 700,
+                fontSize: '0.84rem',
+                cursor: 'grab',
+                touchAction: 'none',
+                userSelect: 'none',
+                opacity: arrastre?.dir === d ? 0.4 : 1,
+              }}
+            >
+              ⠿ {rotulos[d]}
+            </button>
+          ))
+        )}
       </div>
+      {avisoES && (
+        <p role="status" style={{ margin: '0 0 8px', padding: '4px 8px', background: '#fdf6e3', border: '1px solid #f0c36d', borderRadius: 6, color: '#7a4f00', fontSize: '0.8rem' }} data-aviso-es="si">
+          {avisoES}
+        </p>
+      )}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 12 }}>
+        {(['I', 'Q'] as const).map((zona) => {
+          const filas = enTabla.filter((d) => areaDe(d) === zona)
+          const encima = arrastre?.zona === zona
+          return (
+            <div
+              key={zona}
+              data-zona-es={zona}
+              onClick={() => elegido && soltar(elegido, zona)}
+              style={{
+                border: `2px dashed ${encima || elegido ? '#1668c7' : 'transparent'}`,
+                background: encima ? '#e8f1fc' : 'transparent',
+                borderRadius: 8,
+                padding: 4,
+                cursor: elegido ? 'copy' : 'default',
+              }}
+            >
+              <p style={subRotulo}>{zona === 'I' ? 'Entradas' : 'Salidas'}</p>
+              {filas.map((d) => {
+                const libre = !cableado.includes(d)
+                const tipo = tiposLibres[d] ?? 'interruptor'
+                return (
+                  <div key={d} style={filaES} data-es={d} data-valor={estado.bits[d] ? 1 : 0}>
+                    {led(d)}
+                    <code style={{ minWidth: 48 }}>{fmt(d)}</code>
+                    {nombrar(
+                      d,
+                      libre ? (
+                        zona === 'I' ? (
+                          <>
+                            libre, para probar:
+                            {botonMando(d, nombre(d) || 'libre', tipo === 'interruptor' ? 'interruptor' : tipo === 'NC' ? 'NC' : 'pulsador', '#1d5ea8')}
+                            <select
+                              value={tipo}
+                              title="Qué elemento hay en esta entrada libre"
+                              onChange={(e) => onTipoLibre(d, e.target.value as TipoLibre)}
+                              style={{ fontSize: '0.76rem', padding: '0.1rem' }}
+                            >
+                              <option value="interruptor">interruptor</option>
+                              <option value="NA">pulsador NA</option>
+                              <option value="NC">pulsador NC</option>
+                            </select>
+                          </>
+                        ) : (
+                          'libre (sin nada conectado)'
+                        )
+                      ) : (
+                        <span>
+                          En la máquina: <strong>{rotulos[d]}</strong>
+                        </span>
+                      ),
+                    )}
+                    {forzar(d)}
+                    {editable && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onQuitar(d)
+                        }}
+                        title="Quitar esta fila (el elemento vuelve arriba)"
+                        aria-label={`Quitar ${fmt(d)} de la tabla`}
+                        style={{ border: 'none', background: 'transparent', color: '#8a4a45', cursor: 'pointer', padding: '0 4px' }}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+              <div style={{ border: '1px dashed #c6ced6', borderRadius: 6, padding: '8px', fontSize: '0.78rem', color: '#5f6b78', textAlign: 'center', marginTop: 4 }}>
+                {elegido ? `Toca aquí para agregar ${rotulos[elegido]} a ${zona === 'I' ? 'Entradas' : 'Salidas'}` : `Arrastra aquí ${zona === 'I' ? 'una entrada' : 'una salida'}`}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      {arrastre && (
+        <div style={{ position: 'fixed', left: arrastre.x + 8, top: arrastre.y + 8, zIndex: 50, pointerEvents: 'none', border: '2px solid #1668c7', background: '#fff', borderRadius: 8, padding: '0.3rem 0.7rem', fontWeight: 700, fontSize: '0.84rem', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
+          {rotulos[arrastre.dir]}
+        </div>
+      )}
     </div>
   )
 }

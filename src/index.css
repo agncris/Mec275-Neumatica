@@ -1375,3 +1375,23 @@ body:has(.banco:not(.banco--apilado):not(.banco--neumatica-apilado)) {
   padding-left: max(10px, env(safe-area-inset-left));
   padding-right: max(10px, env(safe-area-inset-right));
 }
+
+/* Tabla de E/S del PLC: símbolo y descripción lado a lado; en el celular, uno bajo el otro. */
+.campos-es {
+  display: flex;
+  gap: 4px;
+  min-width: 0;
+}
+.campos-es__simbolo {
+  width: 36%;
+  box-sizing: border-box;
+  min-width: 0;
+}
+@media (max-width: 600px) {
+  .campos-es {
+    flex-direction: column;
+  }
+  .campos-es__simbolo {
+    width: 100%;
+  }
+}

@@ -219,8 +219,12 @@ que se ve en el curso (clases, tareas y controles): contactos y bobinas. El simu
 todavía entiende otras instrucciones (temporizadores, contadores, ONS, comparaciones,
 MOV y operaciones) para abrir programas que ya las tengan, pero no se ofrecen.
 Cada elemento lleva su dirección (`I0.0…I0.7`, `Q0.0…Q0.7`, marcas `M0.0…M1.7`) y se
-muestra con el nombre de la **tabla de símbolos** (simbología · asignación ·
-descripción). Con el PLC en RUN se ve la corriente: tramos con tensión en verde,
+muestra con su símbolo. Los símbolos se escriben en la pestaña **Entradas y salidas**:
+el alumno arrastra cada elemento de la máquina (START, PROX, MOTOR…) a Entradas o a
+Salidas (o lo toca y toca la sección), y en esa fila escribe su símbolo y su descripción;
+si lo pone en la sección equivocada, la app le pide pensar si el PLC lo lee o lo acciona.
+Ahí mismo se ve el estado en vivo de cada punto y se puede forzar. Las marcas se agregan
+debajo. Con el PLC en RUN se ve la corriente: tramos con tensión en verde,
 contactos cerrados rellenos y bobinas activas encendidas. La aplicación avisa de los errores típicos: un contacto
 sin dirección, una bobina sobre una entrada, la misma salida con bobina en dos
 escalones (manda la última).
@@ -229,7 +233,7 @@ escalones (manda la última).
 `M0.1`); la autoevaluación y la ficha de repaso usan sólo esa. Quien use el
 simulador LogixPro puede cambiarla en **Archivo** a la de **LogixPro / RSLogix** (`I:1/03`, `O:2/01`, `B3:0/1`,
 `T4:0/DN`, `C5:0.ACC`); en esa notación las bobinas se rotulan L / U y RES. Cambia
-todo a la vez: el diagrama, la tabla de símbolos, el simulador de E/S y los rótulos
+todo a la vez: el diagrama, la tabla de entradas y salidas y los rótulos
 de la planta 3D.
 
 **Simulador de E/S.** Siempre están las 8
