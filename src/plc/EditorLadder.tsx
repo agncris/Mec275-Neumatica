@@ -137,6 +137,8 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
   const celular = useCelular()
   const [sel, setSel] = useState<Seleccion | null>(null)
   const [escalonSel, setEscalonSel] = useState<number | null>(null)
+  /** Escalón cuya descripción se está escribiendo, directamente sobre el diagrama. */
+  const [editandoComentario, setEditandoComentario] = useState<number | null>(null)
   /** Aviso breve cuando se usa una herramienta en la columna que no le toca. */
   const [pista, setPista] = useState<string | null>(null)
   useEffect(() => {
@@ -301,11 +303,68 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
         <text x={12} y={top + 19} fontSize={12} fontWeight={700} fill={TINTA}>
           {String(i).padStart(3, '0')}
         </text>
-        <text x={X0 + 8} y={top + 19} fontSize={11.5} fill="#5a6b7d" fontStyle="italic">
-          {recortar(e.comentario ?? '', 92)}
-        </text>
+        {editable && editandoComentario === i ? null : (
+          <text x={X0 + (editable ? (celular ? 42 : 32) : 8)} y={top + 19} fontSize={11.5} fill="#5a6b7d" fontStyle="italic">
+            {recortar(e.comentario ?? '', celular ? 70 : 80)}
+          </text>
+        )}
       </g>,
     )
+    // Descripción del escalón: un lápiz (o «Agregar descripción») que abre un cuadro de texto ahí mismo.
+    if (editable) {
+      const anchoTexto = ANCHO - X0 - (celular ? 24 : 230)
+      if (editandoComentario === i) {
+        elementos.push(
+          <foreignObject key={`com-${i}`} x={X0 + 2} y={top + 3} width={anchoTexto} height={24} data-no-exportar>
+            <input
+              autoFocus
+              data-comentario-escalon={i}
+              aria-label={`Descripción del escalón ${String(i).padStart(3, '0')}`}
+              value={e.comentario ?? ''}
+              placeholder="Qué hace este escalón, en tus palabras"
+              onChange={(ev) => cambiar((p) => (p.escalones[i].comentario = ev.target.value))}
+              onBlur={() => setEditandoComentario(null)}
+              onKeyDown={(ev) => {
+                ev.stopPropagation()
+                if (ev.key === 'Enter' || ev.key === 'Escape') setEditandoComentario(null)
+              }}
+              style={{ width: '100%', height: 22, boxSizing: 'border-box', font: 'italic 11.5px system-ui, sans-serif', color: '#33475c', border: '1px solid #1668c7', borderRadius: 4, padding: '0 6px', background: '#fff', minHeight: 0 }}
+            />
+          </foreignObject>,
+        )
+      } else {
+        const vacio = !e.comentario?.trim()
+        const xl = X0 + 8
+        elementos.push(
+          <g
+            key={`lapiz-${i}`}
+            data-no-exportar
+            data-editar-comentario={i}
+            onClick={(ev) => {
+              ev.stopPropagation()
+              setEscalonSel(i)
+              setEditandoComentario(i)
+            }}
+            style={{ cursor: 'pointer' }}
+          >
+            <title>{vacio ? 'Agregar una descripción a este escalón' : 'Editar la descripción del escalón'}</title>
+            {vacio && <rect x={xl - 4} y={top + 2} width={210} height={26} fill="transparent" />}
+            {vacio ? (
+              <text x={xl} y={top + 19} fontSize={11.5} fill={AZUL} fontStyle="italic">
+                ✎ Agregar descripción del escalón
+              </text>
+            ) : (
+              <>
+                <rect x={xl - 4} y={top + 4} width={celular ? 30 : 20} height={celular ? 26 : 20} rx={4} fill="#fff" stroke="#c6ced6" />
+                <text x={xl - 4 + (celular ? 15 : 10)} y={top + 18.5} fontSize={12} textAnchor="middle" fill={AZUL}>
+                  ✎
+                </text>
+              </>
+            )}
+          </g>,
+        )
+      }
+    }
     // En el celular estos botones van en una barra aparte, del tamaño de un dedo.
     if (editable && !celular) {
       const botones: Array<[string, string, () => void]> = [

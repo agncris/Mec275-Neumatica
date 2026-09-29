@@ -22,6 +22,8 @@ function prepararCopia(svg: SVGSVGElement, escala: number): { texto: string; anc
   // Las animaciones de flujo se quedan congeladas en la lámina; el trazo
   // discontinuo sobraría, así que lo quitamos.
   copia.querySelectorAll('.manguera-flujo').forEach((n) => n.classList.remove('manguera-flujo'))
+  // Ayudas de edición (lápiz, «agregar descripción»…) que no van en la imagen.
+  copia.querySelectorAll('[data-no-exportar]').forEach((n) => n.remove())
 
   // Fondo blanco y tipografía embebida: el PNG debe verse igual fuera del navegador.
   const estilo = document.createElementNS('http://www.w3.org/2000/svg', 'style')
