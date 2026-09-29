@@ -252,7 +252,7 @@ semáforo sigue en el código pero no se ofrece, porque necesita temporizadores:
 | Tablero de pruebas | 4 pulsadores y 4 selectores (`I0.0…I0.7`) | 6 pilotos, zumbador y ventilador (`Q0.0…Q0.7`) |
 | Estanque con dos electroválvulas | START, STOP y los flotadores S1 (abajo) y S2 (arriba) | V1 llenado, V2 vaciado |
 | Elevador de piezas | S0 (pieza en la plataforma) y los finales de carrera S1…S4 de Z1 y Z2 | Y1 y Y2 (electroválvulas de Z1 y Z2) |
-| Silo que llena cajas (Tarea 2) | START, STOP (NC), PROX, LEVEL | MOTOR de la cinta, SOLENOID, pilotos RUN / FILL / FULL |
+| Silo que llena cajas (Tarea 2) | START, STOP, PROX, LEVEL | MOTOR de la cinta, SOLENOID, pilotos RUN / FILL / FULL |
 | Portón automático (como el *Door Simulator* de LogixPro) | ABRIR, CERRAR, PARO, finales de carrera arriba y abajo, fotocelda | SUBIR, BAJAR, pilotos abierto / cerrado / moviendo |
 
 El silo no trae programa: es la planta para que la programes tú, en la sección

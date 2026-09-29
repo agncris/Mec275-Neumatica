@@ -135,7 +135,7 @@ export default function UnidadPLC() {
   const panel = usePanelAcoplado<PestanaPLC>('neumalab.plc.panel', 'es', typeof window !== 'undefined' && window.innerHeight >= 860)
   // Quien tenía abierta una pestaña que ya no existe (la tabla de datos) vuelve a Entradas y salidas.
   useEffect(() => {
-    if (!['es', 'simbolos', 'registro'].includes(panel.pestana)) panel.onPestana('es')
+    if (!['es', 'registro'].includes(panel.pestana)) panel.onPestana('es')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   const [movil, setMovil] = useState('programa')
@@ -447,6 +447,16 @@ export default function UnidadPLC() {
         // Un pulsador NC da 1 en reposo.
         pulsar(dir, tipo === 'NC')
       }}
+      editable={!corriendo}
+      soloCableadas={enTarea}
+      onSimbolo={(dir, campo, valor) => {
+        const p = clonarPrograma(programa)
+        let s = p.simbolos.find((x) => x.dir === dir)
+        if (!s) p.simbolos.push((s = { dir, nombre: '', descripcion: '' }))
+        s[campo] = valor
+        if (!s.nombre && !s.descripcion) p.simbolos = p.simbolos.filter((x) => x !== s)
+        setPrograma(p)
+      }}
       forzados={forzados}
       onForzar={(dir, v) =>
         setForzados((f) => {
@@ -661,8 +671,18 @@ export default function UnidadPLC() {
     )
 
   const pestanas: Array<PestanaPanel<PestanaPLC>> = [
-    { id: 'es', titulo: 'Entradas y salidas', tituloCorto: 'E/S', contenido: panelES('tabla') },
-    { id: 'simbolos', titulo: 'Tabla de símbolos', tituloCorto: 'Símbolos', contenido: <TablaSimbolos programa={programa} onCambiar={setPrograma} editable={!corriendo} notacion={notacion} /> },
+    {
+      id: 'es',
+      titulo: 'Entradas y salidas',
+      tituloCorto: 'E/S',
+      contenido: (
+        <>
+          {panelES('tabla')}
+          <p style={{ margin: '14px 0 4px', fontSize: '0.8rem', color: '#5a6b7d', fontWeight: 700 }}>Marcas (memorias internas)</p>
+          <TablaSimbolos programa={programa} onCambiar={setPrograma} editable={!corriendo} notacion={notacion} />
+        </>
+      ),
+    },
     { id: 'registro', titulo: '¿Qué está pasando?', tituloCorto: 'Registro', contador: eventos.length, contenido: registro, seguirFinal: true },
   ]
 
@@ -782,7 +802,7 @@ export default function UnidadPLC() {
               { ok: avisos.length === 0, texto: avisos.length === 0 ? 'El editor no encuentra problemas en el programa.' : `Hay ${avisos.length} aviso(s). El primero: ${avisos[0]}` },
               {
                 ok: sinNombre.length === 0,
-                texto: sinNombre.length === 0 ? 'Todas las entradas y salidas que usas tienen nombre en la tabla de símbolos.' : `Ponle nombre en la tabla de símbolos a: ${sinNombre.map((d) => formatear(d, notacion)).join(', ')}.`,
+                texto: sinNombre.length === 0 ? 'Todas las entradas y salidas que usas tienen símbolo.' : `Ponle símbolo en la pestaña «Entradas y salidas» a: ${sinNombre.map((d) => formatear(d, notacion)).join(', ')}.`,
               },
               { ok: Object.keys(forzados).length === 0, texto: Object.keys(forzados).length === 0 ? 'No quedan entradas ni salidas forzadas.' : 'Quedan E/S forzadas: quítalas antes de probar y entregar.' },
               {
@@ -808,7 +828,7 @@ export default function UnidadPLC() {
               id: 'es',
               tipo: 'tabla',
               titulo: 'Tabla de entradas y salidas',
-              detalle: 'Símbolo, dirección, tipo y descripción, desde tu tabla de símbolos.',
+              detalle: 'Símbolo, dirección, tipo y descripción, desde la pestaña «Entradas y salidas».',
               hacer: async () => {
                 const tipo: Record<string, string> = { I: 'Entrada (INPUT)', Q: 'Salida (OUTPUT)', M: 'Marca', T: 'Temporizador', C: 'Contador' }
                 const orden = 'IQMTC'
@@ -816,7 +836,7 @@ export default function UnidadPLC() {
                   .filter((x) => x.nombre.trim())
                   .sort((a, b) => orden.indexOf(areaDe(a.dir) ?? 'Z') - orden.indexOf(areaDe(b.dir) ?? 'Z') || a.dir.localeCompare(b.dir))
                   .map((x) => [x.nombre, formatear(x.dir, notacion), tipo[areaDe(x.dir) ?? ''] ?? '', x.descripcion])
-                if (!filas.length) throw new Error('Tu tabla de símbolos no tiene nombres todavía.')
+                if (!filas.length) throw new Error('Todavía no le pones símbolo a ninguna entrada o salida.')
                 return (await copiarTabla([['Símbolo', 'Dirección', 'Tipo', 'Descripción'], ...filas])) ? 'Tabla copiada: pégala en tu presentación (Ctrl+V).' : 'Tu navegador no dejó copiar.'
               },
             },
@@ -844,7 +864,7 @@ export default function UnidadPLC() {
   )
 }
 
-type PestanaPLC = 'es' | 'simbolos' | 'registro'
+type PestanaPLC = 'es' | 'registro'
 
 const SECCIONES_PLC: SeccionEstudio[] = [
   { id: 'practica', indice: 'Autoevaluación', titulo: 'Autoevaluación · practica con preguntas al azar', contenido: <Autoevaluacion generadores={PREGUNTAS_PLC} /> },
@@ -880,6 +900,9 @@ function PanelES({
   forzados,
   onForzar,
   parte,
+  editable,
+  onSimbolo,
+  soloCableadas,
 }: {
   /** Sólo los mandos de la planta (bajo la vista 3D) o sólo la tabla de E/S. */
   parte: 'mandos' | 'tabla'
@@ -896,6 +919,11 @@ function PanelES({
   onTipoLibre: (dir: string, tipo: TipoLibre) => void
   forzados: Record<string, boolean>
   onForzar: (dir: string, v: boolean | null) => void
+  /** Se pueden editar el símbolo y la descripción (en STOP). */
+  editable: boolean
+  onSimbolo: (dir: string, campo: 'nombre' | 'descripcion', valor: string) => void
+  /** Sólo las entradas y salidas conectadas a la planta (en la tarea, para no distraer). */
+  soloCableadas?: boolean
 }) {
   /** Botón de forzado: sin forzar → forzar 1 → forzar 0 → sin forzar. */
   const forzar = (d: string) => {
@@ -986,6 +1014,34 @@ function PanelES({
     )
   }
   const deMandos = new Set(mandos.map((m) => m.dir))
+  /** Símbolo y descripción de la dirección, escritos ahí mismo, y debajo qué hay conectado en la planta. */
+  const nombrar = (d: string, origen: React.ReactNode) => {
+    const s = simbolos.find((x) => x.dir === d)
+    return (
+      <div style={{ flex: 1, minWidth: 0, display: 'grid', gap: 2 }}>
+        <div style={{ display: 'flex', gap: 4 }}>
+          <input
+            value={s?.nombre ?? ''}
+            disabled={!editable}
+            placeholder="Símbolo"
+            aria-label={`Símbolo de ${fmt(d)}`}
+            data-simbolo={d}
+            onChange={(e) => onSimbolo(d, 'nombre', e.target.value)}
+            style={{ ...campoES, width: '36%', fontWeight: 700 }}
+          />
+          <input
+            value={s?.descripcion ?? ''}
+            disabled={!editable}
+            placeholder="Descripción"
+            aria-label={`Descripción de ${fmt(d)}`}
+            onChange={(e) => onSimbolo(d, 'descripcion', e.target.value)}
+            style={{ ...campoES, flex: 1, minWidth: 0 }}
+          />
+        </div>
+        <span style={{ color: '#5f6b78', fontSize: '0.74rem', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>{origen}</span>
+      </div>
+    )
+  }
   if (parte === 'mandos')
     return mandos.length > 0 ? (
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -1003,35 +1059,42 @@ function PanelES({
           </button>
         </p>
       )}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10 }}>
+      <p style={{ margin: '0 0 8px', fontSize: '0.8rem', color: '#51606f' }}>
+        Identifica qué hay conectado en cada entrada y salida (debajo de cada una ves su rótulo en la máquina) y ponle un símbolo y una descripción. Esos
+        nombres son los que aparecen en tu diagrama Ladder.
+      </p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 12 }}>
         <div>
           <p style={subRotulo}>Entradas</p>
-          {ENTRADAS.map((d) => {
+          {ENTRADAS.filter((d) => !soloCableadas || cableado.includes(d)).map((d) => {
             const libre = !cableado.includes(d)
             const tipo = tiposLibres[d] ?? 'interruptor'
             return (
               <div key={d} style={filaES} data-es={d} data-valor={estado.bits[d] ? 1 : 0}>
                 {led(d)}
                 <code style={{ minWidth: 48 }}>{fmt(d)}</code>
-                {libre ? (
-                  <>
-                    {botonMando(d, nombre(d) || 'libre', tipo === 'interruptor' ? 'interruptor' : tipo === 'NC' ? 'NC' : 'pulsador', '#1d5ea8')}
-                    <select
-                      value={tipo}
-                      title="Qué elemento hay en esta entrada libre"
-                      onChange={(e) => onTipoLibre(d, e.target.value as TipoLibre)}
-                      style={{ fontSize: '0.76rem', padding: '0.1rem' }}
-                    >
-                      <option value="interruptor">interruptor</option>
-                      <option value="NA">pulsador NA</option>
-                      <option value="NC">pulsador NC</option>
-                    </select>
-                  </>
-                ) : (
-                  <span>
-                    <strong>{nombre(d)}</strong>
-                    <span style={{ color: '#5f6b78', fontSize: '0.76rem' }}>{deMandos.has(d) ? ' · mando' : ' · sensor de la planta'}</span>
-                  </span>
+                {nombrar(
+                  d,
+                  libre ? (
+                    <>
+                      libre, para probar:
+                      {botonMando(d, nombre(d) || 'libre', tipo === 'interruptor' ? 'interruptor' : tipo === 'NC' ? 'NC' : 'pulsador', '#1d5ea8')}
+                      <select
+                        value={tipo}
+                        title="Qué elemento hay en esta entrada libre"
+                        onChange={(e) => onTipoLibre(d, e.target.value as TipoLibre)}
+                        style={{ fontSize: '0.76rem', padding: '0.1rem' }}
+                      >
+                        <option value="interruptor">interruptor</option>
+                        <option value="NA">pulsador NA</option>
+                        <option value="NC">pulsador NC</option>
+                      </select>
+                    </>
+                  ) : (
+                    <span>
+                      En la máquina: <strong>{rotulos[d]}</strong> {deMandos.has(d) ? '· pulsador' : '· sensor'}
+                    </span>
+                  ),
                 )}
                 {forzar(d)}
               </div>
@@ -1040,12 +1103,20 @@ function PanelES({
         </div>
         <div>
           <p style={subRotulo}>Salidas</p>
-          {SALIDAS.map((d) => (
+          {SALIDAS.filter((d) => !soloCableadas || cableado.includes(d)).map((d) => (
             <div key={d} style={filaES} data-es={d} data-valor={estado.bits[d] ? 1 : 0}>
               {led(d)}
               <code style={{ minWidth: 48 }}>{fmt(d)}</code>
-              <strong>{nombre(d)}</strong>
-              {!cableado.includes(d) && <span style={{ color: '#5f6b78', fontSize: '0.76rem' }}>· piloto libre</span>}
+              {nombrar(
+                d,
+                cableado.includes(d) ? (
+                  <span>
+                    En la máquina: <strong>{rotulos[d]}</strong>
+                  </span>
+                ) : (
+                  'libre (sin nada conectado)'
+                ),
+              )}
               {forzar(d)}
             </div>
           ))}
@@ -1056,7 +1127,8 @@ function PanelES({
 }
 
 const subRotulo: React.CSSProperties = { margin: '0 0 4px', fontSize: '0.8rem', color: '#5a6b7d', fontWeight: 700 }
-const filaES: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.82rem', color: '#33475c', minHeight: 28 }
+const filaES: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.82rem', color: '#33475c', minHeight: 28, padding: '3px 0', borderBottom: '1px solid #eef1f4' }
+const campoES: React.CSSProperties = { padding: '0.2rem 0.35rem', border: '1px solid #d7dde3', borderRadius: 4, fontSize: '0.84rem', fontFamily: 'inherit' }
 
 function TablaSimbolos({
   programa,
@@ -1075,7 +1147,11 @@ function TablaSimbolos({
     onCambiar(p)
   }
   const orden = (d: string) => DIRECCIONES.indexOf(d)
-  const filas = programa.simbolos.map((s, i) => ({ s, i })).sort((a, b) => orden(a.s.dir) - orden(b.s.dir))
+  // Las entradas y salidas se nombran en su propia fila, arriba: aquí van las marcas y demás.
+  const filas = programa.simbolos
+    .map((s, i) => ({ s, i }))
+    .filter(({ s }) => !['I', 'Q'].includes(areaDe(s.dir) ?? ''))
+    .sort((a, b) => orden(a.s.dir) - orden(b.s.dir))
   const celda: React.CSSProperties = { borderBottom: '1px solid #e0e5eb', padding: '3px 6px' }
   const campo: React.CSSProperties = { width: '100%', padding: '0.2rem 0.3rem', border: '1px solid #d7dde3', borderRadius: 4, fontSize: '0.86rem' }
   return (
@@ -1107,7 +1183,7 @@ function TablaSimbolos({
                   value={s.dir}
                   onChange={(e) => cambiar((p) => (p.simbolos[i].dir = e.target.value))}
                 >
-                  {DIRECCIONES.map((d) => (
+                  {DIRECCIONES.filter((d) => !['I', 'Q'].includes(areaDe(d) ?? '')).map((d) => (
                     <option key={d} value={d}>
                       {formatear(d, notacion)}
                     </option>
@@ -1151,8 +1227,7 @@ function TablaSimbolos({
         </button>
       )}
       <p style={{ margin: '6px 0 0', fontSize: '0.8rem', color: '#5a6b7d' }}>
-        Las direcciones de las entradas y salidas vienen cableadas por la planta (con su rótulo en la pestaña «Entradas y salidas»).
-        Con «＋ Añadir símbolo» ponle nombre y descripción a cada una que uses, y a tus marcas.
+        Si usas marcas (por ejemplo una memoria de marcha), añádelas aquí con su símbolo y descripción.
       </p>
     </div>
   )

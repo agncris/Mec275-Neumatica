@@ -373,10 +373,10 @@ export const SILO: DescripcionPlanta = {
   id: 'silo',
   nombre: 'Silo que llena cajas (Tarea 2)',
   resumen:
-    'La cinta trae cajas vacías bajo el silo. El sensor de proximidad detecta la caja en posición; la electroválvula deja caer el material y el sensor de nivel avisa cuando la caja está llena. Pilotos RUN, FILL y FULL. Ojo: STOP es un pulsador normalmente cerrado (vale 1 en reposo).',
+    'La cinta trae cajas vacías bajo el silo. El sensor de proximidad detecta la caja en posición; la electroválvula deja caer el material y el sensor de nivel avisa cuando la caja está llena. Pilotos RUN, FILL y FULL.',
   cableado: [
     { dir: 'I0.0', nombre: 'START', descripcion: 'Pulsador de marcha (NA)' },
-    { dir: 'I0.1', nombre: 'STOP', descripcion: 'Pulsador de paro (NC: vale 1 en reposo, 0 al pulsarlo)' },
+    { dir: 'I0.1', nombre: 'STOP', descripcion: 'Pulsador de paro (NA)' },
     { dir: 'I0.3', nombre: 'PROX', descripcion: 'Sensor de proximidad: hay una caja bajo el silo' },
     { dir: 'I0.4', nombre: 'LEVEL', descripcion: 'Sensor de nivel: la caja bajo el silo está llena' },
     { dir: 'Q0.0', nombre: 'MOTOR', descripcion: 'Motor de la cinta transportadora' },
@@ -387,7 +387,7 @@ export const SILO: DescripcionPlanta = {
   ],
   mandos: [
     { dir: 'I0.0', nombre: 'START', tipo: 'pulsador', color: 'verde' },
-    { dir: 'I0.1', nombre: 'STOP', tipo: 'pulsador', color: 'rojo', nc: true },
+    { dir: 'I0.1', nombre: 'STOP', tipo: 'pulsador', color: 'rojo' },
   ],
 }
 
