@@ -461,6 +461,13 @@ export default function UnidadPLC() {
         p.simbolos.push({ dir, nombre: '', descripcion: '' })
         setPrograma(p)
       }}
+      ocultarPlanta={enTarea}
+      onCambiarDir={(antes, despues) => {
+        const p = clonarPrograma(programa)
+        const s = p.simbolos.find((x) => x.dir === antes)
+        if (s && !p.simbolos.some((x) => x.dir === despues)) s.dir = despues
+        setPrograma(p)
+      }}
       onQuitar={(dir) => {
         const p = clonarPrograma(programa)
         p.simbolos = p.simbolos.filter((x) => x.dir !== dir)
@@ -913,6 +920,8 @@ function PanelES({
   onSimbolo,
   onAgregar,
   onQuitar,
+  onCambiarDir,
+  ocultarPlanta,
 }: {
   /** Sólo los mandos de la planta (bajo la vista 3D) o sólo la tabla de E/S. */
   parte: 'mandos' | 'tabla'
@@ -935,6 +944,9 @@ function PanelES({
   /** Agrega una fila a la tabla de E/S (el alumno puso ahí un elemento de la máquina). */
   onAgregar: (dir: string) => void
   onQuitar: (dir: string) => void
+  onCambiarDir: (antes: string, despues: string) => void
+  /** En la tarea no se dice qué hay en cada dirección: el alumno lo identifica. */
+  ocultarPlanta?: boolean
 }) {
   /** Botón de forzado: sin forzar → forzar 1 → forzar 0 → sin forzar. */
   const forzar = (d: string) => {
@@ -1049,33 +1061,16 @@ function PanelES({
             style={{ ...campoES, flex: 1, minWidth: 0, width: '100%', boxSizing: 'border-box' }}
           />
         </div>
-        <span style={{ color: '#5f6b78', fontSize: '0.74rem', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>{origen}</span>
+        {origen && <span style={{ color: '#5f6b78', fontSize: '0.74rem', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>{origen}</span>}
       </div>
     )
   }
-  // Tabla de E/S que arma el alumno: arrastra (o toca) los elementos de la máquina a Entradas o Salidas.
-  const [arrastre, setArrastre] = useState<{ dir: string; x: number; y: number; zona: 'I' | 'Q' | null } | null>(null)
-  const [elegido, setElegido] = useState<string | null>(null)
-  const [avisoES, setAvisoES] = useState<string | null>(null)
-  const inicio = useRef<{ dir: string; x: number; y: number; movido: boolean } | null>(null)
+  // Tabla de E/S que arma el alumno: agrega filas y elige la dirección de cada una.
   const orden = (d: string) => DIRECCIONES.indexOf(d)
   const enTabla = simbolos
     .map((x) => x.dir)
     .filter((d) => ['I', 'Q'].includes(areaDe(d) ?? ''))
     .sort((a, b) => orden(a) - orden(b))
-  const pendientes = cableado.filter((d) => !enTabla.includes(d))
-  const zonaEn = (x: number, y: number) => ((document.elementFromPoint(x, y)?.closest('[data-zona-es]') as HTMLElement | null)?.dataset.zonaEs as 'I' | 'Q' | undefined) ?? null
-  const soltar = (dir: string, zona: 'I' | 'Q') => {
-    setElegido(null)
-    if (areaDe(dir) !== zona) {
-      setAvisoES(
-        `${rotulos[dir]} no va en ${zona === 'I' ? 'Entradas' : 'Salidas'}: piensa si el PLC lo lee (una señal que llega, como un pulsador o un sensor) o si lo acciona (un motor, una válvula, un piloto).`,
-      )
-      return
-    }
-    setAvisoES(null)
-    onAgregar(dir)
-  }
   if (parte === 'mandos')
     return mandos.length > 0 ? (
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -1094,102 +1089,41 @@ function PanelES({
         </p>
       )}
       <p style={{ margin: '0 0 8px', fontSize: '0.8rem', color: '#51606f' }}>
-        Arrastra cada elemento de la máquina a <strong>Entradas</strong> (lo que el PLC lee) o a <strong>Salidas</strong> (lo que el PLC acciona), o tócalo y
-        luego toca la sección. Después ponle un símbolo y una descripción: esos nombres aparecen en tu diagrama Ladder.
+        Identifica los elementos de la máquina: los que el PLC lee van en <strong>Entradas</strong> y los que acciona, en <strong>Salidas</strong>. Agrega una
+        fila por elemento, elige su dirección y escribe su símbolo y su descripción: esos nombres aparecen en tu diagrama Ladder.
       </p>
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 10 }} data-fichas-es="si">
-        <span style={{ fontSize: '0.8rem', color: '#5a6b7d', fontWeight: 700 }}>Elementos de la máquina:</span>
-        {pendientes.length === 0 ? (
-          <span style={{ fontSize: '0.8rem', color: '#0a6b3c' }}>✓ Ya están todos en la tabla.</span>
-        ) : (
-          pendientes.map((d) => (
-            <button
-              key={d}
-              data-ficha-es={d}
-              aria-pressed={elegido === d}
-              disabled={!editable}
-              title="Arrástralo a Entradas o a Salidas (o tócalo y luego toca la sección)"
-              onPointerDown={(e) => {
-                if (!editable) return
-                try {
-                  e.currentTarget.setPointerCapture(e.pointerId)
-                } catch {
-                  /* puntero sintético */
-                }
-                inicio.current = { dir: d, x: e.clientX, y: e.clientY, movido: false }
-              }}
-              onPointerMove={(e) => {
-                const a = inicio.current
-                if (!a) return
-                if (!a.movido && Math.hypot(e.clientX - a.x, e.clientY - a.y) < 6) return
-                a.movido = true
-                setArrastre({ dir: a.dir, x: e.clientX, y: e.clientY, zona: zonaEn(e.clientX, e.clientY) })
-              }}
-              onPointerUp={(e) => {
-                const a = inicio.current
-                inicio.current = null
-                setArrastre(null)
-                if (!a) return
-                if (!a.movido) return setElegido((x) => (x === a.dir ? null : a.dir))
-                const z = zonaEn(e.clientX, e.clientY)
-                if (z) soltar(a.dir, z)
-              }}
-              onPointerCancel={() => {
-                inicio.current = null
-                setArrastre(null)
-              }}
-              style={{
-                border: `2px solid ${elegido === d ? '#1668c7' : '#8a96a3'}`,
-                background: elegido === d ? '#e8f1fc' : '#fff',
-                color: '#1c2733',
-                borderRadius: 8,
-                padding: '0.3rem 0.7rem',
-                fontWeight: 700,
-                fontSize: '0.84rem',
-                cursor: 'grab',
-                touchAction: 'none',
-                userSelect: 'none',
-                opacity: arrastre?.dir === d ? 0.4 : 1,
-              }}
-            >
-              ⠿ {rotulos[d]}
-            </button>
-          ))
-        )}
-      </div>
-      {avisoES && (
-        <p role="status" style={{ margin: '0 0 8px', padding: '4px 8px', background: '#fdf6e3', border: '1px solid #f0c36d', borderRadius: 6, color: '#7a4f00', fontSize: '0.8rem' }} data-aviso-es="si">
-          {avisoES}
-        </p>
-      )}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 12 }}>
         {(['I', 'Q'] as const).map((zona) => {
+          const todas = zona === 'I' ? ENTRADAS : SALIDAS
           const filas = enTabla.filter((d) => areaDe(d) === zona)
-          const encima = arrastre?.zona === zona
+          const libres = todas.filter((d) => !enTabla.includes(d))
           return (
-            <div
-              key={zona}
-              data-zona-es={zona}
-              onClick={() => elegido && soltar(elegido, zona)}
-              style={{
-                border: `2px dashed ${encima || elegido ? '#1668c7' : 'transparent'}`,
-                background: encima ? '#e8f1fc' : 'transparent',
-                borderRadius: 8,
-                padding: 4,
-                cursor: elegido ? 'copy' : 'default',
-              }}
-            >
+            <div key={zona} data-zona-es={zona}>
               <p style={subRotulo}>{zona === 'I' ? 'Entradas' : 'Salidas'}</p>
+              {filas.length === 0 && <p style={{ margin: '2px 0 6px', fontSize: '0.78rem', color: '#5f6b78' }}>Todavía no agregas {zona === 'I' ? 'entradas' : 'salidas'}.</p>}
               {filas.map((d) => {
                 const libre = !cableado.includes(d)
                 const tipo = tiposLibres[d] ?? 'interruptor'
                 return (
                   <div key={d} style={filaES} data-es={d} data-valor={estado.bits[d] ? 1 : 0}>
                     {led(d)}
-                    <code style={{ minWidth: 48 }}>{fmt(d)}</code>
+                    <select
+                      value={d}
+                      disabled={!editable}
+                      aria-label={`Dirección de la fila ${fmt(d)}`}
+                      data-direccion-es={d}
+                      onChange={(e) => onCambiarDir(d, e.target.value)}
+                      style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: '0.82rem', padding: '0.1rem', minWidth: 64 }}
+                    >
+                      {[d, ...libres].sort((a, b) => orden(a) - orden(b)).map((x) => (
+                        <option key={x} value={x}>
+                          {fmt(x)}
+                        </option>
+                      ))}
+                    </select>
                     {nombrar(
                       d,
-                      libre ? (
+                      ocultarPlanta ? null : libre ? (
                         zona === 'I' ? (
                           <>
                             libre, para probar:
@@ -1217,11 +1151,8 @@ function PanelES({
                     {forzar(d)}
                     {editable && (
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          onQuitar(d)
-                        }}
-                        title="Quitar esta fila (el elemento vuelve arriba)"
+                        onClick={() => onQuitar(d)}
+                        title="Quitar esta fila"
                         aria-label={`Quitar ${fmt(d)} de la tabla`}
                         style={{ border: 'none', background: 'transparent', color: '#8a4a45', cursor: 'pointer', padding: '0 4px' }}
                       >
@@ -1231,24 +1162,22 @@ function PanelES({
                   </div>
                 )
               })}
-              <div style={{ border: '1px dashed #c6ced6', borderRadius: 6, padding: '8px', fontSize: '0.78rem', color: '#5f6b78', textAlign: 'center', marginTop: 4 }}>
-                {elegido ? `Toca aquí para agregar ${rotulos[elegido]} a ${zona === 'I' ? 'Entradas' : 'Salidas'}` : `Arrastra aquí ${zona === 'I' ? 'una entrada' : 'una salida'}`}
-              </div>
+              {editable && libres.length > 0 && (
+                <button onClick={() => onAgregar(libres[0])} data-agregar-es={zona} style={{ ...botonAgregarES, marginTop: 6 }}>
+                  ＋ Agregar {zona === 'I' ? 'entrada' : 'salida'}
+                </button>
+              )}
             </div>
           )
         })}
       </div>
-      {arrastre && (
-        <div style={{ position: 'fixed', left: arrastre.x + 8, top: arrastre.y + 8, zIndex: 50, pointerEvents: 'none', border: '2px solid #1668c7', background: '#fff', borderRadius: 8, padding: '0.3rem 0.7rem', fontWeight: 700, fontSize: '0.84rem', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
-          {rotulos[arrastre.dir]}
-        </div>
-      )}
     </div>
   )
 }
 
 const subRotulo: React.CSSProperties = { margin: '0 0 4px', fontSize: '0.8rem', color: '#5a6b7d', fontWeight: 700 }
 const filaES: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.82rem', color: '#33475c', minHeight: 28, padding: '3px 0', borderBottom: '1px solid #eef1f4' }
+const botonAgregarES: React.CSSProperties = { border: '1px dashed #1668c7', background: '#fff', color: '#1668c7', borderRadius: 6, padding: '0.3rem 0.7rem', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer' }
 const campoES: React.CSSProperties = { padding: '0.2rem 0.35rem', border: '1px solid #d7dde3', borderRadius: 4, fontSize: '0.84rem', fontFamily: 'inherit' }
 
 function TablaSimbolos({

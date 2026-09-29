@@ -220,9 +220,9 @@ todavía entiende otras instrucciones (temporizadores, contadores, ONS, comparac
 MOV y operaciones) para abrir programas que ya las tengan, pero no se ofrecen.
 Cada elemento lleva su dirección (`I0.0…I0.7`, `Q0.0…Q0.7`, marcas `M0.0…M1.7`) y se
 muestra con su símbolo. Los símbolos se escriben en la pestaña **Entradas y salidas**:
-el alumno arrastra cada elemento de la máquina (START, PROX, MOTOR…) a Entradas o a
-Salidas (o lo toca y toca la sección), y en esa fila escribe su símbolo y su descripción;
-si lo pone en la sección equivocada, la app le pide pensar si el PLC lo lee o lo acciona.
+con «＋ Agregar entrada» / «＋ Agregar salida» el alumno suma una fila, elige su dirección y
+escribe su símbolo y su descripción. En la Tarea 2 la tabla parte vacía y la app no dice qué
+hay en cada dirección: el alumno lo identifica en la máquina.
 Ahí mismo se ve el estado en vivo de cada punto y se puede forzar. Las marcas se agregan
 debajo. Con el PLC en RUN se ve la corriente: tramos con tensión en verde,
 contactos cerrados rellenos y bobinas activas encendidas. La aplicación avisa de los errores típicos: un contacto
