@@ -1351,3 +1351,27 @@ body:has(.banco:not(.banco--apilado):not(.banco--neumatica-apilado)) {
     font-size: 0.72rem;
   }
 }
+
+/* Celular: el área blanca va de borde a borde, así el dedo desplaza el
+   contenido deslizando en cualquier parte de la pantalla (no hay un margen gris
+   que no se mueve). Los márgenes laterales quedan dentro del área. */
+.banco.banco--movil {
+  padding-left: 0;
+  padding-right: 0;
+}
+.banco--movil > .banco__barra,
+.banco--movil > .pestanas-movil,
+.banco--movil > .banco__estado {
+  padding-left: max(10px, env(safe-area-inset-left));
+  padding-right: max(10px, env(safe-area-inset-right));
+}
+.banco--movil > .banco__cuerpo > .banco-panel {
+  border-radius: 0;
+  border-left: none;
+  border-right: none;
+  border-bottom: none;
+}
+.banco--movil > .banco__cuerpo > .banco__area:not(.banco__area--sin-relleno) {
+  padding-left: max(10px, env(safe-area-inset-left));
+  padding-right: max(10px, env(safe-area-inset-right));
+}

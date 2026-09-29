@@ -119,7 +119,7 @@ export default function BancoDividido<T extends string>({ clave, barra, izquierd
     )
     // Acostado, las pestañas van en la misma fila que las herramientas: el alto es lo que falta.
     return (
-      <main className="banco banco--dividido">
+      <main className="banco banco--dividido banco--movil">
         <div className="banco__barra" role="toolbar" aria-label="Herramientas">
           {barra}
           {apaisado && listaPestanas}
