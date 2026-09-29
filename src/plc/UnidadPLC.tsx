@@ -75,7 +75,8 @@ function leerJson(clave: string): ProgramaPLC | null {
 }
 
 function tareaVacia(): ProgramaPLC {
-  return { ...programaVacio(PLANTA_TAREA, PLANTAS[PLANTA_TAREA].cableado.map((s) => ({ ...s }))), nombre: NOMBRE_TAREA }
+  // La tabla de entradas y salidas la completa el alumno: parte vacía (las direcciones están rotuladas en la planta).
+  return { ...programaVacio(PLANTA_TAREA, []), nombre: NOMBRE_TAREA }
 }
 
 function leerGuardado(): ProgramaPLC {
@@ -434,6 +435,7 @@ export default function UnidadPLC() {
       mandos={descripcion.mandos}
       simbolos={programa.simbolos}
       cableado={descripcion.cableado.map((c) => c.dir)}
+      rotulos={Object.fromEntries(descripcion.cableado.map((c) => [c.dir, c.nombre]))}
       estado={estado}
       mandosActivos={sim.mandos}
       pulsar={pulsar}
@@ -864,6 +866,7 @@ function PanelES({
   mandos,
   simbolos,
   cableado,
+  rotulos,
   estado,
   mandosActivos,
   pulsar,
@@ -879,6 +882,8 @@ function PanelES({
   mandos: Mando[]
   simbolos: ProgramaPLC['simbolos']
   cableado: string[]
+  /** El rótulo de cada entrada y salida en la máquina (START, PROX, RUN…), si el alumno aún no le puso nombre. */
+  rotulos: Record<string, string>
   estado: EstadoPLC
   mandosActivos: Record<string, boolean>
   pulsar: (dir: string, v: boolean) => void
@@ -916,7 +921,7 @@ function PanelES({
     )
   }
   const colores: Record<string, string> = { verde: '#0e7a43', rojo: '#c62828', negro: '#2b3036', amarillo: '#8a6500' }
-  const nombre = (d: string) => simbolos.find((s) => s.dir === d)?.nombre ?? ''
+  const nombre = (d: string) => simbolos.find((s) => s.dir === d)?.nombre || rotulos[d] || ''
   const fmt = (d: string) => formatear(d, notacion)
   const botonMando = (dir: string, texto: string, tipo: 'pulsador' | 'interruptor' | 'NC', color: string) => {
     const on = !!mandosActivos[dir]
@@ -1142,8 +1147,8 @@ function TablaSimbolos({
         </button>
       )}
       <p style={{ margin: '6px 0 0', fontSize: '0.8rem', color: '#5a6b7d' }}>
-        Las entradas y salidas vienen cableadas por la planta; ponles el nombre que quieras. Para marcas, temporizadores
-        y contadores añade tus propios símbolos.
+        Las direcciones de las entradas y salidas vienen cableadas por la planta (con su rótulo en la pestaña «Entradas y salidas»).
+        Con «＋ Añadir símbolo» ponle nombre y descripción a cada una que uses, y a tus marcas.
       </p>
     </div>
   )
