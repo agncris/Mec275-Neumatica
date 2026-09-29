@@ -438,6 +438,9 @@ export default function TiposRobot() {
     const cam = new THREE.PerspectiveCamera(38, cont.clientWidth / cont.clientHeight, 10, 10000)
     cam.position.set(1100, 900, 1300)
     const ctrl = new OrbitControls(cam, renderer.domElement)
+    // El botón del medio (la rueda apretada) también gira la cámara, sin el autodesplazamiento del navegador.
+    ctrl.mouseButtons.MIDDLE = THREE.MOUSE.ROTATE
+    renderer.domElement.addEventListener('mousedown', (e) => e.button === 1 && e.preventDefault())
     ctrl.target.set(0, 280, 0)
     ctrl.enableDamping = true
     ctrl.update()

@@ -1534,6 +1534,9 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
     }
     renderer.domElement.addEventListener('wheel', alGirarRueda)
     const controles = new OrbitControls(camara, renderer.domElement)
+    // El botón del medio (la rueda apretada) también gira la cámara, sin el autodesplazamiento del navegador.
+    controles.mouseButtons.MIDDLE = THREE.MOUSE.ROTATE
+    renderer.domElement.addEventListener('mousedown', (e) => e.button === 1 && e.preventDefault())
     controles.enableDamping = true
     controles.dampingFactor = 0.08
     controles.minDistance = 0.12

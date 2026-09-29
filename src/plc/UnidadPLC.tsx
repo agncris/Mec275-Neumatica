@@ -6,7 +6,7 @@
  * ejecuta en ciclos de scan contra la planta, las salidas mueven la máquina
  * y los sensores de la máquina vuelven a las entradas.
  */
-import { BotonNuevo, botonPrimario, estiloAviso, Menu, useEsEstrecha } from '../components/ui'
+import { BotonNuevo, botonPrimario, estiloAviso, Menu, useApaisado, useEsEstrecha } from '../components/ui'
 import BancoDividido, { TituloArea } from '../components/banco/BancoDividido'
 import { usePanelAcoplado, type PestanaPanel } from '../components/banco/PanelAcoplado'
 import PaginaEstudiar, { type SeccionEstudio } from '../components/banco/PaginaEstudiar'
@@ -129,6 +129,7 @@ export default function UnidadPLC() {
   const [, setFotograma] = useState(0)
   const [aviso, setAviso] = useState<string | null>(null)
   const estrecha = useEsEstrecha()
+  const acostado = useApaisado()
   const [seccion, setSeccionCruda] = useSeccionUnidad(SECCIONES_PLC.map((x) => x.id))
   const enTarea = seccion === 'tarea'
   const panel = usePanelAcoplado<PestanaPLC>('neumalab.plc.panel', 'es', typeof window !== 'undefined' && window.innerHeight >= 860)
@@ -459,12 +460,12 @@ export default function UnidadPLC() {
   )
 
   const botonPlanta = enTarea ? (
-    <span className="boton-planta" title="El enunciado de la tarea está en Aula" data-planta-tarea="si" style={{ width: estrecha ? '28vw' : 'auto', maxWidth: 360, cursor: 'default' }}>
+    <span className="boton-planta" title="El enunciado de la tarea está en Aula" data-planta-tarea="si" style={{ width: acostado ? 'clamp(64px, 17vw - 44px, 170px)' : estrecha ? '28vw' : 'auto', maxWidth: 360, cursor: 'default' }}>
       {!estrecha && <span style={{ color: '#9a4a00', fontWeight: 700 }}>{NOMBRE_TAREA}:</span>}
       <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis' }}>{descripcion.nombre.replace(` (${NOMBRE_TAREA})`, '')}</span>
     </span>
   ) : (
-    <button onClick={() => setEligiendoPlanta(true)} className="boton-planta" title="Elegir la planta, o empezar un ejercicio o un ejemplo" aria-label={`Planta: ${descripcion.nombre}. Elegir planta, ejercicio o ejemplo`} data-boton-planta="si" style={{ width: estrecha ? '28vw' : 'auto', maxWidth: 360 }}>
+    <button onClick={() => setEligiendoPlanta(true)} className="boton-planta" title="Elegir la planta, o empezar un ejercicio o un ejemplo" aria-label={`Planta: ${descripcion.nombre}. Elegir planta, ejercicio o ejemplo`} data-boton-planta="si" style={{ width: acostado ? 'clamp(64px, 17vw - 44px, 170px)' : estrecha ? '28vw' : 'auto', maxWidth: 360 }}>
       {!estrecha && <span style={{ color: '#51606f' }}>Planta:</span>}
       <span style={{ fontWeight: 600 }}>{descripcion.nombre}</span>
       <span aria-hidden style={{ fontSize: '0.7rem', flex: 'none' }}>
@@ -557,6 +558,8 @@ export default function UnidadPLC() {
   const areaPrograma = (
     <>
       {ejercicioActual && <TarjetaEjercicio ejercicio={ejercicioActual} programa={programa} notacion={notacion} />}
+      {/* Acostado en el celular el título se omite: el estado RUN/STOP ya está en el botón. */}
+      {(!acostado || (corriendo && pausado)) && (
       <TituloArea>
         Programa Ladder{programa.nombre ? ` · ${programa.nombre}` : ''}
         <span style={{ ...estadoPLC, background: corriendo ? '#0e7a43' : '#a35200' }}>{corriendo ? (pausado ? 'RUN · en pausa' : 'RUN') : 'STOP'}</span>
@@ -566,6 +569,7 @@ export default function UnidadPLC() {
           </span>
         )}
       </TituloArea>
+      )}
       {corriendo && <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: '#51606f' }}>El PLC está ejecutando el programa. Pásalo a STOP para editarlo.</p>}
       <EditorLadder
         programa={programa}

@@ -310,6 +310,9 @@ export default function Robot3D({ vista, alto = 480, onCanvas }: { vista: Mutabl
 
     const camara = new THREE.PerspectiveCamera(38, cont.clientWidth / Math.max(1, cont.clientHeight), 5, 30000)
     const controles = new OrbitControls(camara, renderer.domElement)
+    // El botón del medio (la rueda apretada) también gira la cámara, sin el autodesplazamiento del navegador.
+    controles.mouseButtons.MIDDLE = THREE.MOUSE.ROTATE
+    renderer.domElement.addEventListener('mousedown', (e) => e.button === 1 && e.preventDefault())
     controles.enableDamping = true
     controles.dampingFactor = 0.08
     controles.zoomToCursor = true

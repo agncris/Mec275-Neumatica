@@ -1329,3 +1329,25 @@ body:has(.banco:not(.banco--apilado):not(.banco--neumatica-apilado)) {
     gap: 4px;
   }
 }
+
+/* Celular acostado: las pestañas (Programa, Planta, E/S…) van en la barra de herramientas. */
+.pestanas-movil.pestanas-movil--barra {
+  flex: 0 1 auto;
+  min-width: 0;
+  gap: 3px;
+}
+.pestanas-movil.pestanas-movil--barra button {
+  flex: none;
+  padding: 0 9px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+}
+@media (orientation: landscape) and (max-height: 500px) and (max-width: 740px) {
+  .banco__barra {
+    gap: 3px;
+  }
+  .pestanas-movil.pestanas-movil--barra button {
+    padding: 0 5px;
+    font-size: 0.72rem;
+  }
+}

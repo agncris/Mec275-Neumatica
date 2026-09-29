@@ -9,7 +9,7 @@
  * ocupan toda la pantalla, una a la vez.
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { useApilado, useCelular, usePersistente } from '../ui'
+import { useApaisado, useApilado, useCelular, usePersistente } from '../ui'
 import PanelAcoplado, { type PestanaPanel } from './PanelAcoplado'
 
 export interface AreaBanco {
@@ -60,6 +60,7 @@ const capa = (visible: boolean): React.CSSProperties => ({ position: 'absolute',
 export default function BancoDividido<T extends string>({ clave, barra, izquierda, derecha, inferior, estado, encabezado, movil, onMovil, conCajon }: Props<T>) {
   const estrecha = useCelular()
   const apilado = useApilado()
+  const apaisado = useApaisado()
   const [division, setDivision] = usePersistente(`${clave}.division`, 0.5)
   const [movilPropio, setMovilPropio] = useState(izquierda.id)
   const vistaMovil = movil ?? movilPropio
@@ -107,19 +108,24 @@ export default function BancoDividido<T extends string>({ clave, barra, izquierd
   if (estrecha) {
     const pestanas: Array<{ id: string; titulo: string; tituloCorto?: string }> = [izquierda, derecha, ...(inferior?.pestanas ?? [])]
     const deInferior = inferior?.pestanas.find((p) => p.id === vistaMovil)
+    const listaPestanas = (
+      <div role="tablist" aria-label="Qué ver" className={`pestanas-movil${apaisado ? ' pestanas-movil--barra' : ''}`}>
+        {pestanas.map((p) => (
+          <button key={p.id} role="tab" aria-selected={vistaMovil === p.id} onClick={() => elegirMovil(p.id)} data-pestana-movil={p.id} title={p.titulo}>
+            {p.tituloCorto ?? p.titulo}
+          </button>
+        ))}
+      </div>
+    )
+    // Acostado, las pestañas van en la misma fila que las herramientas: el alto es lo que falta.
     return (
       <main className="banco banco--dividido">
         <div className="banco__barra" role="toolbar" aria-label="Herramientas">
           {barra}
+          {apaisado && listaPestanas}
         </div>
         {encabezado}
-        <div role="tablist" aria-label="Qué ver" className="pestanas-movil">
-          {pestanas.map((p) => (
-            <button key={p.id} role="tab" aria-selected={vistaMovil === p.id} onClick={() => elegirMovil(p.id)} data-pestana-movil={p.id} title={p.titulo}>
-              {p.tituloCorto ?? p.titulo}
-            </button>
-          ))}
-        </div>
+        {!apaisado && listaPestanas}
         <div className="banco__cuerpo" style={{ position: 'relative' }}>
           {/* Las dos áreas quedan montadas y con su tamaño, una encima de la otra: la vista 3D
               no se reinicia al cambiar de pestaña y se dibuja bien al volver. */}

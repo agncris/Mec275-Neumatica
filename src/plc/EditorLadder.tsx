@@ -34,7 +34,7 @@ import {
   type TipoBobina,
 } from './ladder'
 import { MNEMONICOS, formatear, type Notacion } from './notacion'
-import { useCelular } from '../components/ui'
+import { useApaisado, useCelular } from '../components/ui'
 
 type Herramienta =
   | 'seleccionar'
@@ -135,6 +135,8 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
   const [herramienta, setHerramienta] = useState<Herramienta>('seleccionar')
   // En el celular: paleta en cuadrícula pareja y el diagrama más grande (se desplaza de lado).
   const celular = useCelular()
+  // Celular acostado: la paleta es una sola fila de iconos, para dejarle alto al diagrama.
+  const acostado = useApaisado()
   const [sel, setSel] = useState<Seleccion | null>(null)
   const [escalonSel, setEscalonSel] = useState<number | null>(null)
   /** Escalón cuya descripción se está escribiendo, directamente sobre el diagrama. */
@@ -237,26 +239,27 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
     if (h === 'NA' || h === 'NC' || h === 'CMP') setSel(s)
   }
 
+  /**
+   * Herramienta «Rama»: une o separa dos filas en un nodo. Bajo la última fila
+   * hay una fila fantasma: unirla abre una rama nueva, y la última fila se quita
+   * sola cuando queda vacía y sin uniones.
+   */
   const alternarEnlace = (escalon: number, fila: number, nodo: number) =>
     cambiar((p) => {
       const e = p.escalones[escalon]
+      if (fila >= e.celdas.length - 1) {
+        e.celdas.push(Array.from({ length: COLUMNAS }, () => ({ tipo: 'vacio' }) as Celda))
+        e.bobinas.push(null)
+        e.enlaces.push(Array(COLUMNAS + 1).fill(false))
+      }
       e.enlaces[fila][nodo] = !e.enlaces[fila][nodo]
-    })
-
-  const agregarFila = (i: number) =>
-    cambiar((p) => {
-      const e = p.escalones[i]
-      e.celdas.push(Array.from({ length: COLUMNAS }, () => ({ tipo: 'vacio' }) as Celda))
-      e.bobinas.push(null)
-      e.enlaces.push(Array(COLUMNAS + 1).fill(false))
-    })
-  const quitarFila = (i: number) =>
-    cambiar((p) => {
-      const e = p.escalones[i]
-      if (e.celdas.length <= 1) return
-      e.celdas.pop()
-      e.bobinas.pop()
-      e.enlaces.pop()
+      for (let u = e.celdas.length - 1; u > 0; u--) {
+        const vacia = e.celdas[u].every((c) => c.tipo === 'vacio') && !e.bobinas[u] && !e.enlaces[u - 1].some(Boolean)
+        if (!vacia) break
+        e.celdas.pop()
+        e.bobinas.pop()
+        e.enlaces.pop()
+      }
     })
   const moverEscalon = (i: number, d: number) =>
     cambiar((p) => {
@@ -272,9 +275,11 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
 
   // --- dibujo -------------------------------------------------------------------
   let y = 8
+  /** Con la herramienta «Rama», cada escalón muestra una fila más (vacía) para abrir una rama nueva. */
+  const fantasma = editable && herramienta === 'rama' ? 1 : 0
   const posiciones = programa.escalones.map((e) => {
     const top = y
-    y += altoEscalon(e.celdas.length) + SEP
+    y += altoEscalon(e.celdas.length + fantasma) + SEP
     return top
   })
   const altoTotal = y + 4
@@ -294,7 +299,7 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
           x={4}
           y={top}
           width={ANCHO - 8}
-          height={altoEscalon(filas)}
+          height={altoEscalon(filas + fantasma)}
           rx={6}
           fill={seleccionado ? '#f1f6fd' : '#fafbfc'}
           stroke={seleccionado ? AZUL : '#e3e8ee'}
@@ -368,8 +373,6 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
     // En el celular estos botones van en una barra aparte, del tamaño de un dedo.
     if (editable && !celular) {
       const botones: Array<[string, string, () => void]> = [
-        ['＋ rama', 'Añade una fila para montar un paralelo', () => agregarFila(i)],
-        ['− rama', 'Quita la última fila', () => quitarFila(i)],
         ['↑', 'Sube el escalón', () => moverEscalon(i, -1)],
         ['↓', 'Baja el escalón', () => moverEscalon(i, 1)],
         ['✕', 'Borra el escalón', () => borrarEscalon(i)],
@@ -513,12 +516,12 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
       )
     }
     // Enlaces verticales (paralelos).
-    for (let f = 0; f < filas - 1; f++) {
+    for (let f = 0; f < filas - 1 + fantasma; f++) {
       for (let n = 1; n <= COLUMNAS; n++) {
         const x = X0 + n * CW
         const y1 = top + CAB + FH / 2 + f * FH
-        const on = e.enlaces[f][n]
-        const tension = !!flujo && !!flujo.nodos[f][n] && !!flujo.nodos[f + 1][n]
+        const on = !!e.enlaces[f]?.[n]
+        const tension = !!flujo && !!flujo.nodos[f]?.[n] && !!flujo.nodos[f + 1]?.[n]
         if (on) elementos.push(<line key={`e${i}-${f}-${n}`} x1={x} y1={y1} x2={x} y2={y1 + FH} {...trazo(tension)} />)
         if (on && flujo) {
           elementos.push(<circle key={`p${i}-${f}-${n}`} cx={x} cy={y1} r={2.8} fill={tension ? VERDE : TINTA} />)
@@ -552,7 +555,11 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
       {editable && (
         <div
           style={{
-            ...(celular ? { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(54px, 1fr))' } : { display: 'flex', flexWrap: 'wrap' }),
+            ...(acostado
+              ? { display: 'flex', flexWrap: 'nowrap', overflowX: 'auto', alignItems: 'center', scrollbarWidth: 'none' }
+              : celular
+                ? { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(54px, 1fr))' }
+                : { display: 'flex', flexWrap: 'wrap' }),
             gap: 4,
             marginBottom: 6,
             position: 'sticky',
@@ -577,7 +584,8 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
                   flexDirection: 'column',
                   alignItems: 'center',
                   gap: 1,
-                  minWidth: celular ? 0 : 52,
+                  minWidth: acostado ? 44 : celular ? 0 : 52,
+                  flex: 'none',
                   justifyContent: 'center',
                   padding: '0.2rem 0.35rem',
                   borderRadius: 6,
@@ -588,19 +596,17 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
                 }}
               >
                 <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: '0.84rem', fontWeight: 700 }}>{h.icono}</span>
-                <span style={{ fontSize: '0.64rem', lineHeight: 1.1, whiteSpace: 'nowrap' }}>{celular ? (CORTO[h.id] ?? h.texto) : h.texto}</span>
+                {!acostado && <span style={{ fontSize: '0.64rem', lineHeight: 1.1, whiteSpace: 'nowrap' }}>{celular ? (CORTO[h.id] ?? h.texto) : h.texto}</span>}
               </button>
             </span>
           ))}
           {celular && (
-            <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap', fontSize: '0.8rem', color: '#51606f' }} data-barra-escalon="si">
+            <div style={{ gridColumn: '1 / -1', flex: 'none', display: acostado && escalonSel === null ? 'none' : 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap', fontSize: '0.8rem', color: '#51606f' }} data-barra-escalon="si">
               {escalonSel !== null && programa.escalones[escalonSel] ? (
                 <>
                   <strong style={{ color: TINTA }}>Escalón {String(escalonSel).padStart(3, '0')}:</strong>
                   {(
                     [
-                      ['＋ rama', 'Añade una fila para montar un paralelo', () => agregarFila(escalonSel)],
-                      ['− rama', 'Quita la última fila', () => quitarFila(escalonSel)],
                       ['↑', 'Sube el escalón', () => moverEscalon(escalonSel, -1)],
                       ['↓', 'Baja el escalón', () => moverEscalon(escalonSel, 1)],
                       ['✕', 'Borra el escalón', () => borrarEscalon(escalonSel)],
@@ -612,7 +618,7 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
                   ))}
                 </>
               ) : (
-                <span>Toca el fondo de un escalón para agregarle ramas, moverlo o borrarlo.</span>
+                <span>Toca el fondo de un escalón para moverlo o borrarlo.</span>
               )}
             </div>
           )}
@@ -642,7 +648,7 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
           </button>
           <span style={{ fontSize: '0.8rem', color: pista ? '#8a5b00' : '#5a6b7d', fontWeight: pista ? 700 : 400 }} role={pista ? 'status' : undefined}>
             {pista ? `⚠ ${pista}` : herramienta === 'rama'
-              ? 'Haz clic en las franjas azules para unir dos filas en ese punto (así se arma un paralelo).'
+              ? 'Haz clic en una franja azul para unir dos filas en ese punto; las de abajo del todo abren una rama nueva.'
               : herramienta === 'seleccionar'
                 ? 'Elige una herramienta y haz clic en una casilla. Las bobinas van en la última columna.'
                 : esBobina(herramienta)
