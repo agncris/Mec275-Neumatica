@@ -772,7 +772,7 @@ export default function UnidadPLC() {
             }
             const sinNombre = [...usadas].filter((d) => ['I', 'Q'].includes(areaDe(d) ?? '') && !programa.simbolos.find((x) => x.dir === d)?.nombre)
             return [
-              { ok: hayContenido, texto: hayContenido ? `El programa tiene ${programa.escalones.length} escalón(es).` : 'El programa está vacío.' },
+              { ok: hayContenido, texto: hayContenido ? 'El programa no está vacío.' : 'El programa está vacío: todavía no hay nada que entregar.' },
               { ok: avisos.length === 0, texto: avisos.length === 0 ? 'El editor no encuentra problemas en el programa.' : `Hay ${avisos.length} aviso(s). El primero: ${avisos[0]}` },
               {
                 ok: sinNombre.length === 0,
