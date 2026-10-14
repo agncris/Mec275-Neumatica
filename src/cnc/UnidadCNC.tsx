@@ -10,7 +10,7 @@ import { acercar, BotonNuevo, botonPrimario, botonSecundario, estiloAviso, Menu,
 import BancoDividido, { TituloArea } from '../components/banco/BancoDividido'
 import { usePanelAcoplado, type PestanaPanel } from '../components/banco/PanelAcoplado'
 import PaginaEstudiar, { type SeccionEstudio } from '../components/banco/PaginaEstudiar'
-import SubnavUnidad, { useSeccionUnidad } from '../components/banco/SubnavUnidad'
+import SubnavUnidad, { seccionDeLaUrl, useSeccionUnidad, type SeccionUnidad } from '../components/banco/SubnavUnidad'
 import CajonEntregar from '../components/banco/CajonEntregar'
 import MisTrabajos from '../components/banco/MisTrabajos'
 import GuiaInicio, { GUIA_CNC, useGuia } from '../components/banco/GuiaInicio'
@@ -52,6 +52,14 @@ const Maquina3D = lazy(() => import('./Maquina3D'))
 
 const CLAVE = 'neumalab.cnc'
 
+/**
+ * La Tarea 3 se trabaja en su propia sección: centro de torneado, latón y un
+ * programa en blanco guardado aparte. El enunciado (la pieza) lo entrega el
+ * profesor: la app sólo pone la máquina. «Entregar» aparece sólo ahí.
+ */
+const CLAVE_TAREA = 'neumalab.cnc.tarea'
+const NOMBRE_TAREA = 'Tarea 3'
+
 type Estado = 'listo' | 'corriendo' | 'bloque' | 'pausa' | 'parada' | 'alarma' | 'fin'
 
 interface Guardado {
@@ -84,23 +92,65 @@ function leerGuardado(): Guardado {
   return base
 }
 
+function tareaVacia(): Guardado {
+  return {
+    config: { ...CONFIG_INICIAL, maquina: 'torno', material: 'laton' },
+    codigos: { torno: programaNuevo('torno'), fresadora: programaNuevo('fresadora') },
+    nombres: { torno: NOMBRE_TAREA, fresadora: NOMBRE_TAREA },
+  }
+}
+
+function leerTarea(): Guardado {
+  try {
+    const crudo = localStorage.getItem(CLAVE_TAREA)
+    if (crudo) {
+      const g = JSON.parse(crudo) as Partial<Guardado>
+      if (g.config && g.codigos && typeof g.codigos.torno === 'string') {
+        const base = tareaVacia()
+        return {
+          config: { ...base.config, ...g.config, maquina: 'torno', torno: { ...base.config.torno, ...g.config.torno } },
+          codigos: { ...base.codigos, torno: g.codigos.torno },
+          nombres: { ...base.nombres, ...(g.nombres ?? {}) },
+        }
+      }
+    }
+  } catch {
+    /* sin almacenamiento o dato roto */
+  }
+  return tareaVacia()
+}
+
 const VELOCIDADES = [0.5, 1, 2, 5, 10, 25, 60]
 
 export default function UnidadCNC() {
   const tactil = useTactil()
   const estrecha = useEsEstrecha()
-  const [seccion, setSeccion] = useSeccionUnidad(SECCIONES_CNC.map((x) => x.id))
+  const [seccion, setSeccionCruda] = useSeccionUnidad(SECCIONES_CNC.map((x) => x.id))
+  const enTarea = seccion === 'tarea'
   const panel = usePanelAcoplado<PestanaCNC>('neumalab.cnc.panel', 'preparacion', typeof window !== 'undefined' && window.innerHeight >= 860)
   const [entregaAbierta, setEntregaAbierta] = useState(false)
   const [misTrabajos, setMisTrabajos] = useState(false)
   const guia = useGuia('cnc')
   /** Nombre del próximo video (desde «Entregar» se nombra como pide el enunciado). */
   const nombreVideo = useRef<string | null>(null)
-  const inicial = useMemo(leerGuardado, [])
+  const inicial = useMemo(() => (seccionDeLaUrl() === 'tarea' ? leerTarea() : leerGuardado()), [])
   const [config, setConfig] = useState<ConfigCNC>(inicial.config)
   const [codigos, setCodigos] = useState(inicial.codigos)
   const [nombres, setNombres] = useState(inicial.nombres)
   const maquina = config.maquina
+  /** Entrar o salir de la tarea cambia de programa y de preparación: cada uno se guarda por su lado. */
+  const setSeccion = (s: SeccionUnidad) => {
+    if ((s === 'tarea') !== enTarea) {
+      const g = s === 'tarea' ? leerTarea() : leerGuardado()
+      setConfig(g.config)
+      setCodigos(g.codigos)
+      setNombres(g.nombres)
+      setEstado('listo')
+      setEntregaAbierta(false)
+      setEligiendoMaquina(false)
+    }
+    setSeccionCruda(s)
+  }
   const codigo = codigos[maquina]
   const setCodigo = (c: string) => setCodigos((x) => ({ ...x, [maquina]: c }))
   const [eligiendoMaquina, setEligiendoMaquina] = useState(false)
@@ -153,14 +203,14 @@ export default function UnidadCNC() {
     reiniciar()
   }, [reiniciar])
 
-  // Guardado automático.
+  // Guardado automático: la tarea y el laboratorio se guardan cada uno por su lado.
   useEffect(() => {
     try {
-      localStorage.setItem(CLAVE, JSON.stringify({ config, codigos, nombres }))
+      localStorage.setItem(enTarea ? CLAVE_TAREA : CLAVE, JSON.stringify({ config, codigos, nombres }))
     } catch {
       /* sin almacenamiento */
     }
-  }, [config, codigos, nombres])
+  }, [config, codigos, nombres, enTarea])
 
   // Un enlace con un programa (#cnc=…) lo abre en su máquina, con su preparación.
   useEffect(() => {
@@ -307,6 +357,7 @@ export default function UnidadCNC() {
         const d = JSON.parse(texto) as { tipo?: string; config?: ConfigCNC; codigo?: string; nombre?: string }
         if (d.tipo !== 'trabajo-cnc' || !d.config || typeof d.codigo !== 'string') throw new Error('Ese archivo no es un trabajo de CNC de NeumaLab.')
         const m = d.config.maquina
+        if (enTarea && m !== 'torno') throw new Error('La Tarea 3 se hace en el centro de torneado.')
         setConfig(d.config)
         setCodigos((x) => ({ ...x, [m]: d.codigo as string }))
         setNombres((x) => ({ ...x, [m]: d.nombre || archivo.name.replace(/\.[^.]+$/, '') }))
@@ -423,7 +474,12 @@ export default function UnidadCNC() {
       </select>
     </label>
   )
-  const botonMaquina = (
+  const botonMaquina = enTarea ? (
+    <span className="boton-planta" title="El enunciado de la tarea está en Aula" data-maquina-tarea="si" style={{ maxWidth: 360, cursor: 'default', padding: estrecha ? '0 0.5rem' : undefined }}>
+      {!estrecha && <span style={{ color: '#9a4a00', fontWeight: 700 }}>{NOMBRE_TAREA}:</span>}
+      <span style={{ fontWeight: 600 }}>{estrecha ? MAQUINAS.torno.corto : MAQUINAS.torno.nombre}</span>
+    </span>
+  ) : (
     <button
       onClick={() => setEligiendoMaquina(true)}
       className="boton-planta"
@@ -677,27 +733,34 @@ export default function UnidadCNC() {
 
   return (
     <>
-      <SubnavUnidad nombre="CNC" seccion={seccion} onSeccion={setSeccion} entregar={{ abierto: entregaAbierta, onAlternar: () => setEntregaAbierta((a) => !a) }} />
-      {seccion === 'laboratorio' ? (
+      <SubnavUnidad
+        nombre="CNC"
+        seccion={seccion}
+        onSeccion={setSeccion}
+        tarea={NOMBRE_TAREA}
+        entregar={enTarea ? { abierto: entregaAbierta, onAlternar: () => setEntregaAbierta((a) => !a), etiqueta: 'Entregar Tarea CNC', etiquetaCorta: 'Entregar' } : undefined}
+      />
+      {seccion !== 'estudiar' ? (
         <BancoDividido<PestanaCNC>
+          key={seccion}
           clave="neumalab.cnc.banco"
           barra={barra}
           izquierda={{ id: 'programa', titulo: 'Programa', contenido: areaPrograma }}
           derecha={{ id: 'maquina', titulo: 'Máquina', contenido: areaMaquina }}
           inferior={{ etiqueta: 'Preparación, trayectoria y tablas', pestanas, estado: panel }}
           estado={barraEstado}
-          conCajon={entregaAbierta && !estrecha}
+          conCajon={entregaAbierta && enTarea && !estrecha}
         />
       ) : (
         <PaginaEstudiar
           etiqueta="Estudiar CNC"
           titulo="Estudiar · CNC"
           descripcion="Teoría de la unidad. Los programas de ejemplo se abren en el Laboratorio."
-          pie="NeumaLab · MEC275 — Unidad 3: Control numérico computacional · código G"
+          pie="NeumaLab · MEC275 — Unidad 3: Control Numérico Computarizado · código G"
           secciones={SECCIONES_CNC}
         />
       )}
-      {guia.visible && seccion === 'laboratorio' && <GuiaInicio unidad="CNC" pasos={GUIA_CNC} onCerrar={guia.cerrar} />}
+      {guia.visible && seccion !== 'estudiar' && <GuiaInicio unidad="CNC" pasos={GUIA_CNC} onCerrar={guia.cerrar} />}
       {eligiendoMaquina && (
         <SelectorMaquina
           actual={maquina}
@@ -720,6 +783,7 @@ export default function UnidadCNC() {
             const d = dato as { config?: ConfigCNC; codigo?: string }
             if (!d?.config || typeof d.codigo !== 'string') return 'Ese trabajo no es un programa de CNC válido.'
             const m = d.config.maquina
+            if (enTarea && m !== 'torno') return 'La Tarea 3 se hace en el centro de torneado.'
             setEstado('listo')
             setConfig(d.config)
             setCodigos((x) => ({ ...x, [m]: d.codigo as string }))
@@ -728,7 +792,7 @@ export default function UnidadCNC() {
           onCerrar={() => setMisTrabajos(false)}
         />
       )}
-      {entregaAbierta && (
+      {entregaAbierta && enTarea && (
         <CajonEntregar
           unidad="CNC"
           clave="neumalab.cnc.entrega"
@@ -742,6 +806,7 @@ export default function UnidadCNC() {
             const fin = codigoSinComentarios.some((l) => /\bM(30|0?2)\b/i.test(l.replace(/\(.*?\)/g, '')))
             const sinC = resultado.sinComentario
             return [
+              { ok: resultado.puntos.length > 1, texto: resultado.puntos.length > 1 ? 'El programa mueve la herramienta.' : 'El programa todavía no mueve la herramienta: escribe la trayectoria.' },
               { ok: errores.length === 0, texto: errores.length === 0 ? 'El programa no tiene errores de escritura.' : `Hay ${errores.length} error(es). El primero, en la línea ${errores[0].linea + 1}: ${errores[0].texto}` },
               {
                 ok: sinC.length === 0,
@@ -815,7 +880,7 @@ export default function UnidadCNC() {
             {
               id: 'trabajo',
               tipo: 'archivo',
-              titulo: 'Tu trabajo (.json)',
+              titulo: 'Tu programa (.json)',
               detalle: 'Programa y preparación en un archivo. Adjúntalo en Aula junto con tu PDF; se abre en la app con Archivo › Abrir.',
               hacer: (base) => {
                 descargarTexto(trabajoJson(), `${base}.json`, 'application/json')
@@ -888,7 +953,7 @@ const SECCIONES_CNC: SeccionEstudio[] = [
   { id: 'arcos', indice: 'Arcos G02 y G03', titulo: 'Arcos: G02 y G03', contenido: <Arcos /> },
   { id: 'torno', indice: 'El torno CNC', titulo: 'El torno CNC y sus operaciones', contenido: <Torno /> },
   { id: 'insertos', indice: 'Herramientas de corte', titulo: 'Herramientas de corte: código de los insertos', contenido: <Insertos /> },
-  { id: 'como-usar', indice: 'Cómo usar el simulador', titulo: 'Cómo usar este simulador (y entregar tu trabajo)', contenido: <ComoUsar /> },
+  { id: 'como-usar', indice: 'Cómo usar el simulador', titulo: 'Cómo usar este simulador (y entregar tu tarea)', contenido: <ComoUsar /> },
 ]
 
 // ---------------------------------------------------------------------------
@@ -1195,7 +1260,8 @@ function ComoUsar() {
       <li style={li}>
         <strong>Para el informe:</strong> «Trayectoria (PNG)» descarga el dibujo 2D con los puntos, «Copiar tabla» copia
         las coordenadas, «Guardar .cnc» descarga el programa (un archivo de texto que también abre CNC Simulator Pro) y
-        «● Grabar video» graba la vista 3D mientras corre la simulación.
+        «● Grabar video» graba la vista 3D mientras corre la simulación. En «★ Tarea 3» (torno y latón, con tu programa
+        aparte) está «Entregar», que reúne todo eso, el .cnc y el video con el nombre que pide el enunciado.
       </li>
       <li style={li}>
         <strong>Programas de CNC Simulator Pro:</strong> se abren tal cual. <code>$Millimeter</code>/<code>$Inch</code> fijan
