@@ -22,6 +22,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { exportarPng, nombreSeguro } from '../exportar'
 import EditorGcode, { type EditorGcodeRef } from './EditorGcode'
 import { EJEMPLOS_CNC, programaNuevo } from './ejemplos'
+import { VER_TAREA_CNC } from '../unidades'
 import { explicarBloque, interpretar, type ResultadoGcode } from './gcode'
 import {
   almacenDe,
@@ -125,7 +126,9 @@ const VELOCIDADES = [0.5, 1, 2, 5, 10, 25, 60]
 export default function UnidadCNC() {
   const tactil = useTactil()
   const estrecha = useEsEstrecha()
-  const [seccion, setSeccionCruda] = useSeccionUnidad(SECCIONES_CNC.map((x) => x.id))
+  const [seccionPedida, setSeccionCruda] = useSeccionUnidad(SECCIONES_CNC.map((x) => x.id))
+  // Mientras la tarea no se publica, ni el enlace ?vista=tarea la abre.
+  const seccion: SeccionUnidad = seccionPedida === 'tarea' && !VER_TAREA_CNC ? 'laboratorio' : seccionPedida
   const enTarea = seccion === 'tarea'
   const panel = usePanelAcoplado<PestanaCNC>('neumalab.cnc.panel', 'preparacion', typeof window !== 'undefined' && window.innerHeight >= 860)
   const [entregaAbierta, setEntregaAbierta] = useState(false)
@@ -133,7 +136,7 @@ export default function UnidadCNC() {
   const guia = useGuia('cnc')
   /** Nombre del próximo video (desde «Entregar» se nombra como pide el enunciado). */
   const nombreVideo = useRef<string | null>(null)
-  const inicial = useMemo(() => (seccionDeLaUrl() === 'tarea' ? leerTarea() : leerGuardado()), [])
+  const inicial = useMemo(() => (seccionDeLaUrl() === 'tarea' && VER_TAREA_CNC ? leerTarea() : leerGuardado()), [])
   const [config, setConfig] = useState<ConfigCNC>(inicial.config)
   const [codigos, setCodigos] = useState(inicial.codigos)
   const [nombres, setNombres] = useState(inicial.nombres)
@@ -737,7 +740,7 @@ export default function UnidadCNC() {
         nombre="CNC"
         seccion={seccion}
         onSeccion={setSeccion}
-        tarea={NOMBRE_TAREA}
+        tarea={VER_TAREA_CNC ? NOMBRE_TAREA : undefined}
         entregar={enTarea ? { abierto: entregaAbierta, onAlternar: () => setEntregaAbierta((a) => !a), etiqueta: 'Entregar Tarea CNC', etiquetaCorta: 'Entregar' } : undefined}
       />
       {seccion !== 'estudiar' ? (
@@ -1260,8 +1263,7 @@ function ComoUsar() {
       <li style={li}>
         <strong>Para el informe:</strong> «Trayectoria (PNG)» descarga el dibujo 2D con los puntos, «Copiar tabla» copia
         las coordenadas, «Guardar .cnc» descarga el programa (un archivo de texto que también abre CNC Simulator Pro) y
-        «● Grabar video» graba la vista 3D mientras corre la simulación. En «★ Tarea 3» (torno y latón, con tu programa
-        aparte) está «Entregar», que reúne todo eso, el .cnc y el video con el nombre que pide el enunciado.
+        «● Grabar video» graba la vista 3D mientras corre la simulación.{VER_TAREA_CNC && ' En «★ Tarea 3» (torno y latón, con tu programa aparte) está «Entregar», que reúne todo eso, el .cnc y el video con el nombre que pide el enunciado.'}
       </li>
       <li style={li}>
         <strong>Programas de CNC Simulator Pro:</strong> se abren tal cual. <code>$Millimeter</code>/<code>$Inch</code> fijan

@@ -68,10 +68,9 @@ abierto.
 
 La aplicación no trae enunciados ni soluciones: el enunciado y la plantilla (PPT) los
 reparte el profesor. El alumno responde en la plantilla, la guarda como PDF y la sube
-en Aula junto con el archivo `.json` de su trabajo. En PLC y CNC la tarea tiene su propia
-sección (**«★ Tarea 2»** con la planta del silo, **«★ Tarea 3»** con el centro de torneado
-y latón; junto a Laboratorio); los botones **«Entregar Tarea PLC»** y **«Entregar Tarea CNC»**
-aparecen sólo dentro de ellas. El botón de entrega (arriba a la
+en Aula junto con el archivo `.json` de su trabajo. En PLC, la Tarea 2 tiene su propia
+sección (**«★ Tarea 2»**, junto a Laboratorio) con la planta del silo; el botón
+**«Entregar Tarea PLC»** aparece sólo dentro de ella. El botón de entrega (arriba a la
 derecha) abre un cajón con cuatro pasos:
 
 1. **Tus datos**: nombre (y el de la pareja, si hay) y el trabajo. Todos los archivos
@@ -88,7 +87,7 @@ derecha) abre un cajón con cuatro pasos:
 |---|---|---|
 | Neumática | Diagrama VDI 2860 (se arma en el mismo cajón), diagrama espacio-fase, elementos del circuito, imagen del circuito | Circuito `.json` |
 | PLC (Tarea 2) | Diagrama Ladder, tabla de entradas y salidas | Programa `.json` |
-| CNC (Tarea 3) | Trayectoria con los puntos, tabla de coordenadas, herramientas usadas, bruto | Trabajo `.json` (programa y preparación), programa `.cnc` (se abre también en CNC Simulator Pro), video |
+| CNC | Trayectoria con los puntos, tabla de coordenadas, herramientas usadas, bruto | Trabajo `.json` (programa y preparación), programa `.cnc` (se abre también en CNC Simulator Pro), video |
 | Robótica | Croquis de la pieza, posicionamiento, definición de nodos, ficha técnica | Definición `.json`, programa KRL `.src`, video, enlace |
 
 Las entregas `.json` de semestres anteriores (con respuestas escritas) se siguen
@@ -342,10 +341,12 @@ no la detienen. Al tronzar, la pieza cae a la bandeja. Hay viruta, refrigerante 
 sonido del husillo y del corte, y un visor de cotas (DRO) con herramienta, husillo,
 avance, tiempo de ciclo y material quitado.
 
-**Tarea 3.** La sección **«★ Tarea 3»** (junto a Laboratorio) trae el centro de torneado con
-latón y un programa en blanco, guardado aparte del Laboratorio; no trae el enunciado ni la
-pieza (los reparte el profesor) y no se cambia de máquina ni hay ejemplos. «Entregar Tarea CNC»
-sólo aparece ahí.
+**Tarea 3 (lista, todavía oculta).** La sección **«★ Tarea 3»** (junto a Laboratorio) trae el
+centro de torneado con latón y un programa en blanco, guardado aparte del Laboratorio; no trae
+el enunciado ni la pieza (los reparte el profesor), no se cambia de máquina y no hay ejemplos.
+«Entregar Tarea CNC» sólo aparece ahí, así que mientras esté oculta la unidad no ofrece entrega.
+Se muestra poniendo `TAREA_CNC_PUBLICADA = true` en [`src/unidades.ts`](src/unidades.ts); con
+`npm run dev` se ve siempre.
 
 **Para el informe.** Vista 2D de la trayectoria (plano Z-X en el torno, vista superior
 en la fresadora) con la silueta y los puntos de cada bloque; **tabla de coordenadas**
