@@ -5,6 +5,7 @@
  */
 import { lazy, Suspense, useEffect, useState } from 'react'
 import App from './App'
+import { useDesplazarEnBordes } from './desplazarEnBordes'
 import { unidadVisible, VER_CNC, VER_ROBOTICA, type Unidad } from './unidades'
 
 const UnidadPLC = lazy(() => import('./plc/UnidadPLC'))
@@ -34,6 +35,7 @@ function unidadInicial(): Unidad {
 }
 
 export default function Raiz() {
+  useDesplazarEnBordes()
   const [unidad, setUnidad] = useState<Unidad>(unidadInicial)
   // Sin internet la app sigue funcionando (service worker): se avisa para que nadie se preocupe.
   const [sinConexion, setSinConexion] = useState(() => typeof navigator !== 'undefined' && navigator.onLine === false)
