@@ -15,11 +15,11 @@
 
 Todo el contenido y la interfaz están en español.
 
-**Unidades ocultas.** Por ahora los alumnos sólo ven Neumática y PLC. CNC y Robótica
-están listas, pero no se publican: su código no entra en el sitio que se sube, así que
-no hay forma de abrirlas desde la app. Para publicar una, se cambia a `true` su valor
-en [`src/unidades.ts`](src/unidades.ts) y se sube a `main`. Con `npm run dev` se ven
-todas, para revisarlas en el propio computador.
+**Unidades ocultas.** Los alumnos ven Neumática, PLC y CNC. Robótica está lista, pero
+no se publica: su código no entra en el sitio que se sube, así que no hay forma de
+abrirla desde la app. Para publicar una unidad, se cambia a `true` su valor en
+[`src/unidades.ts`](src/unidades.ts) y se sube a `main`. Con `npm run dev` se ven todas,
+para revisarlas en el propio computador.
 
 ---
 
