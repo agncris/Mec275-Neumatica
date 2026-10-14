@@ -1416,3 +1416,35 @@ body:has(.banco:not(.banco--apilado):not(.banco--neumatica-apilado)) {
 .pestanas-movil.pestanas-movil--barra.pestanas-movil--muchas button {
   padding: 0 10px;
 }
+
+/* Ventana mediana (las zonas apiladas, la página se desplaza): lo mismo que en el
+   celular. Las zonas van de borde a borde, sin margen gris que no se mueve, y lo
+   que se desplaza por dentro pasa el movimiento a la página al llegar a su fin.
+   Así se desplaza deslizando en cualquier parte, sea cual sea el tamaño de la ventana. */
+.banco.banco--apilado,
+.banco.banco--neumatica-apilado {
+  padding-left: 0;
+  padding-right: 0;
+}
+.banco--apilado > .banco__barra,
+.banco--apilado > .pestanas-movil,
+.banco--apilado > .banco__estado,
+.banco--apilado > .banco__encabezado,
+.banco--neumatica-apilado > .banco__barra,
+.banco--neumatica-apilado > .banco__estado {
+  padding-left: max(10px, env(safe-area-inset-left));
+  padding-right: max(10px, env(safe-area-inset-right));
+}
+.banco--apilado > .banco-panel,
+.banco--apilado > .panel-acoplado,
+.banco--neumatica-apilado .banco__cuerpo > * {
+  border-radius: 0;
+  border-left: none;
+  border-right: none;
+}
+.banco--apilado .banco__area,
+.banco--apilado .banco-panel,
+.banco--apilado .panel-acoplado__contenido,
+.banco--neumatica-apilado .banco-panel {
+  overscroll-behavior: auto !important;
+}
