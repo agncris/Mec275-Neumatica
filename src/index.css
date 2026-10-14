@@ -1395,3 +1395,24 @@ body:has(.banco:not(.banco--apilado):not(.banco--neumatica-apilado)) {
     width: 100%;
   }
 }
+
+/* Más de cuatro pestañas en el celular: no se aprietan ni se cortan, se desplazan. */
+.pestanas-movil.pestanas-movil--muchas {
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  padding-right: 20px;
+  overscroll-behavior-x: contain;
+}
+.pestanas-movil.pestanas-movil--muchas button {
+  flex: none;
+  padding: 0 14px;
+}
+/* Acostado van en la fila de herramientas y ocupan lo que sobra. */
+.pestanas-movil.pestanas-movil--barra.pestanas-movil--muchas {
+  flex: 1 1 0;
+  min-width: 150px;
+}
+.pestanas-movil.pestanas-movil--barra.pestanas-movil--muchas button {
+  padding: 0 10px;
+}

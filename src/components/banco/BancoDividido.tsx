@@ -109,7 +109,7 @@ export default function BancoDividido<T extends string>({ clave, barra, izquierd
     const pestanas: Array<{ id: string; titulo: string; tituloCorto?: string }> = [izquierda, derecha, ...(inferior?.pestanas ?? [])]
     const deInferior = inferior?.pestanas.find((p) => p.id === vistaMovil)
     const listaPestanas = (
-      <div role="tablist" aria-label="Qué ver" className={`pestanas-movil${apaisado ? ' pestanas-movil--barra' : ''}`}>
+      <div role="tablist" aria-label="Qué ver" className={`pestanas-movil${apaisado ? ' pestanas-movil--barra' : ''}${pestanas.length > 4 ? ' pestanas-movil--muchas' : ''}`}>
         {pestanas.map((p) => (
           <button key={p.id} role="tab" aria-selected={vistaMovil === p.id} onClick={() => elegirMovil(p.id)} data-pestana-movil={p.id} title={p.titulo}>
             {p.tituloCorto ?? p.titulo}

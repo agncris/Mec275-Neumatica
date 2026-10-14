@@ -17,7 +17,7 @@ import GuiaInicio, { GUIA_CNC, useGuia } from '../components/banco/GuiaInicio'
 import Autoevaluacion from '../components/Autoevaluacion'
 import FichaCNC from './FichaCNC'
 import { PREGUNTAS_CNC } from './preguntasCNC'
-import { copiarTabla, copiarTexto, descargarTexto, enlaceTrabajo, limpiarEnlace, trabajoDelEnlace } from '../entregar'
+import { copiarTabla, descargarTexto, limpiarEnlace, trabajoDelEnlace } from '../entregar'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { exportarPng, nombreSeguro } from '../exportar'
 import EditorGcode, { type EditorGcodeRef } from './EditorGcode'
@@ -291,10 +291,27 @@ export default function UnidadCNC() {
     setAviso(`Programa descargado como ${a.download}.`)
   }
 
+  /** El trabajo completo (programa, preparación y máquina) en un solo archivo, para entregar y volver a abrir. */
+  const trabajoJson = () => JSON.stringify({ tipo: 'trabajo-cnc', version: 1, nombre: nombres[maquina], config, codigo }, null, 2)
+
+  const guardarJson = () => {
+    descargarTexto(trabajoJson(), nombreSeguro(nombres[maquina] || 'programa-cnc', 'json'), 'application/json')
+    setAviso('Trabajo descargado (JSON): se abre en la app con Archivo › Abrir.')
+  }
+
   const abrir = async (archivo: File | undefined) => {
     if (!archivo) return
     try {
       const texto = await archivo.text()
+      if (/\.json$/i.test(archivo.name) || texto.trimStart().startsWith('{')) {
+        const d = JSON.parse(texto) as { tipo?: string; config?: ConfigCNC; codigo?: string; nombre?: string }
+        if (d.tipo !== 'trabajo-cnc' || !d.config || typeof d.codigo !== 'string') throw new Error('Ese archivo no es un trabajo de CNC de NeumaLab.')
+        const m = d.config.maquina
+        setConfig(d.config)
+        setCodigos((x) => ({ ...x, [m]: d.codigo as string }))
+        setNombres((x) => ({ ...x, [m]: d.nombre || archivo.name.replace(/\.[^.]+$/, '') }))
+        return setAviso(`Trabajo «${archivo.name}» abierto en la ${m === 'torno' ? 'máquina de torneado' : 'fresadora'}.`)
+      }
       if (/[\u0000-\u0008]/.test(texto.slice(0, 2000))) throw new Error('Ese archivo no parece un programa de texto (código G).')
       setCodigo(texto.replace(/\r\n?/g, '\n'))
       setNombres((x) => ({ ...x, [maquina]: archivo.name.replace(/\.[^.]+$/, '') }))
@@ -424,11 +441,12 @@ export default function UnidadCNC() {
   )
   const itemsArchivo = [
     { texto: 'Nuevo programa', ayuda: 'Un programa en blanco para esta máquina', onClick: () => void nuevo() },
-    { texto: 'Abrir…', ayuda: '.cnc, .nc, .gcode o .txt (también de CNC Simulator Pro)', onClick: () => inputArchivo.current?.click() },
+    { texto: 'Abrir…', ayuda: 'Un trabajo (.json) o un programa .cnc, .nc, .gcode o .txt (también de CNC Simulator Pro)', onClick: () => inputArchivo.current?.click() },
     { texto: 'Guardar .cnc', ayuda: 'El archivo de texto que se entrega', onClick: guardarCnc },
     { texto: 'Mis trabajos…', ayuda: 'Guarda varios programas con nombre (con su preparación)', onClick: () => setMisTrabajos(true), separar: true },
   ]
   const itemsExportar = [
+    { texto: 'Trabajo (JSON)', ayuda: 'Programa y preparación en un archivo: se vuelve a abrir en la app con «Abrir…»', onClick: guardarJson },
     { texto: 'Trayectoria (PNG)', ayuda: 'La trayectoria 2D con sus puntos, para el informe', onClick: () => void exportarPlano() },
     {
       texto: 'Grabar video de la simulación',
@@ -471,6 +489,8 @@ export default function UnidadCNC() {
         </button>
       </span>
       {!estrecha && selectorVelocidad}
+      {/* En el celular «＋» va junto al avance del programa y la máquina baja a la segunda fila. */}
+      {estrecha && <BotonNuevo que="un programa" compacto deshabilitado={bloqueado} onClick={() => void nuevo()} />}
       {botonMaquina}
       {!estrecha && <BotonNuevo que="un programa" deshabilitado={bloqueado} onClick={() => void nuevo()} />}
       <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -496,7 +516,7 @@ export default function UnidadCNC() {
       <input
         ref={inputArchivo}
         type="file"
-        accept=".cnc,.nc,.gcode,.ngc,.tap,.txt,text/plain"
+        accept=".json,.cnc,.nc,.gcode,.ngc,.tap,.txt,application/json,text/plain"
         style={{ display: 'none' }}
         onChange={(e) => {
           void abrir(e.target.files?.[0])
@@ -583,16 +603,19 @@ export default function UnidadCNC() {
     {
       id: 'preparacion',
       titulo: 'Preparación',
+      tituloCorto: 'Preparar',
       contenido: <Preparacion config={config} setConfig={setConfig} bloqueado={bloqueado} modoCero={cero.modo} addRegPart={resultado.addRegPart} />,
     },
     {
       id: 'plano',
       titulo: `Trayectoria 2D ${torno ? '(Z-X)' : '(desde arriba)'}`,
+      tituloCorto: 'Trayectoria',
       contenido: <Plano2D programa={resultado} sim={sim} config={config} lineas={lineas} seleccionada={cursor} onElegirLinea={irA} origen={cero.origen} />,
     },
     {
       id: 'explicar',
       titulo: 'Explicar el bloque',
+      tituloCorto: 'Explicar',
       contenido: (
         <>
           <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: '#51606f' }}>Línea {lineaExplicada + 1}. Pon el cursor en una línea del programa para ver qué hace cada palabra.</p>
@@ -617,6 +640,7 @@ export default function UnidadCNC() {
     {
       id: 'coordenadas',
       titulo: 'Tabla de coordenadas',
+      tituloCorto: 'Tabla',
       contenido: <TablaPuntos resultado={resultado} torno={torno} lineas={lineas} irA={irA} seleccionada={cursor} casa={casa} origen={cero.origen} />,
     },
   ]
@@ -789,10 +813,20 @@ export default function UnidadCNC() {
           ]}
           archivos={[
             {
+              id: 'trabajo',
+              tipo: 'archivo',
+              titulo: 'Tu trabajo (.json)',
+              detalle: 'Programa y preparación en un archivo. Adjúntalo en Aula junto con tu PDF; se abre en la app con Archivo › Abrir.',
+              hacer: (base) => {
+                descargarTexto(trabajoJson(), `${base}.json`, 'application/json')
+                return `Descargado: ${base}.json`
+              },
+            },
+            {
               id: 'cnc',
               tipo: 'archivo',
               titulo: 'Programa .cnc',
-              detalle: 'El archivo de texto con tu código G. También se abre en CNC Simulator Pro.',
+              detalle: 'Solo el código G, en texto. También se abre en CNC Simulator Pro.',
               hacer: (base) => {
                 descargarTexto(codigo.replace(/\n/g, '\r\n'), `${base}.cnc`)
                 return `Descargado: ${base}.cnc`
@@ -811,16 +845,6 @@ export default function UnidadCNC() {
                 alternarGrabacion()
                 setTimeout(() => correr('corriendo'), 300)
                 return 'Grabando desde el inicio. Al terminar el mecanizado pulsa «■ Detener grabación» (arriba a la derecha).'
-              },
-            },
-            {
-              id: 'enlace',
-              tipo: 'enlace',
-              titulo: 'Enlace a tu programa',
-              detalle: 'Opcional: abre tu programa, con su preparación, en la app.',
-              hacer: async () => {
-                const url = await enlaceTrabajo('cnc', 'cnc', { config, codigo, nombre: nombres[maquina] })
-                return (await copiarTexto(url)) ? 'Enlace copiado.' : `Copia este enlace: ${url}`
               },
             },
           ]}

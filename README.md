@@ -81,14 +81,13 @@ derecha) abre un cajón con cuatro pasos:
 3. **Para pegar en tu presentación**: imágenes en PNG y tablas que se copian y se pegan
    en PowerPoint como tabla.
 4. **Archivos que subes junto con tu PDF**: el archivo de la app (que se vuelve a abrir
-   y a simular) y, en CNC y Robótica, el video de la simulación y un enlace que abre
-   el trabajo en la app.
+   y a simular) y, en CNC y Robótica, el video de la simulación.
 
 | Unidad | Para la presentación | Archivos |
 |---|---|---|
 | Neumática | Diagrama VDI 2860 (se arma en el mismo cajón), diagrama espacio-fase, elementos del circuito, imagen del circuito | Circuito `.json` |
 | PLC (Tarea 2) | Diagrama Ladder, tabla de entradas y salidas | Programa `.json` |
-| CNC | Trayectoria con los puntos, tabla de coordenadas, herramientas usadas, bruto | Programa `.cnc` (se abre también en CNC Simulator Pro), video, enlace |
+| CNC | Trayectoria con los puntos, tabla de coordenadas, herramientas usadas, bruto | Trabajo `.json` (programa y preparación), programa `.cnc` (se abre también en CNC Simulator Pro), video |
 | Robótica | Croquis de la pieza, posicionamiento, definición de nodos, ficha técnica | Definición `.json`, programa KRL `.src`, video, enlace |
 
 Las entregas `.json` de semestres anteriores (con respuestas escritas) se siguen
@@ -345,7 +344,14 @@ avance, tiempo de ciclo y material quitado.
 **Para el informe.** Vista 2D de la trayectoria (plano Z-X en el torno, vista superior
 en la fresadora) con la silueta y los puntos de cada bloque; **tabla de coordenadas**
 en absolutas e incrementales (se copia con un clic); descarga del programa como
-`.cnc`, de la trayectoria como PNG y **grabación en video** de la vista 3D.
+`.cnc`, del **trabajo completo** (programa, preparación y máquina) como `.json` desde
+Exportar o Entregar —se vuelve a abrir con «Abrir…»—, de la trayectoria como PNG y
+**grabación en video** de la vista 3D.
+
+**En el celular.** Los botones miden al menos 44 px, las pestañas se desplazan, «＋ Nuevo»
+queda a la vista y, acostado, las pestañas van en la misma fila de herramientas para
+dejarle alto al programa. La vista 3D se gira con un dedo (y, con mouse, también con la
+rueda apretada).
 
 **Ejemplos** (comentados línea a línea): refrentado y cilindrado; eje escalonado con
 ranura y tronzado; pomo con arcos G02/G03; buje taladrado; contorno cuadrado (el de la
@@ -558,7 +564,7 @@ npm run dev        # http://localhost:5173
 ```
 
 ```bash
-npm test           # 349 pruebas: motor, análisis, entregas, trabajos, autoevaluaciones, plano, símbolos, banco 3D, PLC, CNC, robótica y utilidades
+npm test           # 351 pruebas: motor, análisis, entregas, trabajos, autoevaluaciones, plano, símbolos, banco 3D, PLC, CNC, robótica y utilidades
 npm run typecheck  # comprobación de tipos
 npm run build      # compila a /dist
 ```
