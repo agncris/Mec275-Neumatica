@@ -15,7 +15,7 @@ import GuiaInicio, { GUIA_ROBOT, useGuia } from '../components/banco/GuiaInicio'
 import Autoevaluacion from '../components/Autoevaluacion'
 import FichaRobot from './FichaRobot'
 import { PREGUNTAS_ROBOT } from './preguntasRobot'
-import { copiarTabla, copiarTexto, descargarTexto, enlaceTrabajo, limpiarEnlace, trabajoDelEnlace } from '../entregar'
+import { copiarTabla, descargarTexto, limpiarEnlace, trabajoDelEnlace } from '../entregar'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { exportarPng, nombreSeguro } from '../exportar'
 import { croquisPieza, croquisPosicion } from './croquis'
@@ -966,16 +966,6 @@ export default function UnidadRobotica() {
                 alternarGrabacion()
                 setReproduciendo(true)
                 return 'Grabando desde el inicio. Al terminar el recorrido pulsa «■ Detener grabación» (arriba a la derecha).'
-              },
-            },
-            {
-              id: 'enlace',
-              tipo: 'enlace',
-              titulo: 'Enlace a tu definición',
-              detalle: 'Opcional: abre tu definición, con su plano, en la app.',
-              hacer: async () => {
-                const url = await enlaceTrabajo('robotica', 'rob', def)
-                return (await copiarTexto(url)) ? 'Enlace copiado.' : `Copia este enlace: ${url}`
               },
             },
           ]}

@@ -89,7 +89,7 @@ derecha) abre un cajón con cuatro pasos:
 | Neumática | Diagrama VDI 2860 (se arma en el mismo cajón), diagrama espacio-fase, elementos del circuito, imagen del circuito | Circuito `.json` |
 | PLC (Tarea 2) | Diagrama Ladder, tabla de entradas y salidas | Programa `.json` |
 | CNC (Tarea 3) | Trayectoria con los puntos, tabla de coordenadas, herramientas usadas, bruto | Trabajo `.json` (programa, preparación y torreta), video; el programa `.cnc` es opcional (se abre también en CNC Simulator Pro) |
-| Robótica | Croquis de la pieza, posicionamiento, definición de nodos, ficha técnica | Definición `.json`, programa KRL `.src`, video, enlace |
+| Robótica | Croquis de la pieza, posicionamiento, definición de nodos, ficha técnica | Definición `.json`, programa KRL `.src`, video |
 
 Las entregas `.json` de semestres anteriores (con respuestas escritas) se siguen
 abriendo.
@@ -365,6 +365,8 @@ en absolutas e incrementales (se copia con un clic); descarga del programa como
 `.cnc`, del **trabajo completo** (programa, preparación y máquina) como `.json` desde
 Exportar o Entregar —se vuelve a abrir con «Abrir…»—, de la trayectoria como PNG y
 **grabación en video** de la vista 3D.
+
+**Pantalla completa.** La vista 3D de CNC y de Robótica tiene su botón «⤢ Pantalla completa» (Esc para salir), como el banco 3D de Neumática y la planta del PLC.
 
 **En el celular.** Los botones miden al menos 44 px, las pestañas se desplazan, «＋ Nuevo»
 queda a la vista y, acostado, las pestañas van en la misma fila de herramientas para

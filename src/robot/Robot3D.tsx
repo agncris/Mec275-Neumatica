@@ -8,6 +8,7 @@
  * La escena está en milímetros; el robot usa Z hacia arriba (como KUKA y
  * Rhino) y se gira para three.js, que usa Y hacia arriba.
  */
+import BotonPantallaCompleta, { usePantallaCompleta } from '../components/PantallaCompleta'
 import { useEffect, useRef, useState, type MutableRefObject } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
@@ -256,6 +257,8 @@ type Vista = 'iso' | 'frente' | 'arriba' | 'lado'
 
 export default function Robot3D({ vista, alto = 480, onCanvas }: { vista: MutableRefObject<VistaRobot>; alto?: number | string; onCanvas?: (c: HTMLCanvasElement | null) => void }) {
   const contRef = useRef<HTMLDivElement>(null)
+  const envolturaRef = useRef<HTMLDivElement>(null)
+  const [pantalla, alternarPantalla] = usePantallaCompleta(envolturaRef)
   const [sinWebGL, setSinWebGL] = useState(false)
   const accion = useRef<((v: Vista) => void) | null>(null)
   const [vistaActual, setVistaActual] = useState<Vista>('iso')
@@ -520,8 +523,8 @@ export default function Robot3D({ vista, alto = 480, onCanvas }: { vista: Mutabl
 
   if (sinWebGL) return <p style={{ padding: 20, color: '#8a5b00' }}>Este navegador no tiene WebGL: la vista 3D no está disponible.</p>
   return (
-    <div style={{ position: 'relative', height: typeof alto === 'string' ? alto : undefined }}>
-      <div ref={contRef} style={{ width: '100%', height: alto, borderRadius: 8, overflow: 'hidden', background: '#dfe3e8' }} />
+    <div ref={envolturaRef} style={{ position: 'relative', height: pantalla ? '100%' : typeof alto === 'string' ? alto : undefined, background: '#dde2e7' }}>
+      <div ref={contRef} style={{ width: '100%', height: pantalla ? '100%' : alto, borderRadius: 8, overflow: 'hidden', background: '#dfe3e8' }} />
       <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 4 }}>
         {(
           [
@@ -548,6 +551,7 @@ export default function Robot3D({ vista, alto = 480, onCanvas }: { vista: Mutabl
             {t}
           </button>
         ))}
+        <BotonPantallaCompleta activa={pantalla} onAlternar={alternarPantalla} estilo={{ border: '1px solid #c6ced6', background: 'rgba(255,255,255,0.9)', color: '#33475c', borderRadius: 6, padding: '2px 8px', fontSize: '0.78rem', cursor: 'pointer' }} />
       </div>
     </div>
   )
