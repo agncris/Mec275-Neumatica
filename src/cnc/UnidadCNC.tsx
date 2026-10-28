@@ -17,7 +17,8 @@ import GuiaInicio, { GUIA_CNC, useGuia } from '../components/banco/GuiaInicio'
 import Autoevaluacion from '../components/Autoevaluacion'
 import FichaCNC from './FichaCNC'
 import { PREGUNTAS_CNC } from './preguntasCNC'
-import { copiarTabla, descargarTexto, limpiarEnlace, trabajoDelEnlace } from '../entregar'
+import { baseArchivo, copiarTabla, descargarTexto, leerAlumno, limpiarEnlace, trabajoDelEnlace } from '../entregar'
+import { crearTrabajo, herramientasLlamadas, leerTrabajo, revisarTrabajo, TAREA_3, type ResumenTrabajo } from './trabajo'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { exportarPng, nombreSeguro } from '../exportar'
 import EditorGcode, { type EditorGcodeRef } from './EditorGcode'
@@ -151,6 +152,8 @@ export default function UnidadCNC() {
       setEstado('listo')
       setEntregaAbierta(false)
       setEligiendoMaquina(false)
+      panel.onPestana(s === 'tarea' ? 'plano-tarea' : 'preparacion')
+      panel.onAbrir(true)
     }
     setSeccionCruda(s)
   }
@@ -164,6 +167,9 @@ export default function UnidadCNC() {
   const [sonido, setSonido] = useState(false)
   const [cursor, setCursor] = useState<number | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
+  // Al abrir un .json se muestra su revisión: errores, comentarios, choques, herramientas y bruto.
+  const [revisionAlAbrir, setRevisionAlAbrir] = useState<{ archivo: string; alumno: string } | null>(null)
+  const [resumen, setResumen] = useState<{ archivo: string; alumno: string; resumen: ResumenTrabajo } | null>(null)
   const [, setTick] = useState(0)
   const [grabando, setGrabando] = useState(false)
   const editor = useRef<EditorGcodeRef>(null)
@@ -231,6 +237,21 @@ export default function UnidadCNC() {
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Al entrar directo a la tarea (enlace ?vista=tarea) se ve primero el plano.
+  useEffect(() => {
+    if (!enTarea) return
+    panel.onPestana('plano-tarea')
+    panel.onAbrir(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if (!revisionAlAbrir) return
+    setResumen({ ...revisionAlAbrir, resumen: revisarTrabajo(config, codigo) })
+    setRevisionAlAbrir(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [revisionAlAbrir])
 
   useEffect(() => {
     if (!aviso) return
@@ -345,10 +366,16 @@ export default function UnidadCNC() {
   }
 
   /** El trabajo completo (programa, preparación y máquina) en un solo archivo, para entregar y volver a abrir. */
-  const trabajoJson = () => JSON.stringify({ tipo: 'trabajo-cnc', version: 1, nombre: nombres[maquina], config, codigo }, null, 2)
+  const trabajoJson = () => {
+    const alumno = leerAlumno()
+    return JSON.stringify(crearTrabajo({ nombre: nombres[maquina], config, codigo, tarea: enTarea ? TAREA_3 : undefined, alumno: enTarea ? alumno : undefined }), null, 2)
+  }
 
   const guardarJson = () => {
-    descargarTexto(trabajoJson(), nombreSeguro(nombres[maquina] || 'programa-cnc', 'json'), 'application/json')
+    // En la tarea el archivo sale con el nombre que pide el enunciado, si ya se escribió el nombre.
+    const alumno = leerAlumno()
+    const nombreTarea = enTarea && alumno.nombre.trim() ? `${baseArchivo(alumno, 'Tarea-3')}.json` : null
+    descargarTexto(trabajoJson(), nombreTarea ?? nombreSeguro(nombres[maquina] || 'programa-cnc', 'json'), 'application/json')
     setAviso('Trabajo descargado (JSON): se abre en la app con Archivo › Abrir.')
   }
 
@@ -357,13 +384,17 @@ export default function UnidadCNC() {
     try {
       const texto = await archivo.text()
       if (/\.json$/i.test(archivo.name) || texto.trimStart().startsWith('{')) {
-        const d = JSON.parse(texto) as { tipo?: string; config?: ConfigCNC; codigo?: string; nombre?: string }
-        if (d.tipo !== 'trabajo-cnc' || !d.config || typeof d.codigo !== 'string') throw new Error('Ese archivo no es un trabajo de CNC de NeumaLab.')
+        const d = leerTrabajo(texto)
         const m = d.config.maquina
+        const deLaTarea = d.tarea === TAREA_3 && VER_TAREA_CNC
         if (enTarea && m !== 'torno') throw new Error('La Tarea 3 se hace en el centro de torneado.')
+        // Un trabajo de la tarea se abre en la sección de la tarea, sea donde sea que se abra.
+        if (deLaTarea && !enTarea) setSeccion('tarea')
+        setEstado('listo')
         setConfig(d.config)
-        setCodigos((x) => ({ ...x, [m]: d.codigo as string }))
+        setCodigos((x) => ({ ...x, [m]: d.codigo }))
         setNombres((x) => ({ ...x, [m]: d.nombre || archivo.name.replace(/\.[^.]+$/, '') }))
+        setRevisionAlAbrir({ archivo: archivo.name, alumno: d.alumno ? [d.alumno.nombre, d.alumno.companero].filter(Boolean).join(' y ') : '' })
         return setAviso(`Trabajo «${archivo.name}» abierto en la ${m === 'torno' ? 'máquina de torneado' : 'fresadora'}.`)
       }
       if (/[\u0000-\u0008]/.test(texto.slice(0, 2000))) throw new Error('Ese archivo no parece un programa de texto (código G).')
@@ -659,6 +690,16 @@ export default function UnidadCNC() {
   )
 
   const pestanas: Array<PestanaPanel<PestanaCNC>> = [
+    ...(enTarea
+      ? [
+          {
+            id: 'plano-tarea' as const,
+            titulo: 'Plano de la Tarea 3',
+            tituloCorto: 'Plano',
+            contenido: <PlanoTarea />,
+          },
+        ]
+      : []),
     {
       id: 'preparacion',
       titulo: 'Preparación',
@@ -801,29 +842,7 @@ export default function UnidadCNC() {
           clave="neumalab.cnc.entrega"
           trabajoSugerido="Tarea-3"
           onCerrar={() => setEntregaAbierta(false)}
-          revisar={() => {
-            const prueba = new SimuladorCNC(resultado, config, casa)
-            prueba.terminar()
-            const codigoSinComentarios = lineas.filter((l) => !/^\s*[(;%]/.test(l))
-            const unidadesMm = codigoSinComentarios.some((l) => /\bG21\b/i.test(l.replace(/\(.*?\)/g, '')))
-            const fin = codigoSinComentarios.some((l) => /\bM(30|0?2)\b/i.test(l.replace(/\(.*?\)/g, '')))
-            const sinC = resultado.sinComentario
-            return [
-              { ok: resultado.puntos.length > 1, texto: resultado.puntos.length > 1 ? 'El programa mueve la herramienta.' : 'El programa todavía no mueve la herramienta: escribe la trayectoria.' },
-              { ok: errores.length === 0, texto: errores.length === 0 ? 'El programa no tiene errores de escritura.' : `Hay ${errores.length} error(es). El primero, en la línea ${errores[0].linea + 1}: ${errores[0].texto}` },
-              {
-                ok: sinC.length === 0,
-                texto: sinC.length === 0 ? 'Cada línea de código tiene su comentario.' : `Hay ${sinC.length} línea(s) de código sin comentario (por ejemplo la ${sinC[0] + 1}). Si el enunciado pide comentar cada línea, agrégalo entre paréntesis.`,
-              },
-              { ok: unidadesMm, texto: unidadesMm ? 'Trabaja en milímetros (G21).' : 'No encuentro G21: indica que trabajas en milímetros.' },
-              { ok: fin, texto: fin ? 'El programa termina con M30 (o M02).' : 'El programa no termina con M30 ni M02.' },
-              {
-                ok: !prueba.alarma,
-                texto: prueba.alarma ? `Al mecanizar todo salta una alarma en la línea ${prueba.alarma.linea + 1}: ${prueba.alarma.texto}` : 'La simulación completa llega al final sin alarmas.',
-              },
-              ...prueba.consejos.slice(0, 3).map((c) => ({ ok: false, texto: `Línea ${c.linea + 1}: ${c.texto}` })),
-            ]
-          }}
+          revisar={() => revisarTrabajo(config, codigo).puntos}
           presentacion={[
             {
               id: 'trayectoria',
@@ -853,14 +872,7 @@ export default function UnidadCNC() {
               detalle: 'Cada herramienta con su nombre y en qué líneas se llama.',
               hacer: async () => {
                 const lista = torno ? torretaDe(config) : almacenDe(config)
-                const uso = new Map<number, number[]>()
-                lineas.forEach((l, i) => {
-                  const limpia = l.replace(/\(.*?\)/g, '').replace(/;.*/, '')
-                  for (const m of limpia.matchAll(/\bT0*(\d{1,2})/gi)) {
-                    const t = Number(m[1])
-                    uso.set(t, [...(uso.get(t) ?? []), i + 1])
-                  }
-                })
+                const uso = herramientasLlamadas(codigo, torno)
                 if (!uso.size) throw new Error('Tu programa no llama a ninguna herramienta (T).')
                 const filas = [...uso.entries()].sort((a, b) => a[0] - b[0]).map(([t, ls]) => [`T${t}`, lista.find((h) => h.t === t)?.nombre ?? '(no está en la torreta)', lista.find((h) => h.t === t)?.uso ?? '', ls.join(', ')])
                 return (await copiarTabla([['Herramienta', 'Nombre', 'Para qué sirve', 'Líneas'], ...filas])) ? 'Tabla copiada: pégala en tu presentación (Ctrl+V).' : 'Tu navegador no dejó copiar.'
@@ -894,7 +906,7 @@ export default function UnidadCNC() {
               id: 'cnc',
               tipo: 'archivo',
               titulo: 'Programa .cnc',
-              detalle: 'Solo el código G, en texto. También se abre en CNC Simulator Pro.',
+              detalle: 'Opcional: solo el código G, en texto. También se abre en CNC Simulator Pro.',
               hacer: (base) => {
                 descargarTexto(codigo.replace(/\n/g, '\r\n'), `${base}.cnc`)
                 return `Descargado: ${base}.cnc`
@@ -918,6 +930,7 @@ export default function UnidadCNC() {
           ]}
         />
       )}
+      {resumen && <ResumenRevision {...resumen} onCerrar={() => setResumen(null)} />}
       {aviso && (
         <p role="status" style={avisoOk}>
           {aviso}
@@ -942,7 +955,7 @@ function filasCoordenadas(resultado: ResultadoGcode, torno: boolean, lineas: str
   return [cab, ...filas]
 }
 
-type PestanaCNC = 'preparacion' | 'plano' | 'explicar' | 'coordenadas'
+type PestanaCNC = 'preparacion' | 'plano' | 'explicar' | 'coordenadas' | 'plano-tarea'
 
 const SECCIONES_CNC: SeccionEstudio[] = [
   { id: 'practica', indice: 'Autoevaluación', titulo: 'Autoevaluación · practica con preguntas al azar', contenido: <Autoevaluacion generadores={PREGUNTAS_CNC} /> },
@@ -1442,3 +1455,56 @@ const alarma: React.CSSProperties = {
 }
 const celda: React.CSSProperties = { padding: '4px 8px', borderBottom: '1px solid #eef1f4', verticalAlign: 'top' }
 const celdaNum: React.CSSProperties = { padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid #eef1f4' }
+
+
+/** El plano de fabricación de la Tarea 3 (el mismo del enunciado), a mano mientras se programa. */
+function PlanoTarea() {
+  return (
+    <div data-plano-tarea="si">
+      <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: '#51606f' }}>
+        Pieza 1, cotas en mm. En el torno, X se programa en diámetro y el cero del programa va en la cara frontal, sobre el eje. Toca el plano para verlo
+        grande.
+      </p>
+      <a href="/plano-tarea3-cnc.png" target="_blank" rel="noreferrer" title="Abrir el plano en grande">
+        <img src="/plano-tarea3-cnc.png" alt="Plano de fabricación de la Tarea 3: pieza 1 con ranuras, tramo cónico, tramo curvo, hombro de Ø80 y punta redondeada de Ø40" style={{ width: '100%', maxWidth: 900, height: 'auto', display: 'block', border: '1px solid #dbe1e8', borderRadius: 6, background: '#fff' }} />
+      </a>
+    </div>
+  )
+}
+
+/** La revisión de un .json recién abierto: qué tiene el trabajo y qué conviene mirar. */
+function ResumenRevision({ archivo, alumno, resumen, onCerrar }: { archivo: string; alumno: string; resumen: ResumenTrabajo; onCerrar: () => void }) {
+  return (
+    <div role="dialog" aria-modal="true" aria-label="Revisión del trabajo" data-resumen-revision="si" style={{ position: 'fixed', inset: 0, background: 'rgba(20,30,40,0.45)', zIndex: 200, display: 'grid', placeItems: 'center', padding: 12 }} onClick={onCerrar}>
+      <div style={{ background: '#fff', borderRadius: 10, maxWidth: 560, width: '100%', maxHeight: '88dvh', overflowY: 'auto', padding: '14px 16px', boxShadow: '0 12px 40px rgba(0,0,0,0.3)' }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+          <h2 style={{ margin: 0, fontSize: '1.05rem', flex: 1 }}>Revisión del trabajo</h2>
+          <button onClick={onCerrar} aria-label="Cerrar" style={{ border: 'none', background: 'transparent', fontSize: '1.2rem', cursor: 'pointer' }}>
+            ✕
+          </button>
+        </div>
+        <p style={{ margin: '4px 0 10px', fontSize: '0.84rem', color: '#51606f' }}>
+          {archivo}
+          {alumno ? ` · ${alumno}` : ''}
+        </p>
+        <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 5 }}>
+          {resumen.puntos.map((r, i) => (
+            <li key={i} style={{ display: 'flex', gap: 8, fontSize: '0.88rem', color: r.ok ? '#14532d' : '#7a4f00' }}>
+              <span aria-hidden>{r.ok ? '✓' : '⚠'}</span>
+              <span>{r.texto}</span>
+            </li>
+          ))}
+        </ul>
+        <dl style={{ margin: '12px 0 0', display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '3px 10px', fontSize: '0.86rem' }}>
+          {resumen.datos.map(([k, v]) => (
+            <div key={k} style={{ display: 'contents' }}>
+              <dt style={{ color: '#51606f' }}>{k}</dt>
+              <dd style={{ margin: 0 }}>{v}</dd>
+            </div>
+          ))}
+        </dl>
+        <p style={{ margin: '12px 0 0', fontSize: '0.78rem', color: '#51606f' }}>La revisión no califica: avisa de lo que conviene mirar. El programa ya está abierto para simularlo.</p>
+      </div>
+    </div>
+  )
+}

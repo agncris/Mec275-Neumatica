@@ -13,7 +13,7 @@ export interface DatosAlumno {
 
 const CLAVE_ALUMNO = 'neumalab.alumno'
 
-function leerAlumno(): DatosAlumno {
+export function leerAlumno(): DatosAlumno {
   try {
     const d = JSON.parse(localStorage.getItem(CLAVE_ALUMNO) ?? '{}') as Partial<DatosAlumno>
     return { nombre: typeof d.nombre === 'string' ? d.nombre : '', companero: typeof d.companero === 'string' ? d.companero : '' }

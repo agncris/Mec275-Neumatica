@@ -68,9 +68,10 @@ abierto.
 
 La aplicación no trae enunciados ni soluciones: el enunciado y la plantilla (PPT) los
 reparte el profesor. El alumno responde en la plantilla, la guarda como PDF y la sube
-en Aula junto con el archivo `.json` de su trabajo. En PLC, la Tarea 2 tiene su propia
-sección (**«★ Tarea 2»**, junto a Laboratorio) con la planta del silo; el botón
-**«Entregar Tarea PLC»** aparece sólo dentro de ella. El botón de entrega (arriba a la
+en Aula junto con el archivo `.json` de su trabajo. En PLC y CNC la tarea tiene su propia
+sección (**«★ Tarea 2»** con la planta del silo, **«★ Tarea 3»** con el torno y el plano de la pieza;
+junto a Laboratorio); los botones **«Entregar Tarea PLC»** y **«Entregar Tarea CNC»** aparecen
+sólo dentro de ellas. El botón de entrega (arriba a la
 derecha) abre un cajón con cuatro pasos:
 
 1. **Tus datos**: nombre (y el de la pareja, si hay) y el trabajo. Todos los archivos
@@ -87,7 +88,7 @@ derecha) abre un cajón con cuatro pasos:
 |---|---|---|
 | Neumática | Diagrama VDI 2860 (se arma en el mismo cajón), diagrama espacio-fase, elementos del circuito, imagen del circuito | Circuito `.json` |
 | PLC (Tarea 2) | Diagrama Ladder, tabla de entradas y salidas | Programa `.json` |
-| CNC | Trayectoria con los puntos, tabla de coordenadas, herramientas usadas, bruto | Trabajo `.json` (programa y preparación), programa `.cnc` (se abre también en CNC Simulator Pro), video |
+| CNC (Tarea 3) | Trayectoria con los puntos, tabla de coordenadas, herramientas usadas, bruto | Trabajo `.json` (programa, preparación y torreta), video; el programa `.cnc` es opcional (se abre también en CNC Simulator Pro) |
 | Robótica | Croquis de la pieza, posicionamiento, definición de nodos, ficha técnica | Definición `.json`, programa KRL `.src`, video, enlace |
 
 Las entregas `.json` de semestres anteriores (con respuestas escritas) se siguen
@@ -341,12 +342,22 @@ no la detienen. Al tronzar, la pieza cae a la bandeja. Hay viruta, refrigerante 
 sonido del husillo y del corte, y un visor de cotas (DRO) con herramienta, husillo,
 avance, tiempo de ciclo y material quitado.
 
-**Tarea 3 (lista, todavía oculta).** La sección **«★ Tarea 3»** (junto a Laboratorio) trae el
-centro de torneado con latón y un programa en blanco, guardado aparte del Laboratorio; no trae
-el enunciado ni la pieza (los reparte el profesor), no se cambia de máquina y no hay ejemplos.
-«Entregar Tarea CNC» sólo aparece ahí, así que mientras esté oculta la unidad no ofrece entrega.
-Se muestra poniendo `TAREA_CNC_PUBLICADA = true` en [`src/unidades.ts`](src/unidades.ts); con
-`npm run dev` se ve siempre.
+**Tarea 3.** La sección **«★ Tarea 3»** (junto a Laboratorio) abre el centro de torneado con
+latón y el programa nuevo del torno (N10–N40 y N900–N920), guardado aparte del Laboratorio. En el
+panel de abajo, la pestaña **Plano** muestra el plano de la pieza (el del enunciado); la
+**Preparación** del bruto queda en blanco para que el alumno determine sus dimensiones. No trae
+soluciones, no se cambia de máquina y no hay ejemplos. **«Entregar Tarea CNC»** sólo aparece ahí y
+da la trayectoria, la tabla de coordenadas, las herramientas, el bruto, el video y el `.json`
+(`Nombre_Apellido[_Pareja]_Tarea-3`). Si el nombre ya está escrito, **Exportar › Trabajo (JSON)**
+usa ese mismo nombre.
+
+El `.json` guarda el programa, la preparación (material, bruto, garras, sobremetal y cero del
+programa), la **torreta completa**, el nombre del alumno y la marca de la tarea; los `.json` anteriores
+se siguen abriendo. Al abrir un `.json` con «Abrir…» se muestra su **revisión**: errores de
+escritura, líneas sin comentario, alarmas y choques con las garras, pasadas de más de 5 mm,
+ciclo completo, herramientas usadas y dimensiones del bruto. La revisión no califica. Un `.json` de
+la tarea se abre siempre en «★ Tarea 3». La sección se puede ocultar con `TAREA_CNC_PUBLICADA = false`
+en [`src/unidades.ts`](src/unidades.ts).
 
 **Para el informe.** Vista 2D de la trayectoria (plano Z-X en el torno, vista superior
 en la fresadora) con la silueta y los puntos de cada bloque; **tabla de coordenadas**
@@ -571,7 +582,7 @@ npm run dev        # http://localhost:5173
 ```
 
 ```bash
-npm test           # 351 pruebas: motor, análisis, entregas, trabajos, autoevaluaciones, plano, símbolos, banco 3D, PLC, CNC, robótica y utilidades
+npm test           # 358 pruebas: motor, análisis, entregas, trabajos, autoevaluaciones, plano, símbolos, banco 3D, PLC, CNC, robótica y utilidades
 npm run typecheck  # comprobación de tipos
 npm run build      # compila a /dist
 ```

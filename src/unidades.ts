@@ -10,8 +10,8 @@ export type Unidad = 'neumatica' | 'plc' | 'cnc' | 'robotica'
 
 const CNC_PUBLICADA = true
 const ROBOTICA_PUBLICADA = false
-/** La sección «★ Tarea 3» de CNC está lista pero se muestra recién cuando se indique. */
-const TAREA_CNC_PUBLICADA = false
+/** La sección «★ Tarea 3» de CNC (plano, torno y entrega). Con false queda oculta. */
+const TAREA_CNC_PUBLICADA = true
 
 // Valores fijos al compilar: si son false, el compilador deja fuera esas unidades.
 export const VER_CNC = CNC_PUBLICADA || import.meta.env.DEV
