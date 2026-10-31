@@ -531,7 +531,7 @@ export default function UnidadRobotica() {
       </span>
       {modo === 'visual' && (
         <>
-          {!estrecha && <BotonNuevo que="una definición" onClick={() => cargarEjemplo('vacio')} />}
+          <BotonNuevo que="una definición" compacto={estrecha} onClick={() => cargarEjemplo('vacio')} />
           <span style={{ display: 'inline-flex', gap: 2 }}>
             <button onClick={deshacer} disabled={!historial.current.puedeDeshacer} aria-label="Deshacer" className="boton-icono" style={{ opacity: historial.current.puedeDeshacer ? 1 : 0.4 }} title="Deshacer (Ctrl+Z)">
               ↶

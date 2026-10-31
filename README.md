@@ -327,6 +327,8 @@ una herramienta como `T n`, `T… M6` la monta, `G81`/`G83` taladran en el eje d
 (como `G81 Z60 R78` del tutorial, con la broca T17) y `G76` rosca en dos bloques
 (`P` repasos/ángulo, `Q` en micrones). El resto de las instrucciones `$` se ignora.
 
+**Programas de un torno Fanuc real** (como el Prog 610 del laboratorio) se abren casi tal cual: `:610` es el número de programa, `/` es salto de bloque, `T0` sólo borra correctores, y `G83` sin `R` parte de donde está la herramienta (con `Q` en micras, `Q10000` = 10 mm). Lo propio de esa máquina (tope, puerta, `G50`) se avisa o se ignora; el tope `T0404` se tiene que quitar, porque en la app es una herramienta de corte.
+
 **Editor y revisión.** Editor con colores y números de línea; mientras se escribe se
 revisa el programa y los errores salen en rojo con su línea y una explicación (arco
 que no cierra, falta el avance F, eje que la máquina no tiene…). Poniendo el cursor en
@@ -584,7 +586,7 @@ npm run dev        # http://localhost:5173
 ```
 
 ```bash
-npm test           # 358 pruebas: motor, análisis, entregas, trabajos, autoevaluaciones, plano, símbolos, banco 3D, PLC, CNC, robótica y utilidades
+npm test           # 361 pruebas: motor, análisis, entregas, trabajos, autoevaluaciones, plano, símbolos, banco 3D, PLC, CNC, robótica y utilidades
 npm run typecheck  # comprobación de tipos
 npm run build      # compila a /dist
 ```

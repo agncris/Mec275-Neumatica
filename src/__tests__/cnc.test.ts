@@ -334,3 +334,22 @@ describe('subprogramas, ciclos G71/G70 y compensación de radio', () => {
     expect(interpretar(chico, 'fresadora', casaF, opciones).diagnosticos.some((d) => /no cabe/.test(d.texto))).toBe(true)
   })
 })
+
+describe('programas de un torno Fanuc real (Prog 610)', () => {
+  const dist = (c: string) => interpretar(c, 'torno', posicionCasa(TORNO))
+  it(':610 es el número de programa y «/» después de N es salto de bloque', () => {
+    const r = dist('%\n: 610 (BUJE)\nN10 G21 G90\nN80 / M05\nN90 M30\n%')
+    expect(r.diagnosticos.filter((d) => d.nivel === 'error')).toEqual([])
+  })
+  it('G83 sin R parte de donde está la herramienta, y Q10000 son 10 mm', () => {
+    const r = dist('G21 G90\nM03 S1200\nG00 X0 Z2\nG83 Z-43 Q10000 F0.2\nG80\nM30')
+    expect(r.diagnosticos.filter((d) => d.nivel === 'error')).toEqual([])
+    const cortes = r.pasos.filter((p) => p.tipo === 'corte')
+    expect(cortes.length).toBeGreaterThan(3) // picoteo cada 10 mm: varias bajadas
+  })
+  it('T0 no es una herramienta: sólo borra correctores', () => {
+    const r = dist('G21 G90\nT0\nT0101\nM30')
+    expect(r.diagnosticos.filter((d) => d.nivel !== 'info')).toEqual([])
+    expect(r.pasos.some((p) => p.herramienta === 0)).toBe(false)
+  })
+})

@@ -578,11 +578,10 @@ export default function UnidadCNC() {
           {'⟲\uFE0E'}
         </button>
       </span>
+      {/* Igual que en las otras unidades: acción principal, «Nuevo» y después los selectores. */}
+      <BotonNuevo que="un programa" compacto={estrecha} deshabilitado={bloqueado} onClick={() => void nuevo()} />
       {!estrecha && selectorVelocidad}
-      {/* En el celular «＋» va junto al avance del programa y la máquina baja a la segunda fila. */}
-      {estrecha && <BotonNuevo que="un programa" compacto deshabilitado={bloqueado} onClick={() => void nuevo()} />}
       {botonMaquina}
-      {!estrecha && <BotonNuevo que="un programa" deshabilitado={bloqueado} onClick={() => void nuevo()} />}
       <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
         {!estrecha && (
           <button onClick={guia.abrir} className="boton-icono" title="Guía de inicio" aria-label="Guía de inicio" data-abrir-guia="si">

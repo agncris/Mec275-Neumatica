@@ -144,7 +144,11 @@ export function analizarLinea(texto: string): LineaAnalizada {
   const comentario = comentarios.filter(Boolean).join(' · ')
   if (t.startsWith('%') || t === '') return { palabras: [], comentario, directiva: null, resto: null, vacia: t === '' || t.startsWith('%') }
   if (t.startsWith('$')) return { palabras: [], comentario, directiva: t.slice(1).trim(), resto: null, vacia: false }
+  // Número de programa de Fanuc (:610): es sólo el nombre, no se ejecuta.
+  if (/^:\s*\d*\s*$/.test(t)) return { palabras: [], comentario, directiva: null, resto: null, vacia: true }
   if (t.startsWith('/')) t = t.slice(1).trim() // salto de bloque opcional: se ejecuta igual
+  // También puede ir después del número de bloque (N80 / M18).
+  t = t.replace(/^(N\s*\d+\s*)\/\s*/i, '$1')
   // ET: herramienta integrada de CNC Simulator Pro; aquí equivale a T.
   t = t.replace(/(^|[\s\d.])ET\s*(\d+)/gi, '$1T$2')
   const palabras: LineaAnalizada['palabras'] = []
@@ -484,7 +488,9 @@ export function interpretar(texto: string, maquina: TipoMaquina, casa: Vec3, opc
       // T0101 (torno: herramienta 01, corrector 01) o T1 / T01.
       const tt = Math.round(val.T)
       const num = torno && tt >= 100 ? Math.floor(tt / 100) : tt
-      if (torno || tieneM(6)) cambio = num
+      // T0 (o T0000) sólo borra los correctores en un torno Fanuc: no cambia de herramienta.
+      if (num === 0 && torno) diag(n, 'info', 'T0 borra los correctores de herramienta; aquí no cambia nada.')
+      else if (torno || tieneM(6)) cambio = num
       else {
         // En la fresadora T sólo prepara la herramienta: se monta con M06.
         pendienteT = num
@@ -717,13 +723,15 @@ export function interpretar(texto: string, maquina: TipoMaquina, casa: Vec3, opc
       } else if (m === 81 || m === 83) {
         if (!e.ciclo || 'R' in val || 'Z' in val || 'Q' in val) {
           const zIni = e.ciclo?.zInicial ?? e.pos.z
-          const r = 'R' in val ? (e.absoluto ? e.origen.z + val.R * esc : zIni + val.R * esc) : e.ciclo?.r
+          // Sin R (como en Fanuc) el ciclo parte desde donde está la herramienta.
+          const r = 'R' in val ? (e.absoluto ? e.origen.z + val.R * esc : zIni + val.R * esc) : e.ciclo?.r ?? (torno && 'Z' in val ? zIni : undefined)
           const zc = 'Z' in val ? (e.absoluto ? e.origen.z + val.Z * esc : (r ?? zIni) + val.Z * esc) : e.ciclo?.z
           if (r === undefined || zc === undefined) {
             diag(n, 'error', `${codigo('G', m)} necesita el plano de aproximación R y la profundidad Z.`)
             continue
           }
-          e.ciclo = { r, z: zc, q: 'Q' in val ? val.Q * esc : e.ciclo?.q ?? 0, retorno: tieneG(99) ? 99 : 98, zInicial: zIni }
+          e.ciclo = { r, z: zc, q: 'Q' in val ? (m === 83 && val.Q >= 100 ? val.Q / 1000 : val.Q) * esc : e.ciclo?.q ?? 0, // Q10000 = 10 mm (Fanuc lo da en micras)
+            retorno: tieneG(99) ? 99 : 98, zInicial: zIni }
         }
         if (tieneG(98)) e.ciclo.retorno = 98
         if (tieneG(99)) e.ciclo.retorno = 99
