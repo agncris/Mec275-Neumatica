@@ -8,14 +8,15 @@ import { BotonNuevo, botonPrimario, botonSecundario, estiloAviso, Menu, useEsEst
 import BancoDividido, { TituloArea } from '../components/banco/BancoDividido'
 import { usePanelAcoplado, type PestanaPanel } from '../components/banco/PanelAcoplado'
 import PaginaEstudiar, { type SeccionEstudio } from '../components/banco/PaginaEstudiar'
-import SubnavUnidad, { useSeccionUnidad } from '../components/banco/SubnavUnidad'
+import SubnavUnidad, { seccionDeLaUrl, useSeccionUnidad, type SeccionUnidad } from '../components/banco/SubnavUnidad'
+import { VER_TAREA_ROBOTICA } from '../unidades'
 import CajonEntregar from '../components/banco/CajonEntregar'
 import MisTrabajos from '../components/banco/MisTrabajos'
 import GuiaInicio, { GUIA_ROBOT, useGuia } from '../components/banco/GuiaInicio'
 import Autoevaluacion from '../components/Autoevaluacion'
 import FichaRobot from './FichaRobot'
 import { PREGUNTAS_ROBOT } from './preguntasRobot'
-import { copiarTabla, descargarTexto, limpiarEnlace, trabajoDelEnlace } from '../entregar'
+import { copiarTabla, descargarTexto, leerAlumno, limpiarEnlace, trabajoDelEnlace } from '../entregar'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { exportarPng, nombreSeguro } from '../exportar'
 import { croquisPieza, croquisPosicion } from './croquis'
@@ -47,6 +48,14 @@ const Robot3D = lazy(() => import('./Robot3D'))
 const TiposRobot = lazy(() => import('./TiposRobot'))
 
 const CLAVE = 'neumalab.robot.definicion'
+/**
+ * La tarea de Robótica se trabaja en su propia sección, con su definición guardada
+ * aparte del Laboratorio. El enunciado lo entrega el profesor; «Entregar» sólo
+ * aparece ahí.
+ */
+const CLAVE_TAREA = 'neumalab.robot.tarea'
+const NOMBRE_TAREA = 'Tarea Robótica'
+const MARCA_TAREA = 'tarea-4'
 const HERR_DEFECTO: Herramienta = { tipo: 'fresa', nombre: 'Husillo con fresa', largo: 200, diametro: 5 }
 const HERR_MANDO: Herramienta = { tipo: 'ventosa', nombre: 'Ventosa de vacío', largo: 120, diametro: 40 }
 const BASE_DEFECTO: Plano = planoXY(v(450, -150, 300))
@@ -62,6 +71,19 @@ function leerGuardada(): Definicion {
     /* sin almacenamiento */
   }
   return EJEMPLOS_ROBOT[0].definicion()
+}
+
+function leerTarea(): Definicion {
+  try {
+    const crudo = localStorage.getItem(CLAVE_TAREA)
+    if (crudo) {
+      const d = JSON.parse(crudo)
+      if (esDefinicion(d)) return d
+    }
+  } catch {
+    /* sin almacenamiento */
+  }
+  return (EJEMPLOS_ROBOT.find((e) => e.id === 'vacio') ?? EJEMPLOS_ROBOT[0]).definicion()
 }
 
 const esCurva = (d: Dato): d is Curva => typeof d === 'object' && d !== null && 'pts' in d && 'cerrada' in d
@@ -81,7 +103,7 @@ function previaDe(datos: Dato[]): Previa {
 type Modo = 'visual' | 'mando'
 
 export default function UnidadRobotica() {
-  const [def, setDefCruda] = useState<Definicion>(leerGuardada)
+  const [def, setDefCruda] = useState<Definicion>(() => (seccionDeLaUrl() === 'tarea' && VER_TAREA_ROBOTICA ? leerTarea() : leerGuardada()))
   const defRef = useRef(def)
   defRef.current = def
   const historial = useRef(new Historial<Definicion>())
@@ -91,6 +113,19 @@ export default function UnidadRobotica() {
     setDefCruda(d)
     setHist((n) => n + 1)
   }, [])
+  /** Entrar o salir de la tarea cambia de definición: cada una se guarda por su lado. */
+  const setSeccion = (s: SeccionUnidad) => {
+    if ((s === 'tarea') !== enTarea) {
+      historial.current = new Historial<Definicion>()
+      setDefCruda(s === 'tarea' ? leerTarea() : leerGuardada())
+      setHist((n) => n + 1)
+      setReproduciendo(false)
+      setSeleccion(null)
+      setModo('visual')
+      setEntregaAbierta(false)
+    }
+    setSeccionCruda(s)
+  }
   const deshacer = () => {
     const p = historial.current.deshacer(defRef.current)
     if (p) setDefCruda(p)
@@ -103,7 +138,10 @@ export default function UnidadRobotica() {
   }
   const [modo, setModo] = useState<Modo>('visual')
   const estrecha = useEsEstrecha()
-  const [seccion, setSeccion] = useSeccionUnidad(SECCIONES_ROBOT.map((x) => x.id))
+  const [seccionPedida, setSeccionCruda] = useSeccionUnidad(SECCIONES_ROBOT.map((x) => x.id))
+  // Mientras la tarea no se publica, ni el enlace ?vista=tarea la abre.
+  const seccion: SeccionUnidad = seccionPedida === 'tarea' && !VER_TAREA_ROBOTICA ? 'laboratorio' : seccionPedida
+  const enTarea = seccion === 'tarea'
   const panel = usePanelAcoplado<PestanaRobot>('neumalab.robot.panel', 'analisis', false)
   const [entregaAbierta, setEntregaAbierta] = useState(false)
   const [misTrabajos, setMisTrabajos] = useState(false)
@@ -142,11 +180,11 @@ export default function UnidadRobotica() {
 
   useEffect(() => {
     try {
-      localStorage.setItem(CLAVE, JSON.stringify(def))
+      localStorage.setItem(enTarea ? CLAVE_TAREA : CLAVE, JSON.stringify(def))
     } catch {
       /* sin almacenamiento o definición demasiado grande */
     }
-  }, [def])
+  }, [def, enTarea])
   useEffect(() => {
     if (!aviso) return
     const id = setTimeout(() => setAviso(null), 5000)
@@ -393,6 +431,8 @@ export default function UnidadRobotica() {
     try {
       const d = JSON.parse(await f.text())
       if (!esDefinicion(d)) throw new Error('Ese archivo no es una definición de robótica de NeumaLab.')
+      // Una definición de la tarea se abre en la sección de la tarea, sea donde sea que se abra.
+      if ((d as { tarea?: string }).tarea === MARCA_TAREA && VER_TAREA_ROBOTICA && !enTarea) setSeccion('tarea')
       setDef(d)
       setSeleccion(null)
       setAviso(`Definición «${f.name}» abierta.`)
@@ -540,6 +580,7 @@ export default function UnidadRobotica() {
               ↷
             </button>
           </span>
+          {!enTarea && (
           <select
             value=""
             onChange={(e) => {
@@ -558,6 +599,7 @@ export default function UnidadRobotica() {
               </option>
             ))}
           </select>
+          )}
           {!estrecha && (
             <button onClick={() => inputDXF.current?.click()} style={botonSecundario} title="Traer un plano DXF para usar sus curvas">
               Abrir DXF
@@ -820,16 +862,23 @@ export default function UnidadRobotica() {
 
   return (
     <>
-      <SubnavUnidad nombre="Robótica" seccion={seccion} onSeccion={setSeccion} entregar={{ abierto: entregaAbierta, onAlternar: () => setEntregaAbierta((a) => !a) }} />
-      {seccion === 'laboratorio' ? (
+      <SubnavUnidad
+        nombre="Robótica"
+        seccion={seccion}
+        onSeccion={setSeccion}
+        tarea={VER_TAREA_ROBOTICA ? NOMBRE_TAREA : undefined}
+        entregar={enTarea ? { abierto: entregaAbierta, onAlternar: () => setEntregaAbierta((a) => !a), etiqueta: 'Entregar Tarea Robótica', etiquetaCorta: 'Entregar' } : undefined}
+      />
+      {seccion !== 'estudiar' ? (
         <BancoDividido<PestanaRobot>
+          key={seccion}
           clave="neumalab.robot.banco"
           barra={barra}
           izquierda={{ id: 'programa', titulo: modo === 'visual' ? 'Definición' : 'Mando', contenido: areaPrograma }}
           derecha={{ id: 'simulacion', titulo: 'Simulación', contenido: areaSimulacion }}
           inferior={{ etiqueta: 'Análisis, código y ficha', pestanas, estado: panel }}
           estado={barraEstado}
-          conCajon={entregaAbierta && !estrecha}
+          conCajon={entregaAbierta && enTarea && !estrecha}
         />
       ) : (
         <PaginaEstudiar
@@ -840,7 +889,7 @@ export default function UnidadRobotica() {
           secciones={SECCIONES_ROBOT}
         />
       )}
-      {guia.visible && seccion === 'laboratorio' && <GuiaInicio unidad="Robótica" pasos={GUIA_ROBOT} onCerrar={guia.cerrar} />}
+      {guia.visible && seccion !== 'estudiar' && <GuiaInicio unidad="Robótica" pasos={GUIA_ROBOT} onCerrar={guia.cerrar} />}
       {misTrabajos && (
         <MisTrabajos
           unidad="robotica"
@@ -856,7 +905,7 @@ export default function UnidadRobotica() {
           onCerrar={() => setMisTrabajos(false)}
         />
       )}
-      {entregaAbierta && (
+      {entregaAbierta && enTarea && (
         <CajonEntregar
           unidad="Robótica"
           clave="neumalab.robot.entrega"
@@ -936,7 +985,8 @@ export default function UnidadRobotica() {
               titulo: 'Tu definición (NeumaLab)',
               detalle: 'Se abre en la app con Archivo › Abrir definición; incluye el plano DXF.',
               hacer: (base) => {
-                descargarTexto(JSON.stringify(def, null, 2), `${base}.json`, 'application/json')
+                const alumno = leerAlumno()
+                descargarTexto(JSON.stringify(enTarea ? { ...def, tarea: MARCA_TAREA, ...(alumno.nombre.trim() ? { alumno } : {}) } : def, null, 2), `${base}.json`, 'application/json')
                 return `Descargado: ${base}.json`
               },
             },

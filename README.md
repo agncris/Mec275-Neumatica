@@ -391,6 +391,8 @@ La unidad no incluye enunciados ni soluciones de evaluaciones.
 
 ## Unidad 4 · Robótica
 
+**Tarea (lista, oculta).** Como en PLC y CNC, la tarea tiene su propia sección «★ Tarea Robótica»: definición aparte del Laboratorio, sin ejemplos, y «Entregar Tarea Robótica» sólo aparece ahí. El `.json` lleva la marca de la tarea y el nombre del alumno. Se muestra con `TAREA_ROBOTICA_PUBLICADA = true` en [`src/unidades.ts`](src/unidades.ts) (con `npm run dev` se ve siempre).
+
 La pestaña **Unidad 4 · Robótica** reemplaza, para estudiar y practicar, a Rhino 8 +
 Grasshopper + KUKA|prc: corre en el navegador (Windows, Mac, Linux o tablet) y no
 necesita licencias.
