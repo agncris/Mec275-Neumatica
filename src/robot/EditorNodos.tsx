@@ -287,7 +287,7 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
     : []
 
   return (
-    <div data-editor-nodos="si" style={typeof alto === 'string' ? { display: 'flex', flexDirection: 'column', height: alto, minHeight: 0 } : undefined}>
+    <div data-editor-nodos="si" style={typeof alto === 'string' ? { display: 'flex', flexDirection: 'column', height: alto, minHeight: 'min-content' } : undefined}>
       {/* Cinta de componentes, por pestañas como en Grasshopper. */}
       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 4 }}>
         {PESTANAS.map((p) => (

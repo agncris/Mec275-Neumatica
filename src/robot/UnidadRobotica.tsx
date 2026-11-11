@@ -639,7 +639,7 @@ export default function UnidadRobotica() {
           Definición · {def.nombre}
           {def.dxf ? <span style={{ fontWeight: 400, fontSize: '0.8rem', color: '#51606f' }}>· plano: {def.dxf.nombre}</span> : null}
         </TituloArea>
-        <div className="relleno" style={{ minHeight: 300 }}>
+        <div className="relleno" style={{ minHeight: 300, flexShrink: 0 }}>
           <EditorNodos def={def} evaluacion={evaluacion} onCambiar={setDef} seleccion={seleccion} onSeleccionar={setSeleccion} alto="100%" />
         </div>
         {evaluacion.ciclo && <p style={{ color: '#b3261e', fontSize: '0.86rem', margin: '6px 0 0' }}>⚠ Hay un ciclo en los cables.</p>}
@@ -795,6 +795,7 @@ export default function UnidadRobotica() {
     {
       id: 'krl',
       titulo: 'Código KRL',
+      tituloCorto: 'KRL',
       contenido:
         modo === 'visual' && sim ? (
           <>
@@ -812,6 +813,7 @@ export default function UnidadRobotica() {
     {
       id: 'ficha',
       titulo: `Ficha técnica · ${modeloVista.nombre}`,
+      tituloCorto: 'Ficha',
       contenido: (
         <>
           <table style={{ fontSize: '0.85rem', borderCollapse: 'collapse' }}>

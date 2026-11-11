@@ -32,7 +32,7 @@ import {
   areaDe,
   clonarPrograma,
   DIRECCIONES,
-  esProgramaPLC,
+  esProgramaPLC as esProgramaBase,
   estadoInicial,
   programaVacio,
   revisarPrograma,
@@ -50,6 +50,9 @@ import { CicloScan, ComponentesPLC, ElegirPLC, EntradasSalidas, QueEsPLC, Sensor
 const Planta3D = lazy(() => import('./Planta3D'))
 
 const CLAVE = 'neumalab.plc.programa'
+
+/** Un programa de PLC, con una planta que esta versión conoce (un guardado de otra versión no debe romper la unidad). */
+const esProgramaPLC = (x: unknown): x is ProgramaPLC => esProgramaBase(x) && (x as ProgramaPLC).planta in PLANTAS
 const DT = 0.02
 
 /**

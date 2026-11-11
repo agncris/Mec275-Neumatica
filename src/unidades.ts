@@ -3,13 +3,13 @@
  * se sube (su código ni siquiera se incluye en la compilación): no aparece en
  * la barra y no hay forma de abrirla, ni con ?unidad= ni con un enlace.
  *
- * Para publicar una, se cambia su valor a true y se sube a main (CNC ya está publicada).
+ * Para publicar una, se cambia su valor a true y se sube a main (CNC y Robótica ya están publicadas).
  * Con `npm run dev` (en tu computador) se ven todas, para revisarlas.
  */
 export type Unidad = 'neumatica' | 'plc' | 'cnc' | 'robotica'
 
 const CNC_PUBLICADA = true
-const ROBOTICA_PUBLICADA = false
+const ROBOTICA_PUBLICADA = true
 /** La sección «★ Tarea 3» de CNC (plano, torno y entrega). Con false queda oculta. */
 const TAREA_CNC_PUBLICADA = true
 /** La sección de la tarea de Robótica (se arma igual que la de CNC); mientras la unidad esté oculta no se ve. */
