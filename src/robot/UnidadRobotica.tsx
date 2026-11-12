@@ -16,6 +16,7 @@ import GuiaInicio, { GUIA_ROBOT, useGuia } from '../components/banco/GuiaInicio'
 import Autoevaluacion from '../components/Autoevaluacion'
 import FichaRobot from './FichaRobot'
 import { PREGUNTAS_ROBOT } from './preguntasRobot'
+import { analizarTarea4, MARCA_TAREA4, revisarTarea4, tareaVaciaRobot } from './tarea4'
 import { copiarTabla, descargarTexto, leerAlumno, limpiarEnlace, trabajoDelEnlace } from '../entregar'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { exportarPng, nombreSeguro } from '../exportar'
@@ -55,7 +56,6 @@ const CLAVE = 'neumalab.robot.definicion'
  */
 const CLAVE_TAREA = 'neumalab.robot.tarea'
 const NOMBRE_TAREA = 'Tarea Robótica'
-const MARCA_TAREA = 'tarea-4'
 const HERR_DEFECTO: Herramienta = { tipo: 'fresa', nombre: 'Husillo con fresa', largo: 200, diametro: 5 }
 const HERR_MANDO: Herramienta = { tipo: 'ventosa', nombre: 'Ventosa de vacío', largo: 120, diametro: 40 }
 const BASE_DEFECTO: Plano = planoXY(v(450, -150, 300))
@@ -83,7 +83,7 @@ function leerTarea(): Definicion {
   } catch {
     /* sin almacenamiento */
   }
-  return (EJEMPLOS_ROBOT.find((e) => e.id === 'vacio') ?? EJEMPLOS_ROBOT[0]).definicion()
+  return tareaVaciaRobot()
 }
 
 const esCurva = (d: Dato): d is Curva => typeof d === 'object' && d !== null && 'pts' in d && 'cerrada' in d
@@ -123,6 +123,8 @@ export default function UnidadRobotica() {
       setSeleccion(null)
       setModo('visual')
       setEntregaAbierta(false)
+      panel.onPestana(s === 'tarea' ? 'plano-tarea' : 'analisis')
+      panel.onAbrir(true)
     }
     setSeccionCruda(s)
   }
@@ -143,6 +145,13 @@ export default function UnidadRobotica() {
   const seccion: SeccionUnidad = seccionPedida === 'tarea' && !VER_TAREA_ROBOTICA ? 'laboratorio' : seccionPedida
   const enTarea = seccion === 'tarea'
   const panel = usePanelAcoplado<PestanaRobot>('neumalab.robot.panel', 'analisis', false)
+  // Al entrar directo a la tarea (enlace ?vista=tarea) se ve primero el plano.
+  useEffect(() => {
+    if (!enTarea) return
+    panel.onPestana('plano-tarea')
+    panel.onAbrir(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const [entregaAbierta, setEntregaAbierta] = useState(false)
   const [misTrabajos, setMisTrabajos] = useState(false)
   const guia = useGuia('robotica')
@@ -390,6 +399,15 @@ export default function UnidadRobotica() {
   }, [])
 
   const cargarEjemplo = (id: string) => {
+    // En la tarea, «Nuevo» vuelve a la definición de la tarea (con el plano cargado).
+    if (enTarea && id === 'vacio') {
+      if (!window.confirm('¿Empezar de nuevo la tarea? Se reemplaza tu definición.')) return
+      setReproduciendo(false)
+      setDef(tareaVaciaRobot())
+      setSeleccion(null)
+      setModo('visual')
+      return setAviso('Definición de la tarea en blanco: robot, herramienta y Core, con el plano cargado.')
+    }
     const ej = EJEMPLOS_ROBOT.find((e) => e.id === id)
     if (!ej) return
     setReproduciendo(false)
@@ -410,6 +428,8 @@ export default function UnidadRobotica() {
 
   const abrirDXF = async (f: File | undefined) => {
     if (!f) return
+    // En la tarea el plano es el del enunciado: no se reemplaza.
+    if (enTarea) return setAviso('En la tarea el plano ya está cargado y no se puede cambiar.')
     try {
       const texto = await f.text()
       const d = leerDXF(texto)
@@ -432,7 +452,7 @@ export default function UnidadRobotica() {
       const d = JSON.parse(await f.text())
       if (!esDefinicion(d)) throw new Error('Ese archivo no es una definición de robótica de NeumaLab.')
       // Una definición de la tarea se abre en la sección de la tarea, sea donde sea que se abra.
-      if ((d as { tarea?: string }).tarea === MARCA_TAREA && VER_TAREA_ROBOTICA && !enTarea) setSeccion('tarea')
+      if ((d as { tarea?: string }).tarea === MARCA_TAREA4 && VER_TAREA_ROBOTICA && !enTarea) setSeccion('tarea')
       setDef(d)
       setSeleccion(null)
       setAviso(`Definición «${f.name}» abierta.`)
@@ -520,7 +540,7 @@ export default function UnidadRobotica() {
     { texto: 'Nueva definición', ayuda: 'Empieza con el lienzo vacío', onClick: () => cargarEjemplo('vacio') },
     { texto: 'Abrir definición…', ayuda: 'Una definición guardada (.json), con su plano', onClick: () => inputDef.current?.click() },
     { texto: 'Guardar definición', ayuda: 'Descarga la definición y el plano DXF', onClick: () => descargar(JSON.stringify(def, null, 2), nombreSeguro(def.nombre || 'definicion', 'json'), 'application/json') },
-    { texto: 'Abrir plano DXF…', ayuda: 'Trae las curvas de tu plano', onClick: () => inputDXF.current?.click(), separar: true },
+    { texto: 'Abrir plano DXF…', ayuda: enTarea ? 'En la tarea el plano ya está cargado' : 'Trae las curvas de tu plano', onClick: () => inputDXF.current?.click(), separar: true, ...(enTarea ? { deshabilitado: true, porque: 'En la tarea el plano ya está cargado' } : {}) },
     { texto: 'Mis trabajos…', ayuda: 'Guarda varias definiciones con nombre y cámbiate entre ellas', onClick: () => setMisTrabajos(true), separar: true },
   ]
   const itemsExportar = [
@@ -601,7 +621,13 @@ export default function UnidadRobotica() {
           </select>
           )}
           {!estrecha && (
-            <button onClick={() => inputDXF.current?.click()} style={botonSecundario} title="Traer un plano DXF para usar sus curvas">
+            <button
+              onClick={() => inputDXF.current?.click()}
+              disabled={enTarea}
+              style={{ ...botonSecundario, opacity: enTarea ? 0.45 : 1 }}
+              title={enTarea ? 'En la tarea el plano ya está cargado' : 'Traer un plano DXF para usar sus curvas'}
+              data-abrir-dxf="si"
+            >
               Abrir DXF
             </button>
           )}
@@ -775,6 +801,7 @@ export default function UnidadRobotica() {
   )
 
   const pestanas: Array<PestanaPanel<PestanaRobot>> = [
+    ...(enTarea ? [{ id: 'plano-tarea' as const, titulo: 'Plano de la tarea', tituloCorto: 'Plano', contenido: <PlanoTarea /> }] : []),
     {
       id: 'analisis',
       titulo: 'Análisis',
@@ -916,12 +943,15 @@ export default function UnidadRobotica() {
           revisar={() => {
             const errs = sim?.problemas.filter((p) => p.nivel === 'error') ?? []
             const avs = sim?.problemas.filter((p) => p.nivel === 'aviso') ?? []
+            // En la tarea, además: el plano, la fresa, el husillo, los trazos recorridos y el nombre.
+            const deLaTarea = enTarea ? revisarTarea4(analizarTarea4(def), leerAlumno().nombre) : []
             return [
               { ok: !!sim, texto: sim ? `El Core arma un programa de ${sim.tiempo.toFixed(1)} s.` : 'El Core todavía no arma un programa: necesita comandos, robot y herramienta.' },
-              { ok: !!def.dxf, texto: def.dxf ? `Usas el plano «${def.dxf.nombre}».` : 'No abriste un plano DXF: si el enunciado trae un plano, ábrelo con «Abrir DXF».' },
+              ...(enTarea ? [] : [{ ok: !!def.dxf, texto: def.dxf ? `Usas el plano «${def.dxf.nombre}».` : 'No abriste un plano DXF: si el enunciado trae un plano, ábrelo con «Abrir DXF».' }]),
               { ok: errs.length === 0, texto: errs.length === 0 ? 'La simulación no encuentra errores (alcance, límites de ejes).' : `La simulación encuentra ${errs.length} error(es). El primero: ${errs[0].texto}` },
               { ok: avs.length === 0, texto: avs.length === 0 ? 'Sin avisos de singularidades ni de cercanía a los límites.' : `${avs.length} aviso(s). Revísalos en la pestaña Análisis.` },
               { ok: !evaluacion.ciclo, texto: evaluacion.ciclo ? 'Hay un ciclo en los cables.' : 'Los cables no forman ciclos.' },
+              ...deLaTarea,
             ]
           }}
           presentacion={[
@@ -988,7 +1018,7 @@ export default function UnidadRobotica() {
               detalle: 'Se abre en la app con Archivo › Abrir definición; incluye el plano DXF.',
               hacer: (base) => {
                 const alumno = leerAlumno()
-                descargarTexto(JSON.stringify(enTarea ? { ...def, tarea: MARCA_TAREA, ...(alumno.nombre.trim() ? { alumno } : {}) } : def, null, 2), `${base}.json`, 'application/json')
+                descargarTexto(JSON.stringify(enTarea ? { ...def, tarea: MARCA_TAREA4, ...(alumno.nombre.trim() ? { alumno } : {}) } : def, null, 2), `${base}.json`, 'application/json')
                 return `Descargado: ${base}.json`
               },
             },
@@ -1032,7 +1062,7 @@ export default function UnidadRobotica() {
   )
 }
 
-type PestanaRobot = 'analisis' | 'krl' | 'ficha'
+type PestanaRobot = 'analisis' | 'krl' | 'ficha' | 'plano-tarea'
 
 const SECCIONES_ROBOT: SeccionEstudio[] = [
   { id: 'practica', indice: 'Autoevaluación', titulo: 'Autoevaluación · practica con preguntas al azar', contenido: <Autoevaluacion generadores={PREGUNTAS_ROBOT} /> },
@@ -1309,3 +1339,19 @@ const rotulo: React.CSSProperties = { display: 'flex', alignItems: 'center', gap
 const estadoChip: React.CSSProperties = { color: '#fff', borderRadius: 6, padding: '1px 8px', fontSize: '0.75rem', fontWeight: 700 }
 /** Aviso flotante: aparece y desaparece sin mover el resto de la página. */
 const avisoOk = estiloAviso
+
+
+/** El plano de fabricación de la Tarea 4 (el de la lámina del enunciado), a mano mientras se programa. */
+function PlanoTarea() {
+  return (
+    <div data-plano-tarea="si">
+      <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: '#51606f' }}>
+        Pieza de soporte de motor: 250 × 250 mm, acero A36 de 5 mm, fresa de 5 mm. El plano DXF ya está cargado (capa CONTORNO para el borde y capa RANURAS para las nueve aberturas);
+        usa el componente Curve y elige la capa. Toca la lámina para verla grande.
+      </p>
+      <a href="/plano-tarea4-robotica.png" target="_blank" rel="noreferrer" title="Abrir la lámina en grande">
+        <img src="/plano-tarea4-robotica.png" alt="Lámina de la Tarea 4: plancha de 250 por 250 mm con chaflanes, una cruz de ranuras rectas, cuatro ranuras en arco de radios 100 y 110 mm y un agujero cuadrado central" style={{ width: '100%', maxWidth: 900, height: 'auto', display: 'block', border: '1px solid #dbe1e8', borderRadius: 6, background: '#fff' }} />
+      </a>
+    </div>
+  )
+}
