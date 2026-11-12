@@ -387,7 +387,7 @@ La unidad no incluye enunciados ni soluciones de evaluaciones.
 
 ## Unidad 4 · Robótica
 
-**Tarea (lista, oculta).** Como en PLC y CNC, la tarea tiene su propia sección «★ Tarea Robótica»: definición aparte del Laboratorio, sin ejemplos, y «Entregar Tarea Robótica» sólo aparece ahí. El `.json` lleva la marca de la tarea y el nombre del alumno. Se muestra con `TAREA_ROBOTICA_PUBLICADA = true` en [`src/unidades.ts`](src/unidades.ts) (con `npm run dev` se ve siempre).
+**Tarea 4 (lista, oculta).** La sección **«★ Tarea Robótica»** (junto a Laboratorio) parte con robot, herramienta (fresa de 5 mm) y Core (plancha de 5 mm), con el **plano de la tarea ya cargado**: una pieza de soporte de motor de 250 x 250 mm, con el contorno en la capa CONTORNO y las nueve aberturas en la capa RANURAS (mm, `public/plano-tarea4-robotica.dxf`). «Abrir DXF» queda deshabilitado en la tarea. La pestaña **Plano** muestra la lámina del enunciado. No trae solución. **«Entregar Tarea Robótica»** sólo aparece ahí; su revisión (no califica) avisa si el plano está sin modificar, si la herramienta es la fresa de 5 mm, el espesor, si el husillo se enciende antes de cortar, si se acerca y se aleja con PTP, si la fresa atraviesa la plancha, cuántos de los 10 trazos recorre con la fresa compensada y si falta el nombre. El `.json` lleva la marca de la tarea y el nombre del alumno. Se muestra con `TAREA_ROBOTICA_PUBLICADA = true` en [`src/unidades.ts`](src/unidades.ts) (con `npm run dev` se ve siempre).
 
 La pestaña **Unidad 4 · Robótica** reemplaza, para estudiar y practicar, a Rhino 8 +
 Grasshopper + KUKA|prc: corre en el navegador (Windows, Mac, Linux o tablet) y no
@@ -584,7 +584,7 @@ npm run dev        # http://localhost:5173
 ```
 
 ```bash
-npm test           # 361 pruebas: motor, análisis, entregas, trabajos, autoevaluaciones, plano, símbolos, banco 3D, PLC, CNC, robótica y utilidades
+npm test           # 371 pruebas: motor, análisis, entregas, trabajos, autoevaluaciones, plano, símbolos, banco 3D, PLC, CNC, robótica y utilidades
 npm run typecheck  # comprobación de tipos
 npm run build      # compila a /dist
 ```
