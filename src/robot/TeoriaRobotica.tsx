@@ -236,8 +236,10 @@ export function ProgramacionParametrica() {
         ]}
       />
       <p style={{ ...p, marginTop: 10 }}>
-        <strong>Colores de los componentes</strong> (igual que en Grasshopper): gris = funciona bien; naranjo = le faltan
-        datos o hay un aviso; rojo = error (recibe un dato que no corresponde); verde = seleccionado.
+        <strong>Colores de los componentes</strong>: gris = funciona bien; naranjo = le faltan datos, depende de un nodo
+        que falla o hay un aviso (no es un error propio); rojo = error en ese nodo (recibe un dato que no corresponde,
+        como curvas donde se piden puntos); verde = seleccionado. Ojo: en Grasshopper el componente que funciona bien se
+        ve blanco, y el gris es un componente oculto.
       </p>
       <p style={p}>
         <strong>Movimientos:</strong> <strong>PTP</strong> mueve todos los ejes a la vez y llega lo más rápido posible,
@@ -250,7 +252,9 @@ export function ProgramacionParametrica() {
         <strong>El código KRL</strong> que se genera tiene la forma <code>DEF programa( ) … END</code>, fija la base (
         <code>$BASE</code>) y la herramienta (<code>$TOOL</code>), la velocidad (<code>$VEL.CP</code> en m/s para LIN y CIR)
         y luego los movimientos: <code>PTP {'{A1 …, A6 …}'}</code>, <code>LIN {'{X, Y, Z, A, B, C}'}</code>,{' '}
-        <code>$OUT[1] = TRUE</code>, <code>WAIT SEC 2</code>.
+        <code>$OUT[1] = TRUE</code>, <code>WAIT SEC 2</code>. Las posiciones X, Y, Z de LIN y CIR van <strong>relativas a
+        la base</strong> (<code>$BASE</code>, la cara superior de la plancha): <code>Z -5</code> en una plancha de 5 mm
+        atraviesa la plancha. En el mundo, esa altura es la del mesón menos 5 mm.
       </p>
     </div>
   )

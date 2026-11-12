@@ -16,6 +16,7 @@ import GuiaInicio, { GUIA_ROBOT, useGuia } from '../components/banco/GuiaInicio'
 import Autoevaluacion from '../components/Autoevaluacion'
 import FichaRobot from './FichaRobot'
 import { PREGUNTAS_ROBOT } from './preguntasRobot'
+import { ETIQUETA_GRUPO, PRACTICA_ROBOT, type GrupoPractica } from './practica'
 import { analizarTarea4, MARCA_TAREA4, revisarTarea4, tareaVaciaRobot } from './tarea4'
 import { copiarTabla, descargarTexto, leerAlumno, limpiarEnlace, trabajoDelEnlace } from '../entregar'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -122,6 +123,7 @@ export default function UnidadRobotica() {
       setReproduciendo(false)
       setSeleccion(null)
       setModo('visual')
+      setEnunciado(null)
       setEntregaAbierta(false)
       panel.onPestana(s === 'tarea' ? 'plano-tarea' : 'analisis')
       panel.onAbrir(true)
@@ -158,6 +160,8 @@ export default function UnidadRobotica() {
   const nombreVideo = useRef<string | null>(null)
   const [seleccion, setSeleccion] = useState<string | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
+  // Enunciado del ejercicio de práctica abierto (una línea, sin la respuesta).
+  const [enunciado, setEnunciado] = useState<string | null>(null)
   const [reproduciendo, setReproduciendo] = useState(false)
   const [velocidad, setVelocidad] = useState(1)
   const [alcance, setAlcance] = useState(false)
@@ -398,7 +402,21 @@ export default function UnidadRobotica() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const cargarPractica = (id: string) => {
+    const ej = PRACTICA_ROBOT.find((e) => e.id === id)
+    if (!ej) return false
+    setReproduciendo(false)
+    setDef(ej.definicion())
+    setSeleccion(null)
+    setModo('visual')
+    setEnunciado(ej.enunciado)
+    setAviso(`Ejercicio abierto: ${ej.titulo}.`)
+    return true
+  }
+
   const cargarEjemplo = (id: string) => {
+    if (cargarPractica(id)) return
+    setEnunciado(null)
     // En la tarea, «Nuevo» vuelve a la definición de la tarea (con el plano cargado).
     if (enTarea && id === 'vacio') {
       if (!window.confirm('¿Empezar de nuevo la tarea? Se reemplaza tu definición.')) return
@@ -455,6 +473,7 @@ export default function UnidadRobotica() {
       if ((d as { tarea?: string }).tarea === MARCA_TAREA4 && VER_TAREA_ROBOTICA && !enTarea) setSeccion('tarea')
       setDef(d)
       setSeleccion(null)
+      setEnunciado(null)
       setAviso(`Definición «${f.name}» abierta.`)
     } catch (e) {
       setAviso(e instanceof Error ? e.message : 'No se pudo abrir el archivo.')
@@ -618,6 +637,15 @@ export default function UnidadRobotica() {
                 {e.titulo}
               </option>
             ))}
+            {(['clase', 'fallas', 'control'] as GrupoPractica[]).map((g) => (
+              <optgroup key={g} label={ETIQUETA_GRUPO[g]}>
+                {PRACTICA_ROBOT.filter((e) => e.grupo === g).map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.titulo}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
           </select>
           )}
           {!estrecha && (
@@ -665,6 +693,14 @@ export default function UnidadRobotica() {
           Definición · {def.nombre}
           {def.dxf ? <span style={{ fontWeight: 400, fontSize: '0.8rem', color: '#51606f' }}>· plano: {def.dxf.nombre}</span> : null}
         </TituloArea>
+        {enunciado && (
+          <p data-enunciado="si" style={{ margin: '0 0 6px', padding: '6px 10px', background: '#eef4fb', border: '1px solid #c9d9ee', borderRadius: 6, fontSize: '0.84rem', color: '#1c2733', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+            <span style={{ flex: 1 }}>{enunciado}</span>
+            <button onClick={() => setEnunciado(null)} aria-label="Ocultar el enunciado" title="Ocultar el enunciado" style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '1rem', lineHeight: 1 }}>
+              ✕
+            </button>
+          </p>
+        )}
         <div className="relleno" style={{ minHeight: 300, flexShrink: 0 }}>
           <EditorNodos def={def} evaluacion={evaluacion} onCambiar={setDef} seleccion={seleccion} onSeleccionar={setSeleccion} alto="100%" />
         </div>
