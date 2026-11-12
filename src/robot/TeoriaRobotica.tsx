@@ -122,9 +122,9 @@ export function Componentes() {
         <rect x={548} y={118} width={34} height={28} rx={3} fill="#9fe0a8" />
         <path d="M500 150 C 520 150, 520 150, 540 150" fill="none" stroke="#2b3036" strokeWidth={3} />
         {[
-          [120, 26, '1 Manipulador (brazo)'],
-          [455, 80, '2 Controlador'],
-          [565, 100, '3 Interfaz de control'],
+          [120, 26, 'Estructura mecánica (brazo)'],
+          [455, 80, 'Controlador'],
+          [565, 100, 'smartPAD'],
           [320, 100, 'Efector final'],
         ].map(([x, y, t]) => (
           <text key={String(t)} x={Number(x)} y={Number(y)} textAnchor="middle" fontSize={13} fontWeight={700} fill={TINTA}>
@@ -132,16 +132,23 @@ export function Componentes() {
           </text>
         ))}
       </svg>
+      <p style={p}>
+        Un robot de base fija tiene <strong>seis partes básicas</strong>:
+      </p>
       <Tabla
         cabeza={['Parte', 'Qué es']}
         filas={[
-          [<strong>Manipulador</strong>, 'El brazo mecánico: eslabones unidos por articulaciones, movidos por actuadores (servomotores) a través de transmisiones (engranajes, reductores, correas).'],
-          [<strong>Controlador</strong>, 'El computador del robot (armario): ejecuta el programa, calcula los movimientos y maneja los motores, las entradas y las salidas.'],
-          [<strong>Interfaz de control (teach pendant)</strong>, 'El mando portátil (en KUKA, el smartPAD) para mover el robot a mano, enseñar puntos, escribir y probar programas.'],
+          [<strong>Estructura mecánica</strong>, 'Los eslabones y las articulaciones: el brazo.'],
+          [<strong>Actuadores</strong>, 'Motores, servos y cilindros que mueven cada articulación.'],
+          [<strong>Transmisiones</strong>, 'Engranajes, correas y husillos que llevan el movimiento del actuador a la articulación.'],
+          [<strong>Sensores</strong>, 'Posición de cada eje (encoders), fuerza y visión: le dicen al controlador qué está pasando.'],
+          [<strong>Controlador</strong>, 'El computador y el software (el armario): ejecuta el programa, calcula los movimientos y maneja los motores, las entradas y las salidas.'],
           [<strong>Efector final</strong>, 'Lo que va en la punta: pinza, ventosa, husillo de fresado, soplete de soldadura, pistola de pintura…'],
-          [<strong>Sensores</strong>, 'Posición de cada eje (encoders), fuerza, visión: le dicen al controlador qué está pasando.'],
         ]}
       />
+      <p style={{ ...p, marginTop: 10 }}>
+        <strong>Dato aparte:</strong> la <strong>interfaz de control</strong> (teach pendant; en KUKA, el smartPAD) es el mando portátil para mover el robot a mano, enseñar puntos y probar programas. Se conecta al controlador; no es una de las seis partes.
+      </p>
     </div>
   )
 }

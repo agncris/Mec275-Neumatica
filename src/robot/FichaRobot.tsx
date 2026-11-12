@@ -42,7 +42,7 @@ export default function FichaRobot() {
         ]}
       />
       <h4>Componentes</h4>
-      <p style={{ margin: 0 }}>Manipulador (brazo) · controlador (armario) · interfaz de control (teach pendant; en KUKA, smartPAD) · efector final (pinza, husillo…) · sensores.</p>
+      <p style={{ margin: 0 }}>Seis partes: estructura mecánica (brazo) · actuadores · transmisiones · sensores · controlador (armario) · efector final (pinza, husillo…). Aparte: la interfaz de control (teach pendant; en KUKA, smartPAD).</p>
     </FichaRepaso>
   )
 }

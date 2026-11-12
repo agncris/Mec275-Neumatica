@@ -45,10 +45,13 @@ const FICHA: Fija[] = [
 ]
 
 const COMPONENTES: Fija[] = [
-  { p: '¿Cómo se llama el brazo mecánico del robot, con sus eslabones y articulaciones?', ok: 'Manipulador', mal: ['Controlador', 'Efector final', 'Teach pendant'], porque: 'El manipulador es el brazo: eslabones unidos por articulaciones, movidos por servomotores.' },
-  { p: '¿Qué parte del robot ejecuta el programa y maneja los motores?', ok: 'El controlador', mal: ['El manipulador', 'El efector final', 'El pedestal'], porque: 'El controlador es el computador del robot (el armario).' },
+  { p: '¿Cómo se llama la parte del robot formada por eslabones y articulaciones?', ok: 'Estructura mecánica', mal: ['Controlador', 'Efector final', 'Transmisiones'], porque: 'La estructura mecánica es el brazo: eslabones unidos por articulaciones.' },
+  { p: '¿Qué componente lleva el movimiento del motor a la articulación, con engranajes, correas o husillos?', ok: 'Las transmisiones', mal: ['Los sensores', 'El controlador', 'El efector final'], porque: 'Las transmisiones (engranajes, correas, husillos) llevan el movimiento del actuador a cada articulación.' },
+  { p: '¿Qué componente mueve cada articulación (motores, servos o cilindros)?', ok: 'Los actuadores', mal: ['Los sensores', 'Las transmisiones', 'El controlador'], porque: 'Los actuadores (motores, servos, cilindros) son los que dan el movimiento.' },
+  { p: '¿Qué componente le dice al controlador la posición de cada eje, la fuerza o lo que ve?', ok: 'Los sensores', mal: ['Los actuadores', 'Las transmisiones', 'El efector final'], porque: 'Los sensores (encoders, fuerza, visión) informan al controlador qué está pasando.' },
+  { p: '¿Qué parte del robot ejecuta el programa y maneja los motores?', ok: 'El controlador', mal: ['La estructura mecánica', 'El efector final', 'Los sensores'], porque: 'El controlador es el computador y el software del robot (el armario).' },
   { p: '¿Qué es el efector final?', ok: 'Lo que va en la punta: pinza, ventosa, husillo…', mal: ['El último eje del robot', 'El botón de parada de emergencia', 'El programa que termina el ciclo'], porque: 'El efector final es la herramienta en la punta del robot.' },
-  { p: '¿Cómo se llama el mando portátil para mover el robot a mano y enseñar puntos (en KUKA, el smartPAD)?', ok: 'Interfaz de control (teach pendant)', mal: ['Controlador', 'Efector final', 'Encoder'], porque: 'Con el teach pendant se mueve el robot a mano, se enseñan puntos y se prueban programas.' },
+  { p: '¿Cómo se llama el mando portátil para mover el robot a mano y enseñar puntos (en KUKA, el smartPAD)?', ok: 'Interfaz de control (teach pendant)', mal: ['Controlador', 'Efector final', 'Encoder'], porque: 'Con el teach pendant se mueve el robot a mano, se enseñan puntos y se prueban programas. No es una de las seis partes: se conecta al controlador.' },
 ]
 
 export const PREGUNTAS_ROBOT = [
