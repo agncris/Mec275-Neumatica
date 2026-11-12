@@ -45,6 +45,16 @@ export function esPlanoDeLaTarea(def: Definicion): boolean {
   return !!def.dxf && sinEspacios(def.dxf.texto) === sinEspacios(PLANO_TAREA4_DXF)
 }
 
+/**
+ * Una definición armada en el Laboratorio (con otro plano, o sin plano) se puede traer a la
+ * tarea: se le pone el plano de la tarea y se avisa. Los nodos, los cables y los valores
+ * se conservan. Si ya tiene el plano de la tarea, vuelve igual.
+ */
+export function adaptarATarea(def: Definicion): { def: Definicion; cambioElPlano: boolean } {
+  if (esPlanoDeLaTarea(def)) return { def, cambioElPlano: false }
+  return { def: { ...def, dxf: { nombre: NOMBRE_PLANO_TAREA4, texto: PLANO_TAREA4_DXF } }, cambioElPlano: true }
+}
+
 // ---------------------------------------------------------------- geometría de apoyo
 function distPuntoSegmento(px: number, py: number, ax: number, ay: number, bx: number, by: number): number {
   const dx = bx - ax
@@ -264,7 +274,8 @@ export function analizarTarea4(def: Definicion): AnalisisTarea4 {
   // Acercarse y alejarse: los LIN o CIR a más de 1 mm sobre la plancha son «viajes» hechos con la herramienta equivocada.
   const enElAire = (c: (typeof prog.comandos)[number]) => (c.tipo === 'LIN' || c.tipo === 'CIR') && c.plano.o.z > 1
   a.viajesConLin = prog.comandos.filter(enElAire).length
-  a.acercaConPtp = a.viajesConLin === 0 && prog.comandos.some((c) => c.tipo === 'PTP')
+  // Acercarse y alejarse se puede hacer con PTP o con AXIS: lo que no va es LIN o CIR en el aire.
+  a.acercaConPtp = a.viajesConLin === 0 && prog.comandos.some((c) => c.tipo === 'PTP' || c.tipo === 'AXIS')
 
   // Trazos del plano recorridos (con la mejor traslación entre las posibles del Curve).
   const tramos = tramosDeCorte(prog, sim)
@@ -275,14 +286,27 @@ export function analizarTarea4(def: Definicion): AnalisisTarea4 {
       .map((s: Muestra) => aplicar(m0, v(s.tcp.x - prog.base.o.x, s.tcp.y - prog.base.o.y, s.tcp.z - prog.base.o.z)).z)
     a.profundidadCorte = zs.length ? Math.round(-Math.min(...zs) * 100) / 100 : null
   }
+  // Dónde puso el alumno el plano: con Curve (esquina al origen o no), o corriéndolo con Move.
+  // Se prueban varias posiciones y se queda la que mejor calza con lo que cortó.
   const traslaciones: Array<[number, number]> = [
     [0, 0],
     [-CAJA_PLANO.min.x, -CAJA_PLANO.min.y],
     [-CAJA_CONTORNO.min.x, -CAJA_CONTORNO.min.y],
     [-CAJA_RANURAS.min.x, -CAJA_RANURAS.min.y],
   ]
+  if (tramos.length) {
+    const xs = tramos.flatMap((t) => [t[0], t[2]])
+    const ys = tramos.flatMap((t) => [t[1], t[3]])
+    const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)]
+    traslaciones.push(
+      [x0 - (CAJA_CONTORNO.min.x - RADIO_FRESA), y0 - (CAJA_CONTORNO.min.y - RADIO_FRESA)], // cortó el contorno: su esquina manda
+      [x0 - (CAJA_RANURAS.min.x + RADIO_FRESA), y0 - (CAJA_RANURAS.min.y + RADIO_FRESA)], // cortó sólo las ranuras
+      [(x0 + x1) / 2 - (CAJA_PLANO.min.x + CAJA_PLANO.max.x) / 2, (y0 + y1) / 2 - (CAJA_PLANO.min.y + CAJA_PLANO.max.y) / 2], // lo cortó todo: el centro manda
+    )
+  }
   let mejor: TrazoPlano[] = []
   let mejorPuntaje = -1
+  let mejorTraslacion: [number, number] = [-CAJA_PLANO.min.x, -CAJA_PLANO.min.y]
   if (tramos.length) {
     for (const [dx, dy] of traslaciones) {
       const t = evaluarTrazos(tramos, dx, dy)
@@ -290,6 +314,7 @@ export function analizarTarea4(def: Definicion): AnalisisTarea4 {
       if (puntaje > mejorPuntaje) {
         mejorPuntaje = puntaje
         mejor = t
+        mejorTraslacion = [dx, dy]
       }
     }
   }
@@ -302,7 +327,7 @@ export function analizarTarea4(def: Definicion): AnalisisTarea4 {
   // Alcance que pide la pieza desde la base: punto más lejano del contorno, en planta.
   const m = matrizPlano(prog.base)
   const pts = TRAZOS.find((t) => t.exterior)?.curva.pts ?? []
-  const [tx, ty] = [-CAJA_PLANO.min.x, -CAJA_PLANO.min.y]
+  const [tx, ty] = mejorTraslacion
   a.alcanceNecesario = pts.length
     ? Math.max(...pts.map((p) => {
         const w = aplicar(m, v(p.x + tx, p.y + ty, 0))

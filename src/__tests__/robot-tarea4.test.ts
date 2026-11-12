@@ -3,7 +3,7 @@ import publico from '../../public/plano-tarea4-robotica.dxf?raw'
 import { cajaCurvas, leerDXF } from '../robot/geometria'
 import { componente, paramsIniciales, type Definicion, type NodoDef, type ValorParam } from '../robot/nodos'
 import { PLANO_TAREA4_DXF } from '../robot/planoTarea4'
-import { analizarTarea4, esPlanoDeLaTarea, revisarTarea4, tareaVaciaRobot } from '../robot/tarea4'
+import { adaptarATarea, analizarTarea4, esPlanoDeLaTarea, revisarTarea4, tareaVaciaRobot } from '../robot/tarea4'
 
 describe('plano de la Tarea 4', () => {
   const dxf = leerDXF(PLANO_TAREA4_DXF)
@@ -76,7 +76,7 @@ describe('definición de la tarea', () => {
 })
 
 /** Un programa mínimo: sólo el contorno exterior, con y sin compensar. */
-function soloContorno(d: number): Definicion {
+function soloContorno(d: number, o: { mover?: [number, number]; dividir?: 'largo' | 'cantidad'; robot?: string; bx?: number; giro?: number } = {}): Definicion {
   const base = tareaVaciaRobot()
   const nodos: NodoDef[] = base.nodos.filter((n) => n.tipo !== 'core')
   const add = (id: string, tipo: string, params: Record<string, ValorParam> = {}) => {
@@ -85,11 +85,12 @@ function soloContorno(d: number): Definicion {
   }
   add('crv', 'curvaDXF', { capa: 'CONTORNO' })
   add('of', 'desfase', { d })
-  add('bj', 'mover', { x: 0, y: 0, z: -5 })
-  add('dv', 'dividirLargo', { l: 4 })
+  add('bj', 'mover', { x: o.mover?.[0] ?? 0, y: o.mover?.[1] ?? 0, z: -5 })
+  add(o.dividir === 'cantidad' ? 'dv' : 'dv', o.dividir === 'cantidad' ? 'dividirCurva' : 'dividirLargo', o.dividir === 'cantidad' ? { n: 220 } : { l: 4 })
   add('px', 'planoXY')
   add('ln', 'lin', { v: 0.02 })
-  add('core', 'core', { bx: 425, by: -125, bz: 300, espesor: 5 })
+  add('core', 'core', { bx: o.bx ?? 425, by: -125, bz: 300, espesor: 5, brot: o.giro ?? 0 })
+  if (o.robot) nodos.find((n) => n.id === 'rob')!.params.modelo = o.robot
   const cables = [
     ...base.cables.filter((c) => c.a !== 'core'),
     ...[
@@ -130,5 +131,46 @@ describe('análisis de un trabajo', () => {
     const r = revisarTarea4(a, 'Ana Pérez')
     expect(r.find((x) => /husillo/i.test(x.texto))!.ok).toBe(false)
     expect(r.find((x) => /nombre/i.test(x.texto))!.ok).toBe(true)
+  })
+})
+
+
+describe('caminos propios: la tarea no tiene una sola solución', () => {
+  it('si corre el plano con Move (otra posición en la pieza), igual reconoce el contorno', () => {
+    const a = analizarTarea4(soloContorno(2.5, { mover: [60, 35] }))
+    expect(a.errores).toEqual([])
+    expect(a.trazosRecorridos).toBe(1)
+  })
+
+  it('si divide la curva por cantidad en vez de por largo (Divide Curve), igual cuenta', () => {
+    const a = analizarTarea4(soloContorno(2.5, { dividir: 'cantidad' }))
+    expect(a.trazosRecorridos).toBe(1)
+  })
+
+  it('la posición y el giro de la base no cambian lo que mide: se mide en el sistema de la pieza', () => {
+    const base = analizarTarea4(soloContorno(2.5))
+    const otro = analizarTarea4(soloContorno(2.5, { bx: 500, giro: 20 }))
+    expect(otro.trazosRecorridos).toBe(base.trazosRecorridos)
+    expect(otro.base?.giro).toBeCloseTo(20, 1)
+  })
+
+  it('con otros robots (que alcancen) también mide el recorrido', () => {
+    for (const robot of ['kr10r1100', 'kr50r2100']) {
+      const a = analizarTarea4(soloContorno(2.5, { robot, bx: 600 }))
+      expect(a.robot).toBe(robot)
+      expect(a.trazosRecorridos).toBe(1)
+    }
+  })
+
+  it('una definición del Laboratorio se trae a la tarea con el plano de la tarea y se avisa', () => {
+    const d = tareaVaciaRobot()
+    d.dxf = { nombre: 'otro.dxf', texto: PLANO_TAREA4_DXF.replace('RANURAS', 'OTRA') }
+    const { def, cambioElPlano } = adaptarATarea(d)
+    expect(cambioElPlano).toBe(true)
+    expect(esPlanoDeLaTarea(def)).toBe(true)
+    expect(def.nodos).toEqual(d.nodos)
+    const sinPlano = adaptarATarea({ ...tareaVaciaRobot(), dxf: null })
+    expect(sinPlano.cambioElPlano).toBe(true)
+    expect(adaptarATarea(tareaVaciaRobot()).cambioElPlano).toBe(false)
   })
 })

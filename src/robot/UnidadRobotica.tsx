@@ -17,7 +17,7 @@ import Autoevaluacion from '../components/Autoevaluacion'
 import FichaRobot from './FichaRobot'
 import { PREGUNTAS_ROBOT } from './preguntasRobot'
 import { ETIQUETA_GRUPO, PRACTICA_ROBOT, type GrupoPractica } from './practica'
-import { analizarTarea4, MARCA_TAREA4, revisarTarea4, tareaVaciaRobot } from './tarea4'
+import { adaptarATarea, analizarTarea4, MARCA_TAREA4, revisarTarea4, tareaVaciaRobot } from './tarea4'
 import { copiarTabla, descargarTexto, leerAlumno, limpiarEnlace, trabajoDelEnlace } from '../entregar'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { exportarPng, nombreSeguro } from '../exportar'
@@ -471,10 +471,12 @@ export default function UnidadRobotica() {
       if (!esDefinicion(d)) throw new Error('Ese archivo no es una definición de robótica de NeumaLab.')
       // Una definición de la tarea se abre en la sección de la tarea, sea donde sea que se abra.
       if ((d as { tarea?: string }).tarea === MARCA_TAREA4 && VER_TAREA_ROBOTICA && !enTarea) setSeccion('tarea')
-      setDef(d)
+      // En la tarea el plano es el del enunciado: si la definición trae otro, se cambia por el de la tarea.
+      const { def: abierta, cambioElPlano } = enTarea || ((d as { tarea?: string }).tarea === MARCA_TAREA4 && VER_TAREA_ROBOTICA) ? adaptarATarea(d) : { def: d, cambioElPlano: false }
+      setDef(abierta)
       setSeleccion(null)
       setEnunciado(null)
-      setAviso(`Definición «${f.name}» abierta.`)
+      setAviso(`Definición «${f.name}» abierta.${cambioElPlano ? ' Traía otro plano: quedó el de la tarea. Revisa que tus componentes Curve usen sus capas (CONTORNO y RANURAS).' : ''}`)
     } catch (e) {
       setAviso(e instanceof Error ? e.message : 'No se pudo abrir el archivo.')
     }
@@ -637,7 +639,7 @@ export default function UnidadRobotica() {
                 {e.titulo}
               </option>
             ))}
-            {(['clase', 'fallas', 'control'] as GrupoPractica[]).map((g) => (
+            {(['clase', 'fallas', 'control', 'retos'] as GrupoPractica[]).map((g) => (
               <optgroup key={g} label={ETIQUETA_GRUPO[g]}>
                 {PRACTICA_ROBOT.filter((e) => e.grupo === g).map((e) => (
                   <option key={e.id} value={e.id}>

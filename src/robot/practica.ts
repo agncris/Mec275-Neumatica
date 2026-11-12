@@ -5,6 +5,7 @@
  * Los enunciados no dicen cuál es la falla: eso se encuentra mirando los colores,
  * el análisis y el código KRL.
  */
+import { EJEMPLOS_ROBOT } from './ejemplos'
 import type { Definicion } from './nodos'
 import ejCir from '../../ejercicios-clase2/Ej_CIR.json'
 import ejWeaver from '../../ejercicios-clase2/Ej_Weaver.json'
@@ -16,7 +17,7 @@ import fallaD from '../../ejercicios-clase2/Falla_D.json'
 import fallaE from '../../ejercicios-clase2/Falla_E.json'
 import controlP2 from '../../ejercicios-clase2/Control_P2.json'
 
-export type GrupoPractica = 'clase' | 'fallas' | 'control'
+export type GrupoPractica = 'clase' | 'fallas' | 'control' | 'retos'
 
 export interface EjercicioPractica {
   id: string
@@ -71,10 +72,39 @@ export const PRACTICA_ROBOT: EjercicioPractica[] = [
     enunciado: 'Esta definición debería dibujar un rectángulo de 150 por 100 mm con un lápiz, pero está mal conectada. Mira los colores de los nodos y encuentra la falla.',
     definicion: () => copia(controlP2),
   },
+  // Retos abiertos: no hay una sola respuesta. Sirven para probar caminos propios.
+  {
+    id: 'reto-figura',
+    grupo: 'retos',
+    titulo: 'Reto 1 · Dibuja tu propia figura',
+    enunciado: 'Dibuja con el robot una figura tuya (una letra, un óvalo, una flor). Combina LIN y CIR como quieras. Vale cualquier figura si el análisis no marca errores. Anota qué hiciste.',
+    definicion: () => {
+      const d = copia(EJEMPLOS_ROBOT.find((e) => e.id === 'vacio')!.definicion())
+      const her = d.nodos.find((n) => n.tipo === 'herramienta')
+      if (her) Object.assign(her.params, { tipo: 'lapiz', largo: 150, diametro: 10 })
+      d.nombre = 'Mi figura'
+      return d
+    },
+  },
+  {
+    id: 'reto-posicion',
+    grupo: 'retos',
+    titulo: 'Reto 2 · ¿Dónde pongo la plancha?',
+    enunciado: 'Cambia el robot y la posición de la plancha en el Core (X, Y y altura del mesón). Encuentra tres combinaciones que funcionen y tres que no, y anota por qué. Hay muchas respuestas.',
+    definicion: () => copia(EJEMPLOS_ROBOT.find((e) => e.id === 'fresado')!.definicion()),
+  },
+  {
+    id: 'reto-tiempo',
+    grupo: 'retos',
+    titulo: 'Reto 3 · Baja el tiempo del ciclo',
+    enunciado: 'Baja el tiempo del ciclo sin errores: prueba velocidades, el orden de los movimientos y la separación de los puntos. Anota qué probaste. Hay más de un camino.',
+    definicion: () => copia(EJEMPLOS_ROBOT.find((e) => e.id === 'aproximacion')!.definicion()),
+  },
 ]
 
 export const ETIQUETA_GRUPO: Record<GrupoPractica, string> = {
   clase: 'Practicar · Clase 2',
   fallas: 'Practicar · Diagnosticar fallas',
   control: 'Ejercicio del control',
+  retos: 'Retos abiertos',
 }

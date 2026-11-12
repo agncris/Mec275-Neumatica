@@ -18,8 +18,9 @@ const sinProblemas = (d: Definicion) => {
 }
 
 describe('ejercicios de la Clase 2: lista', () => {
-  it('hay nueve, cada uno con su enunciado, y las fallas no dicen cuál es la falla', () => {
-    expect(PRACTICA_ROBOT).toHaveLength(9)
+  it('hay doce, cada uno con su enunciado, y las fallas no dicen cuál es la falla', () => {
+    expect(PRACTICA_ROBOT).toHaveLength(12)
+    expect(PRACTICA_ROBOT.filter((e) => e.grupo === 'retos')).toHaveLength(3)
     expect(PRACTICA_ROBOT.filter((e) => e.grupo === 'clase')).toHaveLength(3)
     expect(PRACTICA_ROBOT.filter((e) => e.grupo === 'fallas')).toHaveLength(5)
     expect(PRACTICA_ROBOT.filter((e) => e.grupo === 'control')).toHaveLength(1)
@@ -152,5 +153,102 @@ describe('Pregunta 2 del control', () => {
     const { ev } = correr(d)
     expect(Object.values(ev.nodos).map((r) => r.estado)).toEqual(Array(9).fill('ok'))
     expect(ev.programas).toHaveLength(1)
+  })
+})
+
+
+describe('Retos abiertos', () => {
+  it('el reto de la figura parte con lápiz y se puede dibujar de varias maneras', () => {
+    const d = ejercicio('reto-figura')
+    expect(nodo(d, 'her').params.tipo).toBe('lapiz')
+  })
+
+  it('el reto de la posición corre y tiene combinaciones que funcionan y otras que no', () => {
+    const ok = ejercicio('reto-posicion')
+    expect(correr(ok).sim!.problemas.filter((p) => p.nivel === 'error')).toEqual([])
+    const lejos = ejercicio('reto-posicion')
+    nodo(lejos, 'core').params.bx = 1200
+    expect(mensajes(lejos, 'error').length).toBeGreaterThan(0)
+    const otroRobot = ejercicio('reto-posicion')
+    nodo(otroRobot, 'rob').params.modelo = 'kr16'
+    nodo(otroRobot, 'core').params.bx = 900
+    expect(mensajes(otroRobot, 'error')).toEqual([])
+  })
+
+  it('el reto del tiempo: cambiar velocidades cambia el tiempo del ciclo', () => {
+    const lento = correr(ejercicio('reto-tiempo')).sim!.tiempo
+    const d = ejercicio('reto-tiempo')
+    for (const n of d.nodos) if (n.tipo === 'lin') n.params.v = Number(n.params.v) * 4
+    const rapido = correr(d).sim!.tiempo
+    expect(rapido).toBeLessThan(lento)
+    expect(correr(d).sim!.problemas.filter((p) => p.nivel === 'error')).toEqual([])
+  })
+})
+
+/** Varios caminos para arreglar cada falla: no hay una sola respuesta correcta. */
+describe('Fallas: más de un arreglo', () => {
+  const errores = (d: Definicion) => mensajes(d, 'error')
+  const agregarSalida = (d: Definicion, valor: boolean, salida = 1) => {
+    const id = `salida-${valor}-${salida}`
+    d.nodos.push({ id, tipo: 'salida', x: 0, y: 0, params: { salida, valor } })
+    return id
+  }
+
+  it('A: se arregla acercando la plancha o con un robot de más alcance', () => {
+    expect(errores(ejercicio('falla-a')).length).toBeGreaterThan(0)
+    const cerca = ejercicio('falla-a')
+    nodo(cerca, 'core').params.bx = 450
+    expect(errores(cerca)).toEqual([])
+    const masAlcance = ejercicio('falla-a')
+    nodo(masAlcance, 'rob').params.modelo = 'kr16'
+    expect(errores(masAlcance)).toEqual([])
+    const otro = ejercicio('falla-a')
+    nodo(otro, 'rob').params.modelo = 'kr50r2100'
+    expect(errores(otro)).toEqual([])
+  })
+
+  it('B: se arregla cortando hasta -5 o -6 mm, o con una plancha más gruesa', () => {
+    for (const z of [-5, -6]) {
+      const d = ejercicio('falla-b')
+      nodo(d, 'baj').params.z = z
+      expect(errores(d)).toEqual([])
+    }
+    const gruesa = ejercicio('falla-b')
+    nodo(gruesa, 'core').params.espesor = 8
+    expect(errores(gruesa)).toEqual([])
+  })
+
+  it('C: se arregla con cualquier salida digital que se encienda antes del primer corte', () => {
+    for (const salida of [1, 2]) {
+      const d = ejercicio('falla-c')
+      const id = agregarSalida(d, true, salida)
+      d.cables.unshift({ de: id, salida: 0, a: 'core', entrada: 0 })
+      const sim = correr(d).sim!
+      expect(sim.problemas).toEqual([])
+      expect(sim.krl).toContain(`$OUT[${salida}] = TRUE`)
+      expect(sim.krl.indexOf(`$OUT[${salida}] = TRUE`)).toBeLessThan(sim.krl.indexOf('LIN'))
+    }
+  })
+
+  it('D: se arregla con un Offset de 2,5 mm hacia adentro de la ranura (el recorrido queda de 5 mm de ancho)', () => {
+    const d = ejercicio('falla-d')
+    const antes = correr(d).ev.programas[0].comandos.filter((c) => c.tipo === 'LIN') as Array<{ plano: { o: { y: number } } }>
+    const ancho = (cs: typeof antes) => Math.max(...cs.map((c) => c.plano.o.y)) - Math.min(...cs.map((c) => c.plano.o.y))
+    expect(ancho(antes)).toBeCloseTo(10, 1)
+    d.nodos.push({ id: 'off', tipo: 'desfase', x: 0, y: 0, params: { d: -2.5 } })
+    d.cables = d.cables.filter((c) => !(c.de === 'crv' && c.a === 'baj'))
+    d.cables.push({ de: 'crv', salida: 0, a: 'off', entrada: 0 }, { de: 'off', salida: 0, a: 'baj', entrada: 0 })
+    const despues = correr(d).ev.programas[0].comandos.filter((c) => c.tipo === 'LIN') as Array<{ plano: { o: { y: number } } }>
+    expect(ancho(despues)).toBeCloseTo(5, 1)
+    expect(correr(d).sim!.problemas).toEqual([])
+  })
+
+  it('E: se arregla girando la base 180° o -90°', () => {
+    expect(errores(ejercicio('falla-e')).length).toBeGreaterThan(0)
+    for (const giro of [180, -90]) {
+      const d = ejercicio('falla-e')
+      nodo(d, 'core').params.brot = giro
+      expect(correr(d).sim!.problemas.filter((p) => p.nivel === 'error')).toEqual([])
+    }
   })
 })
