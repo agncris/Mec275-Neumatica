@@ -367,7 +367,7 @@ export function revisarTarea4(a: AnalisisTarea4, nombreAlumno: string): PuntoRev
     {
       ok: a.trazosRecorridos === total,
       texto: a.trazos.length
-        ? `La trayectoria recorre ${a.trazosRecorridos} de ${total} trazos del plano (contorno y ${total - 1} ranuras), compensando el radio de la fresa.${a.trazosRecorridos < total && a.trazos.some((t) => t.coberturaSinCompensar >= 0.9 && t.cobertura < 0.9) ? ' Algunos trazos se recorren sobre el borde, sin compensar.' : ''}`
+        ? `La trayectoria recorre ${a.trazosRecorridos} de ${total} trazos del plano (contorno y ${total - 1} aberturas), compensando el radio de la fresa.${a.trazosRecorridos < total && a.trazos.some((t) => t.coberturaSinCompensar >= 0.9 && t.cobertura < 0.9) ? ' Algunos trazos se recorren sobre el borde, sin compensar.' : ''}`
         : 'La trayectoria todavía no corta ningún trazo del plano.',
     },
     {

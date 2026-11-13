@@ -1386,7 +1386,7 @@ function PlanoTarea() {
     <div data-plano-tarea="si">
       <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: '#51606f' }}>
         Pieza de soporte de motor: 250 × 250 mm, acero A36 de 5 mm, fresa de 5 mm. El plano DXF ya está cargado (capa CONTORNO para el borde y capa RANURAS para las nueve aberturas);
-        usa el componente Curve y elige la capa. Toca la lámina para verla grande.
+        usa el componente Curve y elige la capa. La lámina no acota los chaflanes: las medidas exactas son las del DXF. Toca la lámina para verla grande.
       </p>
       <a href="/plano-tarea4-robotica.png" target="_blank" rel="noreferrer" title="Abrir la lámina en grande">
         <img src="/plano-tarea4-robotica.png" alt="Lámina de la Tarea 4: plancha de 250 por 250 mm con chaflanes, una cruz de ranuras rectas, cuatro ranuras en arco de radios 100 y 110 mm y un agujero cuadrado central" style={{ width: '100%', maxWidth: 900, height: 'auto', display: 'block', border: '1px solid #dbe1e8', borderRadius: 6, background: '#fff' }} />
