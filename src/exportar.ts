@@ -22,6 +22,45 @@ function prepararCopia(svg: SVGSVGElement, escala: number): { texto: string; anc
   // Las animaciones de flujo se quedan congeladas en la lámina; el trazo
   // discontinuo sobraría, así que lo quitamos.
   copia.querySelectorAll('.manguera-flujo').forEach((n) => n.classList.remove('manguera-flujo'))
+  // Los campos de formulario (foreignObject) hacen que algunos navegadores marquen el lienzo como
+  // «contaminado» y no dejen exportarlo: se dibujan como formas SVG (el slider, como una pista con su perilla).
+  const originales = Array.from(svg.querySelectorAll('foreignObject'))
+  Array.from(copia.querySelectorAll('foreignObject')).forEach((fo, i) => {
+    const NS = 'http://www.w3.org/2000/svg'
+    const x = Number(fo.getAttribute('x') ?? 0)
+    const y = Number(fo.getAttribute('y') ?? 0)
+    const w = Number(fo.getAttribute('width') ?? 0)
+    const h = Number(fo.getAttribute('height') ?? 0)
+    const campo = originales[i]?.querySelector('input, select, textarea') as HTMLInputElement | null
+    const g = document.createElementNS(NS, 'g')
+    if (campo && campo.type === 'range') {
+      const min = Number(campo.min || 0)
+      const max = Number(campo.max || 100)
+      const f = max > min ? Math.min(1, Math.max(0, (Number(campo.value) - min) / (max - min))) : 0
+      const pista = document.createElementNS(NS, 'rect')
+      pista.setAttribute('x', String(x + 4))
+      pista.setAttribute('y', String(y + h / 2 - 2))
+      pista.setAttribute('width', String(Math.max(0, w - 8)))
+      pista.setAttribute('height', '4')
+      pista.setAttribute('rx', '2')
+      pista.setAttribute('fill', '#c6ced6')
+      const perilla = document.createElementNS(NS, 'circle')
+      perilla.setAttribute('cx', String(x + 4 + (w - 8) * f))
+      perilla.setAttribute('cy', String(y + h / 2))
+      perilla.setAttribute('r', '6')
+      perilla.setAttribute('fill', '#1668c7')
+      g.append(pista, perilla)
+    } else {
+      const texto = document.createElementNS(NS, 'text')
+      texto.setAttribute('x', String(x + 2))
+      texto.setAttribute('y', String(y + h * 0.7))
+      texto.setAttribute('font-size', '11')
+      texto.setAttribute('fill', '#1c2733')
+      texto.textContent = campo ? ('value' in campo ? String(campo.value) : '') : (fo.textContent ?? '')
+      g.append(texto)
+    }
+    fo.replaceWith(g)
+  })
   // Ayudas de edición (lápiz, «agregar descripción»…) que no van en la imagen.
   copia.querySelectorAll('[data-no-exportar]').forEach((n) => n.remove())
 

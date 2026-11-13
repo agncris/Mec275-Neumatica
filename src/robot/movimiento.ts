@@ -159,7 +159,12 @@ function revisarChoques(prog: Programa, placa: Placa, muestras: Muestra[], probl
   }
 }
 
-export function simular(prog: Programa, placa: Placa | null = null): Simulacion {
+export interface OpcionesSimulacion {
+  /** Avisa si la fresa corta con el husillo apagado o si queda encendido al terminar (se usa en la tarea). */
+  avisoHusillo?: boolean
+}
+
+export function simular(prog: Programa, placa: Placa | null = null, opciones: OpcionesSimulacion = {}): Simulacion {
   const { modelo, pedestal } = prog.robot
   const L = prog.herramienta.largo
   const base0 = v(0, 0, pedestal)
@@ -304,6 +309,8 @@ export function simular(prog: Programa, placa: Placa | null = null): Simulacion 
     finales.push([...q])
   })
 
+  if (opciones.avisoHusillo) avisosDeHusillo(prog, muestras, problema)
+
   revisarChoques(prog, placa ?? PLACA_DEFECTO, muestras, (m, texto) => {
     t = m.t
     problema(Math.max(0, m.cmd), 'error', texto)
@@ -411,3 +418,23 @@ export function resumenComandos(cs: Comando[]): Record<string, number> {
   return r
 }
 
+
+/**
+ * Aviso naranjo para herramientas que giran (fresa y taladro): el husillo debe estar
+ * encendido (alguna salida digital en TRUE) antes del primer corte, y apagado al terminar.
+ * No es un error: el programa corre, pero en un robot real la fresa se rompería.
+ */
+function avisosDeHusillo(prog: Programa, muestras: Muestra[], problema: (cmd: number, nivel: 'aviso' | 'error', texto: string) => void): void {
+  const gira = prog.herramienta.tipo === 'fresa' || prog.herramienta.tipo === 'taladro'
+  if (!gira) return
+  const primerCorte = muestras.find((m) => m.enPieza && ['LIN', 'CIR'].includes(prog.comandos[m.cmd]?.tipo ?? ''))
+  if (primerCorte) {
+    const encendido = prog.comandos.slice(0, primerCorte.cmd).some((c) => c.tipo === 'OUT' && c.valor)
+    if (!encendido) problema(primerCorte.cmd, 'aviso', 'El husillo no está encendido cuando la herramienta empieza a cortar. Usa Set Digital Out (TRUE) antes del primer corte.')
+  }
+  const estado = new Map<number, boolean>()
+  prog.comandos.forEach((c) => {
+    if (c.tipo === 'OUT') estado.set(c.salida, c.valor)
+  })
+  if ([...estado.values()].some(Boolean)) problema(prog.comandos.length - 1, 'aviso', 'El husillo queda encendido al terminar. Apágalo con Set Digital Out (FALSE) antes de volver a HOME.')
+}

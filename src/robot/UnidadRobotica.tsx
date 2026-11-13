@@ -227,7 +227,8 @@ export default function UnidadRobotica() {
     const { min, max } = cajaCurvas(curvas)
     return Number.isFinite(min.x) ? { x0: min.x - 20, y0: min.y - 20, x1: max.x + 20, y1: max.y + 20 } : null
   }, [previa])
-  const sim = useMemo(() => (programa ? simular(programa, placa) : null), [programa, placa])
+  // En la tarea, la simulación también avisa del husillo (en los ejercicios y fallas no: ahí se encuentra leyendo el KRL).
+  const sim = useMemo(() => (programa ? simular(programa, placa, { avisoHusillo: enTarea }) : null), [programa, placa, enTarea])
 
   // Programa del mando (teach-in): PTP por ejes, LIN en línea recta.
   const herrMando = HERR_MANDO

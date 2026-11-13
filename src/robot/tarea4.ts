@@ -247,7 +247,7 @@ export function analizarTarea4(def: Definicion): AnalisisTarea4 {
     a.errores = malo.length ? malo.slice(0, 3) : ['El Core no arma un programa: necesita comandos, robot y herramienta.']
     return a
   }
-  const sim = simular(prog, placaDe(def, ev))
+  const sim = simular(prog, placaDe(def, ev), { avisoHusillo: true })
   a.hayPrograma = true
   a.robot = prog.robot.modelo.id
   a.alcanceRobot = prog.robot.modelo.alcance
