@@ -121,7 +121,7 @@ interface Props {
   /** En píxeles, o '100%' para llenar el área. */
   alto?: number | string
   /** En la tarea: el siguiente paso, y el bloque que conviene arrastrar. */
-  guia?: { id: string; numero: number; total: number; texto: string; pestana?: Pestana; destacar?: string }
+  guia?: { id: string; numero: number; total: number; titulo: string; accion: string; pestana?: Pestana; destacar?: string }
 }
 
 type Arrastre =
@@ -350,7 +350,7 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
         </div>
         <p className="paleta-nodos__ayuda">
           {guia
-            ? `Paso ${guia.numero} de ${guia.total}. ${guia.texto}`
+            ? `Paso ${guia.numero} de ${guia.total} · ${guia.titulo}. ${guia.accion}`
             : def.nodos.length === 0
               ? 'Empieza arrastrando un Robot y un Core.'
               : tactil

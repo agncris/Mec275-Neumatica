@@ -558,6 +558,7 @@ export default function UnidadRobotica() {
   const [checklistTarea, setChecklistTarea] = useState<PuntoRevisionTarea[]>([])
   useEffect(() => {
     document.querySelector('.panel-acoplado__contenido')?.scrollTo({ top: 0 })
+    if (pasoTarea?.seleccionar) setSeleccion(pasoTarea.seleccionar)
   }, [pasoTarea?.id])
   useEffect(() => {
     if (!enTarea) return
@@ -772,6 +773,7 @@ export default function UnidadRobotica() {
               setSeleccion(id)
             }}
             capas={dxf?.capas ?? []}
+            enfocar={pasoTarea?.enfocar}
             cables={nodoSel ? def.cables.filter((c) => c.a === nodoSel.id) : []}
             onDesconectar={(c) => setDef({ ...def, cables: def.cables.filter((k) => k !== c) })}
           />
@@ -1254,6 +1256,7 @@ function Propiedades({
   onBorrar,
   onDuplicar,
   capas,
+  enfocar,
   cables = [],
   onDesconectar,
 }: {
@@ -1263,6 +1266,8 @@ function Propiedades({
   onBorrar: () => void
   onDuplicar: () => void
   capas: string[]
+  /** Clave del parámetro que el paso actual pide cambiar. */
+  enfocar?: string
   /** Cables que llegan a este componente. */
   cables?: Definicion['cables']
   onDesconectar?: (c: Definicion['cables'][number]) => void
@@ -1306,7 +1311,7 @@ function Propiedades({
           {comp.params.filter((p) => !p.si || p.si(params)).map((p) => {
             const valor = params[p.clave]
             return (
-              <label key={p.clave} style={{ ...rotulo, flexDirection: p.tipo === 'bool' ? 'row' : 'column', alignItems: p.tipo === 'bool' ? 'center' : 'flex-start', gap: 2 }}>
+              <label key={p.clave} data-param={p.clave} style={{ ...rotulo, flexDirection: p.tipo === 'bool' ? 'row' : 'column', alignItems: p.tipo === 'bool' ? 'center' : 'flex-start', gap: 2, outline: enfocar === p.clave ? '2px solid #1668c7' : undefined, background: enfocar === p.clave ? '#e8f2fb' : undefined, borderRadius: 6, padding: enfocar === p.clave ? '2px 6px' : undefined }}>
                 {p.tipo !== 'bool' && <span>{p.etiqueta}</span>}
                 {p.tipo === 'numero' && (
                   <input
@@ -1523,68 +1528,87 @@ const estadoChip: React.CSSProperties = { color: '#fff', borderRadius: 6, paddin
 const avisoOk = estiloAviso
 
 
+const ETAPAS_TAREA = ['Dibujo', 'Puntos', 'Fresa', 'Corte', 'Programa', 'Revisar']
+
 interface PasoAhora {
   id: string
   numero: number
   total: number
-  texto: string
+  titulo: string
+  donde: string
+  accion: string
+  listo: string
   pestana?: 'Trayectoria' | 'Movimientos'
   destacar?: string
+  /** Bloque que se selecciona solo, para mostrar su panel. */
+  seleccionar?: string
+  /** Parámetro que hay que cambiar en ese panel. */
+  enfocar?: string
 }
 
 /** Un solo paso, el que sigue, según lo que ya está conectado en el lienzo. */
 function pasoGuiado(def: Definicion): PasoAhora {
-  const total = 6
+  const total = ETAPAS_TAREA.length
   const tipoDe = (id: string) => def.nodos.find((n) => n.id === id)?.tipo
   const une = (desde: string[], hacia: string[]) => def.cables.some((c) => desde.includes(tipoDe(c.de) ?? '') && hacia.includes(tipoDe(c.a) ?? ''))
   const curvas = def.nodos.filter((n) => n.tipo === 'curvaDXF')
+  const base = { total }
   if (!curvas.length) {
-    return { id: 'curva', numero: 1, total, pestana: 'Trayectoria', destacar: 'curvaDXF', texto: 'Arrastra Curve (el bloque marcado) al lienzo. Trae el dibujo del plano.' }
+    return { ...base, id: 'curva', numero: 1, titulo: 'Traer el dibujo', pestana: 'Trayectoria', destacar: 'curvaDXF', donde: 'Pestaña Trayectoria, bloque Curve con borde azul.', accion: 'Arrástralo al lienzo. Ese bloque lee el plano que ya está cargado.', listo: 'Aparece un bloque Crv en el lienzo.' }
   }
-  const capas = curvas.map((n) => String(n.params.capa ?? '').trim().toUpperCase())
-  if (!capas.some((c) => c === 'CONTORNO' || c === 'RANURAS')) {
-    return { id: 'capa', numero: 1, total, texto: 'Haz clic en Curve y escribe CONTORNO en Capa. Es el borde de afuera. Las ranuras van después, en otra Curve.' }
+  const sinCapa = curvas.find((n) => !['CONTORNO', 'RANURAS'].includes(String(n.params.capa ?? '').trim().toUpperCase()))
+  if (sinCapa) {
+    return { ...base, id: 'capa', numero: 1, titulo: 'Elegir el borde', seleccionar: sinCapa.id, enfocar: 'capa', donde: 'Panel de abajo del programa. La lista Capa está marcada.', accion: 'Abre Capa y elige CONTORNO. Es el borde de afuera. Las ranuras se hacen después, con otra Curve.', listo: 'La lista dice CONTORNO, no «Todas las capas».' }
   }
   if (!une(['curvaDXF'], ['dividirLargo', 'dividirCurva', 'kukaDividir'])) {
-    return { id: 'dividir', numero: 2, total, pestana: 'Trayectoria', destacar: 'dividirLargo', texto: 'Arrastra Divide Length (marcado) y conecta la C de Curve a su entrada. Parte el contorno en puntos.' }
+    return { ...base, id: 'dividir', numero: 2, titulo: 'Partir en puntos', pestana: 'Trayectoria', destacar: 'dividirLargo', donde: 'Pestaña Trayectoria, bloque Divide Length con borde azul.', accion: 'Arrástralo y conecta la salida C de Curve (a la derecha del bloque) con su entrada (a la izquierda).', listo: 'Ves un cable entre Curve y Divide Length.' }
   }
   if (!une(['dividirLargo', 'dividirCurva', 'kukaDividir'], ['planoXY', 'girarPlano'])) {
-    return { id: 'plano', numero: 3, total, pestana: 'Trayectoria', destacar: 'planoXY', texto: 'Arrastra XY Plane (marcado) y conecta la P de Divide Length a su entrada. Ahí se apoya la fresa.' }
+    return { ...base, id: 'plano', numero: 3, titulo: 'Apoyar la fresa', pestana: 'Trayectoria', destacar: 'planoXY', donde: 'Pestaña Trayectoria, bloque XY Plane con borde azul.', accion: 'Arrástralo y conecta la salida P de Divide Length a su entrada.', listo: 'Ves un cable entre Divide Length y XY Plane.' }
   }
   if (!une(['planoXY', 'girarPlano'], ['lin', 'cir'])) {
-    return { id: 'lin', numero: 4, total, pestana: 'Movimientos', destacar: 'lin', texto: 'Arrastra LIN (marcado) y conecta la salida del plano a su entrada P. LIN corta en recta; en las curvas usarás CIR.' }
+    return { ...base, id: 'lin', numero: 4, titulo: 'Cortar en recta', pestana: 'Movimientos', destacar: 'lin', donde: 'Pestaña Movimientos, bloque LIN con borde azul.', accion: 'Arrástralo y conecta la salida de XY Plane a la entrada P de LIN. LIN corta en línea recta.', listo: 'Ves un cable entre XY Plane y LIN.' }
   }
   if (!une(['lin', 'cir', 'ptp'], ['core'])) {
-    return { id: 'core', numero: 5, total, texto: 'Conecta la C de LIN a la C del Core. Sin ese cable el robot no tiene programa.' }
+    return { ...base, id: 'core', numero: 5, titulo: 'Armar el programa', donde: 'En el lienzo: la salida C de LIN y la entrada C del Core.', accion: 'Arrastra un cable desde la C de LIN hasta la C del Core. El Core junta el movimiento, el robot y la herramienta.', listo: 'Aparece el botón ▶ bajo la vista 3D.' }
   }
+  const capas = curvas.map((n) => String(n.params.capa ?? '').trim().toUpperCase())
   if (!capas.includes('RANURAS')) {
-    return { id: 'simula', numero: 6, total, texto: 'Pulsa ▶ y abre Análisis. Si el contorno se ve bien, repite la cadena con otra Curve en la capa RANURAS. Donde el dibujo dobla, usa CIR.' }
+    return { ...base, id: 'simula', numero: 6, titulo: 'Revisar y seguir con las ranuras', donde: 'El botón ▶ bajo la vista 3D y la pestaña Análisis.', accion: 'Pulsa ▶. Si el borde se recorre, repite desde Dibujo con otra Curve y elige la capa RANURAS. Donde el dibujo dobla, usa CIR en vez de LIN.', listo: 'El recorrido pinta el borde y después las aberturas.' }
   }
-  return { id: 'cerrar', numero: 6, total, pestana: 'Movimientos', destacar: 'ptp', texto: 'Pulsa ▶. El aviso de Análisis dice qué corregir. Acércate y aléjate con PTP; corta solo con LIN o CIR.' }
+  return { ...base, id: 'cerrar', numero: 6, titulo: 'Corregir lo que avisa Análisis', pestana: 'Movimientos', destacar: 'ptp', donde: 'La pestaña Análisis, bajo la vista 3D.', accion: 'Pulsa ▶ y lee el aviso. Para acercarte y alejarte usa PTP. Para cortar, solo LIN o CIR.', listo: 'El checklist de abajo queda en verde.' }
 }
 
-/** El plano de fabricación de la Tarea 4, con el paso actual arriba de todo. */
+/** El plano de la tarea, con el proceso arriba y un solo paso abierto. */
 function PlanoTarea({ paso, checklist, onEstudiar, onEjemplo }: { paso: PasoAhora; checklist: PuntoRevisionTarea[]; onEstudiar: (ancla: string) => void; onEjemplo: () => void }) {
   return (
     <div data-plano-tarea="si" style={{ fontSize: '0.84rem', color: '#1c2733', lineHeight: 1.45 }}>
-      <div style={{ position: 'sticky', top: 0, zIndex: 2, background: '#e8f2fb', border: '1px solid #b9d4ee', borderRadius: 8, padding: '8px 10px', marginBottom: 8 }} data-paso-ahora={paso.id}>
-        <p style={{ margin: 0, fontWeight: 700 }}>Ahora · paso {paso.numero} de {paso.total}</p>
-        <p style={{ margin: '2px 0 0' }}>{paso.texto}</p>
-      </div>
-      <p style={{ margin: '0 0 4px' }}>
-        <strong>Tarea: fresado del soporte de motor</strong>
-      </p>
-      <p style={{ margin: '0 0 8px', color: '#33475c' }}>
-        <strong>Objetivo.</strong> Programar el recorrido de la fresa siguiendo el contorno y las ranuras del plano. La plancha es de 250 × 250 mm, acero A36 de 5 mm, y la fresa es de 5 mm. La lámina no acota los chaflanes: las medidas exactas son las del DXF.
-      </p>
-      <p style={{ margin: '0 0 2px', fontWeight: 700 }}>Pasos sugeridos</p>
-      <ol style={{ margin: '0 0 8px', paddingLeft: 18 }}>
-        <li>Carga las curvas del DXF: capa CONTORNO para el borde y capa RANURAS para las aberturas.</li>
-        <li>Usa LIN en los tramos rectos y CIR en las curvas. PTP solo para acercarte o alejarte.</li>
-        <li>Conecta el Robot y la Tool al Core.</li>
-        <li>Simula y revisa el análisis: alcance, límites de los ejes y singularidades.</li>
-        <li>Ajusta las velocidades y deja altura de sobra al acercarte.</li>
-      </ol>
+      <section className="proceso" aria-label="Proceso de la tarea" data-paso-ahora={paso.id}>
+        <p style={{ margin: 0, fontWeight: 700 }}>
+          Paso {paso.numero} de {paso.total} · {paso.titulo}
+        </p>
+        <ol className="proceso__etapas">
+          {ETAPAS_TAREA.map((nombre, i) => {
+            const n = i + 1
+            const estado = n < paso.numero ? 'hecha' : n === paso.numero ? 'ahora' : ''
+            return (
+              <li key={nombre} className={estado ? `proceso__etapa proceso__etapa--${estado}` : 'proceso__etapa'} aria-current={estado === 'ahora' ? 'step' : undefined}>
+                {estado === 'hecha' ? '✓ ' : `${n} `}
+                {nombre}
+              </li>
+            )
+          })}
+        </ol>
+        <dl className="proceso__fila">
+          <dt>Dónde</dt>
+          <dd>{paso.donde}</dd>
+          <dt>Haz esto</dt>
+          <dd>{paso.accion}</dd>
+          <dt>Listo</dt>
+          <dd>{paso.listo}</dd>
+        </dl>
+      </section>
+      <p style={{ margin: '0 0 8px', color: '#33475c' }}>La fresa tiene que recorrer el contorno y las ranuras. Plancha de 250 × 250 mm, espesor 5 mm, fresa de 5 mm. Los chaflanes se miden en el DXF.</p>
       <p style={{ margin: '0 0 2px', fontWeight: 700 }}>Criterios de éxito</p>
       <ul style={{ margin: '0 0 8px', paddingLeft: 18 }}>
         <li>El recorrido sigue el contorno y las ranuras sin chocar.</li>
