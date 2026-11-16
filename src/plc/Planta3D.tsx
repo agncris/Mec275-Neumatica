@@ -8,6 +8,8 @@
  * (`sim.current`) y se pone al día. Los botones de la máquina se pulsan con
  * el ratón o el dedo, igual que en el banco.
  */
+import HudEscena, { type PlayEscena } from '../components/HudEscena'
+import { aplicarModoArrastre, saltarVista, zoomCamara, type ModoArrastre, type VistaCamara } from '../components/mandoCamara'
 import { acercar, useCelular, useTactil } from '../components/ui'
 import { useEffect, useRef, useState, type MutableRefObject } from 'react'
 import * as THREE from 'three'
@@ -49,6 +51,8 @@ interface Props {
   notacion: Notacion
   /** Alto de la vista (en píxeles, o '100%' para llenar el área). */
   alto?: number | string
+  /** Play dentro de la escena, cuando está a pantalla completa. */
+  play?: PlayEscena
 }
 
 const CLAVE_SONIDO = 'neumalab.plc.sonido'
@@ -1382,11 +1386,21 @@ function crearEscena(id: string): Escena {
 // ---------------------------------------------------------------------------
 // Componente
 // ---------------------------------------------------------------------------
-export default function Planta3D({ sim, version, acciones, onAccion, notacion, alto = 440 }: Props) {
+export default function Planta3D({ sim, version, acciones, onAccion, notacion, alto = 440, play }: Props) {
   const tactil = useTactil()
   const contRef = useRef<HTMLDivElement>(null)
   const [sinWebGL, setSinWebGL] = useState(false)
   const [pantallaCompleta, setPantallaCompleta] = useState(false)
+  const [vistaCamara, setVistaCamara] = useState<VistaCamara>('iso')
+  const [modoArrastre, setModoArrastre] = useState<ModoArrastre>('girar')
+  const vistaRef = useRef<(v: VistaCamara) => void>(() => {})
+  const controlesRef = useRef<OrbitControls | null>(null)
+  useEffect(() => {
+    if (!pantallaCompleta) setModoArrastre('girar')
+  }, [pantallaCompleta])
+  useEffect(() => {
+    if (controlesRef.current) aplicarModoArrastre(controlesRef.current, modoArrastre)
+  }, [modoArrastre])
   const [conSonido, setConSonido] = useState(() => {
     try {
       return localStorage.getItem(CLAVE_SONIDO) !== 'no'
@@ -1530,7 +1544,8 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
     // acercar se usa Ctrl + rueda (o el gesto de pellizcar del trackpad). Va antes
     // que los controles para poder quitarles la rueda.
     const alGirarRueda = (e: WheelEvent) => {
-      if (!e.ctrlKey && cont.closest('.banco--apilado')) e.stopImmediatePropagation()
+      // En pantalla completa la rueda acerca; en la página apilada, baja el contenido.
+      if (!e.ctrlKey && document.fullscreenElement !== cont && cont.closest('.banco--apilado')) e.stopImmediatePropagation()
     }
     renderer.domElement.addEventListener('wheel', alGirarRueda)
     const controles = new OrbitControls(camara, renderer.domElement)
@@ -1543,6 +1558,8 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
     controles.maxDistance = 4
     controles.maxPolarAngle = Math.PI * 0.62
     controles.zoomToCursor = true
+    controlesRef.current = controles
+    aplicarModoArrastre(controles, modoArrastre)
     const encuadrar = () => {
       const aspecto = cont.clientWidth / Math.max(1, cont.clientHeight)
       const vfov = THREE.MathUtils.degToRad(camara.fov)
@@ -1562,6 +1579,11 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
     }
     encuadrar()
     encuadrarRef.current = encuadrar
+    vistaRef.current = (v) => {
+      setVistaCamara(v)
+      if (v === 'iso') encuadrar()
+      else saltarVista(controles, v)
+    }
     const grandes: THREE.Object3D[] = []
     escena.traverse((o) => {
       if (o.userData.insignia) grandes.push(o)
@@ -1639,6 +1661,7 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
       renderer.domElement.removeEventListener('pointerdown', onDown)
       renderer.domElement.removeEventListener('wheel', alGirarRueda)
       window.removeEventListener('pointerup', onUp)
+      controlesRef.current = null
       controles.dispose()
       escena.traverse((o) => {
         const m = o as THREE.Mesh
@@ -1682,7 +1705,7 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
         </p>
       )}
       <div style={barra}>
-        <button style={boton} onClick={() => encuadrarRef.current()} title="Volver a ver la planta entera" aria-label="Encuadrar">
+        <button style={boton} onClick={() => { setVistaCamara('iso'); encuadrarRef.current() }} title="Volver a ver la planta entera" aria-label="Encuadrar">
           {celular ? '⌖' : 'Encuadrar'}
         </button>
         <button
@@ -1722,6 +1745,16 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
           </button>
         )}
       </div>
+      {pantallaCompleta && (
+        <HudEscena
+          play={play}
+          vista={vistaCamara}
+          onVista={(v) => vistaRef.current(v)}
+          modo={modoArrastre}
+          onModo={setModoArrastre}
+          onZoom={(si) => controlesRef.current && zoomCamara(controlesRef.current, si)}
+        />
+      )}
       {acciones.length > 0 && (
         <div style={{ ...barra, left: 8, right: 'auto' }}>
           {acciones.map((a) => (

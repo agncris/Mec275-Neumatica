@@ -642,6 +642,12 @@ export default function UnidadPLC() {
             }}
             notacion={notacion}
             alto="100%"
+            play={{
+              etiqueta: corriendo ? '■ STOP' : '▶ RUN',
+              onClick: () => setCorriendo((c) => !c),
+              titulo: 'Atajo: barra espaciadora',
+              corriendo,
+            }}
           />
         </Suspense>
       </div>

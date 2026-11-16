@@ -8,8 +8,11 @@
  * La escena está en milímetros; el robot usa Z hacia arriba (como KUKA y
  * Rhino) y se gira para three.js, que usa Y hacia arriba.
  */
+import { BotonPlayEscena, type PlayEscena } from '../components/HudEscena'
+import { aplicarModoArrastre, zoomCamara, type ModoArrastre } from '../components/mandoCamara'
 import BotonPantallaCompleta, { usePantallaCompleta } from '../components/PantallaCompleta'
-import { useEffect, useRef, useState, type MutableRefObject } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type MutableRefObject, type ReactNode } from 'react'
+import { ViewportGizmo } from 'three-viewport-gizmo'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
@@ -255,13 +258,38 @@ function lineasPrevia(p: Previa, base: Plano, color: number, tamPlano: number): 
 
 type Vista = 'iso' | 'frente' | 'arriba' | 'lado'
 
-export default function Robot3D({ vista, alto = 480, onCanvas }: { vista: MutableRefObject<VistaRobot>; alto?: number | string; onCanvas?: (c: HTMLCanvasElement | null) => void }) {
+export default function Robot3D({
+  vista,
+  alto = 480,
+  onCanvas,
+  play,
+  encabezado,
+}: {
+  vista: MutableRefObject<VistaRobot>
+  alto?: number | string
+  onCanvas?: (c: HTMLCanvasElement | null) => void
+  /** Play dentro de la escena, cuando está a pantalla completa. */
+  play?: PlayEscena
+  /** Título y avisos, a la izquierda de los controles de vista. */
+  encabezado?: ReactNode
+}) {
   const contRef = useRef<HTMLDivElement>(null)
   const envolturaRef = useRef<HTMLDivElement>(null)
   const [pantalla, alternarPantalla] = usePantallaCompleta(envolturaRef)
   const [sinWebGL, setSinWebGL] = useState(false)
   const accion = useRef<((v: Vista) => void) | null>(null)
   const [vistaActual, setVistaActual] = useState<Vista>('iso')
+  const [modoArrastre, setModoArrastre] = useState<ModoArrastre>('girar')
+  const controlesRef = useRef<OrbitControls | null>(null)
+  const gizmoRef = useRef<ViewportGizmo | null>(null)
+  const pantallaRef = useRef(false)
+  pantallaRef.current = pantalla
+  useEffect(() => {
+    if (!pantalla) setModoArrastre('girar')
+  }, [pantalla])
+  useEffect(() => {
+    if (controlesRef.current) aplicarModoArrastre(controlesRef.current, modoArrastre)
+  }, [modoArrastre])
 
   useEffect(() => {
     const cont = contRef.current
@@ -319,6 +347,47 @@ export default function Robot3D({ vista, alto = 480, onCanvas }: { vista: Mutabl
     controles.enableDamping = true
     controles.dampingFactor = 0.08
     controles.zoomToCursor = true
+    controlesRef.current = controles
+    aplicarModoArrastre(controles, modoArrastre)
+
+    // La librería no tiene el tipo "rounded-cube": el cubo redondeado es type "cube" con radius.
+    const cara = {
+      color: '#3a3a3a',
+      labelColor: '#e0e0e0',
+      opacity: 1,
+      hover: { color: '#4a4a4a', labelColor: '#ffffff', opacity: 1 },
+    }
+    const gizmo = new ViewportGizmo(camara, renderer, {
+      container: cont,
+      type: 'cube',
+      placement: 'top-left',
+      size: 110,
+      offset: { top: 16, left: 16, right: 16, bottom: 16 },
+      animated: true,
+      speed: 1,
+      radius: 0.42,
+      id: 'viewcube-robot',
+      background: {
+        enabled: true,
+        color: '#1e1e1e',
+        opacity: 0.7,
+        hover: { color: '#2d2d2d', opacity: 0.9 },
+      },
+      font: { family: 'Inter, system-ui, -apple-system, sans-serif', weight: 500 },
+      corners: { color: '#2c2c2c', opacity: 1, radius: 0.55, hover: { color: '#3a3a3a', opacity: 1 } },
+      edges: { color: '#2c2c2c', opacity: 0.85, radius: 0.35, hover: { color: '#3a3a3a', opacity: 1 } },
+      front: { ...cara, label: 'Frente' },
+      top: { ...cara, label: 'Arriba' },
+      right: { ...cara, label: 'Lado' },
+      left: { ...cara, label: 'Izq' },
+      bottom: { ...cara, label: 'Abajo' },
+      back: { ...cara, label: 'Atrás' },
+    })
+    const domGizmo = document.getElementById('viewcube-robot')
+    if (domGizmo) domGizmo.style.display = pantallaRef.current ? 'block' : 'none'
+    gizmo.enabled = pantallaRef.current
+    gizmo.attachControls(controles as Parameters<ViewportGizmo['attachControls']>[0])
+    gizmoRef.current = gizmo
 
     // Partes que se rehacen al cambiar el robot, la herramienta o la definición.
     let robot: ModeloArmado | null = null
@@ -359,6 +428,7 @@ export default function Robot3D({ vista, alto = 480, onCanvas }: { vista: Mutabl
       renderer.setSize(cont.clientWidth, cont.clientHeight)
       camara.aspect = cont.clientWidth / Math.max(1, cont.clientHeight)
       camara.updateProjectionMatrix()
+      gizmo.domUpdate()
     })
     observador.observe(cont)
 
@@ -506,13 +576,22 @@ export default function Robot3D({ vista, alto = 480, onCanvas }: { vista: Mutabl
       }
       controles.update()
       renderer.render(escena, camara)
+      if (pantallaRef.current) gizmo.render()
+      else if (gizmo.animating) {
+        // Si se sale de pantalla completa a mitad de un giro, OrbitControls no puede quedar apagado.
+        ;(gizmo as { animating: boolean }).animating = false
+        controles.enabled = true
+      }
     }
     requestAnimationFrame(bucle)
 
     return () => {
       vivo = false
       observador.disconnect()
+      controlesRef.current = null
+      gizmoRef.current = null
       onCanvas?.(null)
+      gizmo.dispose()
       controles.dispose()
       renderer.dispose()
       pmrem.dispose()
@@ -521,38 +600,108 @@ export default function Robot3D({ vista, alto = 480, onCanvas }: { vista: Mutabl
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  useEffect(() => {
+    const gizmo = gizmoRef.current
+    const el = document.getElementById('viewcube-robot')
+    if (el) el.style.display = pantalla ? 'block' : 'none'
+    if (!gizmo) return
+    gizmo.enabled = pantalla
+    if (!pantalla && controlesRef.current) controlesRef.current.enabled = true
+    const id = requestAnimationFrame(() => gizmo.domUpdate())
+    return () => cancelAnimationFrame(id)
+  }, [pantalla])
+
   if (sinWebGL) return <p style={{ padding: 20, color: '#8a5b00' }}>Este navegador no tiene WebGL: la vista 3D no está disponible.</p>
+  const llena = pantalla || alto === '100%'
   return (
-    <div ref={envolturaRef} style={{ position: 'relative', height: pantalla ? '100%' : typeof alto === 'string' ? alto : undefined, background: '#dde2e7' }}>
-      <div ref={contRef} style={{ width: '100%', height: pantalla ? '100%' : alto, borderRadius: 8, overflow: 'hidden', background: '#dfe3e8' }} />
-      <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 4 }}>
-        {(
-          [
-            ['iso', '3D'],
-            ['frente', 'Frente'],
-            ['lado', 'Lado'],
-            ['arriba', 'Arriba'],
-          ] as Array<[Vista, string]>
-        ).map(([v, t]) => (
-          <button
-            key={v}
-            onClick={() => accion.current?.(v)}
-            aria-pressed={vistaActual === v}
-            style={{
-              border: '1px solid #c6ced6',
-              background: vistaActual === v ? '#33475c' : 'rgba(255,255,255,0.9)',
-              color: vistaActual === v ? '#fff' : '#33475c',
-              borderRadius: 6,
-              padding: '2px 8px',
-              fontSize: '0.78rem',
-              cursor: 'pointer',
-            }}
-          >
-            {t}
-          </button>
-        ))}
-        <BotonPantallaCompleta activa={pantalla} onAlternar={alternarPantalla} estilo={{ border: '1px solid #c6ced6', background: 'rgba(255,255,255,0.9)', color: '#33475c', borderRadius: 6, padding: '2px 8px', fontSize: '0.78rem', cursor: 'pointer' }} />
+    <div ref={envolturaRef} style={{ position: 'relative', display: 'flex', flexDirection: 'column', height: llena ? '100%' : undefined, minHeight: 0, background: pantalla ? '#dde2e7' : undefined }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginBottom: 8, flex: 'none' }}>
+        <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>{encabezado}</div>
+        <div style={{ marginLeft: 'auto', display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 8, flex: '1 1 240px' }} role="toolbar" aria-label="Vistas de la simulación">
+          {!pantalla &&
+            (
+              [
+                ['iso', '3D'],
+                ['frente', 'Frente'],
+                ['lado', 'Lado'],
+                ['arriba', 'Arriba'],
+              ] as Array<[Vista, string]>
+            ).map(([v, t]) => (
+              <button
+                key={v}
+                onClick={() => accion.current?.(v)}
+                aria-pressed={vistaActual === v}
+                style={{
+                  border: '1px solid #e0e5eb',
+                  background: vistaActual === v ? '#33475c' : '#fff',
+                  color: vistaActual === v ? '#fff' : '#51606f',
+                  borderRadius: 8,
+                  padding: '4px 10px',
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                }}
+              >
+                {t}
+              </button>
+            ))}
+          <BotonPantallaCompleta activa={pantalla} onAlternar={alternarPantalla} estilo={{ border: '1px solid #e0e5eb', background: '#fff', color: '#51606f', borderRadius: 8, padding: '4px 10px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 600 }} />
+        </div>
       </div>
+      <div style={{ position: 'relative', flex: llena ? 1 : undefined, height: llena ? undefined : alto, minHeight: llena ? 0 : undefined, display: 'flex' }}>
+        <div ref={contRef} style={{ position: 'relative', width: '100%', flex: 1, minHeight: 0, borderRadius: 8, overflow: 'hidden', background: '#dfe3e8' }} />
+        {pantalla && (
+          <div style={barraNav} data-mando-camara="si" role="toolbar" aria-label="Navegación de la cámara">
+            <button type="button" aria-pressed={modoArrastre === 'girar'} title="Girar la vista" onClick={() => setModoArrastre('girar')} style={chipNav(modoArrastre === 'girar')}>
+              Girar
+            </button>
+            <button type="button" aria-pressed={modoArrastre === 'mover'} title="Desplazar la vista" onClick={() => setModoArrastre('mover')} style={chipNav(modoArrastre === 'mover')}>
+              Mover
+            </button>
+            <button type="button" title="Acercar" aria-label="Acercar" onClick={() => controlesRef.current && zoomCamara(controlesRef.current, true)} style={chipNav(false)}>
+              +
+            </button>
+            <button type="button" title="Alejar" aria-label="Alejar" onClick={() => controlesRef.current && zoomCamara(controlesRef.current, false)} style={chipNav(false)}>
+              −
+            </button>
+            <button type="button" title="Vista inicial" onClick={() => accion.current?.('iso')} style={chipNav(false)}>
+              Inicio
+            </button>
+          </div>
+        )}
+      </div>
+      {pantalla && play && (
+        <div style={{ position: 'absolute', left: '50%', bottom: 16, transform: 'translateX(-50%)', zIndex: 4 }}>
+          <BotonPlayEscena play={play} />
+        </div>
+      )}
     </div>
   )
+}
+
+const barraNav: CSSProperties = {
+  position: 'absolute',
+  top: 142,
+  left: 16,
+  zIndex: 5,
+  display: 'flex',
+  gap: 6,
+  padding: 6,
+  borderRadius: 10,
+  background: 'rgba(30,30,30,0.7)',
+  border: '1px solid rgba(255,255,255,0.08)',
+}
+
+function chipNav(activo: boolean): CSSProperties {
+  return {
+    border: '1px solid rgba(255,255,255,0.12)',
+    background: activo ? '#3a3a3a' : 'transparent',
+    color: '#e0e0e0',
+    borderRadius: 8,
+    padding: '6px 10px',
+    fontSize: '0.78rem',
+    fontWeight: 600,
+    cursor: 'pointer',
+    minWidth: 36,
+  }
 }

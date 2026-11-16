@@ -657,7 +657,18 @@ export default function UnidadCNC() {
       {estado === 'parada' && <div style={{ ...alarma, background: '#fff5e0', borderColor: '#f0c36d', color: '#7a4b00' }}>Programa detenido por M00/M01. Pulsa ▶ Continuar.</div>}
       <div className="relleno">
         <Suspense fallback={<p style={{ padding: 20, color: '#51606f' }}>Preparando la máquina…</p>}>
-          <Maquina3D vista={vista} onCanvas={(c) => (canvasRef.current = c)} alto="100%" />
+          <Maquina3D
+            vista={vista}
+            onCanvas={(c) => (canvasRef.current = c)}
+            alto="100%"
+            play={{
+              etiqueta: estado === 'corriendo' ? '❚❚ Pausa' : estado === 'parada' ? '▶ Continuar' : '▶ Ciclo',
+              onClick: () => (estado === 'corriendo' ? setEstado('pausa') : correr('corriendo')),
+              titulo: hayErrores ? 'Hay errores: la máquina corre hasta la línea anterior al primer error' : 'Ejecuta el programa completo',
+              deshabilitado: estado !== 'corriendo' && !resultado.pasos.length,
+              corriendo: estado === 'corriendo',
+            }}
+          />
         </Suspense>
       </div>
       <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 6, fontSize: '0.85rem', color: '#33475c' }}>

@@ -726,6 +726,35 @@ body.arrastrando-borde * {
 .banco__area--sin-relleno {
   padding: 0;
 }
+.banco__area--riel {
+  flex: none;
+  width: 52px;
+  padding: 16px 8px;
+  align-items: center;
+  gap: 16px;
+}
+.banco--robot .banco__area:not(.banco__area--riel) {
+  padding: 16px 16px 16px;
+}
+.banco--robot .titulo-area {
+  margin-bottom: 16px;
+}
+.escena-ejes {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  overflow-x: auto;
+  padding: 8px 0 0;
+  flex: none;
+}
+.escena-ejes label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 96px;
+  min-width: 96px;
+  font-size: 0.8rem;
+}
 /* Lo que ocupa el alto que sobra del área (vista 3D, lienzo, editor). */
 .banco__area .relleno {
   flex: 1 1 auto;

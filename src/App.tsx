@@ -393,6 +393,13 @@ export default function App() {
       : 'Modo edición: arrastra fichas desde la paleta · clic cerca de un puerto para cablear · Espacio simula.'
   })()
 
+  const playEscena = {
+    etiqueta: simulando ? '■ Detener' : '▶ Simular',
+    onClick: () => setModo(simulando ? 'editar' : 'simular'),
+    titulo: bancoVacio ? 'Coloca al menos una ficha en el banco para poder simular' : 'Atajo: barra espaciadora',
+    deshabilitado: bancoVacio,
+    corriendo: simulando,
+  }
   const botonSimular = (
     <button
       onClick={() => setModo(simulando ? 'editar' : 'simular')}
@@ -514,7 +521,7 @@ export default function App() {
       {vista === 'banco3d' ? (
         <>
           <Suspense fallback={<p style={{ padding: 20, color: '#51606f' }}>Montando el banco…</p>}>
-            <Banco3D motor={motor} llenar />
+            <Banco3D motor={motor} llenar play={playEscena} />
           </Suspense>
           {/* La pizarra sigue montada, oculta, para poder exportar el circuito. */}
           <div style={{ display: 'none' }}>
@@ -525,7 +532,7 @@ export default function App() {
         <>
           <div>
             {vista === 'ambos' && <span style={rotuloVista}>Esquema · ISO 1219-1</span>}
-            <Pizarra motor={motor} vista={vista === 'taller' ? 'taller' : 'esquema'} llenar sinBarra controles={controles} onZoom={setZoom} />
+            <Pizarra motor={motor} vista={vista === 'taller' ? 'taller' : 'esquema'} llenar sinBarra controles={controles} onZoom={setZoom} play={playEscena} />
           </div>
           {vista === 'ambos' && (
             <div>

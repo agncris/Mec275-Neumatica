@@ -4,7 +4,7 @@
  * de alcance, límites y singularidades, y exportar el código KRL. Funciona en
  * el navegador: no hace falta Windows ni licencias.
  */
-import { BotonNuevo, botonPrimario, botonSecundario, estiloAviso, Menu, useEsEstrecha } from '../components/ui'
+import { BotonNuevo, botonPrimario, botonSecundario, estiloAviso, Menu, useEsEstrecha, usePersistente } from '../components/ui'
 import BancoDividido, { TituloArea } from '../components/banco/BancoDividido'
 import { usePanelAcoplado, type PestanaPanel } from '../components/banco/PanelAcoplado'
 import PaginaEstudiar, { type SeccionEstudio } from '../components/banco/PaginaEstudiar'
@@ -146,7 +146,8 @@ export default function UnidadRobotica() {
   // Mientras la tarea no se publica, ni el enlace ?vista=tarea la abre.
   const seccion: SeccionUnidad = seccionPedida === 'tarea' && !VER_TAREA_ROBOTICA ? 'laboratorio' : seccionPedida
   const enTarea = seccion === 'tarea'
-  const panel = usePanelAcoplado<PestanaRobot>('neumalab.robot.panel', 'analisis', false)
+  const panel = usePanelAcoplado<PestanaRobot>('neumalab.robot.panel.v2', enTarea ? 'plano-tarea' : 'analisis', false, 168)
+  const [plegado, setPlegado] = usePersistente<'abierto' | 'riel' | 'oculto'>('neumalab.robot.plegado', 'abierto')
   // Al entrar directo a la tarea (enlace ?vista=tarea) se ve primero el plano.
   useEffect(() => {
     if (!enTarea) return
@@ -692,9 +693,20 @@ export default function UnidadRobotica() {
   const areaPrograma =
     modo === 'visual' ? (
       <>
-        <TituloArea>
-          Definición · {def.nombre}
-          {def.dxf ? <span style={{ fontWeight: 400, fontSize: '0.8rem', color: '#51606f' }}>· plano: {def.dxf.nombre}</span> : null}
+        <TituloArea
+          derecha={
+            <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+              <button type="button" className="boton-icono" title="Reducir el programa a una tira" aria-label="Reducir el programa a una tira" onClick={() => setPlegado('riel')}>
+                «
+              </button>
+              <button type="button" className="boton-icono" title="Ocultar el programa y dejar la simulación" aria-label="Ocultar el programa" onClick={() => setPlegado('oculto')}>
+                ✕
+              </button>
+            </span>
+          }
+        >
+          Programa
+          {def.dxf ? <span style={{ fontWeight: 400, fontSize: '0.8rem', color: '#51606f' }}>· {def.dxf.nombre}</span> : null}
         </TituloArea>
         {enunciado && (
           <p data-enunciado="si" style={{ margin: '0 0 6px', padding: '6px 10px', background: '#eef4fb', border: '1px solid #c9d9ee', borderRadius: 6, fontSize: '0.84rem', color: '#1c2733', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
@@ -734,6 +746,21 @@ export default function UnidadRobotica() {
         </div>
       </>
     ) : (
+      <>
+      <TituloArea
+        derecha={
+          <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+            <button type="button" className="boton-icono" title="Reducir el mando a una tira" aria-label="Reducir el mando a una tira" onClick={() => setPlegado('riel')}>
+              «
+            </button>
+            <button type="button" className="boton-icono" title="Ocultar el mando" aria-label="Ocultar el mando" onClick={() => setPlegado('oculto')}>
+              ✕
+            </button>
+          </span>
+        }
+      >
+        Mando manual
+      </TituloArea>
       <Mando
         modelo={modeloM}
         herramienta={herrMando}
@@ -761,6 +788,7 @@ export default function UnidadRobotica() {
         }}
         onExportar={exportarKRL}
       />
+      </>
     )
 
   const abrirAnalisis = () => {
@@ -770,26 +798,51 @@ export default function UnidadRobotica() {
 
   const areaSimulacion = (
     <>
-      <TituloArea>
-        Simulación · {modeloVista.nombre}
-        {simActiva && (
-          <button
-            onClick={abrirAnalisis}
-            title="Ver el análisis de la simulación"
-            style={{ ...estadoChip, border: 'none', cursor: 'pointer', background: errores.length ? '#b3261e' : avisosSim.length ? '#a35200' : '#0e7a43' }}
-            data-analisis={errores.length ? 'error' : avisosSim.length ? 'aviso' : 'ok'}
-          >
-            {errores.length ? `${errores.length} error(es)` : avisosSim.length ? `${avisosSim.length} aviso(s)` : 'sin problemas'}
-          </button>
-        )}
-      </TituloArea>
       <div className="relleno">
         <Suspense fallback={<p style={{ padding: 20, color: '#51606f' }}>Montando la celda…</p>}>
-          <Robot3D vista={vista} onCanvas={(c) => (canvasRef.current = c)} alto="100%" />
+          <Robot3D
+            vista={vista}
+            onCanvas={(c) => (canvasRef.current = c)}
+            alto="100%"
+            encabezado={
+              <>
+                <h2 style={{ margin: 0, fontSize: '1rem' }}>Simulación 3D</h2>
+                <span style={{ fontWeight: 400, fontSize: '0.8rem', color: '#51606f' }}>{modeloVista.nombre}</span>
+                {plegado === 'oculto' && (
+                  <button type="button" className="boton-icono" title="Mostrar el programa" aria-label="Mostrar el programa" onClick={() => setPlegado('abierto')}>
+                    »
+                  </button>
+                )}
+                {simActiva && (
+                  <button
+                    onClick={abrirAnalisis}
+                    title="Ver el análisis de la simulación"
+                    style={{ ...estadoChip, border: 'none', cursor: 'pointer', background: errores.length ? '#b3261e' : avisosSim.length ? '#a35200' : '#0e7a43' }}
+                    data-analisis={errores.length ? 'error' : avisosSim.length ? 'aviso' : 'ok'}
+                  >
+                    {errores.length ? `${errores.length} error(es)` : avisosSim.length ? `${avisosSim.length} aviso(s)` : 'sin problemas'}
+                  </button>
+                )}
+              </>
+            }
+            play={
+              simActiva
+                ? {
+                    etiqueta: reproduciendo ? '❚❚ Pausa' : '▶ Reproducir',
+                    onClick: () => {
+                      if (!reproduciendo && tRef.current >= simActiva.tiempo - 1e-6) tRef.current = 0
+                      setReproduciendo((r) => !r)
+                    },
+                    titulo: 'Recorre el programa',
+                    corriendo: reproduciendo,
+                  }
+                : { etiqueta: '▶ Reproducir', onClick: () => {}, deshabilitado: true, titulo: 'Arma un programa para simular' }
+            }
+          />
         </Suspense>
       </div>
       {simActiva ? (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8, flexWrap: 'wrap' }} data-reproductor="si">
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginTop: 16, flexWrap: 'wrap' }} data-reproductor="si">
           <button
             onClick={() => {
               if (!reproduciendo && tRef.current >= simActiva.tiempo - 1e-6) tRef.current = 0
@@ -826,16 +879,30 @@ export default function UnidadRobotica() {
           </select>
         </div>
       ) : (
-        <p style={{ margin: '8px 0 0', fontSize: '0.84rem', color: '#51606f' }}>
+        <p style={{ margin: '16px 0 0', fontSize: '0.84rem', color: '#51606f' }}>
           {modo === 'visual'
-            ? 'Cuando el Core tenga comandos, robot y herramienta, aquí aparece el reproductor (como KUKA|play).'
-            : 'Mueve el robot con el mando; graba puntos y pulsa «Reproducir».'}
+            ? 'Cuando el Core tenga comandos, robot y herramienta, aquí aparece el reproductor.'
+            : 'Mueve los ejes de abajo, graba puntos en el mando y pulsa «Reproducir».'}
         </p>
       )}
-      <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: '0.84rem', marginTop: 6 }}>
-        <input type="checkbox" checked={alcance} onChange={(e) => setAlcance(e.target.checked)} /> Mostrar el alcance máximo del robot
-      </label>
-      <Ejes modelo={modeloVista} q={qVista} uso={simActiva?.uso ?? null} />
+      <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginTop: 8 }}>
+        <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: '0.8rem', color: '#51606f' }}>
+          <input type="checkbox" checked={alcance} onChange={(e) => setAlcance(e.target.checked)} /> Alcance
+        </label>
+      </div>
+      <Ejes
+        modelo={modeloVista}
+        q={qVista}
+        uso={simActiva?.uso ?? null}
+        onQ={
+          modo === 'mando'
+            ? (q) => {
+                setReproduciendo(false)
+                setQMando(q)
+              }
+            : undefined
+        }
+      />
     </>
   )
 
@@ -878,7 +945,7 @@ export default function UnidadRobotica() {
     },
     {
       id: 'ficha',
-      titulo: `Ficha técnica · ${modeloVista.nombre}`,
+      titulo: 'Ficha técnica',
       tituloCorto: 'Ficha',
       contenido: (
         <>
@@ -940,11 +1007,16 @@ export default function UnidadRobotica() {
       {seccion !== 'estudiar' ? (
         <BancoDividido<PestanaRobot>
           key={seccion}
-          clave="neumalab.robot.banco"
+          clave="neumalab.robot.escena.v2"
+          clase="banco--robot"
+          divisionInicial={0.28}
+          plegado={estrecha ? 'abierto' : plegado}
+          onPlegado={setPlegado}
+          riel={<span style={{ writingMode: 'vertical-rl', fontSize: '0.75rem', fontWeight: 700, color: '#51606f', letterSpacing: '0.04em' }}>{modo === 'visual' ? 'PROGRAMA' : 'MANDO'}</span>}
           barra={barra}
-          izquierda={{ id: 'programa', titulo: modo === 'visual' ? 'Definición' : 'Mando', contenido: areaPrograma }}
-          derecha={{ id: 'simulacion', titulo: 'Simulación', contenido: areaSimulacion }}
-          inferior={{ etiqueta: 'Análisis, código y ficha', pestanas, estado: panel }}
+          izquierda={{ id: 'programa', titulo: modo === 'visual' ? 'Programa' : 'Mando', contenido: areaPrograma }}
+          derecha={{ id: 'simulacion', titulo: 'Simulación', tituloCorto: '3D', contenido: areaSimulacion }}
+          inferior={{ etiqueta: 'Plano, análisis y ficha', pestanas, estado: panel }}
           estado={barraEstado}
           conCajon={entregaAbierta && enTarea && !estrecha}
         />
@@ -1289,25 +1361,32 @@ function Propiedades({
   )
 }
 
-function Ejes({ modelo, q, uso }: { modelo: ReturnType<typeof robotPorId>; q: number[]; uso: Array<[number, number]> | null }) {
+function Ejes({ modelo, q, uso, onQ }: { modelo: ReturnType<typeof robotPorId>; q: number[]; uso: Array<[number, number]> | null; onQ?: (q: number[]) => void }) {
   return (
-    <div style={{ marginTop: 8 }} data-ejes="si">
+    <div className="escena-ejes" data-ejes="si" aria-label="Ángulos de los ejes">
+      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#51606f', flex: 'none' }}>Ejes</span>
       {q.map((x, k) => {
         const [lo, hi] = modelo.limites[k]
-        const pos = (y: number) => `${((y - lo) / (hi - lo)) * 100}%`
         const cerca = x < lo + 5 || x > hi - 5
+        const recorrido = uso ? ` · el programa usa ${uso[k][0].toFixed(0)}° a ${uso[k][1].toFixed(0)}°` : ''
         return (
-          <div key={k} style={{ display: 'grid', gridTemplateColumns: '28px 1fr 70px', gap: 6, alignItems: 'center', fontSize: '0.8rem', marginBottom: 2 }}>
+          <label key={k} title={`A${k + 1}: ${lo}° a ${hi}°${recorrido}${cerca ? ' · cerca del límite' : ''}`}>
             <strong>A{k + 1}</strong>
-            <div style={{ position: 'relative', height: 12, background: '#eef1f4', borderRadius: 6 }} title={`Rango ${lo}° a ${hi}°`}>
-              {uso && <div style={{ position: 'absolute', left: pos(uso[k][0]), width: `calc(${pos(uso[k][1])} - ${pos(uso[k][0])})`, top: 2, bottom: 2, background: '#b9d3ef', borderRadius: 4 }} />}
-              <div style={{ position: 'absolute', left: pos(x), top: -2, width: 3, height: 16, marginLeft: -1, background: cerca ? '#c62828' : '#33475c', borderRadius: 2 }} />
-            </div>
-            <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', textAlign: 'right', color: cerca ? '#c62828' : undefined }}>{x.toFixed(1)}°</span>
-          </div>
+            <input
+              type="range"
+              min={lo}
+              max={hi}
+              step={0.5}
+              value={Math.min(hi, Math.max(lo, x))}
+              disabled={!onQ}
+              aria-label={`Eje A${k + 1}`}
+              onChange={(e) => onQ?.(q.map((a, i) => (i === k ? Number(e.target.value) : a)))}
+              style={{ flex: 1, accentColor: cerca ? '#c62828' : '#33475c' }}
+            />
+            <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', color: cerca ? '#c62828' : '#33475c', minWidth: 52, textAlign: 'right' }}>{x.toFixed(1)}°</span>
+          </label>
         )
       })}
-      <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: '#5f6b78' }}>Cada barra es el rango del eje; en azul, lo que usa el programa; la marca, la posición actual (roja cerca del límite).</p>
     </div>
   )
 }

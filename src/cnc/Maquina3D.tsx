@@ -7,6 +7,8 @@
  * hacia la derecha y el X (radio) hacia arriba, como en los planos; en la
  * fresadora X va a la derecha, Y hacia el fondo y Z hacia arriba.
  */
+import HudEscena, { type PlayEscena } from '../components/HudEscena'
+import { aplicarModoArrastre, zoomCamara, type ModoArrastre } from '../components/mandoCamara'
 import BotonPantallaCompleta, { usePantallaCompleta } from '../components/PantallaCompleta'
 import { useEffect, useRef, useState, type MutableRefObject } from 'react'
 import * as THREE from 'three'
@@ -37,7 +39,7 @@ export interface VistaCNC {
 /** Plano de la vista en corte: deja la mitad trasera de la pieza (z ≤ 0). */
 const PLANO_CORTE = new THREE.Plane(new THREE.Vector3(0, 0, -1), 0)
 
-type Vista = 'iso' | 'frente' | 'arriba'
+type Vista = 'iso' | 'frente' | 'arriba' | 'lado'
 
 const M = {
   pintura: new THREE.MeshStandardMaterial({ color: 0xd9dde2, metalness: 0.15, roughness: 0.55 }),
@@ -694,11 +696,14 @@ export default function Maquina3D({
   vista,
   alto = 440,
   onCanvas,
+  play,
 }: {
   vista: MutableRefObject<VistaCNC>
   /** En píxeles, o '100%' para llenar el área. */
   alto?: number | string
   onCanvas?: (c: HTMLCanvasElement | null) => void
+  /** Play dentro de la escena, cuando está a pantalla completa. */
+  play?: PlayEscena
 }) {
   const contRef = useRef<HTMLDivElement>(null)
   const envolturaRef = useRef<HTMLDivElement>(null)
@@ -706,6 +711,14 @@ export default function Maquina3D({
   const [sinWebGL, setSinWebGL] = useState(false)
   const accionRef = useRef<((v: Vista) => void) | null>(null)
   const [vistaActual, setVistaActual] = useState<Vista>('iso')
+  const [modoArrastre, setModoArrastre] = useState<ModoArrastre>('girar')
+  const controlesRef = useRef<OrbitControls | null>(null)
+  useEffect(() => {
+    if (!pantalla) setModoArrastre('girar')
+  }, [pantalla])
+  useEffect(() => {
+    if (controlesRef.current) aplicarModoArrastre(controlesRef.current, modoArrastre)
+  }, [modoArrastre])
 
   useEffect(() => {
     const cont = contRef.current
@@ -749,6 +762,8 @@ export default function Maquina3D({
     controles.enableDamping = true
     controles.dampingFactor = 0.08
     controles.zoomToCursor = true
+    controlesRef.current = controles
+    aplicarModoArrastre(controles, modoArrastre)
 
     let actual: { sim: SimuladorCNC; esc: EscenaMaquina; maquina: string } | null = null
     const encuadrar = (v: Vista) => {
@@ -762,6 +777,7 @@ export default function Maquina3D({
       const torno = actual.maquina === 'torno'
       if (v === 'frente') camara.position.set(c.x, c.y, c.z + d)
       else if (v === 'arriba') camara.position.set(c.x, c.y + d, c.z + (torno ? 0.01 : 0.01))
+      else if (v === 'lado') camara.position.set(c.x + d, c.y, c.z + 0.01)
       else camara.position.set(c.x + d * 0.35, c.y + d * (torno ? 0.35 : 0.6), c.z + d * 0.85)
       controles.target.copy(c)
       controles.update()
@@ -824,6 +840,7 @@ export default function Maquina3D({
       observador.disconnect()
       renderer.domElement.removeEventListener('pointerdown', activarSonido)
       sonido.cerrar()
+      controlesRef.current = null
       onCanvas?.(null)
       controles.dispose()
       renderer.dispose()
@@ -866,6 +883,16 @@ export default function Maquina3D({
         ))}
         <BotonPantallaCompleta activa={pantalla} onAlternar={alternarPantalla} estilo={{ border: '1px solid #c6ced6', background: 'rgba(255,255,255,0.9)', color: '#33475c', borderRadius: 6, padding: '2px 8px', fontSize: '0.78rem', cursor: 'pointer' }} />
       </div>
+      {pantalla && (
+        <HudEscena
+          play={play}
+          vista={vistaActual}
+          onVista={(v) => accionRef.current?.(v)}
+          modo={modoArrastre}
+          onModo={setModoArrastre}
+          onZoom={(si) => controlesRef.current && zoomCamara(controlesRef.current, si)}
+        />
+      )}
     </div>
   )
 }

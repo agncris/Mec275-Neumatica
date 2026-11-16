@@ -50,6 +50,19 @@ interface Props<T extends string> {
   onMovil?: (id: string) => void
   /** Deja libre el lado derecho para el cajón «Entregar» (en el computador). */
   conCajon?: boolean
+  /** Clase extra del banco (p. ej. más aire en una unidad). */
+  clase?: string
+  /**
+   * En el computador: el área izquierda abierta, reducida a una tira, u oculta
+   * para que la derecha ocupe el ancho. En el celular y en la ventana apilada
+   * no aplica (ahí ya se ve una zona a la vez).
+   */
+  /** Ancho inicial del área izquierda, como fracción (0.5 es mitad y mitad). */
+  divisionInicial?: number
+  plegado?: 'abierto' | 'riel' | 'oculto'
+  onPlegado?: (p: 'abierto' | 'riel' | 'oculto') => void
+  /** Contenido de la tira cuando el área izquierda está plegada. */
+  riel?: ReactNode
 }
 
 const ANCHO_MIN = 320
@@ -57,11 +70,11 @@ const ANCHO_MIN = 320
 /** Una capa del celular: todas ocupan el mismo lugar y sólo la elegida se ve. */
 const capa = (visible: boolean): React.CSSProperties => ({ position: 'absolute', inset: 0, visibility: visible ? 'visible' : 'hidden', zIndex: visible ? 1 : 0 })
 
-export default function BancoDividido<T extends string>({ clave, barra, izquierda, derecha, inferior, estado, encabezado, movil, onMovil, conCajon }: Props<T>) {
+export default function BancoDividido<T extends string>({ clave, barra, izquierda, derecha, inferior, estado, encabezado, movil, onMovil, conCajon, clase, divisionInicial = 0.5, plegado = 'abierto', onPlegado, riel }: Props<T>) {
   const estrecha = useCelular()
   const apilado = useApilado()
   const apaisado = useApaisado()
-  const [division, setDivision] = usePersistente(`${clave}.division`, 0.5)
+  const [division, setDivision] = usePersistente(`${clave}.division`, divisionInicial)
   const [movilPropio, setMovilPropio] = useState(izquierda.id)
   const vistaMovil = movil ?? movilPropio
   const elegirMovil = onMovil ?? setMovilPropio
@@ -119,7 +132,7 @@ export default function BancoDividido<T extends string>({ clave, barra, izquierd
     )
     // Acostado, las pestañas van en la misma fila que las herramientas: el alto es lo que falta.
     return (
-      <main className="banco banco--dividido banco--movil">
+      <main className={`banco banco--dividido banco--movil${clase ? ` ${clase}` : ''}`}>
         <div className="banco__barra" role="toolbar" aria-label="Herramientas">
           {barra}
           {apaisado && listaPestanas}
@@ -146,7 +159,7 @@ export default function BancoDividido<T extends string>({ clave, barra, izquierd
     // Una zona bajo otra, con su alto propio; la página se desplaza. El panel
     // de abajo no se «amplía» (ya hay espacio bajando).
     return (
-      <main className="banco banco--dividido banco--apilado" style={conCajon ? { marginRight: 480 } : undefined}>
+      <main className={`banco banco--dividido banco--apilado${clase ? ` ${clase}` : ''}`} style={conCajon ? { marginRight: 480 } : undefined}>
         <div className="banco__barra" role="toolbar" aria-label="Herramientas">
           {barra}
         </div>
@@ -160,14 +173,24 @@ export default function BancoDividido<T extends string>({ clave, barra, izquierd
   }
 
   return (
-    <main className="banco banco--dividido" style={conCajon ? { marginRight: 480 } : undefined}>
+    <main className={`banco banco--dividido${clase ? ` ${clase}` : ''}`} style={conCajon ? { marginRight: 480 } : undefined}>
       <div className="banco__barra" role="toolbar" aria-label="Herramientas">
         {barra}
       </div>
       {encabezado}
       <div className="banco__centro" style={{ flex: 1 }}>
         <div ref={cuerpo} className="banco__lienzo banco__dividido">
-          {area(izquierda, { flex: `${division} 1 0` })}
+          {plegado === 'oculto' ? null : plegado === 'riel' ? (
+            <section aria-label={izquierda.titulo} className="banco-panel banco__area banco__area--riel" data-area={izquierda.id} data-plegado="riel">
+              {riel}
+              <button type="button" className="boton-icono" title="Mostrar el programa" aria-label="Mostrar el programa" onClick={() => onPlegado?.('abierto')}>
+                »
+              </button>
+            </section>
+          ) : (
+            area(izquierda, { flex: `${division} 1 0` })
+          )}
+          {plegado === 'abierto' && (
           <div
             role="separator"
             aria-orientation="vertical"
@@ -178,14 +201,15 @@ export default function BancoDividido<T extends string>({ clave, barra, izquierd
             tabIndex={0}
             className="divisor-areas"
             onPointerDown={arrastrar}
-            onDoubleClick={() => setDivision(0.5)}
+            onDoubleClick={() => setDivision(divisionInicial)}
             onKeyDown={(e) => {
               if (e.key === 'ArrowLeft') setDivision((d) => limitar(d - 0.04))
               if (e.key === 'ArrowRight') setDivision((d) => limitar(d + 0.04))
             }}
-            title="Arrastra para cambiar el ancho · doble clic: mitad y mitad"
+            title="Arrastra para cambiar el ancho · doble clic: la simulación ocupa el resto"
           />
-          {area(derecha, { flex: `${1 - division} 1 0` })}
+          )}
+          {area(derecha, { flex: plegado === 'abierto' ? `${1 - division} 1 0` : '1 1 0' })}
         </div>
         {inferior && <PanelAcoplado<T> etiqueta={inferior.etiqueta} pestanas={inferior.pestanas} {...inferior.estado} />}
       </div>

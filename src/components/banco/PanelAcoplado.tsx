@@ -168,11 +168,11 @@ export default function PanelAcoplado<T extends string>({
 }
 
 /** Estado de un panel acoplado que se recuerda en este navegador. */
-export function usePanelAcoplado<T extends string>(clave: string, pestanaInicial: T, abiertoInicial = false) {
+export function usePanelAcoplado<T extends string>(clave: string, pestanaInicial: T, abiertoInicial = false, altoInicial?: number) {
   const [abierto, setAbierto] = usePersistente(`${clave}.abierto`, abiertoInicial)
   const [alto, setAlto] = usePersistente(
     `${clave}.alto`,
-    typeof window === 'undefined' ? 220 : Math.round(Math.min(260, Math.max(150, window.innerHeight * 0.26))),
+    altoInicial ?? (typeof window === 'undefined' ? 168 : Math.round(Math.min(200, Math.max(140, window.innerHeight * 0.2)))),
   )
   const [ampliado, setAmpliado] = usePersistente(`${clave}.ampliado`, false)
   const [pestana, setPestana] = usePersistente<T>(`${clave}.pestana`, pestanaInicial)

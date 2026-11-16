@@ -13,6 +13,8 @@
  * altura del punto de la carrera que vigilan, para que se vea a la leva
  * pisarlos.
  */
+import HudEscena, { type PlayEscena } from '../components/HudEscena'
+import { aplicarModoArrastre, saltarVista, zoomCamara, type ModoArrastre, type VistaCamara } from '../components/mandoCamara'
 import { acercar, useTactil } from '../components/ui'
 import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
@@ -30,6 +32,8 @@ interface Props {
   motor: Motor | null
   /** Ocupa todo el alto de su contenedor (banco de trabajo). */
   llenar?: boolean
+  /** Play dentro de la escena, cuando está a pantalla completa. */
+  play?: PlayEscena
 }
 
 interface PiezaEnEscena {
@@ -302,7 +306,7 @@ function estadoDe(motor: Motor | null, p: Pieza): { estado: EstadoPieza; presion
   return { estado, presion }
 }
 
-export default function Banco3D({ motor, llenar = false }: Props) {
+export default function Banco3D({ motor, llenar = false, play }: Props) {
   const tactil = useTactil()
   const contenedorRef = useRef<HTMLDivElement>(null)
   const motorRef = useRef<Motor | null>(motor)
@@ -351,7 +355,17 @@ export default function Banco3D({ motor, llenar = false }: Props) {
     }
   }, [])
   const [pantallaCompleta, setPantallaCompleta] = useState(false)
+  const [vistaCamara, setVistaCamara] = useState<VistaCamara>('iso')
+  const [modoArrastre, setModoArrastre] = useState<ModoArrastre>('girar')
   const encuadrarRef = useRef<() => void>(() => {})
+  const vistaRef = useRef<(v: VistaCamara) => void>(() => {})
+  const controlesRef = useRef<OrbitControls | null>(null)
+  useEffect(() => {
+    if (!pantallaCompleta) setModoArrastre('girar')
+  }, [pantallaCompleta])
+  useEffect(() => {
+    if (controlesRef.current) aplicarModoArrastre(controlesRef.current, modoArrastre)
+  }, [modoArrastre])
   const piezas = useStore((s) => s.piezas)
   const mangueras = useStore((s) => s.mangueras)
 
@@ -554,6 +568,8 @@ export default function Banco3D({ motor, llenar = false }: Props) {
     controles.maxDistance = 4
     controles.maxPolarAngle = Math.PI * 0.62
     controles.zoomToCursor = true
+    controlesRef.current = controles
+    aplicarModoArrastre(controles, modoArrastre)
     const encuadrar = () => {
       const aspecto = cont.clientWidth / Math.max(1, cont.clientHeight)
       const vfov = THREE.MathUtils.degToRad(camara.fov)
@@ -566,6 +582,11 @@ export default function Banco3D({ motor, llenar = false }: Props) {
     }
     encuadrar()
     encuadrarRef.current = encuadrar
+    vistaRef.current = (v) => {
+      setVistaCamara(v)
+      if (v === 'iso') encuadrar()
+      else saltarVista(controles, v)
+    }
 
     // --- interacción: pulsar botones del banco ---------------------------------
     const raycaster = new THREE.Raycaster()
@@ -696,6 +717,7 @@ export default function Banco3D({ motor, llenar = false }: Props) {
       observador.disconnect()
       renderer.domElement.removeEventListener('pointerdown', onDown)
       window.removeEventListener('pointerup', onUp)
+      controlesRef.current = null
       controles.dispose()
       escena.traverse((o) => {
         const malla = o as THREE.Mesh
@@ -766,6 +788,7 @@ export default function Banco3D({ motor, llenar = false }: Props) {
         <button
           style={boton}
           onClick={() => {
+            setVistaCamara('iso')
             encuadrarRef.current()
             resaltarCambio.actual = true
           }}
@@ -797,6 +820,16 @@ export default function Banco3D({ motor, llenar = false }: Props) {
           </button>
         )}
       </div>
+      {pantallaCompleta && (
+        <HudEscena
+          play={play}
+          vista={vistaCamara}
+          onVista={(v) => vistaRef.current(v)}
+          modo={modoArrastre}
+          onModo={setModoArrastre}
+          onZoom={(acercar) => controlesRef.current && zoomCamara(controlesRef.current, acercar)}
+        />
+      )}
       {motor && mandos.length > 0 && (
         <div style={panelMandos}>
           <span style={{ fontSize: '0.72rem', color: '#5a6b7d' }}>Mandos</span>
