@@ -40,6 +40,41 @@ export function tareaVaciaRobot(): Definicion {
   }
 }
 
+/**
+ * Andamiaje de la tarea: la cadena de un tramo recto del contorno, sin las
+ * ranuras, los arcos ni el acercamiento. No es la solución.
+ */
+export function ejemploGuiadoTarea(): Definicion {
+  const nodo = (id: string, tipo: string, x: number, y: number, params: NodoDef['params'] = {}): NodoDef => {
+    const comp = componente(tipo)
+    if (!comp) throw new Error(`Componente ${tipo} no existe`)
+    return { id, tipo, x, y, params: { ...paramsIniciales(comp), ...params } }
+  }
+  return {
+    version: 1,
+    tipo: 'definicion-robot',
+    nombre: 'Ejemplo guiado',
+    nodos: [
+      nodo('crv', 'curvaDXF', 40, 80, { capa: 'CONTORNO' }),
+      nodo('div', 'dividirLargo', 240, 80, { l: 15 }),
+      nodo('xy', 'planoXY', 440, 80),
+      nodo('lin', 'lin', 640, 40),
+      nodo('rob', 'robot', 640, 200),
+      nodo('her', 'herramienta', 640, 330, { tipo: 'fresa', largo: 200, diametro: 5 }),
+      nodo('core', 'core', 860, 140, { espesor: 5 }),
+    ],
+    cables: [
+      { de: 'crv', salida: 0, a: 'div', entrada: 0 },
+      { de: 'div', salida: 0, a: 'xy', entrada: 0 },
+      { de: 'xy', salida: 0, a: 'lin', entrada: 0 },
+      { de: 'lin', salida: 0, a: 'core', entrada: 0 },
+      { de: 'rob', salida: 0, a: 'core', entrada: 1 },
+      { de: 'her', salida: 0, a: 'core', entrada: 2 },
+    ],
+    dxf: { nombre: NOMBRE_PLANO_TAREA4, texto: PLANO_TAREA4_DXF },
+  }
+}
+
 /** ¿El plano abierto es el de la tarea, sin tocar? */
 export function esPlanoDeLaTarea(def: Definicion): boolean {
   return !!def.dxf && sinEspacios(def.dxf.texto) === sinEspacios(PLANO_TAREA4_DXF)

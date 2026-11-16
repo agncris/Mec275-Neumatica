@@ -68,9 +68,9 @@ export const PESTANAS: Pestana[] = ['Movimientos', 'Robot', 'Herramientas', 'Tra
 
 /** Una línea bajo el nombre del bloque, para quien no conoce la sigla. */
 const GLOSA: Record<string, string> = {
-  lin: 'Línea recta',
-  ptp: 'Rápido, no recto',
-  cir: 'En arco',
+  lin: 'Al cortar, en recta',
+  ptp: 'Acercarse o alejarse',
+  cir: 'Al cortar, en curva',
   axis: 'Por ángulos',
   salida: 'Prender o apagar',
   esperar: 'Pausa',
@@ -100,7 +100,14 @@ const GLOSA: Record<string, string> = {
   tejer: 'Combinar comandos',
 }
 
+const CUANDO: Record<string, string> = {
+  lin: 'Movimiento en línea recta. Úsalo cuando la herramienta está cortando.',
+  cir: 'Movimiento en arco. Úsalo en curvas del contorno.',
+  ptp: 'Movimiento rápido punto a punto. Úsalo para acercarse o alejarse.',
+}
+
 function pista(c: Componente): string {
+  if (CUANDO[c.tipo]) return `${c.corto}. ${CUANDO[c.tipo]}`
   const frase = c.descripcion.split(/(?<=\.)\s/)[0]
   return `${c.nombre}. ${frase}`
 }
@@ -337,9 +344,13 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
           ))}
         </div>
         <p className="paleta-nodos__ayuda">
-          {tactil
-            ? 'Toca un bloque para ponerlo en el lienzo. Conecta de la salida (derecha) a la entrada (izquierda).'
-            : 'Arrastra un bloque al lienzo, o haz clic para soltarlo al centro. Conecta de la salida (derecha) a la entrada (izquierda).'}
+          {def.nodos.length === 0
+            ? 'Empieza arrastrando un Robot y un Core.'
+            : !def.nodos.some((n) => n.tipo === 'lin' || n.tipo === 'cir' || n.tipo === 'ptp')
+              ? 'Sigue con un LIN para cortar en recta, un CIR en las curvas, o un PTP para acercarte.'
+              : tactil
+                ? 'Toca un bloque para ponerlo en el lienzo. Conecta de la salida (derecha) a la entrada (izquierda).'
+                : 'Arrastra un bloque al lienzo, o haz clic para soltarlo al centro. Conecta de la salida (derecha) a la entrada (izquierda).'}
         </p>
         {agrupar(COMPONENTES.filter((c) => c.pestana === pestana)).map(([grupo, cs]) => (
           <div key={grupo} className="paleta-nodos__grupo">
@@ -488,9 +499,7 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
             ))}
           </g>
         </svg>
-        {def.nodos.length === 0 && (
-          <p className="paleta-nodos__vacio">Arrastra componentes aquí. Conecta de derecha a izquierda: la salida de un bloque entra al siguiente.</p>
-        )}
+        {def.nodos.length === 0 && <p className="paleta-nodos__vacio">Empieza arrastrando un Robot y un Core.</p>}
         {buscador && (
           <div
             style={{

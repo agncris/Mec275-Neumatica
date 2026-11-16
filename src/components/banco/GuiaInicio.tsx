@@ -94,8 +94,25 @@ export const GUIA_CNC: PasoGuia[] = [
 ]
 
 export const GUIA_ROBOT: PasoGuia[] = [
-  { titulo: '1 · Trae tu pieza', texto: 'Abre un ejemplo o parte con una definición vacía. Con «Abrir DXF» traes las curvas del plano de tu pieza.' },
-  { titulo: '2 · Arma la definición', texto: 'En Movimientos están LIN, PTP y CIR; en Robot, el brazo y el Core; en Trayectoria, las curvas del plano. Arrastra un bloque al lienzo y une la salida (derecha) con la entrada (izquierda).' },
-  { titulo: '3 · Simula', texto: '▶ reproduce el recorrido en 3D. El análisis avisa si un eje llega a su límite, si el robot no alcanza o si pasa cerca de una singularidad.' },
-  { titulo: '4 · Entrega', texto: (VER_TAREA_ROBOTICA ? 'En «★ Tarea Robótica» está «Entregar»: te da ' : 'Exportar te da ') + 'el croquis de la pieza, el posicionamiento, la ficha técnica, el programa KRL y el video.' },
+  {
+    titulo: '1 · Entiende la pieza',
+    texto:
+      'Mira el plano antes de programar. El contorno es el borde de afuera: la fresa lo sigue por fuera de la plancha. Las ranuras son las aberturas de adentro: se siguen por dentro. En el DXF van en capas distintas (CONTORNO y RANURAS). Si eliges la capa equivocada, el robot recorre líneas que no son las de la pieza.',
+  },
+  {
+    titulo: '2 · Construye el recorrido',
+    texto:
+      'LIN va en línea recta: úsalo cuando la herramienta está cortando un tramo recto. CIR hace un arco: úsalo en las curvas. PTP mueve todos los ejes a la vez y el camino no es recto: úsalo solo para acercarte o alejarte, nunca mientras cortas. Un ejemplo mínimo es una curva, puntos sobre ella, un plano, un LIN, y eso unido al Core junto con el Robot y la Tool.',
+  },
+  {
+    titulo: '3 · Verifica y corrige',
+    texto:
+      'Pulsa ▶ y abre Análisis. Alcance: el punto está más lejos de lo que el brazo puede estirarse; acerca la pieza. Límite de un eje: una articulación tendría que girar más de lo que permite; cambia la posición o la orientación. Singularidad: la muñeca queda estirada (A5 cerca de 0°) y dos ejes giran de golpe; inclina un poco la herramienta.',
+  },
+  {
+    titulo: '4 · Documenta y entrega',
+    texto:
+      'El informe muestra el recorrido y que lo revisaste. Lleva el croquis de la pieza, dónde quedó el robot, la ficha del modelo, el programa KRL y el video de la simulación. Sin eso no se ve si el código coincide con lo que simulaste.' +
+      (VER_TAREA_ROBOTICA ? ' En «Tarea Robótica», «Entregar» reúne esos archivos.' : ''),
+  },
 ]

@@ -17,7 +17,7 @@ import Autoevaluacion from '../components/Autoevaluacion'
 import FichaRobot from './FichaRobot'
 import { PREGUNTAS_ROBOT } from './preguntasRobot'
 import { ETIQUETA_GRUPO, PRACTICA_ROBOT, type GrupoPractica } from './practica'
-import { adaptarATarea, analizarTarea4, MARCA_TAREA4, revisarTarea4, tareaVaciaRobot } from './tarea4'
+import { adaptarATarea, analizarTarea4, ejemploGuiadoTarea, MARCA_TAREA4, revisarTarea4, tareaVaciaRobot, type PuntoRevisionTarea } from './tarea4'
 import { copiarTabla, descargarTexto, leerAlumno, limpiarEnlace, trabajoDelEnlace } from '../entregar'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { exportarPng, nombreSeguro } from '../exportar'
@@ -146,7 +146,7 @@ export default function UnidadRobotica() {
   // Mientras la tarea no se publica, ni el enlace ?vista=tarea la abre.
   const seccion: SeccionUnidad = seccionPedida === 'tarea' && !VER_TAREA_ROBOTICA ? 'laboratorio' : seccionPedida
   const enTarea = seccion === 'tarea'
-  const panel = usePanelAcoplado<PestanaRobot>('neumalab.robot.panel.v2', enTarea ? 'plano-tarea' : 'analisis', false, 168)
+  const panel = usePanelAcoplado<PestanaRobot>('neumalab.robot.panel.v3', enTarea ? 'plano-tarea' : 'analisis', false, 280)
   const [plegado, setPlegado] = usePersistente<'abierto' | 'riel' | 'oculto'>('neumalab.robot.plegado', 'abierto')
   // Al entrar directo a la tarea (enlace ?vista=tarea) se ve primero el plano.
   useEffect(() => {
@@ -554,6 +554,34 @@ export default function UnidadRobotica() {
 
   const tiempo = tRef.current
   const nodoSel = seleccion ? def.nodos.find((n) => n.id === seleccion) ?? null : null
+  const [checklistTarea, setChecklistTarea] = useState<PuntoRevisionTarea[]>([])
+  useEffect(() => {
+    if (!enTarea) return
+    const id = window.setTimeout(() => {
+      try {
+        setChecklistTarea(revisarTarea4(analizarTarea4(def), leerAlumno().nombre))
+      } catch {
+        setChecklistTarea([])
+      }
+    }, 500)
+    return () => window.clearTimeout(id)
+  }, [enTarea, def])
+  const irAEstudiar = (ancla: string) => {
+    try {
+      window.history.replaceState(null, '', `#${ancla}`)
+    } catch {
+      /* sin historial */
+    }
+    setSeccion('estudiar')
+  }
+  const verEjemploGuiado = () => {
+    if (!window.confirm('Se reemplaza lo que tienes por un ejemplo a medias: el contorno en línea recta, con Robot, Tool y Core. No incluye las ranuras ni los arcos. ¿Seguir?')) return
+    setReproduciendo(false)
+    setDef(ejemploGuiadoTarea())
+    setSeleccion(null)
+    setModo('visual')
+    setAviso('Ejemplo guiado cargado. Mira cómo se conectan los bloques y completa las ranuras y las curvas.')
+  }
   const errores = simActiva?.problemas.filter((p) => p.nivel === 'error') ?? []
   const avisosSim = simActiva?.problemas.filter((p) => p.nivel === 'aviso') ?? []
   const modeloVista = modo === 'visual' ? robotVista.modelo : modeloM
@@ -907,7 +935,7 @@ export default function UnidadRobotica() {
   )
 
   const pestanas: Array<PestanaPanel<PestanaRobot>> = [
-    ...(enTarea ? [{ id: 'plano-tarea' as const, titulo: 'Plano de la tarea', tituloCorto: 'Plano', contenido: <PlanoTarea /> }] : []),
+    ...(enTarea ? [{ id: 'plano-tarea' as const, titulo: 'Plano de la tarea', tituloCorto: 'Plano', contenido: <PlanoTarea checklist={checklistTarea} onEstudiar={irAEstudiar} onEjemplo={verEjemploGuiado} /> }] : []),
     {
       id: 'analisis',
       titulo: 'Análisis',
@@ -915,6 +943,7 @@ export default function UnidadRobotica() {
       contenido: simActiva ? (
         <Analisis
           sim={simActiva}
+          onEstudiar={irAEstudiar}
           onIr={(p) => {
             tRef.current = p.t
             if (p.nodo && modo === 'visual') setSeleccion(p.nodo)
@@ -922,7 +951,9 @@ export default function UnidadRobotica() {
           }}
         />
       ) : (
-        <p style={{ margin: 0, fontSize: '0.86rem', color: '#51606f' }}>Cuando haya una simulación, aquí se revisan los límites de los ejes, las singularidades y el alcance, punto por punto.</p>
+        <p style={{ margin: 0, fontSize: '0.86rem', color: '#51606f' }}>
+          Cuando haya una simulación, aquí se revisan el alcance, los límites de los ejes y las singularidades. <button type="button" onClick={() => irAEstudiar('grados')} style={enlaceEstudiar}>¿Qué es una singularidad? → Estudiar</button>
+        </p>
       ),
     },
     {
@@ -1392,22 +1423,45 @@ function Ejes({ modelo, q, uso, onQ }: { modelo: ReturnType<typeof robotPorId>; 
   )
 }
 
-function Analisis({ sim, onIr }: { sim: Simulacion; onIr: (p: Simulacion['problemas'][number]) => void }) {
+function ideaDe(texto: string): { idea: string; ancla: string; pregunta: string } | null {
+  if (/singularidad|configuración/i.test(texto)) return { idea: 'La muñeca quedó estirada y dos ejes giran de golpe. Inclina un poco la herramienta.', ancla: 'grados', pregunta: '¿Qué es una singularidad?' }
+  if (/alcance/i.test(texto)) return { idea: 'Ese punto está más lejos de lo que el brazo puede estirarse. Acerca la pieza o cambia el robot.', ancla: 'ficha-tecnica', pregunta: '¿Qué es el alcance?' }
+  if (/fuera de su rango|cerca del límite/i.test(texto)) return { idea: 'Una articulación no puede girar tanto. Cambia la posición de la pieza o cómo apunta la herramienta.', ancla: 'grados', pregunta: '¿Qué son los límites de los ejes?' }
+  if (/husillo/i.test(texto)) return { idea: 'La fresa tiene que estar girando antes de tocar el material, y apagada al terminar.', ancla: 'parametrica', pregunta: '¿Qué es el husillo?' }
+  return null
+}
+
+function Analisis({ sim, onIr, onEstudiar }: { sim: Simulacion; onIr: (p: Simulacion['problemas'][number]) => void; onEstudiar: (ancla: string) => void }) {
   return (
     <div style={{ marginTop: 8 }} data-lista-analisis="si">
       <p style={{ margin: '0 0 4px', fontSize: '0.84rem', color: '#33475c' }}>
         <strong>Análisis:</strong> {sim.muestras.length} posiciones calculadas · recorrido lineal {Math.round(sim.largoCorte)} mm · tiempo {sim.tiempo.toFixed(1)} s
       </p>
-      {sim.problemas.length === 0 && <p style={{ margin: 0, fontSize: '0.84rem', color: '#0a6b3c' }}>✓ El robot alcanza todos los puntos sin salirse de sus límites.</p>}
-      {sim.problemas.slice(0, 12).map((p, i) => (
-        <p key={i} style={{ margin: '2px 0', fontSize: '0.84rem', color: p.nivel === 'error' ? '#c62828' : '#8a5b00', cursor: 'pointer' }} onClick={() => onIr(p)} title="Ir a ese momento">
-          {p.nivel === 'error' ? '✕' : '⚠'} {p.t.toFixed(1)} s · {p.texto}
-        </p>
-      ))}
+      {sim.problemas.length === 0 && <p style={{ margin: 0, fontSize: '0.84rem', color: '#0a6b3c' }}>El robot llega a todos los puntos sin salirse de lo que sus ejes pueden girar.</p>}
+      {sim.problemas.slice(0, 12).map((p, i) => {
+        const idea = ideaDe(p.texto)
+        return (
+          <div key={i} style={{ margin: '6px 0' }}>
+            <p style={{ margin: 0, fontSize: '0.84rem', color: p.nivel === 'error' ? '#c62828' : '#8a5b00', cursor: 'pointer' }} onClick={() => onIr(p)} title="Ir a ese momento">
+              {p.nivel === 'error' ? '✕' : '⚠'} {p.t.toFixed(1)} s · {p.texto}
+            </p>
+            {idea && (
+              <p style={{ margin: '1px 0 0 16px', fontSize: '0.8rem', color: '#33475c' }}>
+                {idea.idea}{' '}
+                <button type="button" onClick={() => onEstudiar(idea.ancla)} style={enlaceEstudiar}>
+                  {idea.pregunta} → Estudiar
+                </button>
+              </p>
+            )}
+          </div>
+        )
+      })}
       {sim.problemas.length > 12 && <p style={{ margin: 0, fontSize: '0.8rem', color: '#5a6b7d' }}>… y {sim.problemas.length - 12} más.</p>}
     </div>
   )
 }
+
+const enlaceEstudiar: React.CSSProperties = { border: 'none', background: 'transparent', color: '#1668c7', fontWeight: 600, cursor: 'pointer', padding: 0, fontSize: 'inherit', textDecoration: 'underline' }
 
 function ComoUsar() {
   const li: React.CSSProperties = { marginBottom: 4 }
@@ -1459,14 +1513,47 @@ const estadoChip: React.CSSProperties = { color: '#fff', borderRadius: 6, paddin
 const avisoOk = estiloAviso
 
 
-/** El plano de fabricación de la Tarea 4 (el de la lámina del enunciado), a mano mientras se programa. */
-function PlanoTarea() {
+/** El plano de fabricación de la Tarea 4, con el objetivo, los pasos y el checklist. */
+function PlanoTarea({ checklist, onEstudiar, onEjemplo }: { checklist: PuntoRevisionTarea[]; onEstudiar: (ancla: string) => void; onEjemplo: () => void }) {
   return (
-    <div data-plano-tarea="si">
-      <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: '#51606f' }}>
-        Pieza de soporte de motor: 250 × 250 mm, acero A36 de 5 mm, fresa de 5 mm. El plano DXF ya está cargado (capa CONTORNO para el borde y capa RANURAS para las nueve aberturas);
-        usa el componente Curve y elige la capa. La lámina no acota los chaflanes: las medidas exactas son las del DXF. Toca la lámina para verla grande.
+    <div data-plano-tarea="si" style={{ fontSize: '0.84rem', color: '#1c2733', lineHeight: 1.45 }}>
+      <p style={{ margin: '0 0 4px' }}>
+        <strong>Tarea: fresado del soporte de motor</strong>
       </p>
+      <p style={{ margin: '0 0 8px', color: '#33475c' }}>
+        <strong>Objetivo.</strong> Programar el recorrido de la fresa siguiendo el contorno y las ranuras del plano. La plancha es de 250 × 250 mm, acero A36 de 5 mm, y la fresa es de 5 mm. La lámina no acota los chaflanes: las medidas exactas son las del DXF.
+      </p>
+      <p style={{ margin: '0 0 2px', fontWeight: 700 }}>Pasos sugeridos</p>
+      <ol style={{ margin: '0 0 8px', paddingLeft: 18 }}>
+        <li>Carga las curvas del DXF: capa CONTORNO para el borde y capa RANURAS para las aberturas.</li>
+        <li>Usa LIN en los tramos rectos y CIR en las curvas. PTP solo para acercarte o alejarte.</li>
+        <li>Conecta el Robot y la Tool al Core.</li>
+        <li>Simula y revisa el análisis: alcance, límites de los ejes y singularidades.</li>
+        <li>Ajusta las velocidades y deja altura de sobra al acercarte.</li>
+      </ol>
+      <p style={{ margin: '0 0 2px', fontWeight: 700 }}>Criterios de éxito</p>
+      <ul style={{ margin: '0 0 8px', paddingLeft: 18 }}>
+        <li>El recorrido sigue el contorno y las ranuras sin chocar.</li>
+        <li>No hay singularidades ni ejes fuera de su límite.</li>
+        <li>El programa KRL se puede leer.</li>
+      </ul>
+      <p style={{ margin: '0 0 6px' }}>
+        <button type="button" onClick={onEjemplo} style={botonSuave}>
+          Ver ejemplo guiado
+        </button>{' '}
+        <button type="button" onClick={() => onEstudiar('parametrica')} style={enlaceEstudiar}>
+          ¿No recuerdas la diferencia entre LIN y CIR? → Estudiar
+        </button>
+      </p>
+      {checklist.length > 0 && (
+        <ul style={{ margin: '0 0 8px', paddingLeft: 0, listStyle: 'none' }} data-checklist-tarea="si">
+          {checklist.map((p) => (
+            <li key={p.texto} style={{ margin: '2px 0', color: p.ok ? '#0a6b3c' : '#8a5b00' }}>
+              {p.ok ? '✓' : '☐'} {p.texto}
+            </li>
+          ))}
+        </ul>
+      )}
       <a href="/plano-tarea4-robotica.png" target="_blank" rel="noreferrer" title="Abrir la lámina en grande">
         <img src="/plano-tarea4-robotica.png" alt="Lámina de la Tarea 4: plancha de 250 por 250 mm con chaflanes, una cruz de ranuras rectas, cuatro ranuras en arco de radios 100 y 110 mm y un agujero cuadrado central" style={{ width: '100%', maxWidth: 900, height: 'auto', display: 'block', border: '1px solid #dbe1e8', borderRadius: 6, background: '#fff' }} />
       </a>
