@@ -554,7 +554,11 @@ export default function UnidadRobotica() {
 
   const tiempo = tRef.current
   const nodoSel = seleccion ? def.nodos.find((n) => n.id === seleccion) ?? null : null
+  const pasoTarea = enTarea ? pasoGuiado(def) : null
   const [checklistTarea, setChecklistTarea] = useState<PuntoRevisionTarea[]>([])
+  useEffect(() => {
+    document.querySelector('.panel-acoplado__contenido')?.scrollTo({ top: 0 })
+  }, [pasoTarea?.id])
   useEffect(() => {
     if (!enTarea) return
     const id = window.setTimeout(() => {
@@ -745,7 +749,7 @@ export default function UnidadRobotica() {
           </p>
         )}
         <div className="relleno" style={{ minHeight: 300, flexShrink: 0 }}>
-          <EditorNodos def={def} evaluacion={evaluacion} onCambiar={setDef} seleccion={seleccion} onSeleccionar={setSeleccion} alto="100%" />
+          <EditorNodos def={def} evaluacion={evaluacion} onCambiar={setDef} seleccion={seleccion} onSeleccionar={setSeleccion} alto="100%" guia={pasoTarea ?? undefined} />
         </div>
         {evaluacion.ciclo && <p style={{ color: '#b3261e', fontSize: '0.86rem', margin: '6px 0 0' }}>⚠ Hay un ciclo en los cables.</p>}
         <div style={{ maxHeight: '42%', overflow: 'auto', flexShrink: 0 }}>
@@ -935,7 +939,7 @@ export default function UnidadRobotica() {
   )
 
   const pestanas: Array<PestanaPanel<PestanaRobot>> = [
-    ...(enTarea ? [{ id: 'plano-tarea' as const, titulo: 'Plano de la tarea', tituloCorto: 'Plano', contenido: <PlanoTarea checklist={checklistTarea} onEstudiar={irAEstudiar} onEjemplo={verEjemploGuiado} /> }] : []),
+    ...(enTarea && pasoTarea ? [{ id: 'plano-tarea' as const, titulo: 'Plano de la tarea', tituloCorto: 'Plano', contenido: <PlanoTarea paso={pasoTarea} checklist={checklistTarea} onEstudiar={irAEstudiar} onEjemplo={verEjemploGuiado} /> }] : []),
     {
       id: 'analisis',
       titulo: 'Análisis',
@@ -1519,10 +1523,54 @@ const estadoChip: React.CSSProperties = { color: '#fff', borderRadius: 6, paddin
 const avisoOk = estiloAviso
 
 
-/** El plano de fabricación de la Tarea 4, con el objetivo, los pasos y el checklist. */
-function PlanoTarea({ checklist, onEstudiar, onEjemplo }: { checklist: PuntoRevisionTarea[]; onEstudiar: (ancla: string) => void; onEjemplo: () => void }) {
+interface PasoAhora {
+  id: string
+  numero: number
+  total: number
+  texto: string
+  pestana?: 'Trayectoria' | 'Movimientos'
+  destacar?: string
+}
+
+/** Un solo paso, el que sigue, según lo que ya está conectado en el lienzo. */
+function pasoGuiado(def: Definicion): PasoAhora {
+  const total = 6
+  const tipoDe = (id: string) => def.nodos.find((n) => n.id === id)?.tipo
+  const une = (desde: string[], hacia: string[]) => def.cables.some((c) => desde.includes(tipoDe(c.de) ?? '') && hacia.includes(tipoDe(c.a) ?? ''))
+  const curvas = def.nodos.filter((n) => n.tipo === 'curvaDXF')
+  if (!curvas.length) {
+    return { id: 'curva', numero: 1, total, pestana: 'Trayectoria', destacar: 'curvaDXF', texto: 'Arrastra Curve (el bloque marcado) al lienzo. Trae el dibujo del plano.' }
+  }
+  const capas = curvas.map((n) => String(n.params.capa ?? '').trim().toUpperCase())
+  if (!capas.some((c) => c === 'CONTORNO' || c === 'RANURAS')) {
+    return { id: 'capa', numero: 1, total, texto: 'Haz clic en Curve y escribe CONTORNO en Capa. Es el borde de afuera. Las ranuras van después, en otra Curve.' }
+  }
+  if (!une(['curvaDXF'], ['dividirLargo', 'dividirCurva', 'kukaDividir'])) {
+    return { id: 'dividir', numero: 2, total, pestana: 'Trayectoria', destacar: 'dividirLargo', texto: 'Arrastra Divide Length (marcado) y conecta la C de Curve a su entrada. Parte el contorno en puntos.' }
+  }
+  if (!une(['dividirLargo', 'dividirCurva', 'kukaDividir'], ['planoXY', 'girarPlano'])) {
+    return { id: 'plano', numero: 3, total, pestana: 'Trayectoria', destacar: 'planoXY', texto: 'Arrastra XY Plane (marcado) y conecta la P de Divide Length a su entrada. Ahí se apoya la fresa.' }
+  }
+  if (!une(['planoXY', 'girarPlano'], ['lin', 'cir'])) {
+    return { id: 'lin', numero: 4, total, pestana: 'Movimientos', destacar: 'lin', texto: 'Arrastra LIN (marcado) y conecta la salida del plano a su entrada P. LIN corta en recta; en las curvas usarás CIR.' }
+  }
+  if (!une(['lin', 'cir', 'ptp'], ['core'])) {
+    return { id: 'core', numero: 5, total, texto: 'Conecta la C de LIN a la C del Core. Sin ese cable el robot no tiene programa.' }
+  }
+  if (!capas.includes('RANURAS')) {
+    return { id: 'simula', numero: 6, total, texto: 'Pulsa ▶ y abre Análisis. Si el contorno se ve bien, repite la cadena con otra Curve en la capa RANURAS. Donde el dibujo dobla, usa CIR.' }
+  }
+  return { id: 'cerrar', numero: 6, total, pestana: 'Movimientos', destacar: 'ptp', texto: 'Pulsa ▶. El aviso de Análisis dice qué corregir. Acércate y aléjate con PTP; corta solo con LIN o CIR.' }
+}
+
+/** El plano de fabricación de la Tarea 4, con el paso actual arriba de todo. */
+function PlanoTarea({ paso, checklist, onEstudiar, onEjemplo }: { paso: PasoAhora; checklist: PuntoRevisionTarea[]; onEstudiar: (ancla: string) => void; onEjemplo: () => void }) {
   return (
     <div data-plano-tarea="si" style={{ fontSize: '0.84rem', color: '#1c2733', lineHeight: 1.45 }}>
+      <div style={{ position: 'sticky', top: 0, zIndex: 2, background: '#e8f2fb', border: '1px solid #b9d4ee', borderRadius: 8, padding: '8px 10px', marginBottom: 8 }} data-paso-ahora={paso.id}>
+        <p style={{ margin: 0, fontWeight: 700 }}>Ahora · paso {paso.numero} de {paso.total}</p>
+        <p style={{ margin: '2px 0 0' }}>{paso.texto}</p>
+      </div>
       <p style={{ margin: '0 0 4px' }}>
         <strong>Tarea: fresado del soporte de motor</strong>
       </p>

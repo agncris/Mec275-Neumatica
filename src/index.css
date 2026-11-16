@@ -842,6 +842,11 @@ body.arrastrando-borde * {
   background: #f4f9fd;
   outline: none;
 }
+.bloque-nodo[data-siguiente='si'] {
+  border-color: #1668c7;
+  background: #e8f2fb;
+  box-shadow: 0 0 0 2px #1668c7;
+}
 .bloque-nodo:active {
   cursor: grabbing;
 }

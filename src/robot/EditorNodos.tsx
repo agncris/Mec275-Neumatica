@@ -120,6 +120,8 @@ interface Props {
   onSeleccionar: (id: string | null) => void
   /** En píxeles, o '100%' para llenar el área. */
   alto?: number | string
+  /** En la tarea: el siguiente paso, y el bloque que conviene arrastrar. */
+  guia?: { id: string; numero: number; total: number; texto: string; pestana?: Pestana; destacar?: string }
 }
 
 type Arrastre =
@@ -127,12 +129,15 @@ type Arrastre =
   | { tipo: 'fondo'; x: number; y: number; tx: number; ty: number }
   | { tipo: 'cable'; de?: { id: string; j: number }; a?: { id: string; i: number }; x: number; y: number; agregar: boolean }
 
-export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onSeleccionar, alto = 460 }: Props) {
+export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onSeleccionar, alto = 460, guia }: Props) {
   const tactil = useTactil()
   const svgRef = useRef<SVGSVGElement>(null)
   const [vista, setVista] = useState({ tx: 20, ty: 40, k: 0.8 })
   const [arrastre, setArrastre] = useState<Arrastre | null>(null)
-  const [pestana, setPestana] = useState<Pestana>('Movimientos')
+  const [pestana, setPestana] = useState<Pestana>(guia?.pestana ?? 'Movimientos')
+  useEffect(() => {
+    if (guia?.pestana) setPestana(guia.pestana)
+  }, [guia?.id, guia?.pestana])
   const [buscador, setBuscador] = useState<{ x: number; y: number; wx: number; wy: number; texto: string } | null>(null)
   const defRef = useRef(def)
   defRef.current = def
@@ -344,10 +349,10 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
           ))}
         </div>
         <p className="paleta-nodos__ayuda">
-          {def.nodos.length === 0
-            ? 'Empieza arrastrando un Robot y un Core.'
-            : !def.nodos.some((n) => n.tipo === 'lin' || n.tipo === 'cir' || n.tipo === 'ptp')
-              ? 'Sigue con un LIN para cortar en recta, un CIR en las curvas, o un PTP para acercarte.'
+          {guia
+            ? `Paso ${guia.numero} de ${guia.total}. ${guia.texto}`
+            : def.nodos.length === 0
+              ? 'Empieza arrastrando un Robot y un Core.'
               : tactil
                 ? 'Toca un bloque para ponerlo en el lienzo. Conecta de la salida (derecha) a la entrada (izquierda).'
                 : 'Arrastra un bloque al lienzo, o haz clic para soltarlo al centro. Conecta de la salida (derecha) a la entrada (izquierda).'}
@@ -360,6 +365,7 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
                 key={c.tipo}
                 type="button"
                 className="bloque-nodo"
+                data-siguiente={guia?.destacar === c.tipo ? 'si' : undefined}
                 title={pista(c)}
                 data-agregar={c.tipo}
                 draggable={!tactil}
