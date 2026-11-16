@@ -96,23 +96,20 @@ export const GUIA_CNC: PasoGuia[] = [
 export const GUIA_ROBOT: PasoGuia[] = [
   {
     titulo: '1 · Entiende la pieza',
-    texto:
-      'Mira el plano antes de programar. El contorno es el borde de afuera: la fresa lo sigue por fuera de la plancha. Las ranuras son las aberturas de adentro: se siguen por dentro. En el DXF van en capas distintas (CONTORNO y RANURAS). Si eliges la capa equivocada, el robot recorre líneas que no son las de la pieza.',
+    texto: 'Mira el plano. El contorno es el borde de afuera (capa CONTORNO) y las ranuras, las aberturas de adentro (capa RANURAS). En Curve elige esa capa: si te equivocas, el robot sigue líneas que no son de la pieza.',
   },
   {
     titulo: '2 · Construye el recorrido',
-    texto:
-      'LIN va en línea recta: úsalo cuando la herramienta está cortando un tramo recto. CIR hace un arco: úsalo en las curvas. PTP mueve todos los ejes a la vez y el camino no es recto: úsalo solo para acercarte o alejarte, nunca mientras cortas. Un ejemplo mínimo es una curva, puntos sobre ella, un plano, un LIN, y eso unido al Core junto con el Robot y la Tool.',
+    texto: 'LIN corta en recta, CIR en curva y PTP solo acerca o aleja (el camino no es recto). Conecta curva → puntos → plano → movimiento → Core, y el Robot y la Tool al Core.',
   },
   {
     titulo: '3 · Verifica y corrige',
-    texto:
-      'Pulsa ▶ y abre Análisis. Alcance: el punto está más lejos de lo que el brazo puede estirarse; acerca la pieza. Límite de un eje: una articulación tendría que girar más de lo que permite; cambia la posición o la orientación. Singularidad: la muñeca queda estirada (A5 cerca de 0°) y dos ejes giran de golpe; inclina un poco la herramienta.',
+    texto: 'Pulsa ▶ y abre Análisis. Alcance: el brazo no llega. Límite: un eje no gira tanto. Singularidad: A5 cerca de 0° y la muñeca gira de golpe. Acerca la pieza o inclina la herramienta.',
   },
   {
     titulo: '4 · Documenta y entrega',
     texto:
-      'El informe muestra el recorrido y que lo revisaste. Lleva el croquis de la pieza, dónde quedó el robot, la ficha del modelo, el programa KRL y el video de la simulación. Sin eso no se ve si el código coincide con lo que simulaste.' +
-      (VER_TAREA_ROBOTICA ? ' En «Tarea Robótica», «Entregar» reúne esos archivos.' : ''),
+      'El informe lleva el croquis, dónde quedó el robot, la ficha, el KRL y el video: así se ve que el código coincide con lo simulado.' +
+      (VER_TAREA_ROBOTICA ? ' «Entregar» junta esos archivos.' : ''),
   },
 ]

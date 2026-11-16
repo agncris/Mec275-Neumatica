@@ -44,7 +44,7 @@ import {
 } from './nodos'
 import { HOME, robotPorId } from './robots'
 import type { Previa, VistaRobot } from './Robot3D'
-import { Componentes, FichaTecnica, GradosLibertad, InstalarSoftware, ProgramacionParametrica, QueEsRobot, SerieVsRobotica, TiposGenerales } from './TeoriaRobotica'
+import { Componentes, FichaTecnica, GradosLibertad, InstalarSoftware, PracticaRobot, ProgramacionParametrica, QueEsRobot, SerieVsRobotica, SaltarAPractica, TiposGenerales } from './TeoriaRobotica'
 
 const Robot3D = lazy(() => import('./Robot3D'))
 const TiposRobot = lazy(() => import('./TiposRobot'))
@@ -1053,13 +1053,15 @@ export default function UnidadRobotica() {
           conCajon={entregaAbierta && enTarea && !estrecha}
         />
       ) : (
-        <PaginaEstudiar
-          etiqueta="Estudiar robótica"
-          titulo="Estudiar · Robótica"
-          descripcion="Teoría de la unidad. Las definiciones de ejemplo se abren en el Laboratorio."
-          pie="NeumaLab · MEC275 — Unidad 4: Robótica industrial"
-          secciones={SECCIONES_ROBOT}
-        />
+        <PracticaRobot.Provider value={setSeccion}>
+          <PaginaEstudiar
+            etiqueta="Estudiar robótica"
+            titulo="Estudiar · Robótica"
+            descripcion="Teoría de la unidad. Al final de cada tema puedes probarlo en el Laboratorio o en la Tarea."
+            pie="NeumaLab · MEC275 — Unidad 4: Robótica industrial"
+            secciones={SECCIONES_ROBOT}
+          />
+        </PracticaRobot.Provider>
       )}
       {guia.visible && seccion !== 'estudiar' && <GuiaInicio unidad="Robótica" pasos={GUIA_ROBOT} onCerrar={guia.cerrar} />}
       {misTrabajos && (
@@ -1488,6 +1490,10 @@ function ComoUsar() {
         <strong>Entregar:</strong> «Exportar KRL» descarga el programa .src; «Guardar definición» guarda tu definición (con el
         plano); «● Grabar video» graba la simulación; «Croquis…» descarga la pieza acotada y el posicionamiento del robot
         (planta y elevación) para el informe; la ficha técnica del robot está bajo la vista 3D.
+      </li>
+      <li style={li}>
+        <SaltarAPractica>Abrir el Laboratorio</SaltarAPractica>
+        <SaltarAPractica destino="tarea">Abrir la Tarea</SaltarAPractica>
       </li>
       <li style={li}>
         <strong>Mando manual:</strong> mueve el robot eje por eje o en X/Y/Z, graba puntos PTP o LIN y reprodúcelos: es el

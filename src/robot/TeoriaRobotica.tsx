@@ -4,8 +4,24 @@
  * grados de libertad, cómo leer una ficha técnica y la programación
  * paramétrica con Rhino, Grasshopper y KUKA|prc.
  */
-import type { ReactNode } from 'react'
+import { createContext, useContext, type ReactNode } from 'react'
+import { VER_TAREA_ROBOTICA } from '../unidades'
 import { ROBOTS } from './robots'
+
+/** El botón «probarlo» de Estudiar llama a esto para abrir el Laboratorio o la Tarea. */
+export const PracticaRobot = createContext<(destino: 'laboratorio' | 'tarea') => void>(() => {})
+
+export function SaltarAPractica({ children, destino = 'laboratorio' }: { children: string; destino?: 'laboratorio' | 'tarea' }) {
+  const ir = useContext(PracticaRobot)
+  if (destino === 'tarea' && !VER_TAREA_ROBOTICA) return null
+  return (
+    <p style={{ margin: '0.75rem 0 0' }}>
+      <button type="button" onClick={() => ir(destino)} style={{ border: '1px solid #c6ced6', background: '#fff', color: '#1668c7', fontWeight: 650, borderRadius: 8, padding: '0.3rem 0.75rem', cursor: 'pointer', fontSize: '0.86rem' }}>
+        {children}
+      </button>
+    </p>
+  )
+}
 
 const TINTA = '#33475c'
 const p: React.CSSProperties = { margin: '0 0 0.6rem', lineHeight: 1.55, color: '#26323f' }
@@ -167,6 +183,7 @@ export function GradosLibertad() {
         queda en 0°, A4 y A6 quedan alineados y el robot pierde un grado de libertad: es una{' '}
         <strong>singularidad</strong>, y cerca de ella A4 y A6 pueden girar muy rápido. El simulador te avisa cuando pasa.
       </p>
+      <SaltarAPractica>Ver una singularidad en el Laboratorio</SaltarAPractica>
     </div>
   )
 }
@@ -199,6 +216,7 @@ export function FichaTecnica() {
         cabeza={['Robot', 'Carga', 'Alcance', 'Repetibilidad', 'Peso', 'Montaje']}
         filas={ROBOTS.map((r) => [r.nombre, `${r.carga} kg`, `${r.alcance} mm`, `± ${r.repetibilidad} mm`, `${r.peso} kg`, r.montaje])}
       />
+      <SaltarAPractica>Elegir un robot en el Laboratorio</SaltarAPractica>
     </div>
   )
 }
@@ -256,6 +274,8 @@ export function ProgramacionParametrica() {
         la base</strong> (<code>$BASE</code>, la cara superior de la plancha): <code>Z -5</code> en una plancha de 5 mm
         atraviesa la plancha. En el mundo, esa altura es la del mesón menos 5 mm.
       </p>
+      <SaltarAPractica>Armar un recorrido en el Laboratorio</SaltarAPractica>
+      <SaltarAPractica destino="tarea">Aplicarlo en la Tarea</SaltarAPractica>
     </div>
   )
 }
