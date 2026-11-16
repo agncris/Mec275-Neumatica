@@ -739,6 +739,37 @@ body.arrastrando-borde * {
 .banco--robot .titulo-area {
   margin-bottom: 8px;
 }
+.flechas-cubo {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  width: 100px;
+  height: 100px;
+  pointer-events: none;
+  z-index: 1001;
+}
+.flecha-cubo {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #8a929a;
+  font-size: 13px;
+  line-height: 16px;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.flecha-cubo:hover,
+.flecha-cubo:focus-visible {
+  color: #0696d7;
+  outline: none;
+}
+.flecha-cubo--arriba { top: -16px; left: 42px; }
+.flecha-cubo--abajo { bottom: -16px; left: 42px; }
+.flecha-cubo--izquierda { top: 42px; left: -16px; }
+.flecha-cubo--derecha { top: 42px; right: -16px; }
 .reproductor-robot {
   display: flex;
   gap: 8px;

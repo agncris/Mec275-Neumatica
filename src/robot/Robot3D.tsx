@@ -9,7 +9,7 @@
  * Rhino) y se gira para three.js, que usa Y hacia arriba.
  */
 import { BotonPlayEscena, type PlayEscena } from '../components/HudEscena'
-import { aplicarModoArrastre, zoomCamara, type ModoArrastre } from '../components/mandoCamara'
+import { aplicarModoArrastre, girarCuadrante, zoomCamara, type LadoCubo, type ModoArrastre } from '../components/mandoCamara'
 import BotonPantallaCompleta, { usePantallaCompleta } from '../components/PantallaCompleta'
 import { useEffect, useRef, useState, type CSSProperties, type MutableRefObject, type ReactNode } from 'react'
 import { ViewportGizmo } from 'three-viewport-gizmo'
@@ -348,46 +348,42 @@ export default function Robot3D({
     controlesRef.current = controles
     aplicarModoArrastre(controles, modoArrastre)
 
-    // Cubo nítido, al estilo ViewCube: las caras, las aristas y las esquinas cambian la vista.
+    // ViewCube claro, como el de Autodesk: el gris no compite con el robot.
     const cara = {
-      color: '#4a4a4a',
-      labelColor: '#ffffff',
-      opacity: 1,
-      hover: { color: '#5c5c5c', labelColor: '#ffffff', opacity: 1, border: { size: 2, color: '#0696d7' } },
+      color: '#f3f3f3',
+      labelColor: '#3c3c3c',
+      opacity: 0.94,
+      border: { size: 1, color: '#c5c5c5' },
+      hover: { color: '#d6eaf8', labelColor: '#1f1f1f', opacity: 1, border: { size: 1, color: '#7eb6e0' } },
     }
     const gizmo = new ViewportGizmo(camara, renderer, {
       container: cont,
       type: 'cube',
       placement: 'top-left',
       size: 100,
-      offset: { top: 12, left: 12, right: 12, bottom: 12 },
+      offset: { top: 16, left: 16, right: 12, bottom: 12 },
       animated: true,
       speed: 1,
-      radius: 0.14,
+      radius: 0.08,
       resolution: 256,
       id: 'viewcube-robot',
-      background: {
-        enabled: true,
-        color: '#2c2c2c',
-        opacity: 0.55,
-        hover: { color: '#2c2c2c', opacity: 0.72 },
-      },
-      font: { family: 'system-ui, sans-serif', weight: 600 },
+      background: { enabled: false },
+      font: { family: 'system-ui, sans-serif', weight: 500 },
       corners: {
         enabled: true,
-        color: '#0696d7',
+        color: '#d6eaf8',
         opacity: 0,
-        scale: 0.22,
-        radius: 0.35,
-        hover: { color: '#0696d7', opacity: 1, scale: 0.28 },
+        scale: 0.18,
+        radius: 0.2,
+        hover: { color: '#7eb6e0', opacity: 0.85, scale: 0.22 },
       },
       edges: {
         enabled: true,
-        color: '#6a6a6a',
-        opacity: 0.9,
-        scale: 0.85,
-        radius: 0.18,
-        hover: { color: '#0696d7', opacity: 1, scale: 1 },
+        color: '#d0d0d0',
+        opacity: 0.55,
+        scale: 0.7,
+        radius: 0.12,
+        hover: { color: '#7eb6e0', opacity: 0.9, scale: 0.85 },
       },
       front: { ...cara, label: 'Front' },
       top: { ...cara, label: 'Top' },
@@ -651,6 +647,20 @@ export default function Robot3D({
       </div>
       <div style={{ position: 'relative', flex: llena ? 1 : undefined, height: llena ? undefined : alto, minHeight: llena ? 0 : undefined, display: 'flex' }}>
         <div ref={contRef} style={{ position: 'relative', width: '100%', flex: 1, minHeight: 0, borderRadius: 8, overflow: 'hidden', background: '#dfe3e8' }} />
+        <div className="flechas-cubo" role="group" aria-label="Girar la vista 90 grados">
+          {(
+            [
+              ['arriba', 'Vista de arriba', '↑'],
+              ['abajo', 'Vista de abajo', '↓'],
+              ['izquierda', 'Vista de la izquierda', '←'],
+              ['derecha', 'Vista de la derecha', '→'],
+            ] as Array<[LadoCubo, string, string]>
+          ).map(([lado, titulo, simbolo]) => (
+            <button key={lado} type="button" className={`flecha-cubo flecha-cubo--${lado}`} title={titulo} aria-label={titulo} onClick={() => controlesRef.current && girarCuadrante(controlesRef.current, lado)}>
+              {simbolo}
+            </button>
+          ))}
+        </div>
         {pantalla && (
           <div style={barraNav} data-mando-camara="si" role="toolbar" aria-label="Navegación de la cámara">
             <button type="button" aria-pressed={modoArrastre === 'girar'} title="Girar la vista" onClick={() => setModoArrastre('girar')} style={chipNav(modoArrastre === 'girar')}>
@@ -682,8 +692,8 @@ export default function Robot3D({
 
 const barraNav: CSSProperties = {
   position: 'absolute',
-  top: 124,
-  left: 12,
+  top: 140,
+  left: 16,
   zIndex: 5,
   display: 'flex',
   gap: 6,
