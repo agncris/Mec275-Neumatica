@@ -59,6 +59,8 @@ interface Props<T extends string> {
    */
   /** Ancho inicial del área izquierda, como fracción (0.5 es mitad y mitad). */
   divisionInicial?: number
+  /** Ancho mínimo de cada área al arrastrar el divisor, en píxeles. */
+  anchoMin?: number
   plegado?: 'abierto' | 'riel' | 'oculto'
   onPlegado?: (p: 'abierto' | 'riel' | 'oculto') => void
   /** Contenido de la tira cuando el área izquierda está plegada. */
@@ -70,7 +72,7 @@ const ANCHO_MIN = 320
 /** Una capa del celular: todas ocupan el mismo lugar y sólo la elegida se ve. */
 const capa = (visible: boolean): React.CSSProperties => ({ position: 'absolute', inset: 0, visibility: visible ? 'visible' : 'hidden', zIndex: visible ? 1 : 0 })
 
-export default function BancoDividido<T extends string>({ clave, barra, izquierda, derecha, inferior, estado, encabezado, movil, onMovil, conCajon, clase, divisionInicial = 0.5, plegado = 'abierto', onPlegado, riel }: Props<T>) {
+export default function BancoDividido<T extends string>({ clave, barra, izquierda, derecha, inferior, estado, encabezado, movil, onMovil, conCajon, clase, divisionInicial = 0.5, anchoMin = ANCHO_MIN, plegado = 'abierto', onPlegado, riel }: Props<T>) {
   const estrecha = useCelular()
   const apilado = useApilado()
   const apaisado = useApaisado()
@@ -94,7 +96,7 @@ export default function BancoDividido<T extends string>({ clave, barra, izquierd
 
   const limitar = (f: number) => {
     const w = cuerpo.current?.clientWidth ?? 1200
-    const min = Math.min(0.45, ANCHO_MIN / Math.max(1, w))
+    const min = Math.min(0.45, anchoMin / Math.max(1, w))
     return Math.max(min, Math.min(1 - min, f))
   }
   const arrastrar = (e: React.PointerEvent) => {

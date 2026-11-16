@@ -282,6 +282,7 @@ export default function Robot3D({
   const [modoArrastre, setModoArrastre] = useState<ModoArrastre>('girar')
   const controlesRef = useRef<OrbitControls | null>(null)
   const gizmoRef = useRef<ViewportGizmo | null>(null)
+  const brujulaRef = useRef<HTMLDivElement>(null)
   const pantallaRef = useRef(false)
   pantallaRef.current = pantalla
   useEffect(() => {
@@ -350,38 +351,53 @@ export default function Robot3D({
     controlesRef.current = controles
     aplicarModoArrastre(controles, modoArrastre)
 
-    // La librería no tiene el tipo "rounded-cube": el cubo redondeado es type "cube" con radius.
+    // Cubo nítido, al estilo ViewCube: las caras, las aristas y las esquinas cambian la vista.
     const cara = {
-      color: '#3a3a3a',
-      labelColor: '#e0e0e0',
+      color: '#4a4a4a',
+      labelColor: '#ffffff',
       opacity: 1,
-      hover: { color: '#4a4a4a', labelColor: '#ffffff', opacity: 1 },
+      hover: { color: '#5c5c5c', labelColor: '#ffffff', opacity: 1, border: { size: 2, color: '#0696d7' } },
     }
     const gizmo = new ViewportGizmo(camara, renderer, {
       container: cont,
       type: 'cube',
       placement: 'top-left',
-      size: 110,
-      offset: { top: 16, left: 16, right: 16, bottom: 16 },
+      size: 100,
+      offset: { top: 28, left: 28, right: 16, bottom: 16 },
       animated: true,
       speed: 1,
-      radius: 0.42,
+      radius: 0.14,
+      resolution: 256,
       id: 'viewcube-robot',
       background: {
         enabled: true,
-        color: '#1e1e1e',
-        opacity: 0.7,
-        hover: { color: '#2d2d2d', opacity: 0.9 },
+        color: '#2c2c2c',
+        opacity: 0.55,
+        hover: { color: '#2c2c2c', opacity: 0.72 },
       },
-      font: { family: 'Inter, system-ui, -apple-system, sans-serif', weight: 500 },
-      corners: { color: '#2c2c2c', opacity: 1, radius: 0.55, hover: { color: '#3a3a3a', opacity: 1 } },
-      edges: { color: '#2c2c2c', opacity: 0.85, radius: 0.35, hover: { color: '#3a3a3a', opacity: 1 } },
-      front: { ...cara, label: 'Frente' },
-      top: { ...cara, label: 'Arriba' },
-      right: { ...cara, label: 'Lado' },
-      left: { ...cara, label: 'Izq' },
-      bottom: { ...cara, label: 'Abajo' },
-      back: { ...cara, label: 'Atrás' },
+      font: { family: 'system-ui, sans-serif', weight: 600 },
+      corners: {
+        enabled: true,
+        color: '#0696d7',
+        opacity: 0,
+        scale: 0.22,
+        radius: 0.35,
+        hover: { color: '#0696d7', opacity: 1, scale: 0.28 },
+      },
+      edges: {
+        enabled: true,
+        color: '#6a6a6a',
+        opacity: 0.9,
+        scale: 0.85,
+        radius: 0.18,
+        hover: { color: '#0696d7', opacity: 1, scale: 1 },
+      },
+      front: { ...cara, label: 'Front' },
+      top: { ...cara, label: 'Top' },
+      right: { ...cara, label: 'Right' },
+      left: { ...cara, label: 'Left' },
+      bottom: { ...cara, label: 'Bottom' },
+      back: { ...cara, label: 'Back' },
     })
     const domGizmo = document.getElementById('viewcube-robot')
     if (domGizmo) domGizmo.style.display = pantallaRef.current ? 'block' : 'none'
@@ -405,6 +421,9 @@ export default function Robot3D({
     let marcas: THREE.Group | null = null
     let marcasObj: V3[] | null = null
     let angHusillo = 0
+    const norteMundo = new THREE.Vector3(0, 0, 1)
+    const norteCam = new THREE.Vector3()
+    const qInv = new THREE.Quaternion()
 
     const encuadrar = (v: Vista) => {
       const V = vista.current
@@ -576,7 +595,20 @@ export default function Robot3D({
       }
       controles.update()
       renderer.render(escena, camara)
-      if (pantallaRef.current) gizmo.render()
+      if (pantallaRef.current) {
+        gizmo.render()
+        const br = brujulaRef.current
+        if (br) {
+          // La N sigue el +Z del mundo (el frente de la celda), proyectado en la pantalla.
+          qInv.copy(camara.quaternion).invert()
+          norteCam.copy(norteMundo).applyQuaternion(qInv)
+          if (norteCam.x * norteCam.x + norteCam.y * norteCam.y > 0.02) {
+            const ang = Math.atan2(norteCam.x, norteCam.y)
+            br.style.transform = `rotate(${ang}rad)`
+            br.style.setProperty('--norte', `${-ang}rad`)
+          }
+        }
+      }
       else if (gizmo.animating) {
         // Si se sale de pantalla completa a mitad de un giro, OrbitControls no puede quedar apagado.
         ;(gizmo as { animating: boolean }).animating = false
@@ -651,6 +683,15 @@ export default function Robot3D({
       <div style={{ position: 'relative', flex: llena ? 1 : undefined, height: llena ? undefined : alto, minHeight: llena ? 0 : undefined, display: 'flex' }}>
         <div ref={contRef} style={{ position: 'relative', width: '100%', flex: 1, minHeight: 0, borderRadius: 8, overflow: 'hidden', background: '#dfe3e8' }} />
         {pantalla && (
+          <div ref={brujulaRef} style={brujula} aria-hidden="true">
+            {(['N', 'E', 'S', 'W'] as const).map((p) => (
+              <span key={p} style={puntoBrujula(p)}>
+                {p}
+              </span>
+            ))}
+          </div>
+        )}
+        {pantalla && (
           <div style={barraNav} data-mando-camara="si" role="toolbar" aria-label="Navegación de la cámara">
             <button type="button" aria-pressed={modoArrastre === 'girar'} title="Girar la vista" onClick={() => setModoArrastre('girar')} style={chipNav(modoArrastre === 'girar')}>
               Girar
@@ -679,9 +720,41 @@ export default function Robot3D({
   )
 }
 
+const brujula: CSSProperties = {
+  position: 'absolute',
+  top: 4,
+  left: 4,
+  width: 148,
+  height: 148,
+  borderRadius: '50%',
+  border: '1px solid rgba(255,255,255,0.35)',
+  boxShadow: 'inset 0 0 0 11px rgba(44,44,44,0.35)',
+  pointerEvents: 'none',
+  zIndex: 4,
+}
+
+function puntoBrujula(p: 'N' | 'E' | 'S' | 'W'): CSSProperties {
+  const lugar = {
+    N: { top: 8, left: '50%' },
+    E: { top: '50%', left: 'calc(100% - 8px)' },
+    S: { top: 'calc(100% - 8px)', left: '50%' },
+    W: { top: '50%', left: 8 },
+  }[p]
+  return {
+    position: 'absolute',
+    ...lugar,
+    transform: 'translate(-50%, -50%) rotate(var(--norte, 0rad))',
+    fontFamily: 'system-ui, sans-serif',
+    fontSize: p === 'N' ? '0.72rem' : '0.62rem',
+    fontWeight: p === 'N' ? 700 : 500,
+    color: p === 'N' ? '#ffffff' : 'rgba(255,255,255,0.75)',
+    lineHeight: 1,
+  }
+}
+
 const barraNav: CSSProperties = {
   position: 'absolute',
-  top: 142,
+  top: 160,
   left: 16,
   zIndex: 5,
   display: 'flex',

@@ -842,13 +842,13 @@ export default function UnidadRobotica() {
         </Suspense>
       </div>
       {simActiva ? (
-        <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginTop: 16, flexWrap: 'wrap' }} data-reproductor="si">
+        <div className="reproductor-robot" data-reproductor="si">
           <button
             onClick={() => {
               if (!reproduciendo && tRef.current >= simActiva.tiempo - 1e-6) tRef.current = 0
               setReproduciendo((r) => !r)
             }}
-            style={{ ...botonPrimario(false, reproduciendo ? '#ffa726' : undefined), color: reproduciendo ? '#1c2733' : '#fff', padding: '0.4rem 0.9rem' }}
+            style={{ ...botonPrimario(false, reproduciendo ? '#ffa726' : undefined), color: reproduciendo ? '#1c2733' : '#fff', padding: '0.25rem 0.7rem', minHeight: 32 }}
             aria-label={reproduciendo ? 'Pausa' : 'Reproducir'}
             data-play="si"
           >
@@ -867,7 +867,7 @@ export default function UnidadRobotica() {
             style={{ flex: 1, minWidth: 140 }}
             aria-label="Tiempo de la simulación"
           />
-          <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: '0.85rem' }}>
+          <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: '0.78rem' }}>
             {tiempo.toFixed(1)} / {simActiva.tiempo.toFixed(1)} s
           </span>
           <select value={velocidad} onChange={(e) => setVelocidad(Number(e.target.value))} style={{ padding: '0.2rem', minHeight: 32 }} aria-label="Velocidad">
@@ -879,13 +879,13 @@ export default function UnidadRobotica() {
           </select>
         </div>
       ) : (
-        <p style={{ margin: '16px 0 0', fontSize: '0.84rem', color: '#51606f' }}>
+        <p style={{ margin: '8px 0 0', fontSize: '0.8rem', color: '#51606f' }}>
           {modo === 'visual'
             ? 'Cuando el Core tenga comandos, robot y herramienta, aquí aparece el reproductor.'
             : 'Mueve los ejes de abajo, graba puntos en el mando y pulsa «Reproducir».'}
         </p>
       )}
-      <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginTop: 8 }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 4 }}>
         <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: '0.8rem', color: '#51606f' }}>
           <input type="checkbox" checked={alcance} onChange={(e) => setAlcance(e.target.checked)} /> Alcance
         </label>
@@ -1007,9 +1007,10 @@ export default function UnidadRobotica() {
       {seccion !== 'estudiar' ? (
         <BancoDividido<PestanaRobot>
           key={seccion}
-          clave="neumalab.robot.escena.v2"
+          clave="neumalab.robot.escena.v3"
           clase="banco--robot"
-          divisionInicial={0.28}
+          divisionInicial={0.2}
+          anchoMin={260}
           plegado={estrecha ? 'abierto' : plegado}
           onPlegado={setPlegado}
           riel={<span style={{ writingMode: 'vertical-rl', fontSize: '0.75rem', fontWeight: 700, color: '#51606f', letterSpacing: '0.04em' }}>{modo === 'visual' ? 'PROGRAMA' : 'MANDO'}</span>}
@@ -1383,7 +1384,7 @@ function Ejes({ modelo, q, uso, onQ }: { modelo: ReturnType<typeof robotPorId>; 
               onChange={(e) => onQ?.(q.map((a, i) => (i === k ? Number(e.target.value) : a)))}
               style={{ flex: 1, accentColor: cerca ? '#c62828' : '#33475c' }}
             />
-            <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', color: cerca ? '#c62828' : '#33475c', minWidth: 52, textAlign: 'right' }}>{x.toFixed(1)}°</span>
+            <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', color: cerca ? '#c62828' : '#33475c', minWidth: 46, textAlign: 'right' }}>{x.toFixed(1)}°</span>
           </label>
         )
       })}
