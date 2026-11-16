@@ -64,7 +64,46 @@ export function nuevoId(def: Definicion, tipo: string): string {
   return id
 }
 
-export const PESTANAS: Pestana[] = ['Params', 'Curve', 'Vector', 'Sets', 'KUKA|prc']
+export const PESTANAS: Pestana[] = ['Movimientos', 'Robot', 'Herramientas', 'Trayectoria', 'Utilidades']
+
+/** Una línea bajo el nombre del bloque, para quien no conoce la sigla. */
+const GLOSA: Record<string, string> = {
+  lin: 'Línea recta',
+  ptp: 'Rápido, no recto',
+  cir: 'En arco',
+  axis: 'Por ángulos',
+  salida: 'Prender o apagar',
+  esperar: 'Pausa',
+  core: 'Arma el programa',
+  robot: 'El brazo',
+  herramienta: 'Fresa, ventosa…',
+  curvaDXF: 'Curvas del plano',
+  punto: 'Un punto',
+  rectangulo: 'Rectángulo',
+  circulo: 'Círculo',
+  poligono: 'Polígono',
+  dividirLargo: 'Puntos cada X mm',
+  dividirCurva: 'Puntos parejos',
+  discontinuidad: 'Las esquinas',
+  kukaDividir: 'Planos sobre la curva',
+  desfase: 'Curva paralela',
+  area: 'Área y centro',
+  mover: 'Desplazar',
+  planoXY: 'Hacia dónde apunta',
+  girarPlano: 'Girar el plano',
+  slider: 'Un número',
+  panel: 'Ver los datos',
+  unir: 'Juntar listas',
+  item: 'Un elemento',
+  invertir: 'Dar vuelta la lista',
+  krl: 'Una línea de código',
+  tejer: 'Combinar comandos',
+}
+
+function pista(c: Componente): string {
+  const frase = c.descripcion.split(/(?<=\.)\s/)[0]
+  return `${c.nombre}. ${frase}`
+}
 
 interface Props {
   def: Definicion
@@ -86,10 +125,11 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
   const svgRef = useRef<SVGSVGElement>(null)
   const [vista, setVista] = useState({ tx: 20, ty: 40, k: 0.8 })
   const [arrastre, setArrastre] = useState<Arrastre | null>(null)
-  const [pestana, setPestana] = useState<Pestana>('KUKA|prc')
+  const [pestana, setPestana] = useState<Pestana>('Movimientos')
   const [buscador, setBuscador] = useState<{ x: number; y: number; wx: number; wy: number; texto: string } | null>(null)
   const defRef = useRef(def)
   defRef.current = def
+  const soltoBloque = useRef(false)
 
   const porId = useMemo(() => new Map(def.nodos.map((n) => [n.id, n])), [def])
 
@@ -288,53 +328,61 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
 
   return (
     <div data-editor-nodos="si" style={typeof alto === 'string' ? { display: 'flex', flexDirection: 'column', height: alto, minHeight: 'min-content' } : undefined}>
-      {/* Cinta de componentes, por pestañas como en Grasshopper. */}
-      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 4 }}>
-        {PESTANAS.map((p) => (
-          <button
-            key={p}
-            onClick={() => setPestana(p)}
-            aria-pressed={pestana === p}
-            style={{
-              border: '1px solid #c6ced6',
-              borderBottom: pestana === p ? '2px solid #33475c' : '1px solid #c6ced6',
-              background: pestana === p ? '#fff' : '#f1f4f7',
-              color: '#33475c',
-              padding: tactil ? '6px 12px' : '2px 10px',
-              fontSize: tactil ? '0.88rem' : '0.8rem',
-              fontWeight: pestana === p ? 700 : 500,
-              cursor: 'pointer',
-              borderRadius: '6px 6px 0 0',
-            }}
-          >
-            {p}
-          </button>
-        ))}
-        <span style={{ marginLeft: 'auto', fontSize: '0.76rem', color: '#5f6b78', alignSelf: 'center' }}>
-          {tactil ? 'Toca un componente (LIN, PTP…) para agregarlo · arrastra desde una salida hasta una entrada para conectar · dos dedos: zoom' : 'Doble clic en el fondo: buscar componente · Supr: borrar'}
-        </span>
-      </div>
-      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 6, minHeight: 30 }}>
+      <div className="paleta-nodos" role="toolbar" aria-label="Bloques del programa">
+        <div className="paleta-nodos__pestanas">
+          {PESTANAS.map((p) => (
+            <button key={p} type="button" onClick={() => setPestana(p)} aria-pressed={pestana === p} className={pestana === p ? 'paleta-nodos__pestana paleta-nodos__pestana--activa' : 'paleta-nodos__pestana'}>
+              {p}
+            </button>
+          ))}
+        </div>
+        <p className="paleta-nodos__ayuda">
+          {tactil
+            ? 'Toca un bloque para ponerlo en el lienzo. Conecta de la salida (derecha) a la entrada (izquierda).'
+            : 'Arrastra un bloque al lienzo, o haz clic para soltarlo al centro. Conecta de la salida (derecha) a la entrada (izquierda).'}
+        </p>
         {agrupar(COMPONENTES.filter((c) => c.pestana === pestana)).map(([grupo, cs]) => (
-          <span key={grupo} style={{ display: 'flex', gap: 3, alignItems: 'center', border: '1px solid #e0e5eb', borderRadius: 6, padding: '2px 4px', background: '#fafbfc' }}>
-            <span style={{ fontSize: '0.66rem', color: '#5f6b78', marginRight: 2 }}>{grupo}</span>
+          <div key={grupo} className="paleta-nodos__grupo">
+            <span className="paleta-nodos__nombre">{grupo}</span>
             {cs.map((c) => (
               <button
                 key={c.tipo}
-                title={`${c.nombre}: ${c.descripcion}`}
+                type="button"
+                className="bloque-nodo"
+                title={pista(c)}
                 data-agregar={c.tipo}
+                draggable={!tactil}
+                onDragStart={(e) => {
+                  soltoBloque.current = true
+                  e.dataTransfer.setData('text/neumalab-nodo', c.tipo)
+                  e.dataTransfer.effectAllowed = 'copy'
+                }}
+                onDragEnd={() => {
+                  setTimeout(() => {
+                    soltoBloque.current = false
+                  }, 50)
+                }}
                 onClick={() => {
+                  if (soltoBloque.current) {
+                    soltoBloque.current = false
+                    return
+                  }
                   const svg = svgRef.current!
                   const r = svg.getBoundingClientRect()
                   const p = aMundo(r.left + r.width / 2 - 75, r.top + r.height / 2 - 30)
                   agregarNodo(c.tipo, p.x, p.y)
                 }}
-                style={{ border: '1px solid #b8c1ca', background: '#fff', borderRadius: 4, padding: tactil ? '6px 10px' : '1px 6px', minHeight: tactil ? 34 : undefined, fontSize: tactil ? '0.85rem' : '0.74rem', cursor: 'pointer', color: '#1c2733' }}
               >
-                {c.corto}
+                <span className="bloque-nodo__agarre" aria-hidden="true">
+                  ⋮⋮
+                </span>
+                <span>
+                  <span className="bloque-nodo__corto">{c.corto}</span>
+                  <span className="bloque-nodo__glosa">{GLOSA[c.tipo] ?? c.nombre}</span>
+                </span>
               </button>
             ))}
-          </span>
+          </div>
         ))}
       </div>
       <div style={{ position: 'relative', ...(typeof alto === 'string' ? { flex: 1, minHeight: 200 } : {}) }}>
@@ -371,6 +419,16 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
           onPointerUp={onPointerUp}
           onPointerLeave={() => arrastre?.tipo !== 'cable' && setArrastre(null)}
           onWheel={onWheel}
+          onDragOver={(e) => {
+            if ([...e.dataTransfer.types].includes('text/neumalab-nodo')) e.preventDefault()
+          }}
+          onDrop={(e) => {
+            const tipo = e.dataTransfer.getData('text/neumalab-nodo')
+            if (!tipo) return
+            e.preventDefault()
+            const w = aMundo(e.clientX, e.clientY)
+            agregarNodo(tipo, w.x - 70, w.y - 16)
+          }}
           onDoubleClick={(e) => {
             if (e.target !== svgRef.current && !(e.target as Element).hasAttribute('data-fondo')) return
             const r = svgRef.current!.getBoundingClientRect()
@@ -430,6 +488,9 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
             ))}
           </g>
         </svg>
+        {def.nodos.length === 0 && (
+          <p className="paleta-nodos__vacio">Arrastra componentes aquí. Conecta de derecha a izquierda: la salida de un bloque entra al siguiente.</p>
+        )}
         {buscador && (
           <div
             style={{
@@ -447,7 +508,7 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
             <input
               autoFocus
               value={buscador.texto}
-              placeholder="Buscar componente (ej. divide, LIN, plane)…"
+              placeholder="Buscar bloque (ej. LIN, curva, robot)…"
               onChange={(e) => setBuscador({ ...buscador, texto: e.target.value })}
               onKeyDown={(e) => {
                 if (e.key === 'Escape') setBuscador(null)
@@ -578,7 +639,7 @@ function Nodo({
       <rect x={nodo.x} y={nodo.y} width={w} height={h} rx={6} fill={fondo} stroke={borde} strokeWidth={1.5} onPointerDown={onDown} style={{ cursor: 'move' }}>
         <title>{titulo}</title>
       </rect>
-      <rect x={nodo.x + w / 2 - 34} y={nodo.y + 3} width={68} height={16} rx={3} fill={comp?.pestana === 'KUKA|prc' ? '#ff6b00' : '#3c4046'} pointerEvents="none" />
+      <rect x={nodo.x + w / 2 - 34} y={nodo.y + 3} width={68} height={16} rx={3} fill={comp && (comp.pestana === 'Movimientos' || comp.pestana === 'Robot' || comp.pestana === 'Herramientas') ? '#ff6b00' : '#3c4046'} pointerEvents="none" />
       <text x={nodo.x + w / 2} y={nodo.y + 15} fontSize={11} fontWeight={700} fill="#fff" textAnchor="middle" pointerEvents="none">
         {comp?.corto ?? nodo.tipo}
       </text>

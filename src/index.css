@@ -770,6 +770,101 @@ body.arrastrando-borde * {
 .flecha-cubo--abajo { bottom: -16px; left: 42px; }
 .flecha-cubo--izquierda { top: 42px; left: -16px; }
 .flecha-cubo--derecha { top: 42px; right: -16px; }
+.paleta-nodos {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.paleta-nodos__pestanas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.paleta-nodos__pestana {
+  border: 1px solid #c6ced6;
+  background: #f1f4f7;
+  color: #33475c;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 8px;
+}
+.paleta-nodos__pestana--activa {
+  background: #fff;
+  border-color: #33475c;
+  font-weight: 700;
+}
+.paleta-nodos__ayuda,
+.paleta-nodos__vacio {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: #51606f;
+}
+.paleta-nodos__vacio {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 16px;
+  pointer-events: none;
+}
+.paleta-nodos__grupo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: stretch;
+}
+.paleta-nodos__nombre {
+  flex: 1 0 100%;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #5f6b78;
+}
+.bloque-nodo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 108px;
+  border: 1px solid #c5ced6;
+  background: #fff;
+  border-radius: 8px;
+  padding: 4px 8px 4px 6px;
+  cursor: grab;
+  text-align: left;
+  box-shadow: 0 1px 0 rgba(28, 39, 51, 0.06);
+}
+.bloque-nodo:hover,
+.bloque-nodo:focus-visible {
+  border-color: #7eb6e0;
+  background: #f4f9fd;
+  outline: none;
+}
+.bloque-nodo:active {
+  cursor: grabbing;
+}
+.bloque-nodo__agarre {
+  color: #b0b8c0;
+  font-size: 0.7rem;
+  letter-spacing: -2px;
+}
+.bloque-nodo__corto,
+.bloque-nodo__glosa {
+  display: block;
+  line-height: 1.15;
+}
+.bloque-nodo__corto {
+  font-weight: 700;
+  font-size: 0.78rem;
+  color: #1c2733;
+}
+.bloque-nodo__glosa {
+  font-size: 0.66rem;
+  font-weight: 500;
+  color: #5f6b78;
+}
 .reproductor-robot {
   display: flex;
   gap: 8px;

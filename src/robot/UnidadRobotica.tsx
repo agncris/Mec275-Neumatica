@@ -458,7 +458,7 @@ export default function UnidadRobotica() {
       setDef({ ...def, dxf: { nombre: f.name, texto } })
       setAviso(
         `Plano «${f.name}» abierto: ${d.curvas.length} curvas en ${d.capas.length} capa(s) (${d.capas.join(', ')}), unidades ${d.unidades}.` +
-          (tieneCurva ? '' : ' Agrega un componente Curve (Crv) de la pestaña Params para usarlas.') +
+          (tieneCurva ? '' : ' Agrega el bloque Curve, en la pestaña Trayectoria, para usarlas.') +
           (d.avisos.length ? ` ${d.avisos.join(' ')}` : ''),
       )
     } catch (e) {
@@ -1233,7 +1233,7 @@ function Propiedades({
   if (!nodo)
     return (
       <p style={{ margin: '8px 0 0', fontSize: '0.84rem', color: '#5a6b7d' }} data-propiedades="vacio">
-        Selecciona un componente para ver qué hace, sus entradas y salidas y ajustar sus valores. Arrastra desde una salida (derecha) hasta una entrada (izquierda) para conectar. Con dos dedos (o con − y +) acercas y alejas el lienzo.
+        Elige un bloque para ver qué hace y cambiar sus valores. En el lienzo, conecta la salida (derecha) con la entrada (izquierda). Con la rueda, o con − y +, acercas y alejas.
       </p>
     )
   const comp = componente(nodo.tipo)
@@ -1414,8 +1414,7 @@ function ComoUsar() {
   return (
     <ol style={{ margin: 0, paddingLeft: 20, lineHeight: 1.55 }}>
       <li style={li}>
-        <strong>Programación visual:</strong> agrega componentes desde las pestañas (Params, Curve, Vector, Sets, KUKA|prc) o con
-        doble clic en el fondo del lienzo, y conéctalos arrastrando de una salida a una entrada. Todo se recalcula al instante.
+        <strong>Programación visual:</strong> elige un bloque en Movimientos, Robot, Herramientas, Trayectoria o Utilidades y arrástralo al lienzo (o haz clic). Conecta la salida, a la derecha, con la entrada, a la izquierda. Todo se recalcula al instante.
       </li>
       <li style={li}>
         <strong>Plano DXF:</strong> «Abrir DXF» trae las curvas de tu plano (líneas, arcos, círculos, polilíneas); el componente

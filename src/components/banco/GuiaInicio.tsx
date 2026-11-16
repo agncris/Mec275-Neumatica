@@ -95,7 +95,7 @@ export const GUIA_CNC: PasoGuia[] = [
 
 export const GUIA_ROBOT: PasoGuia[] = [
   { titulo: '1 · Trae tu pieza', texto: 'Abre un ejemplo o parte con una definición vacía. Con «Abrir DXF» traes las curvas del plano de tu pieza.' },
-  { titulo: '2 · Arma la definición', texto: 'Agrega componentes desde las pestañas (Curve, KUKA|prc…) o con doble clic en el fondo, y une salidas (a la derecha) con entradas (a la izquierda). El Core junta los comandos, el robot y la herramienta.' },
+  { titulo: '2 · Arma la definición', texto: 'En Movimientos están LIN, PTP y CIR; en Robot, el brazo y el Core; en Trayectoria, las curvas del plano. Arrastra un bloque al lienzo y une la salida (derecha) con la entrada (izquierda).' },
   { titulo: '3 · Simula', texto: '▶ reproduce el recorrido en 3D. El análisis avisa si un eje llega a su límite, si el robot no alcanza o si pasa cerca de una singularidad.' },
   { titulo: '4 · Entrega', texto: (VER_TAREA_ROBOTICA ? 'En «★ Tarea Robótica» está «Entregar»: te da ' : 'Exportar te da ') + 'el croquis de la pieza, el posicionamiento, la ficha técnica, el programa KRL y el video.' },
 ]
