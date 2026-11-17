@@ -28,8 +28,8 @@ import PlanoTarea, { BarraEjemplo } from './PlanoTarea'
 import { Ejes, Propiedades } from './PanelParametros'
 import PanelEntrega from './PanelEntrega'
 import { EJEMPLOS_ROBOT } from './ejemplos'
-import { cajaCurvas, leerDXF, type Curva } from './geometria'
-import { planoXY, v, type Plano, type V3 } from './matematica'
+import { cajaCurvas, leerDXF } from './geometria'
+import { planoXY, v, type Plano } from './matematica'
 import Mando, { poseDe, type PuntoEnsenado } from './Mando'
 import { ejesEn, generarKRL, PLACA_DEFECTO, simular, type Simulacion } from './movimiento'
 import {
@@ -45,77 +45,13 @@ import {
   type RobotVirtual,
 } from './nodos'
 import { HOME, robotPorId } from './robots'
-import type { Previa, VistaRobot } from './Robot3D'
+import type { VistaRobot } from './Robot3D'
 import { ANCLAS_ESTUDIAR_ROBOT } from './anclasEstudiar'
+import { BASE_DEFECTO, CLAVE, CLAVE_ANTES_EJEMPLO, CLAVE_TAREA, definicionGuardada, HERR_DEFECTO, HERR_MANDO, leerGuardada, leerTarea, marcasDe, NOMBRE_TAREA, previaDe } from './datosRobot'
 
 const Robot3D = lazy(() => import('./Robot3D'))
 // La teoría, la ficha y las demos 3D de Estudiar se cargan solo al entrar a Estudiar.
 const EstudiarRobotica = lazy(() => import('./EstudiarRobotica'))
-
-const CLAVE = 'neumalab.robot.definicion'
-/**
- * La tarea de Robótica se trabaja en su propia sección, con su definición guardada
- * aparte del Laboratorio. El enunciado lo entrega el profesor; «Entregar» sólo
- * aparece ahí.
- */
-const CLAVE_TAREA = 'neumalab.robot.tarea'
-/** Lo que había en la tarea antes de abrir el ejemplo guiado. */
-const CLAVE_ANTES_EJEMPLO = 'neumalab.robot.tarea.antes-ejemplo'
-const NOMBRE_TAREA = 'Tarea Robótica'
-const HERR_DEFECTO: Herramienta = { tipo: 'fresa', nombre: 'Husillo con fresa', largo: 200, diametro: 5 }
-const HERR_MANDO: Herramienta = { tipo: 'ventosa', nombre: 'Ventosa de vacío', largo: 120, diametro: 40 }
-const BASE_DEFECTO: Plano = planoXY(v(450, -150, 300))
-
-function leerGuardada(): Definicion {
-  try {
-    const crudo = localStorage.getItem(CLAVE)
-    if (crudo) {
-      const d = JSON.parse(crudo)
-      if (esDefinicion(d)) return d
-    }
-  } catch {
-    /* sin almacenamiento */
-  }
-  return EJEMPLOS_ROBOT[0].definicion()
-}
-
-function definicionGuardada(clave: string): Definicion | null {
-  try {
-    const crudo = localStorage.getItem(clave)
-    if (!crudo) return null
-    const d = JSON.parse(crudo)
-    return esDefinicion(d) ? d : null
-  } catch {
-    return null
-  }
-}
-
-function leerTarea(): Definicion {
-  const guardada = definicionGuardada(CLAVE_TAREA)
-  const previa = definicionGuardada(CLAVE_ANTES_EJEMPLO)
-  if (guardada && esEjemploGuiado(guardada)) {
-    try {
-      localStorage.removeItem(CLAVE_ANTES_EJEMPLO)
-    } catch {
-      /* sin almacenamiento */
-    }
-  }
-  return tareaAlAbrir(guardada, previa)
-}
-
-const esCurva = (d: Dato): d is Curva => typeof d === 'object' && d !== null && 'pts' in d && 'cerrada' in d
-const esPlano = (d: Dato): d is Plano => typeof d === 'object' && d !== null && 'o' in d && 'z' in d
-const esPunto = (d: Dato): d is V3 => typeof d === 'object' && d !== null && 'x' in d && 'y' in d && 'z' in d && !('o' in d)
-
-function previaDe(datos: Dato[]): Previa {
-  const p: Previa = { curvas: [], puntos: [], planos: [] }
-  for (const d of datos) {
-    if (esCurva(d)) p.curvas.push(d.cerrada ? d.pts : [...d.pts])
-    else if (esPlano(d)) p.planos.push(d)
-    else if (esPunto(d)) p.puntos.push(d)
-  }
-  return p
-}
 
 type Modo = 'visual' | 'mando'
 
@@ -1104,16 +1040,6 @@ export default function UnidadRobotica() {
 
 type PestanaRobot = 'analisis' | 'krl' | 'ficha' | 'plano-tarea'
 
-
-/** Posiciones de los puntos enseñados (para marcarlos en 3D). */
-const cacheMarcas = new WeakMap<PuntoEnsenado[], V3[]>()
-function marcasDe(puntos: PuntoEnsenado[], modelo: ReturnType<typeof robotPorId>, h: Herramienta): V3[] {
-  const c = cacheMarcas.get(puntos)
-  if (c) return c
-  const m = puntos.map((p) => poseDe(modelo, p.q, h.largo, 0).tcp)
-  cacheMarcas.set(puntos, m)
-  return m
-}
 
 const estadoChip: React.CSSProperties = { color: '#fff', borderRadius: 6, padding: '1px 8px', fontSize: '0.75rem', fontWeight: 700 }
 /** Aviso flotante: aparece y desaparece sin mover el resto de la página. */
