@@ -17,7 +17,7 @@ import Autoevaluacion from '../components/Autoevaluacion'
 import FichaRobot from './FichaRobot'
 import { PREGUNTAS_ROBOT } from './preguntasRobot'
 import { ETIQUETA_GRUPO, PRACTICA_ROBOT, type GrupoPractica } from './practica'
-import { adaptarATarea, analizarTarea4, ejemploGuiadoTarea, MARCA_TAREA4, revisarTarea4, tareaVaciaRobot, type PuntoRevisionTarea } from './tarea4'
+import { adaptarATarea, analizarTarea4, ejemploGuiadoTarea, esEjemploGuiado, MARCA_TAREA4, revisarTarea4, tareaVaciaRobot, type PuntoRevisionTarea } from './tarea4'
 import { copiarTabla, descargarTexto, leerAlumno, limpiarEnlace, trabajoDelEnlace } from '../entregar'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { exportarPng, nombreSeguro } from '../exportar'
@@ -56,6 +56,8 @@ const CLAVE = 'neumalab.robot.definicion'
  * aparece ahí.
  */
 const CLAVE_TAREA = 'neumalab.robot.tarea'
+/** Lo que había en la tarea antes de abrir el ejemplo guiado. */
+const CLAVE_ANTES_EJEMPLO = 'neumalab.robot.tarea.antes-ejemplo'
 const NOMBRE_TAREA = 'Tarea Robótica'
 const HERR_DEFECTO: Herramienta = { tipo: 'fresa', nombre: 'Husillo con fresa', largo: 200, diametro: 5 }
 const HERR_MANDO: Herramienta = { tipo: 'ventosa', nombre: 'Ventosa de vacío', largo: 120, diametro: 40 }
@@ -456,12 +458,19 @@ export default function UnidadRobotica() {
     setEnunciado(null)
     // En la tarea, «Nuevo» vuelve a la definición de la tarea (con el plano cargado).
     if (enTarea && id === 'vacio') {
-      if (!window.confirm('¿Empezar de nuevo la tarea? Se reemplaza tu definición.')) return
+      const eraEjemplo = esEjemploGuiado(defRef.current)
+      const pregunta = eraEjemplo ? '¿Quitar el ejemplo y volver a la tarea sin él?' : '¿Empezar de nuevo la tarea? Se reemplaza tu definición.'
+      if (!window.confirm(pregunta)) return
       setReproduciendo(false)
+      try {
+        localStorage.removeItem(CLAVE_ANTES_EJEMPLO)
+      } catch {
+        /* sin almacenamiento */
+      }
       setDef(tareaVaciaRobot())
       setSeleccion(null)
       setModo('visual')
-      return setAviso('Definición de la tarea en blanco: robot, herramienta y Core, con el plano cargado.')
+      return setAviso(eraEjemplo ? 'Ejemplo quitado. La tarea queda como al empezar: robot, fresa y el plano.' : 'Definición de la tarea en blanco: robot, herramienta y Core, con el plano cargado.')
     }
     const ej = EJEMPLOS_ROBOT.find((e) => e.id === id)
     if (!ej) return
@@ -615,13 +624,39 @@ export default function UnidadRobotica() {
     setSeccion('estudiar')
   }
   const verEjemploGuiado = () => {
-    if (!window.confirm('Se reemplaza lo que tienes por un ejemplo a medias: el contorno en línea recta, con Robot, Tool y Core. No incluye las ranuras ni los arcos. ¿Seguir?')) return
+    if (esEjemploGuiado(defRef.current)) return
+    if (!window.confirm('Se muestra un ejemplo a medias: el contorno en línea recta, con Robot, Tool y Core. No incluye las ranuras ni los arcos. Después puedes volver a tu tarea. ¿Seguir?')) return
+    try {
+      localStorage.setItem(CLAVE_ANTES_EJEMPLO, JSON.stringify(defRef.current))
+    } catch {
+      /* sin almacenamiento */
+    }
     setReproduciendo(false)
     setDef(ejemploGuiadoTarea())
     setSeleccion(null)
     setModo('visual')
-    setAviso('Ejemplo guiado cargado. Mira cómo se conectan los bloques y completa las ranuras y las curvas.')
+    setAviso('Ejemplo guiado cargado. «Volver a mi tarea» lo quita y recupera lo que tenías.')
   }
+  const volverDelEjemplo = () => {
+    if (!window.confirm('¿Quitar el ejemplo y volver a tu tarea?')) return
+    let previa: Definicion | null = null
+    try {
+      const crudo = localStorage.getItem(CLAVE_ANTES_EJEMPLO)
+      if (crudo) {
+        const d = JSON.parse(crudo)
+        if (esDefinicion(d) && !esEjemploGuiado(d)) previa = d
+      }
+      localStorage.removeItem(CLAVE_ANTES_EJEMPLO)
+    } catch {
+      /* sin almacenamiento */
+    }
+    setReproduciendo(false)
+    setDef(previa ?? tareaVaciaRobot())
+    setSeleccion(null)
+    setModo('visual')
+    setAviso(previa ? 'Volviste a tu tarea, sin el ejemplo.' : 'Ejemplo quitado. La tarea queda como al empezar: robot, fresa y el plano.')
+  }
+  const ejemploEnTarea = enTarea && esEjemploGuiado(def)
   const errores = simActiva?.problemas.filter((p) => p.nivel === 'error') ?? []
   const avisosSim = simActiva?.problemas.filter((p) => p.nivel === 'aviso') ?? []
   const modeloVista = modo === 'visual' ? robotVista.modelo : modeloM
@@ -682,7 +717,12 @@ export default function UnidadRobotica() {
       </span>
       {modo === 'visual' && (
         <>
-          <BotonNuevo que="una definición" compacto={estrecha} onClick={() => cargarEjemplo('vacio')} />
+          <BotonNuevo que={ejemploEnTarea ? 'la tarea, sin el ejemplo' : 'una definición'} compacto={estrecha} onClick={() => cargarEjemplo('vacio')} />
+          {ejemploEnTarea && (
+            <button type="button" onClick={volverDelEjemplo} style={botonSecundario} data-volver-tarea="si">
+              Volver a mi tarea
+            </button>
+          )}
           <span style={{ display: 'inline-flex', gap: 2 }}>
             <button onClick={deshacer} disabled={!historial.current.puedeDeshacer} aria-label="Deshacer" className="boton-icono" style={{ opacity: historial.current.puedeDeshacer ? 1 : 0.4 }} title="Deshacer (Ctrl+Z)">
               ↶
@@ -954,7 +994,7 @@ export default function UnidadRobotica() {
   )
 
   const pestanas: Array<PestanaPanel<PestanaRobot>> = [
-    ...(enTarea && pasoTarea ? [{ id: 'plano-tarea' as const, titulo: 'Plano de la tarea', tituloCorto: 'Plano', contenido: <PlanoTarea paso={pasoTarea} checklist={checklistTarea} onEstudiar={irAEstudiar} onEjemplo={verEjemploGuiado} /> }] : []),
+    ...(enTarea && pasoTarea ? [{ id: 'plano-tarea' as const, titulo: 'Plano de la tarea', tituloCorto: 'Plano', contenido: <PlanoTarea paso={pasoTarea} checklist={checklistTarea} onEstudiar={irAEstudiar} onEjemplo={verEjemploGuiado} ejemplo={ejemploEnTarea} onVolver={volverDelEjemplo} /> }] : []),
     {
       id: 'analisis',
       titulo: 'Análisis',
@@ -1588,7 +1628,7 @@ function pasoGuiado(def: Definicion): PasoAhora {
 }
 
 /** El plano de la tarea, con el proceso arriba y un solo paso abierto. */
-function PlanoTarea({ paso, checklist, onEstudiar, onEjemplo }: { paso: PasoAhora; checklist: PuntoRevisionTarea[]; onEstudiar: (ancla: string) => void; onEjemplo: () => void }) {
+function PlanoTarea({ paso, checklist, onEstudiar, onEjemplo, ejemplo, onVolver }: { paso: PasoAhora; checklist: PuntoRevisionTarea[]; onEstudiar: (ancla: string) => void; onEjemplo: () => void; ejemplo: boolean; onVolver: () => void }) {
   return (
     <div data-plano-tarea="si" style={{ fontSize: '0.84rem', color: '#1c2733', lineHeight: 1.45 }}>
       <section className="proceso" aria-label="Proceso de la tarea" data-paso-ahora={paso.id}>
@@ -1624,9 +1664,15 @@ function PlanoTarea({ paso, checklist, onEstudiar, onEjemplo }: { paso: PasoAhor
         <li>El programa KRL se puede leer.</li>
       </ul>
       <p style={{ margin: '0 0 6px' }}>
-        <button type="button" onClick={onEjemplo} style={botonSuave}>
-          Ver ejemplo guiado
-        </button>{' '}
+        {ejemplo ? (
+          <button type="button" onClick={onVolver} style={botonSuave} data-volver-tarea="si">
+            Volver a mi tarea
+          </button>
+        ) : (
+          <button type="button" onClick={onEjemplo} style={botonSuave}>
+            Ver ejemplo guiado
+          </button>
+        )}{' '}
         <button type="button" onClick={() => onEstudiar('parametrica')} style={enlaceEstudiar}>
           ¿No recuerdas la diferencia entre LIN y CIR? → Estudiar
         </button>

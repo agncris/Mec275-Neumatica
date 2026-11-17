@@ -75,6 +75,11 @@ export function ejemploGuiadoTarea(): Definicion {
   }
 }
 
+/** El lienzo es el ejemplo guiado (se puede quitar y volver a la tarea). */
+export function esEjemploGuiado(def: Definicion): boolean {
+  return def.nombre === 'Ejemplo guiado'
+}
+
 /** ¿El plano abierto es el de la tarea, sin tocar? */
 export function esPlanoDeLaTarea(def: Definicion): boolean {
   return !!def.dxf && sinEspacios(def.dxf.texto) === sinEspacios(PLANO_TAREA4_DXF)
