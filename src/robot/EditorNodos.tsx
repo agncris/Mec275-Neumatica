@@ -633,7 +633,7 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
                   setBuscador(null)
                 }
               }}
-              style={{ width: '100%', padding: '6px 8px', border: 'none', borderBottom: '1px solid var(--borde-suave)', outline: 'none', fontSize: '0.88rem' }}
+              style={{ width: '100%', padding: '6px 8px', border: 'none', borderBottom: '1px solid var(--borde-suave)', fontSize: '0.88rem' }}
             />
             {coincidencias.map((c) => (
               <button

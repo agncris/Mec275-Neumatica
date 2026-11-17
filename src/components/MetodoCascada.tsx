@@ -12,6 +12,8 @@ import { CIRCUITO_BLOQUEADO, CIRCUITO_CASCADA, type CircuitoPreparado } from '..
 import { useStore } from '../store'
 
 const COLORES_GRUPO = ['#1668c7', '#12a35a', '#b3671a', '#8a3ab0']
+/** Los mismos grupos para el texto de la etiqueta: más oscuros para que se lean (4,5:1 sobre blanco). */
+const COLORES_TEXTO_GRUPO = ['#1668c7', '#0e7a43', '#9a5712', '#8a3ab0']
 
 const PASOS_EJEMPLO = [
   ['t = 0 s', 'Marcha + a0 → la cascada pasa a L1 → L1 pilota VA:14 → A+'],
@@ -127,7 +129,7 @@ export default function MetodoCascada({ alCargar }: { alCargar?: () => void } = 
                   style={{
                     fontSize: '0.72rem',
                     fontWeight: 700,
-                    color: COLORES_GRUPO[i % COLORES_GRUPO.length],
+                    color: COLORES_TEXTO_GRUPO[i % COLORES_TEXTO_GRUPO.length],
                     marginBottom: 2,
                   }}
                 >

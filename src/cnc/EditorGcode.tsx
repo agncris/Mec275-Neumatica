@@ -18,22 +18,22 @@ const ALTO_LINEA = 20
 const PAD = 8
 
 const COLORES: Record<string, string> = {
-  N: '#8a97a5',
+  N: '#64717f',
   G: '#1668c7',
   M: '#8e3fb8',
   T: '#9c5a12',
-  F: '#c75d00',
-  S: '#c75d00',
+  F: '#b85400',
+  S: '#b85400',
   X: '#18794e',
   Y: '#18794e',
   Z: '#18794e',
-  U: '#2f9e6a',
-  V: '#2f9e6a',
-  W: '#2f9e6a',
-  I: '#0f8b8d',
-  J: '#0f8b8d',
-  K: '#0f8b8d',
-  R: '#0f8b8d',
+  U: '#258259',
+  V: '#258259',
+  W: '#258259',
+  I: '#0c7f81',
+  J: '#0c7f81',
+  K: '#0c7f81',
+  R: '#0c7f81',
 }
 
 function colorear(linea: string): ReactNode[] {
@@ -45,7 +45,7 @@ function colorear(linea: string): ReactNode[] {
     const t = m[0]
     if (!t) break
     let estilo: React.CSSProperties | undefined
-    if (t.startsWith('(') || t.startsWith(';') || t.startsWith('//')) estilo = { color: '#7b8794', fontStyle: 'italic' }
+    if (t.startsWith('(') || t.startsWith(';') || t.startsWith('//')) estilo = { color: '#64717f', fontStyle: 'italic' }
     else if (/^\s*[%$]/.test(t)) estilo = { color: '#5f6b78' }
     else if (/^[A-Za-z]/.test(t)) {
       const c = COLORES[t[0].toUpperCase()]
@@ -191,7 +191,6 @@ const EditorGcode = forwardRef<EditorGcodeRef, Props>(function EditorGcode(
             height: '100%',
             padding: PAD,
             border: 'none',
-            outline: 'none',
             resize: 'none',
             background: 'transparent',
             color: 'transparent',

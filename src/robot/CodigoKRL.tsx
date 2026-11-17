@@ -47,7 +47,7 @@ export default function CodigoKRL({ sim, t, seguir }: { sim: Simulacion; t: numb
               title="Explicar esta línea"
               style={{ padding: '1px 10px 3px', cursor: 'pointer', background: corre ? '#1d4e89' : mira ? '#3a3424' : undefined, color: corre ? '#fff' : mira ? '#ffe7b3' : undefined }}
             >
-              <span style={{ display: 'inline-block', width: '2.2em', color: corre ? '#c5d8ef' : mira ? '#e2c98a' : '#6b7785', userSelect: 'none' }}>{i + 1}</span>
+              <span style={{ display: 'inline-block', width: '2.2em', color: corre ? '#c5d8ef' : mira ? '#e2c98a' : '#8b98a5', userSelect: 'none' }}>{i + 1}</span>
               <span style={{ whiteSpace: 'pre-wrap' }}>{vista.codigo || ' '}</span>
               {vista.glosa ? (
                 <span data-glosa-krl="" style={{ display: 'block', marginLeft: '2.2em', color: corre ? '#d7ecc8' : '#9dcea0' }}>

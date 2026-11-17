@@ -337,13 +337,13 @@ export function PracticaCoordenadas() {
 
 export function EstructuraBloque() {
   const partes: Array<[string, string, string]> = [
-    ['N10', '#8a97a5', 'Número de bloque (secuencia)'],
+    ['N10', '#64717f', 'Número de bloque (secuencia)'],
     ['G01', '#1668c7', 'Función preparatoria: cómo se mueve'],
     ['X50', '#18794e', 'Cota según el eje X'],
     ['Y30', '#18794e', 'Cota según el eje Y'],
     ['Z-5', '#18794e', 'Cota según el eje Z (profundidad)'],
-    ['F100', '#c75d00', 'Velocidad de avance, mm/min'],
-    ['S2000', '#c75d00', 'Velocidad del husillo, rpm'],
+    ['F100', '#b85400', 'Velocidad de avance, mm/min'],
+    ['S2000', '#b85400', 'Velocidad del husillo, rpm'],
     ['T01', '#9c5a12', 'Número de herramienta'],
     ['M03', '#8e3fb8', 'Función auxiliar (miscelánea)'],
   ]

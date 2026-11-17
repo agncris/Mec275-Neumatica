@@ -62,6 +62,12 @@ input:focus-visible,
   outline-offset: 2px;
 }
 
+/* Los campos de texto largo (el editor de código G) llevan el aro por dentro: por fuera lo recortaría su marco. */
+textarea:focus-visible {
+  outline: 2px solid #1668c7;
+  outline-offset: -2px;
+}
+
 /* Flujo de aire animado en las mangueras presurizadas */
 .manguera-flujo {
   stroke-dasharray: 8 6;
@@ -79,6 +85,10 @@ input:focus-visible,
 .item-menu:focus-visible {
   background: #eef2f6 !important;
   outline: none;
+}
+.item-menu:focus-visible {
+  outline: 2px solid #1668c7;
+  outline-offset: -2px;
 }
 
 button:disabled {
@@ -403,6 +413,10 @@ button:disabled:hover {
 .panel-riel__pestana:focus-visible {
   background: #f4f7fb;
   outline: none;
+}
+.panel-riel__pestana:focus-visible {
+  outline: 2px solid #1668c7;
+  outline-offset: -2px;
 }
 .panel-riel__contador {
   margin-top: 6px;
@@ -915,6 +929,11 @@ body.arrastrando-borde * {
   color: #0696d7;
   outline: none;
 }
+.flecha-cubo:focus-visible {
+  outline: 2px solid #1668c7;
+  outline-offset: 1px;
+  border-radius: 4px;
+}
 .flecha-cubo--arriba { top: -16px; left: 42px; }
 .flecha-cubo--abajo { bottom: -16px; left: 42px; }
 .flecha-cubo--izquierda { top: 42px; left: -16px; }
@@ -1213,6 +1232,10 @@ body.arrastrando-borde * {
   background: #f4f9fd;
   outline: none;
 }
+.bloque-nodo:focus-visible {
+  outline: 2px solid #1668c7;
+  outline-offset: -2px;
+}
 .bloque-nodo[data-siguiente='si'] {
   border-color: #1668c7;
   background: #e8f2fb;
@@ -1285,7 +1308,7 @@ body.arrastrando-borde * {
   font-size: 0.72rem;
   font-weight: 650;
   line-height: 1.2;
-  color: #8b98a5;
+  color: #64717f;
   background: #fff;
   border: 1px solid #d5dee6;
   border-radius: 999px;
@@ -2237,7 +2260,7 @@ body:has(.banco:not(.banco--apilado):not(.banco--neumatica-apilado)) {
   padding: 2px 12px 10px;
   font-size: 0.72rem;
   line-height: 1.35;
-  color: #7a8794;
+  color: #64717f;
   text-align: center;
 }
 
