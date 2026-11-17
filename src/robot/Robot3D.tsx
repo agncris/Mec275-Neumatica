@@ -397,7 +397,9 @@ export default function Robot3D({
     mundo.add(ejesMundo)
     const sol = new THREE.DirectionalLight(0xfff1e0, 3.5)
     sol.castShadow = true
-    sol.shadow.mapSize.set(4096, 4096)
+    // Mapa de sombras según el equipo: 4096 solo en pantallas densas y lienzos anchos.
+    const lado = sinDetalle ? 1024 : window.devicePixelRatio < 2 || cont.clientWidth < 700 ? 2048 : 4096
+    sol.shadow.mapSize.set(lado, lado)
     sol.shadow.bias = -0.00015
     sol.shadow.normalBias = 0.05
     sol.shadow.radius = 2.2
