@@ -11,3 +11,5 @@ Cuando un cambio en este repo queda listo (código, estilos o textos de la app),
 - No subas secretos (`.env`, credenciales).
 - No uses `--no-verify`, `--force` ni amend salvo que lo pidan.
 - Si el push falla, dilo y deja el commit local.
+
+Las reglas completas del repo están en `CLAUDE.md` (fuente única). Antes de subir corre `npm run verificar` y `npm run build`.
