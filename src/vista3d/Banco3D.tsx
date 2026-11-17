@@ -27,6 +27,7 @@ import { DESCRIPTORES } from '../components/descriptores'
 import { MAT, crearModelo, type EstadoPieza, type Modelo3D } from './modelos'
 import { Oido } from './oido'
 import { SonidoBanco } from './sonido'
+import { crearViewCube } from './viewcube'
 
 interface Props {
   motor: Motor | null
@@ -582,6 +583,11 @@ export default function Banco3D({ motor, llenar = false, play }: Props) {
     }
     encuadrar()
     encuadrarRef.current = encuadrar
+    const cubo = crearViewCube(camara, renderer, controles, cont, 'viewcube-banco', () => {
+      setVistaCamara('iso')
+      encuadrar()
+      resaltarCambio.actual = true
+    })
     vistaRef.current = (v) => {
       setVistaCamara(v)
       if (v === 'iso') encuadrar()
@@ -636,6 +642,7 @@ export default function Banco3D({ motor, llenar = false, play }: Props) {
       renderer.setSize(w, h)
       camara.aspect = w / Math.max(1, h)
       camara.updateProjectionMatrix()
+      cubo.actualizar()
     }
     const observador = new ResizeObserver(alRedimensionar)
     observador.observe(cont)
@@ -687,7 +694,10 @@ export default function Banco3D({ motor, llenar = false, play }: Props) {
       antes = ahora
       const mot = motorRef.current
       const seMueve = controles.update()
-      if (!mot && !seMueve && !sucio && !resaltarCambio.actual && !hayBocanadas) return
+      if (!mot && !seMueve && !sucio && !resaltarCambio.actual && !hayBocanadas && !cubo.animando()) {
+        cubo.render()
+        return
+      }
       resaltarCambio.actual = false
       if (mot) escuchar(mot, dt)
       else oido = null
@@ -706,6 +716,7 @@ export default function Banco3D({ motor, llenar = false, play }: Props) {
         t.material.emissive.setHex(ver ? 0x0a4fb0 : 0x000000)
       }
       renderer.render(escena, camara)
+      cubo.render()
       sucio = false
     }
     requestAnimationFrame(bucle)
@@ -719,6 +730,7 @@ export default function Banco3D({ motor, llenar = false, play }: Props) {
       window.removeEventListener('pointerup', onUp)
       controlesRef.current = null
       controles.dispose()
+      cubo.dispose()
       escena.traverse((o) => {
         const malla = o as THREE.Mesh
         if (malla.geometry) malla.geometry.dispose()

@@ -8,6 +8,7 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { calidadRender, entornoEstudio, fondoTaller, pisoHormigon, solSuave } from '../vista3d/realista'
+import { crearViewCube } from '../vista3d/viewcube'
 
 type Tipo = 'scara' | 'cilindrico' | 'esferico' | 'cartesiano' | 'angular' | 'delta'
 
@@ -444,6 +445,12 @@ export default function TiposRobot() {
     ctrl.target.set(0, 280, 0)
     ctrl.enableDamping = true
     ctrl.update()
+    const inicio = { pos: cam.position.clone(), objetivo: ctrl.target.clone() }
+    const cubo = crearViewCube(cam, renderer, ctrl, cont, 'viewcube-tipos', () => {
+      cam.position.copy(inicio.pos)
+      ctrl.target.copy(inicio.objetivo)
+      ctrl.update()
+    })
     let actual: { tipo: Tipo; g: THREE.Group; poner: (v: number[]) => void } | null = null
     let vivo = true
     let t = 0
@@ -451,6 +458,7 @@ export default function TiposRobot() {
       renderer.setSize(cont.clientWidth, cont.clientHeight)
       cam.aspect = cont.clientWidth / Math.max(1, cont.clientHeight)
       cam.updateProjectionMatrix()
+      cubo.actualizar()
     })
     obs.observe(cont)
     const bucle = () => {
@@ -475,12 +483,14 @@ export default function TiposRobot() {
       actual.poner(v)
       ctrl.update()
       renderer.render(escena, cam)
+      cubo.render()
     }
     requestAnimationFrame(bucle)
     return () => {
       vivo = false
       obs.disconnect()
       ctrl.dispose()
+      cubo.dispose()
       renderer.dispose()
       pm.dispose()
       cont.removeChild(renderer.domElement)

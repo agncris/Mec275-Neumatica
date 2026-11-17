@@ -15,6 +15,7 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { fondoTaller } from '../vista3d/realista'
+import { crearViewCube } from '../vista3d/viewcube'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import type { Vec3 } from './gcode'
 import {
@@ -792,6 +793,7 @@ export default function Maquina3D({
       setVistaActual(v)
       encuadrar(v)
     }
+    const cubo = crearViewCube(camara, renderer, controles, cont, 'viewcube-cnc', () => accionRef.current?.('iso'))
 
     const sonido = new SonidoCNC()
     const activarSonido = () => {
@@ -803,6 +805,7 @@ export default function Maquina3D({
       renderer.setSize(cont.clientWidth, cont.clientHeight)
       camara.aspect = cont.clientWidth / Math.max(1, cont.clientHeight)
       camara.updateProjectionMatrix()
+      cubo.actualizar()
     })
     observador.observe(cont)
 
@@ -833,6 +836,7 @@ export default function Maquina3D({
       cont.dataset.linea = String(s.linea ?? '')
       controles.update()
       renderer.render(escena, camara)
+      cubo.render()
     }
     requestAnimationFrame(bucle)
 
@@ -844,6 +848,7 @@ export default function Maquina3D({
       controlesRef.current = null
       onCanvas?.(null)
       controles.dispose()
+      cubo.dispose()
       renderer.dispose()
       pmrem.dispose()
       cont.removeChild(renderer.domElement)

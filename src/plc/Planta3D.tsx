@@ -16,6 +16,7 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { fondoTaller } from '../vista3d/realista'
+import { crearViewCube } from '../vista3d/viewcube'
 import { MAT, caja, cilindro, modeloCilindro, modeloValvula } from '../vista3d/modelos'
 import { SonidoBanco } from '../vista3d/sonido'
 import type { EstadoPLC } from './ladder'
@@ -1580,6 +1581,10 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
     }
     encuadrar()
     encuadrarRef.current = encuadrar
+    const cubo = crearViewCube(camara, renderer, controles, cont, 'viewcube-plc', () => {
+      setVistaCamara('iso')
+      encuadrar()
+    })
     vistaRef.current = (v) => {
       setVistaCamara(v)
       if (v === 'iso') encuadrar()
@@ -1633,6 +1638,7 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
       renderer.setSize(w, h)
       camara.aspect = w / Math.max(1, h)
       camara.updateProjectionMatrix()
+      cubo.actualizar()
     })
     observador.observe(cont)
 
@@ -1652,6 +1658,7 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
       if (sim.current.planta.id !== idPlanta) return
       planta.actualizar(sim.current, dt, conSonidoRef.current ? sonidoRef.current : null, pan)
       renderer.render(escena, camara)
+      cubo.render()
     }
     requestAnimationFrame(bucle)
     cont.dataset.planta = sim.current.planta.id
@@ -1664,6 +1671,7 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
       window.removeEventListener('pointerup', onUp)
       controlesRef.current = null
       controles.dispose()
+      cubo.dispose()
       escena.traverse((o) => {
         const m = o as THREE.Mesh
         if (m.geometry) m.geometry.dispose()

@@ -151,8 +151,8 @@ function VistaBoton({ id, actual, onVista }: { id: VistaCamara; actual?: VistaCa
 
 const mando: CSSProperties = {
   position: 'absolute',
-  top: 8,
   left: 8,
+  bottom: 72,
   zIndex: 4,
   display: 'flex',
   flexDirection: 'column',

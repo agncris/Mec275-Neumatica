@@ -1835,6 +1835,25 @@ body:has(.banco:not(.banco--apilado):not(.banco--neumatica-apilado)) {
   overscroll-behavior: auto !important;
 }
 
+.viewcube-casa {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  z-index: 1001;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid #c6ced6;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #33475c;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(28, 39, 51, 0.18);
+}
+.viewcube-casa:hover { background: #fff; color: #1668c7; }
+
 .mecbot {
   position: fixed;
   right: 14px;

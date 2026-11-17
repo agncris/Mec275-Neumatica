@@ -12,7 +12,7 @@ import { type PlayEscena } from '../components/HudEscena'
 import { aplicarModoArrastre, girarCuadrante, zoomCamara, type LadoCubo, type ModoArrastre } from '../components/mandoCamara'
 import BotonPantallaCompleta, { usePantallaCompleta } from '../components/PantallaCompleta'
 import { useEffect, useRef, useState, type CSSProperties, type MutableRefObject, type ReactNode } from 'react'
-import { ViewportGizmo } from 'three-viewport-gizmo'
+import { crearViewCube, type ViewCube } from '../vista3d/viewcube'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { entornoEstudio, fondoTaller, sombraContacto } from '../vista3d/realista'
@@ -308,7 +308,7 @@ export default function Robot3D({
   const [vistaActual, setVistaActual] = useState<Vista>('iso')
   const [modoArrastre, setModoArrastre] = useState<ModoArrastre>('girar')
   const controlesRef = useRef<OrbitControls | null>(null)
-  const gizmoRef = useRef<ViewportGizmo | null>(null)
+  const gizmoRef = useRef<ViewCube | null>(null)
   useEffect(() => {
     if (!pantalla) setModoArrastre('girar')
   }, [pantalla])
@@ -385,53 +385,6 @@ export default function Robot3D({
     controlesRef.current = controles
     aplicarModoArrastre(controles, modoArrastre)
 
-    // Gris con contraste sobre el fondo claro. Al pasar el mouse la cara se oscurece.
-    const cara = {
-      color: '#6d737b',
-      labelColor: '#ffffff',
-      opacity: 0.82,
-      border: { size: 1.5, color: '#3a3a3a' },
-      hover: { color: '#3a3e44', labelColor: '#ffffff', opacity: 0.96, border: { size: 1.5, color: '#2a2a2a' } },
-    }
-    const gizmo = new ViewportGizmo(camara, renderer, {
-      container: cont,
-      type: 'cube',
-      placement: 'top-left',
-      size: 100,
-      offset: { top: 16, left: 16, right: 12, bottom: 12 },
-      animated: true,
-      speed: 1,
-      radius: 0.08,
-      resolution: 256,
-      id: 'viewcube-robot',
-      background: { enabled: false },
-      font: { family: 'system-ui, sans-serif', weight: 600 },
-      corners: {
-        enabled: true,
-        color: '#8d939b',
-        opacity: 0,
-        scale: 0.18,
-        radius: 0.2,
-        hover: { color: '#3a3e44', opacity: 0.95, scale: 0.22 },
-      },
-      edges: {
-        enabled: true,
-        color: '#5c6168',
-        opacity: 0.75,
-        scale: 0.7,
-        radius: 0.12,
-        hover: { color: '#3a3e44', opacity: 0.95, scale: 0.85 },
-      },
-      front: { ...cara, label: 'Frente' },
-      top: { ...cara, label: 'Arriba' },
-      right: { ...cara, label: 'Derecha' },
-      left: { ...cara, label: 'Izquierda' },
-      bottom: { ...cara, label: 'Abajo' },
-      back: { ...cara, label: 'Atrás' },
-    })
-    gizmo.attachControls(controles as Parameters<ViewportGizmo['attachControls']>[0])
-    gizmoRef.current = gizmo
-
     // Partes que se rehacen al cambiar el robot, la herramienta o la definición.
     let robot: ModeloArmado | null = null
     let claveRobot = ''
@@ -466,12 +419,14 @@ export default function Robot3D({
       encuadrar(v)
     }
     encuadrar('iso')
+    const gizmo = crearViewCube(camara, renderer, controles, cont, 'viewcube-robot', () => accion.current?.('iso'))
+    gizmoRef.current = gizmo
 
     const observador = new ResizeObserver(() => {
       renderer.setSize(cont.clientWidth, cont.clientHeight)
       camara.aspect = cont.clientWidth / Math.max(1, cont.clientHeight)
       camara.updateProjectionMatrix()
-      gizmo.domUpdate()
+      gizmo.actualizar()
     })
     observador.observe(cont)
 
@@ -819,7 +774,7 @@ export default function Robot3D({
   useEffect(() => {
     const gizmo = gizmoRef.current
     if (!gizmo) return
-    const id = requestAnimationFrame(() => gizmo.domUpdate())
+    const id = requestAnimationFrame(() => gizmo.actualizar())
     return () => cancelAnimationFrame(id)
   }, [pantalla])
 
