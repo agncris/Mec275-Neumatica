@@ -27,9 +27,17 @@ import {
   type Pestana,
 } from './nodos'
 
-const ANCHO = 150
-const FILA = 18
-const CABEZA = 22
+const ANCHO = 172
+const FILA = 22
+const CABEZA = 26
+
+function colorCabeza(pestana: string | undefined): string {
+  if (pestana === 'Movimientos') return '#e85d04'
+  if (pestana === 'Robot') return '#1668c7'
+  if (pestana === 'Herramientas') return '#0e7a43'
+  if (pestana === 'Trayectoria') return '#5c4d91'
+  return '#4e5964'
+}
 
 export function medidas(_nodo: NodoDef, comp: Componente | undefined): { w: number; h: number } {
   if (!comp) return { w: ANCHO, h: 44 }
@@ -135,6 +143,7 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
   const [vista, setVista] = useState({ tx: 20, ty: 40, k: 0.8 })
   const [arrastre, setArrastre] = useState<Arrastre | null>(null)
   const [plegada, setPlegada] = usePersistente('neumalab.robot.paleta.v1', false)
+  const [ayudaCerrada, setAyudaCerrada] = usePersistente('neumalab.robot.lienzo.ayuda.v1', false)
   const [abiertas, setAbiertas] = useState<Pestana[]>(() => (guia?.pestana ? [guia.pestana] : ['Movimientos', 'Robot']))
   const paletaRef = useRef<HTMLElement>(null)
   useEffect(() => {
@@ -160,11 +169,11 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
     const r = svg.getBoundingClientRect()
     const xs = def.nodos.map((n) => n.x)
     const ys = def.nodos.map((n) => n.y)
-    const x0 = Math.min(...xs) - 20
-    const y0 = Math.min(...ys) - 20
-    const x1 = Math.max(...def.nodos.map((n) => n.x + medidas(n, componente(n.tipo)).w)) + 20
-    const y1 = Math.max(...def.nodos.map((n) => n.y + medidas(n, componente(n.tipo)).h)) + 20
-    const k = Math.min(1.1, Math.max(0.3, Math.min(r.width / (x1 - x0), r.height / (y1 - y0))))
+    const x0 = Math.min(...xs) - 72
+    const y0 = Math.min(...ys) - 72
+    const x1 = Math.max(...def.nodos.map((n) => n.x + medidas(n, componente(n.tipo)).w)) + 72
+    const y1 = Math.max(...def.nodos.map((n) => n.y + medidas(n, componente(n.tipo)).h)) + 72
+    const k = Math.min(1, Math.max(0.35, Math.min(r.width / (x1 - x0), r.height / (y1 - y0))))
     setVista({ k, tx: (r.width - (x1 - x0) * k) / 2 - x0 * k, ty: (r.height - (y1 - y0) * k) / 2 - y0 * k })
   }
   const nombreDef = def.nombre + def.nodos.length
@@ -443,7 +452,21 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
           </div>
         )}
       </aside>
-      <div className={typeof alto === 'string' ? 'editor-nodos__lienzo' : undefined} style={{ position: 'relative', ...(typeof alto === 'string' ? undefined : {}) }}>
+      <div className={typeof alto === 'string' ? 'editor-nodos__lienzo' : undefined} style={typeof alto === 'string' ? undefined : { position: 'relative' }}>
+        {def.nodos.length > 0 && !ayudaCerrada && (
+          <div className="lienzo-ayuda lienzo-ayuda--barra">
+            <p>
+              {guia
+                ? 'Arrastra el bloque azul al lienzo. Robot, Tool y Core ya están.'
+                : 'Arrastra un bloque desde Componentes, o haz clic para dejarlo en el centro.'}{' '}
+              La salida (derecha) se conecta con la entrada (izquierda).
+            </p>
+            <button type="button" onClick={() => setAyudaCerrada(true)}>
+              Entendido
+            </button>
+          </div>
+        )}
+        <div className="editor-nodos__superficie">
         <svg
           ref={svgRef}
           tabIndex={0}
@@ -453,11 +476,13 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
           data-arrastre={arrastre?.tipo ?? ""}
           style={{
             display: 'block',
-            background: '#d4d7da',
-            backgroundImage: 'linear-gradient(#c8cbcf 1px, transparent 1px), linear-gradient(90deg, #c8cbcf 1px, transparent 1px)',
-            backgroundSize: `${20 * vista.k}px ${20 * vista.k}px`,
+            background: '#eef1f4',
+            backgroundImage: 'linear-gradient(#e1e6eb 1px, transparent 1px), linear-gradient(90deg, #e1e6eb 1px, transparent 1px)',
+            backgroundSize: `${32 * vista.k}px ${32 * vista.k}px`,
             backgroundPosition: `${vista.tx}px ${vista.ty}px`,
-            borderRadius: 8,
+            borderRadius: 10,
+            boxShadow: 'inset 0 0 0 1px #d5dee6',
+            fontFamily: 'inherit',
             touchAction: 'none',
             outline: 'none',
             cursor: arrastre?.tipo === 'fondo' ? 'grabbing' : 'default',
@@ -504,19 +529,16 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
               const pb = puertoEntrada(b, componente(b.tipo), c.entrada)
               const activo = seleccion === c.de || seleccion === c.a
               const vacio = !(evaluacion.nodos[c.de]?.salidas[c.salida]?.length ?? 0)
+              const d = curvaCable(pa, pb)
+              const color = activo ? '#1668c7' : vacio ? '#d98a1a' : '#3a4450'
               return (
-                <path
-                  key={k}
-                  d={curvaCable(pa, pb)}
-                  fill="none"
-                  stroke={activo ? '#4c9a2a' : vacio ? '#e0913a' : '#4b5157'}
-                  strokeWidth={activo ? 3 : 2}
-                  strokeDasharray={vacio ? '6 4' : undefined}
-                  opacity={0.9}
-                />
+                <g key={k}>
+                  <path d={d} fill="none" stroke="rgba(28,39,51,0.14)" strokeWidth={activo ? 7 : 5} strokeLinecap="round" />
+                  <path d={d} fill="none" stroke={color} strokeWidth={activo ? 2.6 : 2.15} strokeLinecap="round" strokeDasharray={vacio ? '7 5' : undefined} />
+                </g>
               )
             })}
-            {cableTemporal && <path d={cableTemporal} fill="none" stroke="#1668c7" strokeWidth={2.5} strokeDasharray="5 4" />}
+            {cableTemporal && <path d={cableTemporal} fill="none" stroke="#1668c7" strokeWidth={2.4} strokeLinecap="round" strokeDasharray="6 5" />}
             {def.nodos.map((n) => (
               <Nodo
                 key={n.id}
@@ -546,7 +568,18 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
             ))}
           </g>
         </svg>
-        {def.nodos.length === 0 && <p className="paleta-nodos__vacio">Empieza arrastrando un Robot y un Core.</p>}
+        {def.nodos.length === 0 && (
+          <div className="lienzo-ayuda lienzo-ayuda--vacio">
+            <h3>El lienzo está vacío</h3>
+            <p>Arrastra un bloque desde Componentes, o haz clic en él para dejarlo en el centro.</p>
+            <p>Conecta de la salida a la entrada: el punto de la derecha de un bloque con el punto de la izquierda del siguiente.</p>
+          </div>
+        )}
+        {def.nodos.length > 0 && ayudaCerrada && (
+          <button type="button" className="lienzo-ayuda__chip" onClick={() => setAyudaCerrada(false)}>
+            Ayuda
+          </button>
+        )}
         {buscador && (
           <div
             style={{
@@ -600,6 +633,7 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
             ⤢ Encuadrar
           </button>
         </div>
+        </div>
       </div>
     </div>
   )
@@ -634,20 +668,22 @@ function Nodo({
   const { w, h } = medidas(nodo, comp)
   const ev = evaluacion.nodos[nodo.id]
   const estado = ev?.estado ?? 'ok'
-  const fondo = seleccionado ? '#b7dd8f' : estado === 'error' ? '#ef9a9a' : estado === 'aviso' ? '#f7c77e' : '#e6e7e8'
-  const borde = seleccionado ? '#4c9a2a' : estado === 'error' ? '#c62828' : estado === 'aviso' ? '#d98a1a' : '#5f6368'
+  const borde = seleccionado ? '#1668c7' : estado === 'error' ? '#c62828' : estado === 'aviso' ? '#d98a1a' : '#d0d7de'
+  const relleno = seleccionado ? '#f3f8fd' : estado === 'error' ? '#fdecea' : estado === 'aviso' ? '#fff6e8' : '#fff'
   const conectadas = new Set(def.cables.filter((c) => c.a === nodo.id).map((c) => c.entrada))
   const titulo = ev?.mensajes.length ? ev.mensajes.join(' ') : comp?.descripcion
+  const cabeza = colorCabeza(comp?.pestana)
 
   if (comp?.tipo === 'slider') {
     const p = nodo.params
     const valor = Number(p.valor)
     return (
       <g data-nodo={nodo.id} data-estado={estado}>
-        <rect x={nodo.x} y={nodo.y} width={w} height={h} rx={6} fill={fondo} stroke={borde} strokeWidth={1.5} onPointerDown={onDown} style={{ cursor: 'move' }}>
+        <rect x={nodo.x + 1} y={nodo.y + 2} width={w} height={h} rx={8} fill="rgba(28,39,51,0.08)" />
+        <rect x={nodo.x} y={nodo.y} width={w} height={h} rx={8} fill={relleno} stroke={borde} strokeWidth={seleccionado ? 2 : 1.25} onPointerDown={onDown} style={{ cursor: 'move' }}>
           <title>{titulo}</title>
         </rect>
-        <text x={nodo.x + 8} y={nodo.y + 16} fontSize={11} fill="#1c2733" pointerEvents="none">
+        <text x={nodo.x + 10} y={nodo.y + 16} fontSize={12} fontWeight={700} fill="#1c2733" pointerEvents="none">
           Slider
         </text>
         <foreignObject x={nodo.x + 6} y={nodo.y + 20} width={w - 60} height={22}>
@@ -677,7 +713,8 @@ function Nodo({
     if (datos.length > 7) lineas.push(`… (${datos.length} elementos)`)
     return (
       <g data-nodo={nodo.id}>
-        <rect x={nodo.x} y={nodo.y} width={w} height={h} rx={3} fill={seleccionado ? '#e8f5c8' : '#fff9c4'} stroke={borde} strokeWidth={1.2} onPointerDown={onDown} style={{ cursor: 'move' }}>
+        <rect x={nodo.x + 1} y={nodo.y + 2} width={w} height={h} rx={8} fill="rgba(28,39,51,0.08)" />
+        <rect x={nodo.x} y={nodo.y} width={w} height={h} rx={8} fill={seleccionado ? '#f3f8fd' : '#fffdf3'} stroke={borde} strokeWidth={seleccionado ? 2 : 1.25} onPointerDown={onDown} style={{ cursor: 'move' }}>
           <title>Panel: muestra lo que le llega</title>
         </rect>
         {(lineas.length ? lineas : ['(vacío)']).map((l, i) => (
@@ -692,18 +729,21 @@ function Nodo({
 
   return (
     <g data-nodo={nodo.id} data-estado={estado}>
-      <rect x={nodo.x} y={nodo.y} width={w} height={h} rx={6} fill={fondo} stroke={borde} strokeWidth={1.5} onPointerDown={onDown} style={{ cursor: 'move' }}>
+      <rect x={nodo.x + 1} y={nodo.y + 2} width={w} height={h} rx={8} fill="rgba(28,39,51,0.1)" />
+      <rect x={nodo.x} y={nodo.y} width={w} height={h} rx={8} fill={relleno} />
+      <rect x={nodo.x} y={nodo.y} width={w} height={CABEZA} rx={8} fill={cabeza} pointerEvents="none" />
+      <rect x={nodo.x} y={nodo.y + CABEZA - 8} width={w} height={8} fill={cabeza} pointerEvents="none" />
+      <rect x={nodo.x} y={nodo.y} width={w} height={h} rx={8} fill="none" stroke={borde} strokeWidth={seleccionado ? 2 : 1.25} onPointerDown={onDown} style={{ cursor: 'move' }}>
         <title>{titulo}</title>
       </rect>
-      <rect x={nodo.x + w / 2 - 34} y={nodo.y + 3} width={68} height={16} rx={3} fill={comp && (comp.pestana === 'Movimientos' || comp.pestana === 'Robot' || comp.pestana === 'Herramientas') ? '#ff6b00' : '#3c4046'} pointerEvents="none" />
-      <text x={nodo.x + w / 2} y={nodo.y + 15} fontSize={11} fontWeight={700} fill="#fff" textAnchor="middle" pointerEvents="none">
+      <text x={nodo.x + 12} y={nodo.y + 17} fontSize={13} fontWeight={700} fill="#fff" pointerEvents="none">
         {comp?.corto ?? nodo.tipo}
       </text>
       {comp?.entradas.map((p, i) => {
         const pt = puertoEntrada(nodo, comp, i)
         return (
           <g key={`e${i}`}>
-            <text x={pt.x + 10} y={pt.y + 4} fontSize={11} fill="#1c2733" pointerEvents="none">
+            <text x={pt.x + 12} y={pt.y + 4} fontSize={12} fill="#1c2733" pointerEvents="none">
               {p.corto}
             </text>
             <PuertoSvg x={pt.x} y={pt.y} lado="entrada" nodo={nodo.id} i={i} onDown={onPuerto} titulo={`${p.corto} · ${p.nombre}: ${p.descripcion}`} conectada={conectadas.has(i)} />
@@ -715,7 +755,7 @@ function Nodo({
         const cant = ev?.salidas[j]?.length ?? 0
         return (
           <g key={`s${j}`}>
-            <text x={pt.x - 10} y={pt.y + 4} fontSize={11} fill="#1c2733" textAnchor="end" pointerEvents="none">
+            <text x={pt.x - 12} y={pt.y + 4} fontSize={12} fill="#1c2733" textAnchor="end" pointerEvents="none">
               {p.corto}
               {cant > 1 ? ` (${cant})` : ''}
             </text>
@@ -748,8 +788,8 @@ function PuertoSvg({
 }) {
   return (
     <g data-puerto={lado} data-nodo={nodo} data-indice={i} onPointerDown={(e) => onDown(e, lado, i)} style={{ cursor: 'crosshair' }}>
-      <circle cx={x} cy={y} r={9} fill="transparent" />
-      <circle cx={x} cy={y} r={4.5} fill={lado === 'salida' || conectada ? '#fff' : '#f3f3f3'} stroke="#3c4046" strokeWidth={1.4} />
+      <circle cx={x} cy={y} r={12} fill="transparent" />
+      <circle cx={x} cy={y} r={5.5} fill={lado === 'salida' ? '#1c2733' : conectada ? '#1668c7' : '#fff'} stroke={lado === 'salida' ? '#1c2733' : '#1668c7'} strokeWidth={1.6} />
       <title>{titulo}</title>
     </g>
   )
