@@ -55,7 +55,7 @@ export default function TablaPuntos({
       setTimeout(() => setCopiado(false), 2000)
     })
   }
-  if (!filas.length) return <p style={{ color: 'var(--tinta-gris)', fontSize: '0.86rem' }}>El programa todavía no mueve la máquina.</p>
+  if (!filas.length) return <p className="u-nota">El programa todavía no mueve la máquina.</p>
   return (
     <div>
       <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: 'var(--tinta-tenue)' }}>

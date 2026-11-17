@@ -54,7 +54,7 @@ export default function PlanoTarea({ codigo, checklist, onEstudiar, onEjemplo }:
   return (
     <div data-plano-tarea="si">
       <ProcesoTarea etapas={ETAPAS_CNC} paso={paso}>
-        <p style={{ margin: '8px 0 0' }}>
+        <p className="u-m-8-0-0">
           <button type="button" onClick={onEjemplo} style={botonSuave}>
             Ver ejemplo guiado
           </button>{' '}

@@ -91,7 +91,7 @@ export default function SelectorMaquina({ actual, nombres, onUsar, onNuevo, onEj
                       minWidth: 0,
                     }}
                   >
-                    <span style={{ fontWeight: 600 }}>{MAQUINAS[id].nombre}</span>
+                    <span className="u-semi">{MAQUINAS[id].nombre}</span>
                     <span style={{ fontSize: '0.76rem', color: 'var(--tinta-suave)' }}>
                       {id === actual ? 'En uso · ' : ''}
                       {n} ejemplos
@@ -166,7 +166,7 @@ export default function SelectorMaquina({ actual, nombres, onUsar, onNuevo, onEj
                     fontSize: '0.88rem',
                   }}
                 >
-                  <span style={{ flex: 1, minWidth: 0 }}>
+                  <span className="u-flex-min">
                     <span style={{ display: 'block', fontWeight: 600 }}>{e.titulo}</span>
                     <span
                       style={{

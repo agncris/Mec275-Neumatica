@@ -56,7 +56,7 @@ export default function AreaSimulacion({
   return (
   <>
     <div className="relleno">
-      <Suspense fallback={<p style={{ padding: 20, color: 'var(--tinta-suave)' }}>Montando la celda…</p>}>
+      <Suspense fallback={<p className="u-vacio">Montando la celda…</p>}>
         <Robot3D
           vista={vista}
           onCanvas={(c) => (canvasRef.current = c)}

@@ -18,11 +18,11 @@ export default function FichaNeumatica() {
         ]}
       />
       <h4>Válvulas: vías / posiciones</h4>
-      <p style={{ margin: '0 0 6px' }}>
+      <p className="u-m-0-0-6">
         «5/2» = 5 orificios y 2 posiciones. <strong>Monoestable</strong>: vuelve sola (muelle). <strong>Biestable</strong>: se queda donde la dejó el último pilotaje (memoria).
       </p>
       <h4>Método cascada, paso a paso</h4>
-      <ol style={{ margin: '0 0 6px', paddingLeft: 18 }}>
+      <ol className="u-lista">
         <li>Escribe la secuencia (A+ B+ B− A−…).</li>
         <li>Divídela en grupos: ninguna letra se repite dentro de un grupo.</li>
         <li>Nº de válvulas de cascada = nº de grupos − 1 (5/2 biestables).</li>
@@ -30,7 +30,7 @@ export default function FichaNeumatica() {
         <li>La señal que da el último movimiento de cada grupo pasa la presión a la línea del grupo siguiente.</li>
       </ol>
       <h4>Diagrama de fase</h4>
-      <p style={{ margin: '0 0 6px' }}>Una fila por actuador: 0 = retraído, 1 = extendido; columnas = pasos de la secuencia.</p>
+      <p className="u-m-0-0-6">Una fila por actuador: 0 = retraído, 1 = extendido; columnas = pasos de la secuencia.</p>
       <h4>Funciones VDI 2860</h4>
       <p style={{ margin: 0, lineHeight: 1.45 }}>{FUNCIONES_VDI.map((f) => `${f.n}. ${f.nombre}`).join(' · ')}</p>
     </FichaRepaso>

@@ -49,7 +49,7 @@ export default function Inspector({ pestana, onPestana, onPlegar, motor, avisos,
             <Propiedades />
             {avisos.length > 0 && (
               <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--fondo-gris)' }} data-avisos-circuito="si">
-                <h3 style={{ margin: '0 0 6px', fontSize: '0.82rem', color: 'var(--tinta)' }}>Avisos del circuito ({avisos.length})</h3>
+                <h3 className="u-ayuda-tinta">Avisos del circuito ({avisos.length})</h3>
                 {avisos.map((a, i) => (
                   <p key={i} style={{ color: 'var(--naranjo-texto)', margin: '4px 0', fontSize: '0.85rem', lineHeight: 1.4 }}>
                     ⚠ {a}

@@ -61,8 +61,8 @@ export default function BarraPLC({
     </span>
   ) : (
     <button onClick={() => setEligiendoPlanta(true)} className="boton-planta" title="Elegir la planta, o empezar un ejercicio o un ejemplo" aria-label={`Planta: ${descripcion.nombre}. Elegir planta, ejercicio o ejemplo`} data-boton-planta="si" style={{ width: acostado ? 'clamp(64px, 17vw - 44px, 170px)' : estrecha ? '28vw' : 'auto', maxWidth: 360 }}>
-      {!estrecha && <span style={{ color: 'var(--tinta-suave)' }}>Planta:</span>}
-      <span style={{ fontWeight: 600 }}>{descripcion.nombre}</span>
+      {!estrecha && <span className="u-suave">Planta:</span>}
+      <span className="u-semi">{descripcion.nombre}</span>
       <span aria-hidden style={{ fontSize: '0.7rem', flex: 'none' }}>
         ▾
       </span>
@@ -111,7 +111,7 @@ export default function BarraPLC({
         )}
       </span>
       {botonPlanta}
-      <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
+      <span className="u-barra-derecha">
         {!estrecha && (
           <button onClick={guia.abrir} className="boton-icono" title="Guía de inicio" aria-label="Guía de inicio" data-abrir-guia="si">
             ?
@@ -141,7 +141,7 @@ export default function BarraPLC({
         ref={inputArchivo}
         type="file"
         accept="application/json,.json"
-        style={{ display: 'none' }}
+        className="u-oculto"
         onChange={(e) => {
           void abrir(e.target.files?.[0])
           e.target.value = ''

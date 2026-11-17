@@ -498,7 +498,7 @@ export default function App() {
       ref={inputArchivo}
       type="file"
       accept="application/json,.json"
-      style={{ display: 'none' }}
+      className="u-oculto"
       onChange={(e) => {
         void abrirArchivo(e.target.files?.[0])
         e.target.value = ''
@@ -510,11 +510,11 @@ export default function App() {
     <div className="banco__lienzo" data-vista={vista}>
       {vista === 'banco3d' ? (
         <>
-          <Suspense fallback={<p style={{ padding: 20, color: 'var(--tinta-suave)' }}>Montando el banco…</p>}>
+          <Suspense fallback={<p className="u-vacio">Montando el banco…</p>}>
             <Banco3D motor={motor} llenar play={playEscena} />
           </Suspense>
           {/* La pizarra sigue montada, oculta, para poder exportar el circuito. */}
-          <div style={{ display: 'none' }}>
+          <div className="u-oculto">
             <Pizarra motor={motor} vista="esquema" />
           </div>
         </>
@@ -621,7 +621,7 @@ export default function App() {
           )}
           {!estrecha && grupoZoom}
           {!estrecha && simulando && interruptorAire}
-          <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
+          <span className="u-barra-derecha">
             {estrecha ? (
               <Menu
                 etiqueta="⋯"
@@ -801,7 +801,7 @@ export default function App() {
 
         </>
       ) : (
-        <Suspense fallback={<p style={{ padding: 24, color: 'var(--tinta-suave)', textAlign: 'center' }}>Abriendo Estudiar…</p>}>
+        <Suspense fallback={<p className="u-cargando">Abriendo Estudiar…</p>}>
           <PaginaNeumaticaEstudiar alCargarCircuito={() => setSeccion('laboratorio')} />
         </Suspense>
       )}

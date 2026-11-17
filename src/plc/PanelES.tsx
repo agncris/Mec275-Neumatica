@@ -314,8 +314,8 @@ export function TablaSimbolos({
   const celda: React.CSSProperties = { borderBottom: '1px solid #e0e5eb', padding: '3px 6px' }
   const campo: React.CSSProperties = { width: '100%', padding: '0.2rem 0.3rem', border: '1px solid #d7dde3', borderRadius: 4, fontSize: '0.86rem' }
   return (
-    <div style={{ overflowX: 'auto' }}>
-      <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '0.88rem' }}>
+    <div className="u-scroll-x">
+      <table className="u-tabla">
         <thead>
           <tr style={{ background: '#1d5ea8', color: '#fff', textAlign: 'left' }}>
             <th style={{ padding: '5px 6px', width: '22%' }}>Simbología</th>

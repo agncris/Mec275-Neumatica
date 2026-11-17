@@ -86,7 +86,7 @@ export default function Preparacion({
           Avance orientativo para {materialDe(config.material).nombre.toLowerCase()}: {materialDe(config.material).avance.join('–')} mm/min.
         </p>
       </div>
-      <details style={{ marginTop: 8 }}>
+      <details className="u-mt-8">
         <summary style={{ cursor: 'pointer', color: 'var(--tinta)', fontWeight: 600, fontSize: '0.9rem' }}>
           Herramientas {torno ? 'de la torreta' : 'del almacén'} ({herramientas.length}){(torno ? config.herramientasTorno : config.herramientasFresa) ? ' · propias' : ''}
         </summary>
@@ -119,7 +119,7 @@ function EditorHerramientas({ config, setConfig, bloqueado }: { config: ConfigCN
         Puedes cambiar las herramientas como en la máquina: el número T, el nombre, el tipo y sus medidas.
         {torno ? ' En el torno la medida es el ancho de la hoja (ranurado) o el diámetro (broca); el ángulo es el del filo secundario (el de roscado, el de la punta).' : ' El diámetro es el que usa la compensación de radio G41/G42 (radio = diámetro ÷ 2).'}
       </p>
-      <div style={{ overflowX: 'auto' }}>
+      <div className="u-scroll-x">
         <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '0.85rem' }}>
           <thead>
             <tr>

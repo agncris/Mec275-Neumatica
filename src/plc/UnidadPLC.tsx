@@ -377,9 +377,9 @@ export default function UnidadPLC() {
         )}
       </TituloArea>
       )}
-      {corriendo && <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: 'var(--tinta-suave)' }}>El PLC está ejecutando el programa. Pásalo a STOP para editarlo.</p>}
+      {corriendo && <p className="u-ayuda-suave">El PLC está ejecutando el programa. Pásalo a STOP para editarlo.</p>}
       {!corriendo && !programa.escalones.some((e) => e.bobinas.some(Boolean)) && (
-        <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: 'var(--tinta)' }}>El escalón está vacío. Elige un contacto, haz clic en una casilla y cierra con una bobina a la derecha. Ctrl+Z deshace.</p>
+        <p className="u-ayuda-tinta">El escalón está vacío. Elige un contacto, haz clic en una casilla y cierra con una bobina a la derecha. Ctrl+Z deshace.</p>
       )}
       <EditorLadder
         programa={programa}
@@ -390,7 +390,7 @@ export default function UnidadPLC() {
         notacion={notacion}
       />
       {avisos.length > 0 && (
-        <div style={{ marginTop: 8 }} data-avisos-plc="si">
+        <div className="u-mt-8" data-avisos-plc="si">
           {avisos.map((a, i) => (
             <p key={i} style={{ color: 'var(--naranjo-texto)', margin: '3px 0', fontSize: '0.86rem' }}>
               ⚠ {a}{' '}
@@ -415,7 +415,7 @@ export default function UnidadPLC() {
         )}
       </TituloArea>
       <div className="relleno">
-        <Suspense fallback={<p style={{ padding: 20, color: 'var(--tinta-suave)' }}>Montando la planta…</p>}>
+        <Suspense fallback={<p className="u-vacio">Montando la planta…</p>}>
           <Planta3D
             sim={simRef}
             version={version}
@@ -506,7 +506,7 @@ export default function UnidadPLC() {
             contenido: (
               <div data-plano-tarea="si">
                 <ProcesoTarea etapas={ETAPAS_SILO} paso={pasoTarea}>
-                  <p style={{ margin: '8px 0 0' }}>
+                  <p className="u-m-8-0-0">
                     <button type="button" onClick={verEjemploGuiado} style={botonSuave}>
                       Ver ejemplo guiado
                     </button>{' '}
@@ -592,7 +592,7 @@ export default function UnidadPLC() {
           conCajon={entregaAbierta && !estrecha}
         />
       ) : (
-        <Suspense fallback={<p style={{ padding: 24, color: 'var(--tinta-suave)', textAlign: 'center' }}>Abriendo Estudiar…</p>}>
+        <Suspense fallback={<p className="u-cargando">Abriendo Estudiar…</p>}>
           <EstudiarPLC />
         </Suspense>
       )}

@@ -76,7 +76,7 @@ export default function CajonEntregar({ unidad, clave, trabajoSugerido, onCerrar
     const bloqueada = a.deshabilitado || sinNombre
     return (
       <li key={a.id} style={estiloFila} data-entrega={a.id}>
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="u-flex-min">
           <div style={{ fontWeight: 600, color: 'var(--texto)' }}>{a.titulo}</div>
           {(a.deshabilitado ? a.porque : a.detalle) && <div style={{ fontSize: '0.8rem', color: 'var(--tinta-suave)', marginTop: 1 }}>{a.deshabilitado ? a.porque : a.detalle}</div>}
           {mensajes[a.id] && (

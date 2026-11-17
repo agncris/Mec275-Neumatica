@@ -792,8 +792,8 @@ function Propiedades({
             />
           </label>
         )}
-        <span style={{ color: 'var(--tinta-tenue)' }}>{explicarBobina(b)}</span>
-        <button onClick={onCerrar} style={{ marginLeft: 'auto', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--tinta-tenue)' }}>
+        <span className="u-tenue">{explicarBobina(b)}</span>
+        <button onClick={onCerrar} className="u-cerrar">
           ✕
         </button>
       </div>
@@ -853,8 +853,8 @@ function Propiedades({
             })
           }
         />
-        <span style={{ color: 'var(--tinta-tenue)' }}>Deja pasar la corriente mientras la comparación sea verdadera.</span>
-        <button onClick={onCerrar} style={{ marginLeft: 'auto', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--tinta-tenue)' }}>
+        <span className="u-tenue">Deja pasar la corriente mientras la comparación sea verdadera.</span>
+        <button onClick={onCerrar} className="u-cerrar">
           ✕
         </button>
       </div>
@@ -901,10 +901,10 @@ function Propiedades({
           ])}
         </select>
       </label>
-      <span style={{ color: 'var(--tinta-tenue)' }}>
+      <span className="u-tenue">
         {celda.modo === 'NA' ? 'Deja pasar la corriente cuando su dirección vale 1.' : 'Deja pasar la corriente cuando su dirección vale 0.'}
       </span>
-      <button onClick={onCerrar} style={{ marginLeft: 'auto', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--tinta-tenue)' }}>
+      <button onClick={onCerrar} className="u-cerrar">
         ✕
       </button>
     </div>

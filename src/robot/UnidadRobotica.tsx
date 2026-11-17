@@ -619,7 +619,7 @@ export default function UnidadRobotica() {
           conCajon={entregaAbierta && enTarea && !estrecha}
         />
       ) : (
-        <Suspense fallback={<p style={{ padding: 24, color: 'var(--tinta-suave)', textAlign: 'center' }}>Abriendo Estudiar…</p>}>
+        <Suspense fallback={<p className="u-cargando">Abriendo Estudiar…</p>}>
           <EstudiarRobotica setSeccion={setSeccion} />
         </Suspense>
       )}

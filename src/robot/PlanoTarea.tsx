@@ -56,7 +56,7 @@ export default function PlanoTarea({ paso, avance, checklist, onEstudiar, ejempl
             </ol>
             <p style={{ margin: '0 0 4px' }}><strong>Dónde:</strong> {paso.donde}</p>
             <p style={{ margin: '0 0 4px' }}><strong>Listo cuando:</strong> {paso.listo}</p>
-            <p style={{ margin: '0 0 8px', color: 'var(--tinta)' }}><strong>Por qué:</strong> {paso.por}</p>
+            <p className="u-parrafo"><strong>Por qué:</strong> {paso.por}</p>
             <details data-todos-los-pasos="si" style={{ marginTop: 4 }}>
               <summary style={{ cursor: 'pointer', fontWeight: 650 }}>Ver todos los pasos ({avance.filter((a) => a.hecho).length} de {paso.total} hechos)</summary>
               <ol style={{ margin: '6px 0 0', padding: 0, listStyle: 'none' }}>
@@ -71,14 +71,14 @@ export default function PlanoTarea({ paso, avance, checklist, onEstudiar, ejempl
           </>
         )}
       </section>
-      <p style={{ margin: '0 0 8px', color: 'var(--tinta)' }}>La fresa de 5 mm recorre el contorno (Offset +2,5) y las nueve ranuras (Offset −2,5), baja 5 mm y se acerca con PTP. Plancha de 250 × 250 mm. Los chaflanes y los arcos ya vienen en el DXF.</p>
+      <p className="u-parrafo">La fresa de 5 mm recorre el contorno (Offset +2,5) y las nueve ranuras (Offset −2,5), baja 5 mm y se acerca con PTP. Plancha de 250 × 250 mm. Los chaflanes y los arcos ya vienen en el DXF.</p>
       <p style={{ margin: '0 0 2px', fontWeight: 700 }}>Criterios de éxito</p>
       <ul style={{ margin: '0 0 8px', paddingLeft: 18 }}>
         <li>El recorrido sigue el contorno y las ranuras sin chocar.</li>
         <li>No hay singularidades ni ejes fuera de su límite.</li>
         <li>El programa KRL se puede leer.</li>
       </ul>
-      <p style={{ margin: '0 0 6px' }}>
+      <p className="u-m-0-0-6">
         <button type="button" onClick={() => onEstudiar('parametrica')} style={enlaceEstudiar}>
           ¿No recuerdas la diferencia entre LIN y CIR? → Estudiar
         </button>

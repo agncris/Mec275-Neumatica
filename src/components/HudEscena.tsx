@@ -84,7 +84,7 @@ export default function HudEscena({
           <VistaBoton id="iso" actual={vista} onVista={onVista} />
           <VistaBoton id="frente" actual={vista} onVista={onVista} />
         </div>
-        <div role="group" aria-label="Qué hace el arrastre" style={{ display: 'flex', gap: 4 }}>
+        <div role="group" aria-label="Qué hace el arrastre" className="u-fila-4">
           {(
             [
               ['girar', 'Girar'],
@@ -109,7 +109,7 @@ export default function HudEscena({
             </button>
           ))}
         </div>
-        <div role="group" aria-label="Acercar o alejar" style={{ display: 'flex', gap: 4 }}>
+        <div role="group" aria-label="Acercar o alejar" className="u-fila-4">
           <button type="button" onClick={() => onZoom(false)} title="Alejar" aria-label="Alejar" style={{ ...chip, flex: 1, fontWeight: 700 }}>
             −
           </button>

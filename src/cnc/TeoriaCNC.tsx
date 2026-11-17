@@ -17,7 +17,7 @@ const mono: React.CSSProperties = { fontFamily: "ui-monospace, 'SF Mono', Menlo,
 
 function Tabla({ cabeza, filas }: { cabeza: string[]; filas: ReactNode[][] }) {
   return (
-    <div style={{ overflowX: 'auto' }}>
+    <div className="u-scroll-x">
       <table style={tabla}>
         <thead>
           <tr>
@@ -152,7 +152,7 @@ export function OrganizarPrograma() {
             <span style={{ border: `1px solid ${TINTA}`, borderRadius: 8, padding: '4px 8px', fontSize: '0.86rem', background: '#f4f6f9' }}>
               <strong>{t}</strong>
               <br />
-              <span style={{ color: 'var(--tinta-tenue)' }}>{d}</span>
+              <span className="u-tenue">{d}</span>
             </span>
             {i < eleccion.length - 1 && <span style={{ color: TINTA }}>→</span>}
           </span>

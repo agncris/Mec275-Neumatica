@@ -435,7 +435,7 @@ export default function UnidadCNC() {
         </span>
       </TituloArea>
       {!/\bG0?[123]\b/i.test(codigo.replace(/\(.*?\)/g, '').replace(/;.*/g, '')) && (
-        <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: 'var(--tinta)' }}>G00 sólo se acerca. Para cortar escribe G01 (recta) o G02/G03 (arco), con avance F. Ctrl+Z deshace.</p>
+        <p className="u-ayuda-tinta">G00 sólo se acerca. Para cortar escribe G01 (recta) o G02/G03 (arco), con avance F. Ctrl+Z deshace.</p>
       )}
       <div className="relleno" style={{ minHeight: 220 }}>
         <EditorGcode
@@ -471,7 +471,7 @@ export default function UnidadCNC() {
       )}
       {estado === 'parada' && <div style={{ ...alarma, background: '#fff5e0', borderColor: '#f0c36d', color: '#7a4b00' }}>Programa detenido por M00/M01. Pulsa ▶ Continuar.</div>}
       <div className="relleno">
-        <Suspense fallback={<p style={{ padding: 20, color: 'var(--tinta-suave)' }}>Preparando la máquina…</p>}>
+        <Suspense fallback={<p className="u-vacio">Preparando la máquina…</p>}>
           <Maquina3D
             vista={vista}
             onCanvas={(c) => (canvasRef.current = c)}
@@ -487,23 +487,23 @@ export default function UnidadCNC() {
         </Suspense>
       </div>
       <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 6, fontSize: '0.85rem', color: 'var(--tinta)' }}>
-        <label style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+        <label className="u-fila-5">
           <input type="checkbox" checked={trayectoria} onChange={(e) => setTrayectoria(e.target.checked)} /> Trayectoria
         </label>
         {torno && (
-          <label style={{ display: 'flex', gap: 5, alignItems: 'center' }} title="Corta la pieza por la mitad para ver agujeros y ranuras por dentro">
+          <label className="u-fila-5" title="Corta la pieza por la mitad para ver agujeros y ranuras por dentro">
             <input type="checkbox" checked={corte} onChange={(e) => setCorte(e.target.checked)} /> Vista en corte
           </label>
         )}
-        <label style={{ display: 'flex', gap: 5, alignItems: 'center' }} title="Husillo, corte y ejes; se activa al hacer clic en la vista 3D">
+        <label className="u-fila-5" title="Husillo, corte y ejes; se activa al hacer clic en la vista 3D">
           <input type="checkbox" checked={sonido} onChange={(e) => setSonido(e.target.checked)} /> Sonido
         </label>
         {estrecha && selectorVelocidad}
-        <span style={{ color: 'var(--tinta-suave)' }}>Arrastra para girar la vista · {acercar(tactil)}.</span>
+        <span className="u-suave">Arrastra para girar la vista · {acercar(tactil)}.</span>
       </div>
       <Tablero sim={sim} torno={torno} paso={paso} ultimo={ultimo} modal={estadoModal} tiempoTotal={resultado.tiempoTotal} volumen={volumen} volumenInicial={volumenInicial} />
       {sim.consejos.length > 0 && (
-        <div style={{ marginTop: 8 }}>
+        <div className="u-mt-8">
           {sim.consejos.map((c, i) => (
             <p key={i} style={{ color: 'var(--naranjo-texto)', margin: '3px 0', fontSize: '0.85rem' }}>
               <button type="button" onClick={() => irA(c.linea)} style={{ border: 'none', background: 'transparent', color: 'inherit', cursor: 'pointer', padding: 0, font: 'inherit', textAlign: 'left' }}>
@@ -548,10 +548,10 @@ export default function UnidadCNC() {
       tituloCorto: 'Explicar',
       contenido: (
         <>
-          <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: 'var(--tinta-suave)' }}>Línea {lineaExplicada + 1}. Pon el cursor en una línea del programa para ver qué hace cada palabra.</p>
+          <p className="u-ayuda-suave">Línea {lineaExplicada + 1}. Pon el cursor en una línea del programa para ver qué hace cada palabra.</p>
           <code style={{ display: 'block', background: '#f4f6f9', padding: '6px 8px', borderRadius: 6, marginBottom: 6, whiteSpace: 'pre-wrap' }}>{lineas[lineaExplicada] || ' '}</code>
           {explicacion.length ? (
-            <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '0.88rem' }} data-explicacion="si">
+            <table className="u-tabla" data-explicacion="si">
               <tbody>
                 {explicacion.map((e, i) => (
                   <tr key={i}>
@@ -562,7 +562,7 @@ export default function UnidadCNC() {
               </tbody>
             </table>
           ) : (
-            <p style={{ color: 'var(--tinta-gris)', fontSize: '0.86rem' }}>Línea vacía.</p>
+            <p className="u-nota">Línea vacía.</p>
           )}
         </>
       ),
@@ -628,7 +628,7 @@ export default function UnidadCNC() {
           conCajon={entregaAbierta && enTarea && !estrecha}
         />
       ) : (
-        <Suspense fallback={<p style={{ padding: 24, color: 'var(--tinta-suave)', textAlign: 'center' }}>Abriendo Estudiar…</p>}>
+        <Suspense fallback={<p className="u-cargando">Abriendo Estudiar…</p>}>
           <EstudiarCNC />
         </Suspense>
       )}

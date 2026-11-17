@@ -75,7 +75,7 @@ export default function BarraCNC({
   const botonMaquina = enTarea ? (
     <span className="boton-planta" title="El enunciado de la tarea está en Aula" data-maquina-tarea="si" style={{ maxWidth: 360, cursor: 'default', padding: estrecha ? '0 0.5rem' : undefined }}>
       {!estrecha && <span style={{ color: '#9a4a00', fontWeight: 700 }}>{NOMBRE_TAREA}:</span>}
-      <span style={{ fontWeight: 600 }}>{estrecha ? MAQUINAS.torno.corto : MAQUINAS.torno.nombre}</span>
+      <span className="u-semi">{estrecha ? MAQUINAS.torno.corto : MAQUINAS.torno.nombre}</span>
     </span>
   ) : (
     <button
@@ -86,8 +86,8 @@ export default function BarraCNC({
       data-boton-maquina="si"
       style={{ maxWidth: 360, padding: estrecha ? '0 0.5rem' : undefined }}
     >
-      {!estrecha && <span style={{ color: 'var(--tinta-suave)' }}>Máquina:</span>}
-      <span style={{ fontWeight: 600 }}>{estrecha ? MAQUINAS[maquina].corto : MAQUINAS[maquina].nombre}</span>
+      {!estrecha && <span className="u-suave">Máquina:</span>}
+      <span className="u-semi">{estrecha ? MAQUINAS[maquina].corto : MAQUINAS[maquina].nombre}</span>
       <span aria-hidden style={{ fontSize: '0.7rem', flex: 'none' }}>
         ▾
       </span>
@@ -128,7 +128,7 @@ export default function BarraCNC({
       <BotonNuevo que="un programa" compacto={estrecha} deshabilitado={bloqueado} onClick={() => void nuevo()} />
       {!estrecha && selectorVelocidad}
       {botonMaquina}
-      <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
+      <span className="u-barra-derecha">
         {!estrecha && (
           <button onClick={guia.abrir} className="boton-icono" title="Guía de inicio" aria-label="Guía de inicio" data-abrir-guia="si">
             ?
@@ -152,7 +152,7 @@ export default function BarraCNC({
         ref={inputArchivo}
         type="file"
         accept=".json,.cnc,.nc,.gcode,.ngc,.tap,.txt,application/json,text/plain"
-        style={{ display: 'none' }}
+        className="u-oculto"
         onChange={(e) => {
           void abrir(e.target.files?.[0])
           e.target.value = ''

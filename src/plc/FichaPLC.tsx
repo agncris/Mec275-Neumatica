@@ -8,12 +8,12 @@ export default function FichaPLC() {
       <h4>Instrucciones</h4>
       <TablaFicha cabeza={['Instrucción', 'Qué hace']} filas={INSTRUCCIONES.map(([n, q]) => [<strong>{n}</strong>, q.charAt(0).toUpperCase() + q.slice(1)])} />
       <h4>Ciclo de scan (se repite sin parar)</h4>
-      <ol style={{ margin: '0 0 6px', paddingLeft: 18 }}>
+      <ol className="u-lista">
         <li>Lee las entradas y guarda su estado (imagen de entradas).</li>
         <li>Resuelve los escalones de arriba abajo.</li>
         <li>Escribe las salidas con lo que quedó.</li>
       </ol>
-      <p style={{ margin: '0 0 6px' }}>Si una salida tiene bobina en dos escalones, manda la de más abajo.</p>
+      <p className="u-m-0-0-6">Si una salida tiene bobina en dos escalones, manda la de más abajo.</p>
       <h4>Direcciones</h4>
       <TablaFicha
         cabeza={['Qué es', 'Se escribe', 'Ejemplo']}

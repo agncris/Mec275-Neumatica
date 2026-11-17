@@ -26,8 +26,8 @@ export default function ResumenRevision({ archivo, alumno, resumen, onCerrar }: 
         <dl style={{ margin: '12px 0 0', display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '3px 10px', fontSize: '0.86rem' }}>
           {resumen.datos.map(([k, v]) => (
             <div key={k} style={{ display: 'contents' }}>
-              <dt style={{ color: 'var(--tinta-suave)' }}>{k}</dt>
-              <dd style={{ margin: 0 }}>{v}</dd>
+              <dt className="u-suave">{k}</dt>
+              <dd className="u-sin-margen">{v}</dd>
             </div>
           ))}
         </dl>

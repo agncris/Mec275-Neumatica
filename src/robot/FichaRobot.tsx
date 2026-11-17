@@ -16,7 +16,7 @@ export default function FichaRobot() {
         ]}
       />
       <h4>Ejes de un KUKA de 6 ejes</h4>
-      <ul style={{ margin: '0 0 6px', paddingLeft: 18 }}>
+      <ul className="u-lista">
         <li>A1, A2 y A3 llevan la muñeca a su lugar (posición).</li>
         <li>A4, A5 y A6 orientan la herramienta.</li>
         <li>Singularidad: con A5 en 0°, A4 y A6 quedan alineados.</li>
@@ -42,7 +42,7 @@ export default function FichaRobot() {
         ]}
       />
       <h4>Componentes</h4>
-      <p style={{ margin: 0 }}>Seis partes: estructura mecánica (brazo) · actuadores · transmisiones · sensores · controlador (armario) · efector final (pinza, husillo…). Aparte: la interfaz de control (teach pendant; en KUKA, smartPAD).</p>
+      <p className="u-sin-margen">Seis partes: estructura mecánica (brazo) · actuadores · transmisiones · sensores · controlador (armario) · efector final (pinza, husillo…). Aparte: la interfaz de control (teach pendant; en KUKA, smartPAD).</p>
     </FichaRepaso>
   )
 }

@@ -42,7 +42,7 @@ const boton: CSSProperties = { border: '1px solid #c6ced6', background: '#fff', 
 function Escena({ vista }: { vista: React.MutableRefObject<VistaRobot> }) {
   return (
     <div style={{ height: 340, display: 'flex', flexDirection: 'column', padding: 8 }}>
-      <Suspense fallback={<p style={{ padding: 20, color: 'var(--tinta-suave)' }}>Montando el robot…</p>}>
+      <Suspense fallback={<p className="u-vacio">Montando el robot…</p>}>
         <Robot3D vista={vista} alto="100%" sinDetalle />
       </Suspense>
     </div>
@@ -64,7 +64,7 @@ export function DemoEjes() {
   return (
     <figure style={caja} data-demo-ejes="si">
       <Escena vista={vista} />
-      <div style={{ padding: '4px 12px 12px' }}>
+      <div className="u-pad-panel">
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '0 0 8px' }}>
           <button type="button" style={boton} onClick={() => setQ(POSE_NORMAL)}>Pose normal</button>
           <button type="button" style={boton} onClick={() => setQ((a) => [a[0], a[1], a[2], 40, SINGULAR_A5, -40])} data-ir-singularidad="si">
@@ -105,7 +105,7 @@ export function DemoAlcance() {
   return (
     <figure style={caja} data-demo-alcance="si">
       <Escena vista={vista} />
-      <div style={{ padding: '4px 12px 12px' }}>
+      <div className="u-pad-panel">
         <label style={{ display: 'grid', gridTemplateColumns: 'minmax(120px, 190px) 1fr 64px', gap: 8, alignItems: 'center', fontSize: '0.82rem', color: TINTA }}>
           <span style={{ fontWeight: 650 }}>Distancia de la pieza</span>
           <input type="range" min={250} max={1200} step={10} value={d} onChange={(e) => setD(Number(e.target.value))} aria-label="Distancia de la pieza a la base" />
@@ -188,7 +188,7 @@ export function DemoMovimientos() {
   return (
     <figure style={caja} data-demo-movimientos="si">
       <Escena vista={vista} />
-      <div style={{ padding: '4px 12px 12px' }}>
+      <div className="u-pad-panel">
         <div role="group" aria-label="Tipo de movimiento" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '0 0 8px', alignItems: 'center' }}>
           {(['PTP', 'LIN', 'CIR'] as Modo[]).map((m) => (
             <button key={m} type="button" aria-pressed={modo === m} onClick={() => { setModo(m); setP(0); setCorre(false) }} style={{ ...boton, background: modo === m ? COLOR_MODO[m] : '#fff', color: modo === m ? '#fff' : TINTA, borderColor: COLOR_MODO[m] }}>

@@ -103,7 +103,7 @@ export default function SimbologiaVDI() {
             <SimboloVDI n={pregunta.correcta.n} />
           </div>
 
-          <div style={{ display: 'grid', gap: 6 }}>
+          <div className="u-grid-6">
             {pregunta.opciones.map((op) => {
               const esCorrecta = op.n === pregunta.correcta.n
               const respondida = elegida !== null

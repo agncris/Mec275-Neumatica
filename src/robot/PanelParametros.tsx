@@ -121,7 +121,7 @@ export function Propiedades({
                     <code>{e.corto}</code> {e.nombre}: {e.descripcion}
                     {llegan.map((c) => (
                       <span key={`${c.de}-${c.salida}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginLeft: 6 }}>
-                        <span style={{ color: 'var(--tinta-suave)' }}>← {c.de}</span>
+                        <span className="u-suave">← {c.de}</span>
                         {onDesconectar && (
                           <button onClick={() => onDesconectar(c)} style={{ ...botonSuave, padding: '1px 8px', fontSize: '0.76rem', minHeight: 28 }} title="Quitar este cable">
                             Desconectar
@@ -144,7 +144,7 @@ export function Propiedades({
                 return (
                   <li key={s.corto}>
                     <code>{s.corto}</code> {s.nombre}: {datos.length} elemento(s)
-                    {datos.length > 0 && <span style={{ color: 'var(--tinta-tenue)' }}> — {datos.slice(0, 2).map(describirDato).join('; ')}{datos.length > 2 ? '…' : ''}</span>}
+                    {datos.length > 0 && <span className="u-tenue"> — {datos.slice(0, 2).map(describirDato).join('; ')}{datos.length > 2 ? '…' : ''}</span>}
                   </li>
                 )
               })}

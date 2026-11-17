@@ -55,7 +55,7 @@ export default function SelectorPlanta({ actual, notacion, ejercicioActual, onUs
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
       {lista.map((s) => (
         <span key={s.dir} title={s.descripcion} style={{ border: '1px solid var(--borde-tenue)', borderRadius: 6, padding: '1px 6px', fontSize: '0.8rem', background: '#f7f9fb' }}>
-          <code style={{ color: 'var(--tinta-suave)' }}>{formatear(s.dir, notacion)}</code> <strong>{s.nombre}</strong>
+          <code className="u-suave">{formatear(s.dir, notacion)}</code> <strong>{s.nombre}</strong>
         </span>
       ))}
     </div>
@@ -98,7 +98,7 @@ export default function SelectorPlanta({ actual, notacion, ejercicioActual, onUs
               >
                 <AnimacionPlanta id={p.id} ancho={60} />
                 <span style={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 }}>
-                  <span style={{ fontWeight: 600 }}>{p.nombre}</span>
+                  <span className="u-semi">{p.nombre}</span>
                   <span style={{ fontSize: '0.76rem', color: 'var(--tinta-suave)' }}>
                     {p.id === actual ? 'En uso · ' : ''}
                     {cuenta(p.id) ? `${cuenta(p.id)} ejemplo${cuenta(p.id) === 1 ? '' : 's'} o ejercicio${cuenta(p.id) === 1 ? '' : 's'}` : 'Para programar libre'}
@@ -133,7 +133,7 @@ export default function SelectorPlanta({ actual, notacion, ejercicioActual, onUs
                 <ul style={lista}>
                   {ejercicios.map((e) => (
                     <li key={e.id} style={fila}>
-                      <span style={{ flex: 1 }}>
+                      <span className="u-flex-1">
                         {e.titulo}
                         {e.id === ejercicioActual && <span style={{ color: 'var(--verde-oscuro)', fontWeight: 600 }}> · abierto</span>}
                       </span>
@@ -151,7 +151,7 @@ export default function SelectorPlanta({ actual, notacion, ejercicioActual, onUs
                 <ul style={lista}>
                   {ejemplos.map((e) => (
                     <li key={e.id} style={fila}>
-                      <span style={{ flex: 1 }}>{e.etiqueta}</span>
+                      <span className="u-flex-1">{e.etiqueta}</span>
                       <button onClick={() => onEjemplo(e)} style={boton} data-abrir-ejemplo={e.id}>
                         Abrir
                       </button>

@@ -205,7 +205,7 @@ export default function Autoevaluacion({ generadores, descripcion }: { generador
             {pregunta.enunciado}
           </p>
           {pregunta.figura && <div style={{ marginBottom: 10, overflowX: 'auto' }}>{pregunta.figura}</div>}
-          <div style={{ display: 'grid', gap: 6 }}>
+          <div className="u-grid-6">
             {pregunta.opciones.map((op, i) => {
               const esCorrecta = i === pregunta.correcta
               const marcada = elegida === i

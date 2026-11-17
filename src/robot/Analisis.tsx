@@ -11,7 +11,7 @@ function ideaDe(texto: string): { idea: string; ancla: string; pregunta: string 
 
 export default function Analisis({ sim, onIr, onEstudiar }: { sim: Simulacion; onIr: (p: Simulacion['problemas'][number]) => void; onEstudiar: (ancla: string) => void }) {
   return (
-    <div style={{ marginTop: 8 }} data-lista-analisis="si">
+    <div className="u-mt-8" data-lista-analisis="si">
       <p style={{ margin: '0 0 4px', fontSize: '0.84rem', color: 'var(--tinta)' }}>
         <strong>Análisis:</strong> {sim.muestras.length} posiciones calculadas · recorrido lineal {Math.round(sim.largoCorte)} mm · tiempo {sim.tiempo.toFixed(1)} s
       </p>

@@ -108,7 +108,7 @@ export default function MisTrabajos({ unidad, nombreActual, actual, abrir, onCer
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 6 }} data-lista-trabajos="si">
             {lista.map((t) => (
               <li key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', border: '1px solid var(--borde-suave)', borderRadius: 8 }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="u-flex-min">
                   {renombrando === t.id ? (
                     <input
                       autoFocus
@@ -181,7 +181,7 @@ export default function MisTrabajos({ unidad, nombreActual, actual, abrir, onCer
             ref={archivo}
             type="file"
             accept="application/json,.json"
-            style={{ display: 'none' }}
+            className="u-oculto"
             onChange={(e) => {
               void restaurar(e.target.files?.[0])
               e.target.value = ''

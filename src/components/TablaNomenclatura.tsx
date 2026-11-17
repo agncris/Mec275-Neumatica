@@ -24,7 +24,7 @@ export default function TablaNomenclatura() {
         siempre sobre el cuadro que está activo <em>en reposo</em>.
       </p>
 
-      <div style={{ overflowX: 'auto' }}>
+      <div className="u-scroll-x">
         <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '0.86rem', minWidth: 460 }}>
           <thead>
             <tr style={{ background: 'var(--tinta-suave)', color: '#fff' }}>

@@ -2261,3 +2261,33 @@ body:has(.banco:not(.banco--apilado):not(.banco--neumatica-apilado)) {
   font-weight: 700;
   color: #7a4a00;
 }
+
+/* Utilidades: los style en línea que se repetían igual en varios archivos pasaron a estas clases.
+   El selector va doblado (.u-x.u-x) para ganarle a reglas como `.lienzo-ayuda p`, que un style en línea
+   siempre superaba. */
+.u-oculto.u-oculto { display: none; }
+.u-derecha.u-derecha { margin-left: auto; }
+.u-suave.u-suave { color: var(--tinta-suave); }
+.u-scroll-x.u-scroll-x { overflow-x: auto; }
+.u-vacio.u-vacio { padding: 20px; color: var(--tinta-suave); }
+.u-semi.u-semi { font-weight: 600; }
+.u-mt-8.u-mt-8 { margin-top: 8px; }
+.u-tenue.u-tenue { color: var(--tinta-tenue); }
+.u-barra-derecha.u-barra-derecha { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+.u-cargando.u-cargando { padding: 24px; color: var(--tinta-suave); text-align: center; }
+.u-flex-1.u-flex-1 { flex: 1; }
+.u-m-0-0-6.u-m-0-0-6 { margin: 0 0 6px; }
+.u-lista.u-lista { margin: 0 0 6px; padding-left: 18px; }
+.u-ayuda-suave.u-ayuda-suave { margin: 0 0 6px; font-size: 0.82rem; color: var(--tinta-suave); }
+.u-ayuda-tinta.u-ayuda-tinta { margin: 0 0 6px; font-size: 0.82rem; color: var(--tinta); }
+.u-m-8-0-0.u-m-8-0-0 { margin: 8px 0 0; }
+.u-tabla.u-tabla { border-collapse: collapse; width: 100%; font-size: 0.88rem; }
+.u-cerrar.u-cerrar { margin-left: auto; border: none; background: transparent; cursor: pointer; color: var(--tinta-tenue); }
+.u-nota.u-nota { color: var(--tinta-gris); font-size: 0.86rem; }
+.u-fila-5.u-fila-5 { display: flex; gap: 5px; align-items: center; }
+.u-sin-margen.u-sin-margen { margin: 0; }
+.u-flex-min.u-flex-min { flex: 1; min-width: 0; }
+.u-parrafo.u-parrafo { margin: 0 0 8px; color: var(--tinta); }
+.u-pad-panel.u-pad-panel { padding: 4px 12px 12px; }
+.u-grid-6.u-grid-6 { display: grid; gap: 6px; }
+.u-fila-4.u-fila-4 { display: flex; gap: 4px; }

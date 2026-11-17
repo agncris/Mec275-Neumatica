@@ -134,7 +134,7 @@ export default function BarraRobot({
           )}
         </>
       )}
-      <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
+      <span className="u-barra-derecha">
         {!estrecha && (
           <button onClick={guia.abrir} className="boton-icono" title="Guía de inicio" aria-label="Guía de inicio" data-abrir-guia="si">
             ?
@@ -154,8 +154,8 @@ export default function BarraRobot({
           </>
         )}
       </span>
-      <input ref={inputDXF} type="file" accept=".dxf" style={{ display: 'none' }} onChange={(e) => (void abrirDXF(e.target.files?.[0]), (e.target.value = ''))} />
-      <input ref={inputDef} type="file" accept=".json,application/json" style={{ display: 'none' }} onChange={(e) => (void abrirDef(e.target.files?.[0]), (e.target.value = ''))} />
+      <input ref={inputDXF} type="file" accept=".dxf" className="u-oculto" onChange={(e) => (void abrirDXF(e.target.files?.[0]), (e.target.value = ''))} />
+      <input ref={inputDef} type="file" accept=".json,application/json" className="u-oculto" onChange={(e) => (void abrirDef(e.target.files?.[0]), (e.target.value = ''))} />
     </>
   )
 }

@@ -48,7 +48,7 @@ export default function GuiaInicio({ unidad, pasos, onCerrar }: { unidad: string
         {paso.texto}
       </p>
       <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 10 }}>
-        <div aria-hidden style={{ display: 'flex', gap: 4 }}>
+        <div aria-hidden className="u-fila-4">
           {pasos.map((_, k) => (
             <span key={k} style={{ width: 7, height: 7, borderRadius: 99, background: k === i ? 'var(--azul)' : 'var(--borde)' }} />
           ))}

@@ -32,7 +32,7 @@ const td: React.CSSProperties = { borderBottom: '1px solid #e0e5eb', padding: '6
 
 function Tabla({ cabeza, filas }: { cabeza: string[]; filas: ReactNode[][] }) {
   return (
-    <div style={{ overflowX: 'auto' }}>
+    <div className="u-scroll-x">
       <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '0.9rem' }}>
         <thead>
           <tr>

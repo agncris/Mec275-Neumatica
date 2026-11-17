@@ -189,7 +189,7 @@ export default function EntregaNeumatica({ onCerrar, capturarCircuito, capturarF
       guia={
         <ProcesoTarea etapas={['Montar', 'Probar', 'VDI', 'Entregar']} paso={pasoEntrega}>
           {onEstudiar && (
-            <p style={{ margin: '8px 0 0' }}>
+            <p className="u-m-8-0-0">
               <button type="button" onClick={() => onEstudiar(pasoEntrega.id === 'vdi' ? 'vdi' : pasoEntrega.id === 'probar' ? 'cascada' : 'iso')} style={enlaceEstudiar}>
                 ¿No recuerdas este paso? → Estudiar
               </button>

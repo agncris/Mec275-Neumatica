@@ -5,7 +5,7 @@ import { type ResultadoGcode } from './gcode'
 export default function Revision({ resultado, errores, avisos, irA, onEstudiar }: { resultado: ResultadoGcode; errores: ResultadoGcode['diagnosticos']; avisos: ResultadoGcode['diagnosticos']; irA: (n: number) => void; onEstudiar: (ancla: string) => void }) {
   const sinC = resultado.sinComentario
   return (
-    <div style={{ marginTop: 8 }} data-revision-cnc="si">
+    <div className="u-mt-8" data-revision-cnc="si">
       {errores.length === 0 && avisos.length === 0 && (
         <p style={{ margin: '3px 0', color: 'var(--verde-oscuro)', fontSize: '0.86rem' }}>✓ El programa no tiene errores de escritura.</p>
       )}

@@ -22,7 +22,7 @@ export default function CodigoKRL({ sim, t, seguir }: { sim: Simulacion; t: numb
   }, [explicada])
   return (
     <>
-      <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: 'var(--tinta-suave)' }}>
+      <p className="u-ayuda-suave">
         El programa que se genera para el controlador KUKA ({filas.length} líneas). Cada línea dice qué hace. Elige una para ver sus palabras.
         {seguir && activa >= 0 ? ` Ahora va por la línea ${activa + 1}.` : ''} Descárgalo desde Exportar.
       </p>
@@ -61,7 +61,7 @@ export default function CodigoKRL({ sim, t, seguir }: { sim: Simulacion; t: numb
       <p style={{ margin: '8px 0 6px', fontSize: '0.82rem', color: 'var(--tinta-suave)' }}>Línea {explicada + 1}. Cada palabra, como en el código G.</p>
       <code style={{ display: 'block', background: '#f4f6f9', padding: '6px 8px', borderRadius: 6, marginBottom: 6, whiteSpace: 'pre-wrap' }}>{vistas[explicada]?.codigo || ' '}</code>
       {explicacion.length ? (
-        <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '0.88rem' }} data-explicacion-krl="si">
+        <table className="u-tabla" data-explicacion-krl="si">
           <tbody>
             {explicacion.map((e, i) => (
               <tr key={i}>
@@ -72,7 +72,7 @@ export default function CodigoKRL({ sim, t, seguir }: { sim: Simulacion; t: numb
           </tbody>
         </table>
       ) : (
-        <p style={{ color: 'var(--tinta-gris)', fontSize: '0.86rem' }}>Línea vacía.</p>
+        <p className="u-nota">Línea vacía.</p>
       )}
     </>
   )

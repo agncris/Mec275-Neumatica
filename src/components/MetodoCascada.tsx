@@ -162,7 +162,7 @@ export default function MetodoCascada({ alCargar }: { alCargar?: () => void } = 
 
       {/* 4 — Reglas de cableado --------------------------------------------- */}
       <h3 style={titulo}>4 · Las tres reglas de cableado</h3>
-      <div style={{ overflowX: 'auto' }}>
+      <div className="u-scroll-x">
         <table style={tabla}>
           <tbody>
             <tr style={{ background: 'var(--fondo-claro)' }}>

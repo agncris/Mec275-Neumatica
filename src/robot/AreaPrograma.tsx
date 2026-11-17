@@ -89,7 +89,7 @@ export default function AreaPrograma({
       </TituloArea>
       {enunciado && (
         <p data-enunciado="si" style={{ margin: '0 0 6px', padding: '6px 10px', background: '#eef4fb', border: '1px solid #c9d9ee', borderRadius: 6, fontSize: '0.84rem', color: 'var(--texto)', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-          <span style={{ flex: 1 }}>{enunciado}</span>
+          <span className="u-flex-1">{enunciado}</span>
           <button onClick={() => setEnunciado(null)} aria-label="Ocultar el enunciado" title="Ocultar el enunciado" style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '1rem', lineHeight: 1 }}>
             ✕
           </button>
