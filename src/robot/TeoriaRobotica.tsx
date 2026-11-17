@@ -2,7 +2,7 @@
  * Teoría de la unidad de robótica, escrita para el alumno: qué es un robot
  * industrial, fabricación en serie frente a robótica, tipos, componentes,
  * grados de libertad, cómo leer una ficha técnica y la programación
- * paramétrica con Rhino, Grasshopper y KUKA|prc.
+ * paramétrica en NeumaLab (Programación visual).
  */
 import { createContext, useContext, type ReactNode } from 'react'
 import { VER_TAREA_ROBOTICA } from '../unidades'
@@ -246,38 +246,41 @@ export function ProgramacionParametrica() {
     <div>
       <p style={p}>
         En la <strong>robótica paramétrica</strong> la trayectoria del robot se define con parámetros (largos, alturas,
-        velocidades) que se pueden cambiar y ver el resultado al instante. En el curso se usa <strong>Rhinoceros 8</strong>{' '}
-        (modelado 3D), <strong>Grasshopper</strong> (programación visual con componentes y cables) y el complemento{' '}
-        <strong>KUKA|prc</strong> (Parametric Robot Control), que agrega los robots KUKA, simula y genera el código KRL.
+        velocidades) que se pueden cambiar y ver el resultado al instante. En MEC275 eso se hace en esta app,{' '}
+        <strong>NeumaLab</strong>, en <strong>Programación visual</strong>: cambias un número en un bloque y el recorrido
+        se actualiza al momento.
       </p>
       <ol style={{ margin: '0 0 10px', paddingLeft: 20, lineHeight: 1.6 }}>
-        <li>Modelar la pieza o traer el plano (DXF) a Rhino.</li>
-        <li>Definir la trayectoria con componentes de Grasshopper (dividir curvas, crear planos).</li>
-        <li>Configurar el robot, la herramienta y la base (el mesón y la pieza).</li>
-        <li>Simular con el slider del Core y revisar el análisis (alcance, límites, singularidades).</li>
-        <li>Exportar el código KUKA (archivos .src / .dat, lenguaje KRL).</li>
-        <li>Cargarlo en el controlador y probarlo en modo manual reducido (T1) antes de producir.</li>
+        <li>El plano DXF de la tarea ya está cargado.</li>
+        <li>Curve lee la capa.</li>
+        <li>Offset, Move y los bloques de trayectoria arman el recorrido.</li>
+        <li>El robot, la herramienta y la base (el mesón y la pieza) están en el Core.</li>
+        <li>▶ simula y Análisis revisa alcance, límites y singularidades.</li>
+        <li>Exportar saca el KRL (.src).</li>
       </ol>
       <p style={p}>
-        <strong>Estructura básica de una simulación en KUKA|prc (siete partes):</strong>
+        Ese archivo .src es el que después se carga en el controlador y se prueba en modo manual reducido (T1) antes de producir.
+      </p>
+      <p style={p}>
+        <strong>Partes de una simulación en Programación visual:</strong>
       </p>
       <Tabla
-        cabeza={['Parte', 'Para qué', 'En esta app']}
+        cabeza={['Parte', 'Para qué', 'Bloques']}
         filas={[
-          ['Puntos', 'Las coordenadas por donde pasa el robot.', 'Divide Length, Divide Curve, Discontinuity, Area…'],
-          ['Planos', 'Dicen hacia dónde apunta la herramienta en cada punto.', 'XY Plane, Rotate Plane, Divide Curve (KUKA|prc)'],
-          ['Comando', 'Convierte los planos en movimientos KRL.', 'LIN, PTP, CIR, AXIS, Set Digital Out, Wait, Custom KRL'],
-          ['Robot', 'El robot simulado: tamaño, velocidades y límites de sus ejes.', 'Robot (5 modelos KUKA)'],
+          ['Plano', 'El DXF de la tarea ya está cargado. Curve lee las curvas de una capa.', 'Curve'],
+          ['Recorrido', 'Compensa el trazo, lo baja y arma los puntos y los planos del camino.', 'Offset, Move, Divide Length, XY Plane, Toolpath'],
+          ['Comandos', 'Convierten el camino en movimientos y en salidas (husillo, pinza, esperas).', 'LIN, PTP, CIR, Toolpath, Set Digital Out, Wait'],
+          ['Robot', 'El robot simulado: tamaño, velocidades y límites de sus ejes.', 'Robot'],
           ['Herramienta', 'Lo que va en el flange; define el TCP.', 'Tool'],
-          ['Slider de simulación', 'Recorre la simulación en el tiempo (en KUKA|prc, un slider o KUKA|play).', 'La barra ▶ bajo la vista 3D'],
-          ['Core', 'Junta todo, simula, analiza y genera el código KRL.', 'KUKA|prc Core'],
+          ['Base', 'Dónde están el mesón y la pieza respecto del robot.', 'Core'],
+          ['Simulación', '▶ recorre el programa. Análisis revisa alcance, límites y singularidades. Exportar entrega el KRL (.src).', 'Core, ▶, Análisis, Exportar'],
         ]}
       />
       <p style={{ ...p, marginTop: 10 }}>
-        <strong>Colores de los componentes</strong>: gris = funciona bien; naranjo = le faltan datos, depende de un nodo
-        que falla o hay un aviso (no es un error propio); rojo = error en ese nodo (recibe un dato que no corresponde,
-        como curvas donde se piden puntos); verde = seleccionado. Ojo: en Grasshopper el componente que funciona bien se
-        ve blanco, y el gris es un componente oculto.
+        <strong>Colores de los bloques</strong>: la franja de arriba dice el grupo (naranjo, Movimientos; azul, Robot; verde,
+        Herramientas; morado, Trayectoria; gris, Utilidades). El borde y el fondo dicen el estado: gris y blanco cuando
+        funciona; naranjo cuando le faltan datos o hay un aviso; rojo cuando ese bloque recibe un dato que no corresponde,
+        como curvas donde se piden puntos; azul cuando está seleccionado.
       </p>
       <FiguraMovimientos />
       <p style={p}>

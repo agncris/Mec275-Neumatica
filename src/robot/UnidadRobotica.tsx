@@ -1344,7 +1344,7 @@ const SECCIONES_ROBOT: SeccionEstudio[] = [
   { id: 'componentes', indice: 'Componentes', titulo: 'Componentes de un robot de base fija', contenido: <Componentes /> },
   { id: 'grados', indice: 'Grados de libertad', titulo: 'Grados de libertad y singularidades', contenido: <GradosLibertad /> },
   { id: 'ficha-tecnica', indice: 'Ficha técnica', titulo: 'Ficha técnica: cómo elegir el robot', contenido: <FichaTecnica /> },
-  { id: 'parametrica', indice: 'Programación paramétrica', titulo: 'Programación paramétrica: Rhino, Grasshopper y KUKA|prc', contenido: <ProgramacionParametrica /> },
+  { id: 'parametrica', indice: 'Programación paramétrica', titulo: 'Programación paramétrica en NeumaLab', contenido: <ProgramacionParametrica /> },
   { id: 'como-usar', indice: 'Cómo usar esta unidad', titulo: 'Cómo usar esta unidad', contenido: <ComoUsar /> },
 ]
 
