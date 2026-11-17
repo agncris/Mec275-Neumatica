@@ -147,7 +147,9 @@ export default function UnidadRobotica() {
   const seccion: SeccionUnidad = seccionPedida === 'tarea' && !VER_TAREA_ROBOTICA ? 'laboratorio' : seccionPedida
   const enTarea = seccion === 'tarea'
   const panel = usePanelAcoplado<PestanaRobot>('neumalab.robot.panel.v3', enTarea ? 'plano-tarea' : 'analisis', false, 280)
-  const [plegado, setPlegado] = usePersistente<'abierto' | 'riel' | 'oculto'>('neumalab.robot.plegado', 'abierto')
+  const [plegadoGuardado, setPlegado] = usePersistente<'abierto' | 'riel' | 'oculto'>('neumalab.robot.plegado', 'abierto')
+  // Antes se podía ocultar del todo y no quedaba cómo volver. Solo se colapsa a una tira.
+  const plegado = plegadoGuardado === 'oculto' ? 'riel' : plegadoGuardado
   // Al entrar directo a la tarea (enlace ?vista=tarea) se ve primero el plano.
   useEffect(() => {
     if (!enTarea) return
@@ -729,11 +731,8 @@ export default function UnidadRobotica() {
         <TituloArea
           derecha={
             <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-              <button type="button" className="boton-icono" title="Reducir el programa a una tira" aria-label="Reducir el programa a una tira" onClick={() => setPlegado('riel')}>
+              <button type="button" className="boton-icono" title="Colapsar el programa" aria-label="Colapsar el programa" onClick={() => setPlegado('riel')}>
                 «
-              </button>
-              <button type="button" className="boton-icono" title="Ocultar el programa y dejar la simulación" aria-label="Ocultar el programa" onClick={() => setPlegado('oculto')}>
-                ✕
               </button>
             </span>
           }
@@ -783,12 +782,9 @@ export default function UnidadRobotica() {
       <>
       <TituloArea
         derecha={
-          <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-            <button type="button" className="boton-icono" title="Reducir el mando a una tira" aria-label="Reducir el mando a una tira" onClick={() => setPlegado('riel')}>
+            <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+            <button type="button" className="boton-icono" title="Colapsar el mando" aria-label="Colapsar el mando" onClick={() => setPlegado('riel')}>
               «
-            </button>
-            <button type="button" className="boton-icono" title="Ocultar el mando" aria-label="Ocultar el mando" onClick={() => setPlegado('oculto')}>
-              ✕
             </button>
           </span>
         }
@@ -842,11 +838,6 @@ export default function UnidadRobotica() {
               <>
                 <h2 style={{ margin: 0, fontSize: '1rem' }}>Simulación 3D</h2>
                 <span style={{ fontWeight: 400, fontSize: '0.8rem', color: '#51606f' }}>{modeloVista.nombre}</span>
-                {plegado === 'oculto' && (
-                  <button type="button" className="boton-icono" title="Mostrar el programa" aria-label="Mostrar el programa" onClick={() => setPlegado('abierto')}>
-                    »
-                  </button>
-                )}
                 {simActiva && (
                   <button
                     onClick={abrirAnalisis}

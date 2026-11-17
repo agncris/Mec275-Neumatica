@@ -369,7 +369,7 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
           ) : (
             <>
               <span className="paleta-nodos__titulo">Componentes</span>
-              <button type="button" className="paleta-nodos__plegar" aria-expanded title="Ocultar componentes" aria-label="Ocultar componentes" onClick={() => setPlegada(true)}>
+              <button type="button" className="paleta-nodos__plegar" aria-expanded title="Colapsar componentes" aria-label="Colapsar componentes" onClick={() => setPlegada(true)}>
                 ‹
               </button>
             </>
