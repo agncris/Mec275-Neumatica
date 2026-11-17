@@ -8,7 +8,7 @@
  * La escena está en milímetros; el robot usa Z hacia arriba (como KUKA y
  * Rhino) y se gira para three.js, que usa Y hacia arriba.
  */
-import { BotonPlayEscena, type PlayEscena } from '../components/HudEscena'
+import { type PlayEscena } from '../components/HudEscena'
 import { aplicarModoArrastre, girarCuadrante, zoomCamara, type LadoCubo, type ModoArrastre } from '../components/mandoCamara'
 import BotonPantallaCompleta, { usePantallaCompleta } from '../components/PantallaCompleta'
 import { useEffect, useRef, useState, type CSSProperties, type MutableRefObject, type ReactNode } from 'react'
@@ -693,6 +693,36 @@ export default function Robot3D({
             </button>
           ))}
         </div>
+        {play && (
+          <button
+            type="button"
+            onClick={play.onClick}
+            disabled={play.deshabilitado}
+            title={play.titulo ?? play.etiqueta}
+            aria-label={play.corriendo ? 'Pausa' : 'Reproducir'}
+            data-play-escena="si"
+            data-play="si"
+            style={{
+              position: 'absolute',
+              left: 12,
+              bottom: 12,
+              zIndex: 4,
+              width: 46,
+              height: 46,
+              borderRadius: 12,
+              border: 'none',
+              background: play.corriendo ? '#ffa726' : '#0e7a43',
+              color: play.corriendo ? '#1c2733' : '#fff',
+              fontSize: '1.15rem',
+              lineHeight: 1,
+              cursor: play.deshabilitado ? 'default' : 'pointer',
+              opacity: play.deshabilitado ? 0.45 : 1,
+              boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
+            }}
+          >
+            {play.corriendo ? '❚❚' : '▶'}
+          </button>
+        )}
         {pantalla && (
           <div style={barraNav} data-mando-camara="si" role="toolbar" aria-label="Navegación de la cámara">
             <button type="button" aria-pressed={modoArrastre === 'girar'} title="Girar la vista" onClick={() => setModoArrastre('girar')} style={chipNav(modoArrastre === 'girar')}>
@@ -713,11 +743,6 @@ export default function Robot3D({
           </div>
         )}
       </div>
-      {pantalla && play && (
-        <div style={{ position: 'absolute', left: '50%', bottom: 16, transform: 'translateX(-50%)', zIndex: 4 }}>
-          <BotonPlayEscena play={play} />
-        </div>
-      )}
     </div>
   )
 }

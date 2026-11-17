@@ -4,7 +4,7 @@
  * de alcance, límites y singularidades, y exportar el código KRL. Funciona en
  * el navegador: no hace falta Windows ni licencias.
  */
-import { BotonNuevo, botonPrimario, botonSecundario, estiloAviso, Menu, useEsEstrecha, usePersistente } from '../components/ui'
+import { BotonNuevo, botonSecundario, estiloAviso, Menu, useEsEstrecha, usePersistente } from '../components/ui'
 import BancoDividido, { TituloArea } from '../components/banco/BancoDividido'
 import { usePanelAcoplado, type PestanaPanel } from '../components/banco/PanelAcoplado'
 import PaginaEstudiar, { type SeccionEstudio } from '../components/banco/PaginaEstudiar'
@@ -877,17 +877,6 @@ export default function UnidadRobotica() {
       </div>
       {simActiva ? (
         <div className="reproductor-robot" data-reproductor="si">
-          <button
-            onClick={() => {
-              if (!reproduciendo && tRef.current >= simActiva.tiempo - 1e-6) tRef.current = 0
-              setReproduciendo((r) => !r)
-            }}
-            style={{ ...botonPrimario(false, reproduciendo ? '#ffa726' : undefined), color: reproduciendo ? '#1c2733' : '#fff', padding: '0.25rem 0.7rem', minHeight: 32 }}
-            aria-label={reproduciendo ? 'Pausa' : 'Reproducir'}
-            data-play="si"
-          >
-            {reproduciendo ? '❚❚' : '▶'}
-          </button>
           <input
             type="range"
             min={0}
