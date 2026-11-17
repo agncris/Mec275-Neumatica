@@ -690,7 +690,7 @@ export default function App() {
               {lienzo}
               {panelInferior}
             </div>
-            {!entregaAbierta && inspectorAbierto && <BordeAncho ancho={anchoInspector} onAncho={setAnchoInspector} min={240} max={560} lado={-1} etiqueta="Cambiar el ancho del inspector" />}
+            {!entregaAbierta && inspectorAbierto && <BordeAncho ancho={anchoInspector} onAncho={setAnchoInspector} min={240} max={720} lado={-1} etiqueta="Cambiar el ancho del inspector" />}
             {!entregaAbierta && (
             <div className={`banco__inspector${inspectorAbierto ? '' : ' banco__inspector--plegado'}`} style={inspectorAbierto && anchoInspector ? { width: anchoInspector } : undefined}>
               {inspectorAbierto ? (

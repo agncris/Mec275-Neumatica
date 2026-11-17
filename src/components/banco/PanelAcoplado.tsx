@@ -63,7 +63,6 @@ export default function PanelAcoplado<T extends string>({
   ampliado = false,
   onAmpliar,
   ancho = ANCHO_PANEL,
-  onAncho,
   lado = 'abajo',
   etiqueta,
   fijo = false,
@@ -85,23 +84,6 @@ export default function PanelAcoplado<T extends string>({
       document.body.classList.remove('arrastrando-alto')
     }
     document.body.classList.add('arrastrando-alto')
-    window.addEventListener('pointermove', mover)
-    window.addEventListener('pointerup', soltar)
-  }
-
-  const arrastrarAncho = (e: React.PointerEvent) => {
-    e.preventDefault()
-    const x0 = e.clientX
-    const w0 = raiz.current?.getBoundingClientRect().width ?? ancho
-    const padre = raiz.current?.parentElement?.clientWidth ?? 1200
-    const max = Math.max(ANCHO_MIN_PANEL + 80, Math.min(560, Math.round(padre * 0.48)))
-    const mover = (ev: PointerEvent) => onAncho?.(Math.round(Math.max(ANCHO_MIN_PANEL, Math.min(max, w0 + (x0 - ev.clientX)))))
-    const soltar = () => {
-      window.removeEventListener('pointermove', mover)
-      window.removeEventListener('pointerup', soltar)
-      document.body.classList.remove('arrastrando-ancho')
-    }
-    document.body.classList.add('arrastrando-ancho')
     window.addEventListener('pointermove', mover)
     window.addEventListener('pointerup', soltar)
   }
@@ -139,30 +121,6 @@ export default function PanelAcoplado<T extends string>({
     }
     return (
       <section ref={raiz} aria-label={etiqueta} className="banco-panel panel-acoplado panel-acoplado--derecha" style={{ width: ancho }} data-panel-lado="derecha">
-        <div
-          role="separator"
-          aria-orientation="vertical"
-          aria-label="Cambiar el ancho del panel"
-          aria-valuenow={Math.round(ancho)}
-          aria-valuemin={ANCHO_MIN_PANEL}
-          tabIndex={0}
-          onPointerDown={arrastrarAncho}
-          onDoubleClick={() => onAncho?.(ANCHO_PANEL)}
-          onKeyDown={(e) => {
-            const padre = raiz.current?.parentElement?.clientWidth ?? 1200
-            const max = Math.max(ANCHO_MIN_PANEL + 80, Math.min(560, Math.round(padre * 0.48)))
-            if (e.key === 'ArrowLeft') {
-              e.preventDefault()
-              onAncho?.(Math.min(max, ancho + 24))
-            }
-            if (e.key === 'ArrowRight') {
-              e.preventDefault()
-              onAncho?.(Math.max(ANCHO_MIN_PANEL, ancho - 24))
-            }
-          }}
-          className="tirador-panel tirador-panel--lado"
-          title="Arrastra para cambiar el ancho · doble clic: ancho inicial"
-        />
         <div className="panel-derecha__cabeza">
           <div role="tablist" aria-label={etiqueta} className="panel-derecha__pestanas">
             {pestanas.map((p) => (

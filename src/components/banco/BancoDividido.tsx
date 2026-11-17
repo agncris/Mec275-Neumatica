@@ -11,7 +11,8 @@
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useApaisado, useApilado, useCelular, usePersistente } from '../ui'
-import PanelAcoplado, { type PestanaPanel } from './PanelAcoplado'
+import PanelAcoplado, { ANCHO_MIN_PANEL, type PestanaPanel } from './PanelAcoplado'
+import BordeAncho from './BordeAncho'
 
 export interface AreaBanco {
   id: string
@@ -216,6 +217,16 @@ export default function BancoDividido<T extends string>({ clave, barra, izquierd
           )}
           {area(derecha, { flex: plegado === 'abierto' ? `${1 - division} 1 0` : '1 1 0' })}
         </div>
+        {inferior?.estado.abierto && (
+          <BordeAncho
+            ancho={inferior.estado.ancho}
+            onAncho={(a) => inferior.estado.onAncho(a ?? 320)}
+            min={ANCHO_MIN_PANEL}
+            max={720}
+            lado={-1}
+            etiqueta="Cambiar el ancho del panel"
+          />
+        )}
         {inferior && <PanelAcoplado<T> lado="derecha" etiqueta={inferior.etiqueta} pestanas={inferior.pestanas} {...inferior.estado} />}
       </div>
       {estado && <div className="banco__estado">{estado}</div>}
