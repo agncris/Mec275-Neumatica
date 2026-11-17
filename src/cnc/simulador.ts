@@ -36,6 +36,14 @@ const ALTO_INSERTO = 8
 /** Largo del cuerpo de la broca detrás de la punta (mm). El resto sube a la torreta. */
 export const LARGO_BROCA = 16
 
+/** Espesor de cada mordaza de la prensa de la fresadora y cuánto sobresale a lo largo (mm). */
+export const ESPESOR_MORDAZA = 18
+export const SOBRA_MORDAZA = 15
+/** Hasta qué altura toman las mordazas el bruto, medida desde su base (mm). */
+export function altoMordaza(altoBruto: number): number {
+  return Math.min(altoBruto * 0.6, altoBruto - 3)
+}
+
 /** Contrapunto, delante de la cara, centrado en el eje. */
 export function contrapuntoDe(pz: PiezaTorno): { z0: number; z1: number; radio: number } {
   const z0 = pz.z1 + 56
@@ -464,6 +472,17 @@ export class SimuladorCNC {
     const b = pz.bruto
     if (q.z < -b.alto - 0.01 && q.x > -h.diametro / 2 && q.x < b.largo + h.diametro / 2 && q.y > -h.diametro / 2 && q.y < b.ancho + h.diametro / 2) {
       return this.detener(p, `Choque: la herramienta baja a Z${q.z.toFixed(1)} y corta la mesa (el bruto mide ${b.alto} mm de alto).`)
+    }
+    // La prensa: dos mordazas pegadas a los cantos Y = 0 e Y = ancho, que toman la parte baja del bruto.
+    // Por fuera de la pieza, la fresa no puede bajar más que el borde de las mordazas.
+    const rh = h.diametro / 2
+    const zMordaza = -(b.alto - altoMordaza(b.alto))
+    const sobreMordaza =
+      q.x + rh > -SOBRA_MORDAZA &&
+      q.x - rh < b.largo + SOBRA_MORDAZA &&
+      ((q.y - rh < 0 && q.y + rh > -ESPESOR_MORDAZA) || (q.y + rh > b.ancho && q.y - rh < b.ancho + ESPESOR_MORDAZA))
+    if (sobreMordaza && q.z < zMordaza - 0.05) {
+      return this.detener(p, `Choque: la herramienta baja a Z${q.z.toFixed(1)} junto al canto de la pieza y toca la mordaza de la prensa. La prensa toma la pieza desde Z${zMordaza.toFixed(1)} hacia abajo: por ese lado no bajes de ahí.`)
     }
     const r = h.diametro / 2
     const c = pz.celda

@@ -30,7 +30,7 @@ import {
   type HerramientaFresa,
   type HerramientaTorno,
 } from './maquinas'
-import { ALTO_GARRA, PiezaFresa, PiezaTorno, contrapuntoDe, type SimuladorCNC } from './simulador'
+import { ALTO_GARRA, ESPESOR_MORDAZA, SOBRA_MORDAZA, PiezaFresa, PiezaTorno, altoMordaza, contrapuntoDe, type SimuladorCNC } from './simulador'
 import { SonidoCNC } from './sonidoCNC'
 
 export interface VistaCNC {
@@ -229,7 +229,8 @@ function modeloHerramientaTorno(h: HerramientaTorno, radioBruto: number): THREE.
   const profCuello = ranura ? Math.min(2.6, anchoCuello + 0.3) : 3.6
   // El cuello no cruza la punta hacia el resalte sin mecanizar.
   const xCuello = h.forma === 'izquierda' ? anchoCuello / 2 + 0.5 : h.forma === 'derecha' ? -(anchoCuello / 2 + 0.5) : ranura ? (a + b) / 2 : 0
-  const despeje = Math.min(70, Math.max(28, radioBruto + 14))
+  // Sin tope: en un bruto grande el mango también queda por fuera del material.
+  const despeje = Math.max(28, radioBruto + 14)
   const altoCuello = despeje - alto
   const cuello = caja(anchoCuello, altoCuello, profCuello, color, 0.2)
   cuello.position.set(xCuello, alto + altoCuello / 2, 0)
@@ -756,11 +757,12 @@ function escenaFresa(sim: SimuladorCNC): EscenaMaquina {
   }
   const baseTornillo = caja(L + 40, 30, W + 60, M.aceroOscuro, 3)
   baseTornillo.position.set(L / 2, -H - 15, -W / 2)
-  const altoMordaza = Math.min(H * 0.6, H - 3)
-  const mordaza1 = caja(L + 30, altoMordaza + 10, 18, M.acero, 2)
-  mordaza1.position.set(L / 2, -H + (altoMordaza - 10) / 2, 9)
+  // Las mismas medidas que usa el simulador para avisar del choque con la prensa.
+  const altoM = altoMordaza(H)
+  const mordaza1 = caja(L + SOBRA_MORDAZA * 2, altoM + 10, ESPESOR_MORDAZA, M.acero, 2)
+  mordaza1.position.set(L / 2, -H + (altoM - 10) / 2, ESPESOR_MORDAZA / 2)
   const mordaza2 = mordaza1.clone()
-  mordaza2.position.z = -W - 9
+  mordaza2.position.z = -W - ESPESOR_MORDAZA / 2
   raiz.add(baseTornillo, mordaza1, mordaza2)
   const columna = caja(120, 420, 110, M.pintura, 6)
   columna.position.set(L / 2, 60, -W - 170)
