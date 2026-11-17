@@ -5,7 +5,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
-import { atender } from './api/responder.js'
+import { atenderPeticion } from './api/responder.js'
 
 function cuerpoDe(req: IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -24,14 +24,9 @@ function mecbotEnDev(): Plugin {
       server.middlewares.use(async (req: IncomingMessage, res: ServerResponse, next: () => void) => {
         const ruta = (req.url || '').split('?')[0]
         if (ruta !== '/api/mecbot' || req.method !== 'POST') return next()
-        let cuerpo: unknown = null
-        try {
-          cuerpo = JSON.parse((await cuerpoDe(req)) || '{}')
-        } catch {
-          // Cuerpo ilegible: igual que en Vercel, se contesta como una petición sin mensajes.
-        }
+        const texto = await cuerpoDe(req).catch(() => '')
         const ip = (req.socket?.remoteAddress || 'local').replace(/^::ffff:/, '')
-        const { status, json } = await atender(cuerpo, ip)
+        const { status, json } = await atenderPeticion({ cabeceras: req.headers as Record<string, string>, texto, ip })
         res.statusCode = status
         res.setHeader('Content-Type', 'application/json')
         res.end(JSON.stringify(json))

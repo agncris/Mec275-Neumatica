@@ -3,6 +3,11 @@
  * Cada pregunta la contesta el modelo, con los apuntes del curso como contexto.
  * Guía el estudio y no entrega la resolución de las tareas.
  * Hay una caché de la misma pregunta y un tope por alumno.
+ *
+ * Límite conocido: la caché y el cupo por IP viven en la memoria de cada instancia
+ * de la función. En Vercel una instancia nueva parte de cero, así que el cupo es un
+ * freno razonable (un alumno que insiste) y no una garantía. Para un tope firme haría
+ * falta un almacén compartido (Vercel KV o Upstash); no se instaló a propósito.
  */
 
 import { contextoDe, normalizar, pideSolucion } from './materia.js'
@@ -16,6 +21,8 @@ const MAX_TEXTO = 700
 const TOPE_HORA = 12
 const TOPE_DIA = 40
 const CACHE_MAX = 200
+/** Tamaño máximo del cuerpo de una petición: 10 mensajes de 700 letras caben de sobra. */
+export const MAX_CUERPO = 32 * 1024
 
 /** Pregunta de un solo turno → respuesta ya pedida al modelo. */
 const cache = new Map()
@@ -169,4 +176,66 @@ export async function atender(cuerpo, ip) {
     if (!(e instanceof ErrorBot)) console.error('mecbot: fallo inesperado', e && e.stack)
     return e instanceof ErrorBot ? { status: e.status, json: { error: e.codigo } } : { status: 502, json: { error: 'red' } }
   }
+}
+
+/** ¿El host de esta dirección (o del valor de Host) es el equipo local? */
+function esLocal(host) {
+  return /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(host) || host.endsWith('.localhost')
+}
+
+function hostDe(url) {
+  try {
+    return new URL(url).host
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Revisa lo que llega antes de leer el JSON. `cabeceras` es un objeto con las
+ * cabeceras en minúsculas y `texto` el cuerpo tal como llegó. Devuelve `null` si todo
+ * está bien o `{ status, json }` con el rechazo:
+ *   · 415 si el Content-Type no es application/json;
+ *   · 413 si el cuerpo pasa de 32 kB;
+ *   · 403 si la petición viene de otro sitio. Se acepta el propio sitio (el Host de la
+ *     petición) y localhost. Sin Origin se mira Sec-Fetch-Site y Referer: solo se rechaza
+ *     lo que dice venir de otro sitio. Un cliente sin ninguna de esas cabeceras (curl, un
+ *     script) pasa, y de todos modos queda sujeto al cupo por IP.
+ */
+export function revisarPeticion(cabeceras, texto) {
+  const h = cabeceras || {}
+  const tipo = String(h['content-type'] || '').split(';')[0].trim().toLowerCase()
+  if (tipo !== 'application/json') return { status: 415, json: { error: 'tipo' } }
+  const declarado = Number(h['content-length'])
+  if ((Number.isFinite(declarado) && declarado > MAX_CUERPO) || (typeof texto === 'string' && Buffer.byteLength(texto, 'utf8') > MAX_CUERPO)) {
+    return { status: 413, json: { error: 'grande' } }
+  }
+  const propio = String(h['x-forwarded-host'] || h['host'] || '').split(',')[0].trim().toLowerCase()
+  const delSitio = (host) => !!host && (host.toLowerCase() === propio || esLocal(host.toLowerCase()))
+  const origen = h['origin']
+  if (origen !== undefined && origen !== '') {
+    return delSitio(hostDe(origen)) ? null : { status: 403, json: { error: 'origen' } }
+  }
+  const sitio = String(h['sec-fetch-site'] || '').toLowerCase()
+  if (sitio === 'cross-site') return { status: 403, json: { error: 'origen' } }
+  if (sitio === 'same-origin' || sitio === 'same-site' || sitio === 'none') return null
+  const referer = h['referer']
+  if (referer && !delSitio(hostDe(referer))) return { status: 403, json: { error: 'origen' } }
+  return null
+}
+
+/**
+ * Atiende una petición HTTP de MecBot tal como llega: revisa tipo, tamaño y origen,
+ * lee el JSON y llama a `atender`. La usan Vercel, `server.js` y `npm run dev`.
+ */
+export async function atenderPeticion({ cabeceras, texto, ip }) {
+  const rechazo = revisarPeticion(cabeceras, texto)
+  if (rechazo) return rechazo
+  let cuerpo = null
+  try {
+    cuerpo = JSON.parse(texto || '{}')
+  } catch {
+    // Cuerpo ilegible: se contesta como una petición sin mensajes (400).
+  }
+  return atender(cuerpo, ip)
 }
