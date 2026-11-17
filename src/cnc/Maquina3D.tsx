@@ -8,7 +8,7 @@
  * fresadora X va a la derecha, Y hacia el fondo y Z hacia arriba.
  */
 import HudEscena, { type PlayEscena } from '../components/HudEscena'
-import { aplicarModoArrastre, cursoresCamara, zoomCamara, type ModoArrastre } from '../components/mandoCamara'
+import { aplicarModoArrastre, zoomCamara, type ModoArrastre } from '../components/mandoCamara'
 import BotonPantallaCompleta, { usePantallaCompleta } from '../components/PantallaCompleta'
 import { useEffect, useRef, useState, type MutableRefObject } from 'react'
 import * as THREE from 'three'
@@ -18,8 +18,7 @@ import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js'
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { sombraContacto, solSuave } from '../vista3d/realista'
-import { crearViewCube } from '../vista3d/viewcube'
-import { bucleVisible } from '../vista3d/visible'
+import { crearEscena } from '../vista3d/escena'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import type { Vec3 } from './gcode'
 import {
@@ -879,15 +878,20 @@ export default function Maquina3D({
   useEffect(() => {
     const cont = contRef.current
     if (!cont) return
-    let renderer: THREE.WebGLRenderer
-    try {
-      renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true })
-    } catch {
+    const base = crearEscena(cont, {
+      preserveDrawingBuffer: true,
+      camara: { fov: 35, near: 1, far: 6000 },
+      controles: { enableDamping: true, dampingFactor: 0.08, zoomToCursor: true },
+      modoArrastre,
+      viewCube: { id: 'viewcube-cnc', alInicio: () => accionRef.current?.('iso') },
+      // Fuera de pantalla o con la pestaña oculta no se dibuja ni suena.
+      alOcultar: () => sonido.callar(),
+    })
+    if (!base) {
       setSinWebGL(true)
       return
     }
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-    renderer.setSize(cont.clientWidth, cont.clientHeight)
+    const { renderer, escena, camara, controles } = base
     renderer.outputColorSpace = THREE.SRGBColorSpace
     renderer.toneMapping = THREE.ACESFilmicToneMapping
     renderer.toneMappingExposure = 1.05
@@ -896,10 +900,8 @@ export default function Maquina3D({
     renderer.localClippingEnabled = true
     renderer.domElement.style.display = 'block'
     renderer.domElement.dataset.cnc3d = 'si'
-    cont.appendChild(renderer.domElement)
     onCanvas?.(renderer.domElement)
 
-    const escena = new THREE.Scene()
     const pmrem = new THREE.PMREMGenerator(renderer)
     escena.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
     escena.environmentIntensity = 1.2
@@ -910,15 +912,7 @@ export default function Maquina3D({
     sol.shadow.radius = 2.5
     escena.add(sol, sol.target, new THREE.HemisphereLight(0xf7f8fa, 0x8a8178, 0.62))
 
-    const camara = new THREE.PerspectiveCamera(35, cont.clientWidth / Math.max(1, cont.clientHeight), 1, 6000)
-    const controles = new OrbitControls(camara, renderer.domElement)
-    // El botón del medio desplaza la vista. Lo engancha cursoresCamara.
-    controles.enableDamping = true
-    controles.dampingFactor = 0.08
-    controles.zoomToCursor = true
     controlesRef.current = controles
-    aplicarModoArrastre(controles, modoArrastre)
-    const quitarCursores = cursoresCamara(controles, renderer.domElement)
 
     let actual: { sim: SimuladorCNC; esc: EscenaMaquina; maquina: string } | null = null
     const encuadrar = (v: Vista) => {
@@ -946,7 +940,6 @@ export default function Maquina3D({
       setVistaActual(v)
       encuadrar(v)
     }
-    const cubo = crearViewCube(camara, renderer, controles, cont, 'viewcube-cnc', () => accionRef.current?.('iso'))
 
     const sonido = new SonidoCNC()
     const activarSonido = () => {
@@ -954,20 +947,8 @@ export default function Maquina3D({
     }
     renderer.domElement.addEventListener('pointerdown', activarSonido)
 
-    const observador = new ResizeObserver(() => {
-      renderer.setSize(cont.clientWidth, cont.clientHeight)
-      camara.aspect = cont.clientWidth / Math.max(1, cont.clientHeight)
-      camara.updateProjectionMatrix()
-      cubo.actualizar()
-    })
-    observador.observe(cont)
-
-    let antes = performance.now()
     const tam = new THREE.Vector2()
-    const cuadro = () => {
-      const ahora = performance.now()
-      const dt = Math.min(0.1, (ahora - antes) / 1000)
-      antes = ahora
+    base.alCuadro((dt) => {
       const v = vista.current
       if (!actual || actual.sim !== v.sim) {
         const maquina = v.sim.config.maquina
@@ -987,26 +968,15 @@ export default function Maquina3D({
       if (v.sonido) sonido.actualizar(paso && paso.husillo !== 'off' && !s.alarma ? paso.rpm : 0, Math.min(1, s.cortando / 3), paso?.tipo === 'rapido' && !s.parado && s.t > 0)
       else sonido.callar()
       cont.dataset.linea = String(s.linea ?? '')
-      controles.update()
-      renderer.render(escena, camara)
-      cubo.render()
-    }
-    // Fuera de pantalla o con la pestaña oculta no se dibuja ni suena.
-    const pararBucle = bucleVisible(cont, cuadro, { alOcultar: () => sonido.callar() })
+    })
 
     return () => {
-      pararBucle()
-      observador.disconnect()
+      base.destruir()
       renderer.domElement.removeEventListener('pointerdown', activarSonido)
       sonido.cerrar()
       controlesRef.current = null
       onCanvas?.(null)
-      quitarCursores()
-      controles.dispose()
-      cubo.dispose()
-      renderer.dispose()
       pmrem.dispose()
-      cont.removeChild(renderer.domElement)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
