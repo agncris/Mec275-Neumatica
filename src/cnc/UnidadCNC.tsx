@@ -8,7 +8,7 @@
  */
 import { acercar, BotonNuevo, botonPrimario, botonSecundario, estiloAviso, Menu, useEsEstrecha, useTactil } from '../components/ui'
 import BancoDividido, { TituloArea } from '../components/banco/BancoDividido'
-import ProcesoTarea, { enlaceEstudiar, type PasoProceso } from '../components/banco/ProcesoTarea'
+import { enlaceEstudiar } from '../components/banco/ProcesoTarea'
 import { usePanelAcoplado, type PestanaPanel } from '../components/banco/PanelAcoplado'
 import SubnavUnidad, { seccionDeLaUrl, useSeccionUnidad, type SeccionUnidad } from '../components/banco/SubnavUnidad'
 import CajonEntregar from '../components/banco/CajonEntregar'
@@ -40,6 +40,8 @@ import Preparacion from './PanelPreparacion'
 import Revision from './Revision'
 import Tablero from './Tablero'
 import TablaPuntos, { filasCoordenadas } from './TablaPuntos'
+import PlanoTarea, { EJEMPLO_GUIADO_TORNO } from './PlanoTarea'
+import ResumenRevision from './ResumenRevision'
 import { botonSuave, rotulo, selector } from './estilos'
 import { SimuladorCNC, volumenPieza } from './simulador'
 import type { VistaCNC } from './Maquina3D'
@@ -993,122 +995,4 @@ const alarma: React.CSSProperties = {
   borderRadius: 8,
   color: '#8e1c1c',
   fontSize: '0.88rem',
-}
-
-
-const ETAPAS_CNC = ['Unidades', 'Husillo', 'Acercar', 'Cortar', 'Cerrar', 'Revisar']
-
-/** Código sin comentarios, para ver qué instrucciones ya escribió el alumno. */
-function codigoUtil(codigo: string): string {
-  return codigo.replace(/\(.*?\)/g, ' ').replace(/;.*/g, ' ')
-}
-
-/** Una sola pasada recta. No trae las cotas de la pieza. */
-const EJEMPLO_GUIADO_TORNO = `%
-( Ejemplo a medias: una pasada recta. No es la pieza del plano. )
-N10 G21 G90 G94          ( milímetros, absolutas, mm/min )
-N20 T0101                ( herramienta de desbaste )
-N30 M03 S800             ( husillo horario )
-N40 G00 X42 Z2           ( acercarse sin tocar )
-N50 G01 Z-10 F120        ( una recta de ejemplo: cámbiala por las cotas del plano )
-N60 G00 X46              ( retirar )
-N70 G00 Z2               ( volver )
-( Aquí siguen las demás pasadas. Los arcos van con G02 o G03. )
-N900 G28                 ( volver a la referencia )
-N910 M05                 ( parar el husillo )
-N920 M30                 ( fin de programa )
-%
-`
-
-function pasoCnc(codigo: string): PasoProceso {
-  const u = codigoUtil(codigo)
-  const total = ETAPAS_CNC.length
-  const base = { total }
-  if (!/\bG21\b/i.test(u)) {
-    return { ...base, id: 'unidades', numero: 1, titulo: 'Trabajar en milímetros', donde: 'La primera línea útil del programa.', accion: 'Escribe G21. Al lado, entre paréntesis, di que son milímetros.', listo: 'En el programa se lee G21.' }
-  }
-  if (!/\bM0?[34]\b/i.test(u)) {
-    return { ...base, id: 'husillo', numero: 2, titulo: 'Prender el husillo', donde: 'Debajo de G21, antes de mover la herramienta.', accion: 'Escribe M03 y la velocidad S (por ejemplo M03 S800). M03 gira en sentido horario.', listo: 'Hay un M03 o un M04 con su S.' }
-  }
-  if (!/\bG00\b/i.test(u)) {
-    return { ...base, id: 'acercar', numero: 3, titulo: 'Acercarse sin cortar', donde: 'Antes del primer corte.', accion: 'Con G00 lleva la herramienta cerca del bruto, sin tocarlo. En el torno, X es diámetro.', listo: 'Hay un G00 antes del corte.' }
-  }
-  if (!/\bG0?[123]\b/i.test(u)) {
-    return { ...base, id: 'cortar', numero: 4, titulo: 'Cortar con las cotas del plano', donde: 'Debajo del acercamiento.', accion: 'G01 corta en recta y G02 o G03 en arco. Pon el avance con F. Saca las medidas de la lámina, no las inventes.', listo: 'Hay al menos un G01, G02 o G03.' }
-  }
-  if (!/\bM(30|0?2)\b/i.test(u)) {
-    return { ...base, id: 'cerrar', numero: 5, titulo: 'Terminar el programa', donde: 'La última línea útil.', accion: 'Para el husillo con M05 y cierra con M30.', listo: 'El programa termina en M30 o M02.' }
-  }
-  return { ...base, id: 'revisar', numero: 6, titulo: 'Probar el ciclo y leer el checklist', donde: 'El botón ▶ Ciclo, junto a la máquina, y el checklist del panel derecho.', accion: 'Corre el ciclo. Si salta una alarma o una pasada queda muy profunda, vuelve a esa línea. El checklist no califica: avisa lo que falta.', listo: 'El checklist del panel derecho queda en verde y la simulación llega al final.' }
-}
-
-/** El plano de la tarea, con el proceso arriba y un solo paso abierto. */
-function PlanoTarea({ codigo, checklist, onEstudiar, onEjemplo }: { codigo: string; checklist: PuntoRevision[]; onEstudiar: (ancla: string) => void; onEjemplo: () => void }) {
-  const paso = pasoCnc(codigo)
-  return (
-    <div data-plano-tarea="si">
-      <ProcesoTarea etapas={ETAPAS_CNC} paso={paso}>
-        <p style={{ margin: '8px 0 0' }}>
-          <button type="button" onClick={onEjemplo} style={botonSuave}>
-            Ver ejemplo guiado
-          </button>{' '}
-          <button type="button" onClick={() => onEstudiar(paso.id === 'revisar' ? 'torno' : 'codigos')} style={enlaceEstudiar}>
-            ¿No recuerdas el código de este paso? → Estudiar
-          </button>
-        </p>
-      </ProcesoTarea>
-      <p style={{ margin: '8px 0 6px', fontSize: '0.82rem', color: '#51606f' }}>
-        Pieza 1, cotas en mm. En el torno, X se programa en diámetro y el cero del programa va en la cara frontal, sobre el eje.
-      </p>
-      {checklist.length > 0 && (
-        <ul style={{ margin: '0 0 8px', paddingLeft: 0, listStyle: 'none' }} data-checklist-tarea="si">
-          {checklist.map((p) => (
-            <li key={p.texto} style={{ margin: '2px 0', fontSize: '0.84rem', color: p.ok ? '#0a6b3c' : '#8a5b00' }}>
-              {p.ok ? '✓' : '☐'} {p.texto}
-            </li>
-          ))}
-        </ul>
-      )}
-      <a href="/plano-tarea3-cnc.png" target="_blank" rel="noreferrer" title="Abrir el plano en grande">
-        <img src="/plano-tarea3-cnc.png" alt="Plano de fabricación de la Tarea 3: pieza 1 con ranuras, tramo cónico, tramo curvo, hombro de Ø80 y punta redondeada de Ø40" style={{ width: '100%', maxWidth: 900, height: 'auto', display: 'block', border: '1px solid #dbe1e8', borderRadius: 6, background: '#fff' }} />
-      </a>
-    </div>
-  )
-}
-
-/** La revisión de un .json recién abierto: qué tiene el trabajo y qué conviene mirar. */
-function ResumenRevision({ archivo, alumno, resumen, onCerrar }: { archivo: string; alumno: string; resumen: ResumenTrabajo; onCerrar: () => void }) {
-  return (
-    <div role="dialog" aria-modal="true" aria-label="Revisión del trabajo" data-resumen-revision="si" style={{ position: 'fixed', inset: 0, background: 'rgba(20,30,40,0.45)', zIndex: 200, display: 'grid', placeItems: 'center', padding: 12 }} onClick={onCerrar}>
-      <div style={{ background: '#fff', borderRadius: 10, maxWidth: 560, width: '100%', maxHeight: '88dvh', overflowY: 'auto', padding: '14px 16px', boxShadow: '0 12px 40px rgba(0,0,0,0.3)' }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-          <h2 style={{ margin: 0, fontSize: '1.05rem', flex: 1 }}>Revisión del trabajo</h2>
-          <button onClick={onCerrar} aria-label="Cerrar" style={{ border: 'none', background: 'transparent', fontSize: '1.2rem', cursor: 'pointer' }}>
-            ✕
-          </button>
-        </div>
-        <p style={{ margin: '4px 0 10px', fontSize: '0.84rem', color: '#51606f' }}>
-          {archivo}
-          {alumno ? ` · ${alumno}` : ''}
-        </p>
-        <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 5 }}>
-          {resumen.puntos.map((r, i) => (
-            <li key={i} style={{ display: 'flex', gap: 8, fontSize: '0.88rem', color: r.ok ? '#14532d' : '#7a4f00' }}>
-              <span aria-hidden>{r.ok ? '✓' : '⚠'}</span>
-              <span>{r.texto}</span>
-            </li>
-          ))}
-        </ul>
-        <dl style={{ margin: '12px 0 0', display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '3px 10px', fontSize: '0.86rem' }}>
-          {resumen.datos.map(([k, v]) => (
-            <div key={k} style={{ display: 'contents' }}>
-              <dt style={{ color: '#51606f' }}>{k}</dt>
-              <dd style={{ margin: 0 }}>{v}</dd>
-            </div>
-          ))}
-        </dl>
-        <p style={{ margin: '12px 0 0', fontSize: '0.78rem', color: '#51606f' }}>La revisión no califica: avisa de lo que conviene mirar. El programa ya está abierto para simularlo.</p>
-      </div>
-    </div>
-  )
 }
