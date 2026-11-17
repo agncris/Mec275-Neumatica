@@ -15,7 +15,7 @@ import { useEffect, useRef, useState, type CSSProperties, type MutableRefObject,
 import { crearViewCube, type ViewCube } from '../vista3d/viewcube'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import { entornoEstudio, fondoTaller, sombraContacto } from '../vista3d/realista'
+import { entornoEstudio, sombraContacto } from '../vista3d/realista'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { aMundo, aplicar, matrizPlano, rad, type Plano, type V3 } from './matematica'
 import type { Simulacion } from './movimiento'
@@ -53,10 +53,27 @@ export interface VistaRobot {
   marcas: V3[]
 }
 
+/** Fondo con más contraste que el de las otras escenas: gris azulado que se oscurece hacia el piso. */
+function fondoContraste(): THREE.CanvasTexture {
+  const c = document.createElement('canvas')
+  c.width = 2
+  c.height = 256
+  const g = c.getContext('2d')!
+  const grad = g.createLinearGradient(0, 0, 0, 256)
+  grad.addColorStop(0, '#dde5ee')
+  grad.addColorStop(0.5, '#b3bfcc')
+  grad.addColorStop(1, '#7f8b99')
+  g.fillStyle = grad
+  g.fillRect(0, 0, 2, 256)
+  const t = new THREE.CanvasTexture(c)
+  t.colorSpace = THREE.SRGBColorSpace
+  return t
+}
+
 const NARANJA = new THREE.MeshPhysicalMaterial({ color: 0xf15a12, metalness: 0.18, roughness: 0.28, clearcoat: 0.72, clearcoatRoughness: 0.22 })
 const NEGRO = new THREE.MeshPhysicalMaterial({ color: 0x1a1d22, metalness: 0.35, roughness: 0.46, clearcoat: 0.3, clearcoatRoughness: 0.4 })
 const GRIS = new THREE.MeshPhysicalMaterial({ color: 0xd7dde4, metalness: 0.96, roughness: 0.16, clearcoat: 0.25 })
-const MESON = new THREE.MeshStandardMaterial({ color: 0x8b939c, metalness: 0.42, roughness: 0.4 })
+const MESON = new THREE.MeshStandardMaterial({ color: 0x737c86, metalness: 0.62, roughness: 0.3, envMapIntensity: 1.3 })
 const ACERO = new THREE.MeshPhysicalMaterial({ color: 0xe4e8ed, metalness: 1, roughness: 0.14, clearcoat: 0.15 })
 const HUSILLO = new THREE.MeshPhysicalMaterial({ color: 0xe8ecef, metalness: 0.9, roughness: 0.2, clearcoat: 0.35 })
 
@@ -317,6 +334,9 @@ export default function Robot3D({
   const [sinWebGL, setSinWebGL] = useState(false)
   const accion = useRef<((v: Vista) => void) | null>(null)
   const [vistaActual, setVistaActual] = useState<Vista>('iso')
+  const [detalle, setDetalle] = useState(false)
+  const detalleRef = useRef(false)
+  detalleRef.current = detalle
   const [modoArrastre, setModoArrastre] = useState<ModoArrastre>('girar')
   const controlesRef = useRef<OrbitControls | null>(null)
   const gizmoRef = useRef<ViewCube | null>(null)
@@ -341,7 +361,7 @@ export default function Robot3D({
     renderer.setSize(cont.clientWidth, cont.clientHeight)
     renderer.outputColorSpace = THREE.SRGBColorSpace
     renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 1.08
+    renderer.toneMappingExposure = 0.98
     renderer.shadowMap.enabled = true
     renderer.shadowMap.type = THREE.PCFSoftShadowMap
     renderer.domElement.style.display = 'block'
@@ -350,14 +370,14 @@ export default function Robot3D({
     onCanvas?.(renderer.domElement)
 
     const escena = new THREE.Scene()
-    const pmrem = entornoEstudio(renderer, escena, 0.85)
-    const fondo = fondoTaller()
+    const pmrem = entornoEstudio(renderer, escena, 0.8)
+    const fondo = fondoContraste()
     escena.background = fondo
     // Mundo con Z hacia arriba.
     const mundo = new THREE.Group()
     mundo.rotation.x = -Math.PI / 2
     escena.add(mundo)
-    const piso = new THREE.Mesh(new THREE.PlaneGeometry(8000, 8000), new THREE.MeshStandardMaterial({ color: 0xe7ebf0, roughness: 0.92, metalness: 0.02 }))
+    const piso = new THREE.Mesh(new THREE.PlaneGeometry(8000, 8000), new THREE.MeshStandardMaterial({ color: 0xaeb7c1, roughness: 0.62, metalness: 0.12, envMapIntensity: 0.9 }))
     piso.receiveShadow = true
     mundo.add(piso)
     const grilla = new THREE.GridHelper(6000, 40, 0x9aa3ad, 0xb7c0c9)
@@ -365,25 +385,25 @@ export default function Robot3D({
     grilla.position.z = 1
     for (const m of Array.isArray(grilla.material) ? grilla.material : [grilla.material]) {
       m.transparent = true
-      m.opacity = 0.85
+      m.opacity = 0.45
     }
     mundo.add(grilla)
     const ejesMundo = new THREE.AxesHelper(250)
     ejesMundo.position.z = 1
     mundo.add(ejesMundo)
-    const sol = new THREE.DirectionalLight(0xfff3e4, 2.6)
+    const sol = new THREE.DirectionalLight(0xfff1e0, 3.5)
     sol.castShadow = true
-    sol.shadow.mapSize.set(2048, 2048)
-    sol.shadow.bias = -0.0002
-    sol.shadow.normalBias = 0.04
-    sol.shadow.radius = 3
+    sol.shadow.mapSize.set(4096, 4096)
+    sol.shadow.bias = -0.00015
+    sol.shadow.normalBias = 0.05
+    sol.shadow.radius = 2.2
     Object.assign(sol.shadow.camera, { left: -1600, right: 1800, top: 1800, bottom: -1400, near: 400, far: 6000 })
     sol.position.set(1100, 2400, 1600)
-    const relleno = new THREE.DirectionalLight(0xc5d4e8, 0.55)
+    const relleno = new THREE.DirectionalLight(0xbfd0e6, 0.45)
     relleno.position.set(-1400, 900, -400)
     const contra = new THREE.DirectionalLight(0xffd2a8, 0.7)
     contra.position.set(-500, 1400, -2000)
-    escena.add(sol, relleno, contra, new THREE.HemisphereLight(0xf4f7fb, 0xd5dbe3, 0.65))
+    escena.add(sol, relleno, contra, new THREE.HemisphereLight(0xeaf0f7, 0x8d98a6, 0.4))
 
     const camara = new THREE.PerspectiveCamera(40, cont.clientWidth / Math.max(1, cont.clientHeight), 5, 30000)
     const controles = new OrbitControls(camara, renderer.domElement)
@@ -412,6 +432,9 @@ export default function Robot3D({
     const menosMovimiento = window.matchMedia('(prefers-reduced-motion: reduce)')
     const puntaLocal = new THREE.Vector3()
     let esperaViruta = 0
+    let puntaAntes: THREE.Vector3 | null = null
+    const avanceMm = new THREE.Vector3()
+    const objetivoDetalle = new THREE.Vector3()
     let alcance: THREE.Mesh | null = null
     let marcas: THREE.Group | null = null
     let marcasObj: V3[] | null = null
@@ -578,6 +601,10 @@ export default function Robot3D({
         stock.cargar(V.sim?.muestras ?? [], Math.max(0.4, V.herramienta.diametro / 2), V.base.o.z, localDe, !!(corta && V.sim))
         claveCorte = kC
       }
+      // En el modo detalle se ve el corte limpio: sin la previa ni la línea del centro.
+      const limpio = detalleRef.current && !!V.corriendo
+      if (previa) previa.visible = !limpio
+      if (camino) camino.visible = !limpio
       const iVis = V.sim ? indiceVisual(V.sim, V.q, V.indice) : 0
       if (stock) stock.aplicar(iVis, ahora / 1000, !V.corriendo)
       const enCorte = !!(V.corriendo && V.sim && cortandoAhora(V.sim, iVis, V.base.o.z) && !menosMovimiento.matches && (V.herramienta.tipo === 'fresa' || V.herramienta.tipo === 'taladro'))
@@ -585,15 +612,23 @@ export default function Robot3D({
         virutas.piso = V.base.o.z
         robot.punta.getWorldPosition(puntaLocal)
         mundo.worldToLocal(puntaLocal)
+        if (!puntaAntes) puntaAntes = puntaLocal.clone()
+        avanceMm.copy(puntaLocal).sub(puntaAntes).divideScalar(Math.max(dt, 1e-3))
+        puntaAntes.copy(puntaLocal)
         esperaViruta += dt
-        if (esperaViruta > 0.045) {
-          esperaViruta = 0
-          virutas.emitir(puntaLocal)
+        // Más viruta cuanto más gruesa es la fresa y más hondo el corte.
+        const prof = Math.max(0, Math.min(V.espesor || 5, V.base.o.z - puntaLocal.z))
+        const escala = Math.max(0.5, Math.min(2.6, (V.herramienta.diametro / 5) * (0.55 + prof / Math.max(1, V.espesor || 5) * 0.75)))
+        const cada = 0.03 / Math.max(0.6, V.herramienta.diametro / 5)
+        while (esperaViruta > cada) {
+          esperaViruta -= cada
+          virutas.emitir(puntaLocal, avanceMm, escala)
         }
         virutas.actualizar(dt)
       } else {
         esperaViruta = 0
-        virutas.apagar()
+        puntaAntes = null
+        virutas.apagar(dt)
       }
       // Alcance máximo aproximado (esfera centrada en el hombro).
       if (V.alcance && !alcance) {
@@ -625,6 +660,16 @@ export default function Robot3D({
         }
         mundo.add(marcas)
         marcasObj = V.marcas
+      }
+      if (detalleRef.current && robot) {
+        robot.punta.getWorldPosition(objetivoDetalle)
+        const ant = controles.target.clone()
+        controles.target.lerp(objetivoDetalle, 1 - Math.pow(0.001, dt))
+        camara.position.add(controles.target.clone().sub(ant))
+        const dir = camara.position.clone().sub(controles.target)
+        const d = dir.length()
+        const meta = 520
+        if (Math.abs(d - meta) > 4) camara.position.copy(controles.target).addScaledVector(dir.normalize(), d + (meta - d) * (1 - Math.pow(0.002, dt)))
       }
       controles.update()
       renderer.render(escena, camara)
@@ -692,6 +737,16 @@ export default function Robot3D({
                 {t}
               </button>
             ))}
+          <button
+            type="button"
+            onClick={() => setDetalle((d) => !d)}
+            aria-pressed={detalle}
+            title="La cámara sigue a la herramienta y se acerca al corte"
+            data-detalle-corte="si"
+            style={{ border: '1px solid #e0e5eb', background: detalle ? '#33475c' : '#fff', color: detalle ? '#fff' : '#51606f', borderRadius: 8, padding: '4px 10px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 600 }}
+          >
+            Seguir el corte
+          </button>
           <BotonPantallaCompleta activa={pantalla} onAlternar={alternarPantalla} estilo={{ border: '1px solid #e0e5eb', background: '#fff', color: '#51606f', borderRadius: 8, padding: '4px 10px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 600 }} />
         </div>
       </div>

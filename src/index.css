@@ -2212,3 +2212,24 @@ body:has(.banco:not(.banco--apilado):not(.banco--neumatica-apilado)) {
   color: #7a8794;
   text-align: center;
 }
+
+/* Barra del ejemplo: queda sobre las pestañas Plano, Análisis y KRL. */
+.panel-acoplado__encabezado {
+  flex: none;
+  padding: 8px 10px 0;
+  background: #fff;
+}
+.panel-acoplado__encabezado .tarea-accion {
+  margin: 0 0 6px;
+}
+.panel-acoplado__encabezado .tarea-accion__principal,
+.panel-acoplado__encabezado .tarea-accion__secundario {
+  min-height: 36px;
+  font-size: 0.86rem;
+}
+.panel-acoplado__encabezado__aviso {
+  margin: 0 0 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #7a4a00;
+}

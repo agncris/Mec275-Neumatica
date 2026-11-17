@@ -44,7 +44,7 @@ interface Props<T extends string> {
   barra: ReactNode
   izquierda: AreaBanco
   derecha: AreaBanco
-  inferior?: { etiqueta: string; pestanas: Array<PestanaPanel<T>>; estado: EstadoPanel<T> }
+  inferior?: { etiqueta: string; pestanas: Array<PestanaPanel<T>>; estado: EstadoPanel<T>; encabezado?: ReactNode }
   /** Texto o controles de la barra de estado (abajo). */
   estado?: ReactNode
   /** Encima de las áreas (p. ej. el enunciado de un ejercicio). */
@@ -152,6 +152,7 @@ export default function BancoDividido<T extends string>({ clave, barra, izquierd
           {area(derecha, capa(vistaMovil === derecha.id))}
           {deInferior && (
             <section aria-label={deInferior.titulo} className="banco-panel banco__area" style={capa(true)}>
+              {inferior?.encabezado && <div className="panel-acoplado__encabezado" data-encabezado-panel="si">{inferior.encabezado}</div>}
               {deInferior.contenido}
             </section>
           )}
@@ -172,7 +173,7 @@ export default function BancoDividido<T extends string>({ clave, barra, izquierd
         {encabezado}
         {area(izquierda, { flex: 'none', height: 'max(460px, 74dvh)' })}
         {area(derecha, { flex: 'none', height: 'max(420px, 70dvh)' })}
-        {inferior && <PanelAcoplado<T> etiqueta={inferior.etiqueta} pestanas={inferior.pestanas} {...inferior.estado} ampliado={false} onAmpliar={undefined} />}
+        {inferior && <PanelAcoplado<T> etiqueta={inferior.etiqueta} pestanas={inferior.pestanas} encabezado={inferior.encabezado} {...inferior.estado} ampliado={false} onAmpliar={undefined} />}
         {estado && <div className="banco__estado">{estado}</div>}
       </main>
     )
@@ -227,7 +228,7 @@ export default function BancoDividido<T extends string>({ clave, barra, izquierd
             etiqueta="Cambiar el ancho del panel"
           />
         )}
-        {inferior && <PanelAcoplado<T> lado="derecha" etiqueta={inferior.etiqueta} pestanas={inferior.pestanas} {...inferior.estado} />}
+        {inferior && <PanelAcoplado<T> lado="derecha" etiqueta={inferior.etiqueta} pestanas={inferior.pestanas} encabezado={inferior.encabezado} {...inferior.estado} />}
       </div>
       {estado && <div className="banco__estado">{estado}</div>}
     </main>

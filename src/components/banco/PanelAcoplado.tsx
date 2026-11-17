@@ -38,6 +38,8 @@ interface Props<T extends string> {
   etiqueta: string
   /** En la bandeja del celular: sin tirador ni plegar. */
   fijo?: boolean
+  /** Barra que queda por encima de las pestañas (no depende de la pestaña abierta). */
+  encabezado?: ReactNode
 }
 
 export const ALTO_MIN_PANEL = 110
@@ -66,6 +68,7 @@ export default function PanelAcoplado<T extends string>({
   lado = 'abajo',
   etiqueta,
   fijo = false,
+  encabezado,
 }: Props<T>) {
   const raiz = useRef<HTMLElement>(null)
   const actual = pestanas.find((p) => p.id === pestana) ?? pestanas[0]
@@ -121,6 +124,7 @@ export default function PanelAcoplado<T extends string>({
     }
     return (
       <section ref={raiz} aria-label={etiqueta} className="banco-panel panel-acoplado panel-acoplado--derecha" style={{ width: ancho }} data-panel-lado="derecha">
+        {encabezado && <div className="panel-acoplado__encabezado" data-encabezado-panel="si">{encabezado}</div>}
         <div className="panel-derecha__cabeza">
           <div role="tablist" aria-label={etiqueta} className="panel-derecha__pestanas">
             {pestanas.map((p) => (
@@ -184,6 +188,7 @@ export default function PanelAcoplado<T extends string>({
           title="Arrastra para cambiar el alto · doble clic para ampliar"
         />
       )}
+      {encabezado && <div className="panel-acoplado__encabezado" data-encabezado-panel="si">{encabezado}</div>}
       <div role="tablist" aria-label={etiqueta} style={{ display: 'flex', alignItems: 'stretch', padding: '0 4px', borderBottom: abierto ? '1px solid #e0e5eb' : 'none', overflowX: 'auto', flex: 'none' }}>
         {pestanas.map((p) => (
           <button

@@ -10,13 +10,16 @@ import * as THREE from 'three'
 import type { Muestra } from './movimiento'
 import type { V3 } from './matematica'
 
-const CELDA_MM = 2
-const MAX_CELDAS = 160
+const CELDA_MM = 1.25
+const MAX_CELDAS = 220
 const UMBRAL_MM = 0.15
 
-const CRUDO = new THREE.Color(0xd5dde4)
-const CORTADO = new THREE.Color(0x2c343c)
-const FONDO = new THREE.Color(0x161b20)
+const CRUDO = new THREE.Color(0xc9d1d9)
+const CORTADO = new THREE.Color(0x39434d)
+const FONDO = new THREE.Color(0x12161a)
+const CALOR = new THREE.Color(0xff9a3c)
+/** Cuántos tramos atrás se nota el corte como recién hecho. */
+const TRAMOS_CALIENTES = 5
 
 export interface PlacaMm {
   x0: number
@@ -61,6 +64,7 @@ export class StockPlancha {
   private readonly nx: number
   private readonly ny: number
   private readonly espesor: number
+  private tocadas: Int32Array = new Int32Array(0)
   private indice = -1
   private normalPendiente = false
   private tNormal = 0
@@ -130,8 +134,9 @@ export class StockPlancha {
     this.geo = geo
     const mat = new THREE.MeshStandardMaterial({
       color: 0xffffff,
-      metalness: 0.62,
-      roughness: 0.42,
+      metalness: 0.78,
+      roughness: 0.34,
+      envMapIntensity: 1.35,
       vertexColors: true,
       side: THREE.DoubleSide,
     })
@@ -207,6 +212,9 @@ export class StockPlancha {
         pintar(ax, ay, bx, by, pa, pb, ia, ib)
       }
     }
+    const lista: number[] = []
+    for (let k = 0; k < this.nTop; k++) if (this.cuando[k] < 1e8) lista.push(k)
+    this.tocadas = Int32Array.from(lista)
     this.indice = -1
     this.aplicar(0, 0, true)
   }
@@ -220,14 +228,19 @@ export class StockPlancha {
     const { pos, col, prof, cuando, nTop, borde } = this
     const nB = borde.length
     let cambio = false
-    for (let k = 0; k < nTop; k++) {
+    // Completo al empezar o al saltar; después sólo las celdas que el cabezal toca.
+    const celdas = primera || salto ? null : this.tocadas
+    const total = celdas ? celdas.length : nTop
+    for (let n = 0; n < total; n++) {
+      const k = celdas ? celdas[n] : n
       const baja = cuando[k] <= indice
       const h = baja ? -prof[k] : 0
       if (pos[k * 3 + 2] !== h) {
         pos[k * 3 + 2] = h
         cambio = true
       }
-      this.colorEn(col, k, baja ? prof[k] : 0)
+      const reciente = baja && indice - cuando[k] < TRAMOS_CALIENTES ? 1 - (indice - cuando[k]) / TRAMOS_CALIENTES : 0
+      this.colorEn(col, k, baja ? prof[k] : 0, 1, quieto ? 0 : reciente)
     }
     for (let b = 0; b < nB; b++) {
       const z = pos[borde[b] * 3 + 2]
@@ -263,72 +276,109 @@ export class StockPlancha {
     this.aplicar(indice, 0, true)
   }
 
-  private colorEn(col: Float32Array, k: number, profundidad: number, escala = 1) {
+  private colorEn(col: Float32Array, k: number, profundidad: number, escala = 1, calor = 0) {
     const t = Math.max(0, Math.min(1, profundidad / this.espesor))
-    const c = profundidad >= this.espesor - 0.35 ? this.tinte.copy(FONDO) : this.tinte.copy(CRUDO).lerp(CORTADO, t)
+    const c = profundidad >= this.espesor - 0.35 ? this.tinte.copy(FONDO) : this.tinte.copy(CRUDO).lerp(CORTADO, Math.pow(t, 0.55))
+    if (calor > 0) c.lerp(CALOR, calor * 0.6)
     col[k * 3] = c.r * escala
     col[k * 3 + 1] = c.g * escala
     col[k * 3 + 2] = c.b * escala
   }
 }
 
-/** Viruta: pocas espirales metálicas que saltan de la punta y caen a la plancha. */
+/** Viruta: espirales metálicas que saltan de la punta, caen a la plancha y se apagan. */
 export class Virutas {
   readonly malla: THREE.InstancedMesh
   piso = 0
-  private vivos: Array<{ p: THREE.Vector3; v: THREE.Vector3; r: THREE.Euler; w: number; vida: number }> = []
+  private vivos: Array<{ p: THREE.Vector3; v: THREE.Vector3; r: THREE.Euler; w: number; vida: number; k: number; apoyada: boolean }> = []
   private tmp = new THREE.Object3D()
+  private readonly color = new THREE.Color()
+  private static readonly MAX = 160
 
   constructor() {
-    // Un poco más grandes que en el CNC: la cámara encuadra el brazo entero.
-    const geo = new THREE.TorusGeometry(5.5, 1.45, 4, 8, Math.PI * 1.4)
-    const mat = new THREE.MeshStandardMaterial({ color: 0xf4f7fa, metalness: 0.9, roughness: 0.28 })
-    this.malla = new THREE.InstancedMesh(geo, mat, 40)
+    const geo = new THREE.TorusGeometry(5.5, 1.45, 5, 10, Math.PI * 1.5)
+    const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.92, roughness: 0.22, envMapIntensity: 1.6 })
+    this.malla = new THREE.InstancedMesh(geo, mat, Virutas.MAX)
+    this.malla.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(Virutas.MAX * 3), 3)
     this.malla.count = 0
     this.malla.frustumCulled = false
     this.malla.castShadow = true
   }
 
-  emitir(en: THREE.Vector3) {
-    if (this.vivos.length >= 40) this.vivos.shift()
+  /**
+   * Una viruta sale de la punta, contraria al avance. `escala` crece con el
+   * diámetro de la fresa y con la profundidad de corte; `avance` es la
+   * dirección del movimiento (mm/s, ya en el mundo de la escena).
+   */
+  emitir(en: THREE.Vector3, avance: THREE.Vector3, escala: number) {
+    if (this.vivos.length >= Virutas.MAX) this.vivos.shift()
+    const rapidez = Math.min(1, avance.length() / 120)
+    const atras = avance.clone().setZ(0)
+    if (atras.lengthSq() > 1e-6) atras.normalize().multiplyScalar(-1)
+    const lateral = new THREE.Vector3(-atras.y, atras.x, 0).multiplyScalar((Math.random() - 0.5) * 2)
+    const empuje = 90 + 130 * rapidez
     this.vivos.push({
-      p: en.clone(),
-      v: new THREE.Vector3((Math.random() - 0.5) * 160, (Math.random() - 0.5) * 160, 90 + Math.random() * 120),
+      p: en.clone().add(new THREE.Vector3((Math.random() - 0.5) * 3, (Math.random() - 0.5) * 3, 0)),
+      v: new THREE.Vector3(
+        atras.x * empuje + lateral.x * 90 + (Math.random() - 0.5) * 70,
+        atras.y * empuje + lateral.y * 90 + (Math.random() - 0.5) * 70,
+        110 + Math.random() * 150,
+      ),
       r: new THREE.Euler(Math.random() * 6, Math.random() * 6, Math.random() * 6),
-      w: 6 + Math.random() * 12,
-      vida: 0.6,
+      w: 6 + Math.random() * 14,
+      vida: 1.6,
+      k: escala * (0.7 + Math.random() * 0.6),
+      apoyada: false,
     })
   }
 
   actualizar(dt: number) {
-    let k = 0
+    let n = 0
     for (const c of this.vivos) {
       c.vida -= dt
       if (c.vida <= 0) continue
-      c.v.z -= 1600 * dt
-      c.p.addScaledVector(c.v, dt)
-      if (c.v.z < 0 && c.p.z < this.piso) {
-        c.p.z = this.piso + 0.4
-        c.v.set(c.v.x * 0.15, c.v.y * 0.15, 0)
-        c.w = 0
+      if (!c.apoyada) {
+        c.v.z -= 1700 * dt
+        c.p.addScaledVector(c.v, dt)
+        if (c.v.z < 0 && c.p.z < this.piso) {
+          c.p.z = this.piso + 0.5 * c.k
+          c.v.set(c.v.x * 0.12, c.v.y * 0.12, 0)
+          c.w = 0
+          c.apoyada = true
+          c.vida = Math.min(c.vida, 1.1)
+        }
+        c.r.x += c.w * dt
+        c.r.y += c.w * dt * 0.7
+      } else {
+        c.p.addScaledVector(c.v, dt)
+        c.v.multiplyScalar(Math.max(0, 1 - 6 * dt))
       }
-      c.r.x += c.w * dt
-      c.r.y += c.w * dt * 0.7
       this.tmp.position.copy(c.p)
       this.tmp.rotation.copy(c.r)
+      const e = c.k * Math.min(1, c.vida / 0.4)
+      this.tmp.scale.setScalar(Math.max(0.05, e))
       this.tmp.updateMatrix()
-      this.malla.setMatrixAt(k++, this.tmp.matrix)
+      this.malla.setMatrixAt(n, this.tmp.matrix)
+      // Plata, con algo de azul de recocido o dorado, como la viruta real.
+      this.color.setHSL(0.08 + (n % 7) * 0.06, 0.12 + (n % 3) * 0.1, 0.78 - (n % 4) * 0.06)
+      this.malla.setColorAt(n, this.color)
+      n++
     }
     this.vivos = this.vivos.filter((c) => c.vida > 0)
-    this.malla.count = k
+    this.malla.count = n
     this.malla.instanceMatrix.needsUpdate = true
+    if (this.malla.instanceColor) this.malla.instanceColor.needsUpdate = true
   }
 
-  apagar() {
+  /** Deja de emitir, pero lo que ya cayó termina de apagarse. */
+  apagar(dt = 0) {
     if (!this.vivos.length && this.malla.count === 0) return
-    this.vivos = []
-    this.malla.count = 0
-    this.malla.instanceMatrix.needsUpdate = true
+    if (dt > 0) this.actualizar(dt)
+    else {
+      this.vivos = []
+      this.malla.count = 0
+      this.malla.instanceMatrix.needsUpdate = true
+    }
   }
 
   dispose() {

@@ -1077,7 +1077,7 @@ export default function UnidadRobotica() {
   )
 
   const pestanas: Array<PestanaPanel<PestanaRobot>> = [
-    ...(enTarea && pasoTarea ? [{ id: 'plano-tarea' as const, titulo: 'Plano de la tarea', tituloCorto: 'Plano', contenido: <PlanoTarea paso={pasoTarea} checklist={ejemploEnTarea ? [] : checklistTarea} onEstudiar={irAEstudiar} onEjemplo={verEjemploGuiado} ejemplo={ejemploEnTarea} onVolver={volverDelEjemplo} onSeguir={seguirConElEjemplo} /> }] : []),
+    ...(enTarea && pasoTarea ? [{ id: 'plano-tarea' as const, titulo: 'Plano de la tarea', tituloCorto: 'Plano', contenido: <PlanoTarea paso={pasoTarea} checklist={ejemploEnTarea ? [] : checklistTarea} onEstudiar={irAEstudiar} ejemplo={ejemploEnTarea} /> }] : []),
     {
       id: 'analisis',
       titulo: 'Análisis',
@@ -1185,7 +1185,7 @@ export default function UnidadRobotica() {
           barra={barra}
           izquierda={{ id: 'programa', titulo: modo === 'visual' ? 'Programa' : 'Mando', contenido: areaPrograma }}
           derecha={{ id: 'simulacion', titulo: 'Simulación', tituloCorto: '3D', contenido: areaSimulacion }}
-          inferior={{ etiqueta: 'Plano, análisis y ficha', pestanas, estado: panel }}
+          inferior={{ etiqueta: 'Plano, análisis y ficha', pestanas, estado: panel, encabezado: enTarea && pasoTarea ? <BarraEjemplo ejemplo={ejemploEnTarea} onEjemplo={verEjemploGuiado} onVolver={volverDelEjemplo} onSeguir={seguirConElEjemplo} /> : undefined }}
           estado={barraEstado}
           conCajon={entregaAbierta && enTarea && !estrecha}
         />
@@ -1746,12 +1746,12 @@ function pasoGuiado(def: Definicion): PasoAhora {
   return d ? { ...p, ...d } : p
 }
 
-/** El plano de la tarea, con el proceso arriba y un solo paso abierto. */
-function PlanoTarea({ paso, checklist, onEstudiar, onEjemplo, ejemplo, onVolver, onSeguir }: { paso: PasoAhora; checklist: PuntoRevisionTarea[]; onEstudiar: (ancla: string) => void; onEjemplo: () => void; ejemplo: boolean; onVolver: () => void; onSeguir: () => void }) {
+/** Barra del ejemplo: va por encima de las pestañas del panel, no dentro de Plano. */
+function BarraEjemplo({ ejemplo, onEjemplo, onVolver, onSeguir }: { ejemplo: boolean; onEjemplo: () => void; onVolver: () => void; onSeguir: () => void }) {
   return (
-    <div data-plano-tarea="si" style={{ fontSize: '0.84rem', color: '#1c2733', lineHeight: 1.45 }}>
-      <section className="proceso" aria-label="Proceso de la tarea" data-paso-ahora={ejemplo ? 'ejemplo' : paso.id}>
-        <div className="tarea-accion">
+    <>
+      {ejemplo && <p className="panel-acoplado__encabezado__aviso">Estás viendo el ejemplo del contorno. No es tu entrega.</p>}
+      <div className="tarea-accion">
           {ejemplo ? (
             <>
               <button type="button" className="tarea-accion__principal" onClick={onVolver} data-volver-tarea="si">
@@ -1767,6 +1767,15 @@ function PlanoTarea({ paso, checklist, onEstudiar, onEjemplo, ejemplo, onVolver,
             </button>
           )}
         </div>
+    </>
+  )
+}
+
+/** El plano de la tarea, con el proceso arriba y un solo paso abierto. */
+function PlanoTarea({ paso, checklist, onEstudiar, ejemplo }: { paso: PasoAhora; checklist: PuntoRevisionTarea[]; onEstudiar: (ancla: string) => void; ejemplo: boolean }) {
+  return (
+    <div data-plano-tarea="si" style={{ fontSize: '0.84rem', color: '#1c2733', lineHeight: 1.45 }}>
+      <section className="proceso" aria-label="Proceso de la tarea" data-paso-ahora={ejemplo ? 'ejemplo' : paso.id}>
         <p style={{ margin: 0, fontWeight: 700 }}>
           {ejemplo ? 'Ejemplo del contorno. No es tu entrega.' : `Paso ${paso.numero} de ${paso.total} · ${paso.titulo}`}
         </p>
