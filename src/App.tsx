@@ -29,12 +29,15 @@ import GuiaInicio, { GUIA_NEUMATICA, useGuia } from './components/banco/GuiaInic
 import { circuitoDesdeStore, useStore, type NumeroEjemplo } from './store'
 import { NOMBRES_EJEMPLO } from './circuitos/ejemplos'
 import {
+  CLAVES,
   descargarJson,
   enlaceCompartir,
   esCircuitoValido,
+  guardarJson as guardarClaveJson,
   guardarLocal,
   leerArchivo,
   leerDeUrl,
+  leerJson,
   leerLocal,
 } from './persistencia'
 import { exportarPng, exportarSvg, nombreSeguro, pngEmbebido } from './exportar'
@@ -42,7 +45,7 @@ import { esEntrega, normalizarRespuestas } from './entrega'
 
 const EJEMPLOS: Array<{ n: NumeroEjemplo; etiqueta: string }> = ([1, 2, 3, 4, 5, 6, 7] as NumeroEjemplo[]).map((n) => ({ n, etiqueta: NOMBRES_EJEMPLO[n] }))
 
-const CLAVE_CIRCUITO = 'neumalab.circuito-abierto'
+const CLAVE_CIRCUITO = CLAVES.circuitoAbierto
 
 export default function App() {
   const piezas = useStore((s) => s.piezas)
@@ -72,15 +75,15 @@ export default function App() {
   const [motor, setMotor] = useState<Motor | null>(null)
   const [, setFotograma] = useState(0)
   const [aviso, setAviso] = useState<string | null>(null)
-  const [vista, setVista] = usePersistente<VistaApp>('neumalab.banco.vista', 'esquema')
-  const [paletaPlegada, setPaletaPlegada] = usePersistente('neumalab.banco.paleta-plegada', false)
-  const [inspectorAbierto, setInspectorAbierto] = usePersistente('neumalab.banco.inspector', true)
-  const [anchoPaleta, setAnchoPaleta] = usePersistente<number | null>('neumalab.banco.ancho-paleta', null)
-  const [anchoInspector, setAnchoInspector] = usePersistente<number | null>('neumalab.banco.ancho-inspector', null)
+  const [vista, setVista] = usePersistente<VistaApp>(CLAVES.bancoVista, 'esquema')
+  const [paletaPlegada, setPaletaPlegada] = usePersistente(CLAVES.bancoPaletaPlegada, false)
+  const [inspectorAbierto, setInspectorAbierto] = usePersistente(CLAVES.bancoInspector, true)
+  const [anchoPaleta, setAnchoPaleta] = usePersistente<number | null>(CLAVES.bancoAnchoPaleta, null)
+  const [anchoInspector, setAnchoInspector] = usePersistente<number | null>(CLAVES.bancoAnchoInspector, null)
   const [pestanaInspector, setPestanaInspector] = useState<PestanaInspector>('propiedades')
-  const [inferiorAbierto, setInferiorAbierto] = usePersistente('neumalab.banco.inferior', false)
-  const [altoInferior, setAltoInferior] = usePersistente('neumalab.banco.alto-inferior', typeof window === 'undefined' ? 200 : Math.round(Math.min(200, Math.max(130, window.innerHeight * 0.2))))
-  const [inferiorAmpliado, setInferiorAmpliado] = usePersistente('neumalab.banco.inferior-ampliado', false)
+  const [inferiorAbierto, setInferiorAbierto] = usePersistente(CLAVES.bancoInferior, false)
+  const [altoInferior, setAltoInferior] = usePersistente(CLAVES.bancoAltoInferior, typeof window === 'undefined' ? 200 : Math.round(Math.min(200, Math.max(130, window.innerHeight * 0.2))))
+  const [inferiorAmpliado, setInferiorAmpliado] = usePersistente(CLAVES.bancoInferiorAmpliado, false)
   const [pestanaInferior, setPestanaInferior] = useState<PestanaInferior>('registro')
   const [hoja, setHoja] = useState<'paleta' | 'inspector' | 'registro' | null>(null)
   // Laboratorio (el banco) o Estudiar; «Entregar» es un cajón sobre el laboratorio.
@@ -148,12 +151,8 @@ export default function App() {
     if (local && local.piezas.length > 0) {
       cargarCircuito(local)
       // Nombre del circuito que estaba abierto (ejemplo o archivo), si se guardó.
-      try {
-        const c = JSON.parse(localStorage.getItem(CLAVE_CIRCUITO) ?? 'null')
-        if (c && typeof c.nombre === 'string') useStore.setState({ circuito: { nombre: c.nombre, ejemplo: c.ejemplo, modificado: !!c.modificado } })
-      } catch {
-        /* sin almacenamiento */
-      }
+      const c = leerJson(CLAVE_CIRCUITO) as { nombre?: unknown; ejemplo?: NumeroEjemplo; modificado?: unknown } | null
+      if (c && typeof c.nombre === 'string') useStore.setState({ circuito: { nombre: c.nombre, ejemplo: c.ejemplo, modificado: !!c.modificado } })
     }
     if (local?.trabajo) {
       if (local.trabajo.alumno) setAlumno(local.trabajo.alumno)
@@ -178,11 +177,7 @@ export default function App() {
   }, [cargarCircuito])
 
   useEffect(() => {
-    try {
-      localStorage.setItem(CLAVE_CIRCUITO, JSON.stringify(circuito))
-    } catch {
-      /* sin almacenamiento */
-    }
+    guardarClaveJson(CLAVE_CIRCUITO, circuito)
   }, [circuito])
 
   // --- copia de trabajo automática (circuito y respuestas) -------------------

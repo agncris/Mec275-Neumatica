@@ -6,6 +6,7 @@ import { almacenDe, torretaDe, type ConfigCNC } from './maquinas'
 import { type ResultadoGcode } from './gcode'
 import { herramientasLlamadas, revisarTrabajo } from './trabajo'
 import { copiarTabla, descargarTexto } from '../entregar'
+import { CLAVES } from '../persistencia'
 
 /** Lo que se entrega en la Tarea 3: la revisión, las tablas, los archivos y el video. */
 export default function PanelEntrega({
@@ -46,7 +47,7 @@ export default function PanelEntrega({
   return (
   <CajonEntregar
     unidad="CNC"
-    clave="neumalab.cnc.entrega"
+    clave={CLAVES.cncEntrega}
     trabajoSugerido="Tarea-3"
     onCerrar={onCerrar}
     revisar={() => revisarTrabajo(config, codigo).puntos}

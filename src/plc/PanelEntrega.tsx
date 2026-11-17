@@ -5,6 +5,7 @@ import { copiarTabla, descargarTexto } from '../entregar'
 import { exportarPng } from '../exportar'
 import { areaDe } from './ladder'
 import { formatear } from './notacion'
+import { CLAVES } from '../persistencia'
 
 /** Lo que se entrega en la Tarea 2: la revisión, el diagrama, la tabla de E/S y el archivo. */
 export default function PanelEntrega({
@@ -28,7 +29,7 @@ export default function PanelEntrega({
   return (
   <CajonEntregar
     unidad="PLC"
-    clave="neumalab.plc.entrega"
+    clave={CLAVES.plcEntrega}
     trabajoSugerido="Tarea-2"
     onCerrar={onCerrar}
     revisar={() => {

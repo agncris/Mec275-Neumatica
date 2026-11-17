@@ -28,6 +28,7 @@ import { MAT, crearModelo, type EstadoPieza, type Modelo3D } from './modelos'
 import { Oido } from './oido'
 import { SonidoBanco } from './sonido'
 import { crearEscena } from './escena'
+import { CLAVES, guardarTexto, leerTexto } from '../persistencia'
 
 interface Props {
   motor: Motor | null
@@ -56,7 +57,7 @@ const TAMANO = 1.3
 
 const COLOR_TUBO = new THREE.Color(0x2a76d2)
 const COLOR_TUBO_AIRE = new THREE.Color(0x49a6ff)
-const CLAVE_SONIDO = 'neumalab.banco3d.sonido'
+const CLAVE_SONIDO = CLAVES.banco3dSonido
 
 const MAT_SILENCIADOR = new THREE.MeshStandardMaterial({ color: 0x8e7448, metalness: 0.55, roughness: 0.9 })
 
@@ -324,22 +325,14 @@ export default function Banco3D({ motor, llenar = false, play }: Props) {
   }, [resaltarAire, motor, resaltarCambio])
   const [sinWebGL, setSinWebGL] = useState(false)
   const [conSonido, setConSonido] = useState(() => {
-    try {
-      return localStorage.getItem(CLAVE_SONIDO) !== 'no'
-    } catch {
-      return true
-    }
+    return leerTexto(CLAVE_SONIDO) !== 'no'
   })
   const conSonidoRef = useRef(conSonido)
   conSonidoRef.current = conSonido
   const sonidoRef = useRef<SonidoBanco | null>(null)
   const sonido = () => (sonidoRef.current ??= new SonidoBanco())
   useEffect(() => {
-    try {
-      localStorage.setItem(CLAVE_SONIDO, conSonido ? 'si' : 'no')
-    } catch {
-      /* sin almacenamiento: da igual */
-    }
+    guardarTexto(CLAVE_SONIDO, conSonido ? 'si' : 'no')
     // Al pulsar ▶ Simular ya hubo un gesto del usuario: el navegador deja sonar.
     if (conSonido && motor) sonido().activar()
     if (!conSonido || !motor) sonidoRef.current?.callar()

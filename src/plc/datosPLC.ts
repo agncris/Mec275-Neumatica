@@ -2,8 +2,9 @@ import { EJEMPLOS_PLC } from './ejemplos'
 import { clonarPrograma, programaVacio, type IdPlanta, type ProgramaPLC } from './ladder'
 import { PLANTAS } from './plantas'
 import { esProgramaPLC as esProgramaBase } from './ladder'
+import { CLAVES, guardarJson, leerJson as leerJsonGuardado } from '../persistencia'
 
-export const CLAVE = 'neumalab.plc.programa'
+export const CLAVE = CLAVES.plcPrograma
 
 /** Un programa de PLC, con una planta que esta versión conoce (un guardado de otra versión no debe romper la unidad). */
 export const esProgramaPLC = (x: unknown): x is ProgramaPLC => esProgramaBase(x) && (x as ProgramaPLC).planta in PLANTAS
@@ -14,20 +15,13 @@ export const DT = 0.02
  * programa guardado aparte. El enunciado lo entrega el profesor: la app sólo
  * pone la planta.
  */
-export const CLAVE_TAREA = 'neumalab.plc.tarea'
+export const CLAVE_TAREA = CLAVES.plcTarea
 export const PLANTA_TAREA: IdPlanta = 'silo'
 export const NOMBRE_TAREA = 'Tarea 2'
 
 export function leerJson(clave: string): ProgramaPLC | null {
-  try {
-    const crudo = localStorage.getItem(clave)
-    if (crudo) {
-      const p = JSON.parse(crudo)
-      if (esProgramaPLC(p)) return p
-    }
-  } catch {
-    /* sin almacenamiento o dato roto */
-  }
+  const p = leerJsonGuardado(clave)
+  if (esProgramaPLC(p)) return p
   return null
 }
 
@@ -41,11 +35,7 @@ export function leerGuardado(): ProgramaPLC {
   if (p && p.planta !== PLANTA_TAREA) return p
   // Quien ya trabajaba el silo en el laboratorio lo encuentra ahora en la sección de la tarea.
   if (p && !leerJson(CLAVE_TAREA)) {
-    try {
-      localStorage.setItem(CLAVE_TAREA, JSON.stringify(p))
-    } catch {
-      /* sin almacenamiento */
-    }
+    guardarJson(CLAVE_TAREA, p)
   }
   return clonarPrograma(EJEMPLOS_PLC[0].programa)
 }

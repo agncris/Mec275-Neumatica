@@ -4,6 +4,7 @@
  * desplegable accesible.
  */
 import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { guardarJson, leerTexto } from '../persistencia'
 
 // ---------------------------------------------------------------------------
 // Colores y botones
@@ -278,19 +279,17 @@ export function Menu({ etiqueta, items, ancho = 280, datos }: { etiqueta: string
 /** Estado que se recuerda en este navegador (paneles abiertos, anchos…). */
 export function usePersistente<T>(clave: string, inicial: T): [T, (v: T | ((a: T) => T)) => void] {
   const [valor, setValor] = useState<T>(() => {
+    const crudo = leerTexto(clave)
+    if (crudo === null) return inicial
     try {
-      const crudo = localStorage.getItem(clave)
-      return crudo === null ? inicial : (JSON.parse(crudo) as T)
+      return JSON.parse(crudo) as T
     } catch {
+      // Dato roto: se parte del valor inicial.
       return inicial
     }
   })
   useEffect(() => {
-    try {
-      localStorage.setItem(clave, JSON.stringify(valor))
-    } catch {
-      /* sin almacenamiento */
-    }
+    guardarJson(clave, valor)
   }, [clave, valor])
   return [valor, setValor]
 }

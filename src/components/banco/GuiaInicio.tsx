@@ -6,6 +6,7 @@
 import { useState } from 'react'
 import { usePersistente } from '../ui'
 import { VER_TAREA_CNC, VER_TAREA_ROBOTICA } from '../../unidades'
+import { claveGuia } from '../../persistencia'
 
 export interface PasoGuia {
   titulo: string
@@ -14,7 +15,7 @@ export interface PasoGuia {
 
 /** Estado de la guía de una unidad: visible la primera vez; `abrir` la muestra de nuevo. */
 export function useGuia(unidad: string) {
-  const [vista, setVista] = usePersistente(`neumalab.guia.${unidad}`, false)
+  const [vista, setVista] = usePersistente(claveGuia(unidad), false)
   const [forzada, setForzada] = useState(false)
   return {
     visible: !vista || forzada,

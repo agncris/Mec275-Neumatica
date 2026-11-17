@@ -26,6 +26,7 @@ import {
   type NodoDef,
   type Pestana,
 } from './nodos'
+import { CLAVES } from '../persistencia'
 
 const ANCHO = 172
 const FILA = 22
@@ -148,10 +149,10 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
   const svgRef = useRef<SVGSVGElement>(null)
   const [vista, setVista] = useState({ tx: 20, ty: 40, k: 0.8 })
   const [arrastre, setArrastre] = useState<Arrastre | null>(null)
-  const [plegadaGuardada, setPlegada] = usePersistente('neumalab.robot.paleta.v1', false)
+  const [plegadaGuardada, setPlegada] = usePersistente(CLAVES.robotPaleta, false)
   // Con Entregar abierto queda poco ancho: se esconde la paleta para que el lienzo se vea (y se exporte) entero.
   const plegada = plegadaGuardada || soloLienzo
-  const [ayudaCerrada, setAyudaCerrada] = usePersistente('neumalab.robot.lienzo.ayuda.v1', false)
+  const [ayudaCerrada, setAyudaCerrada] = usePersistente(CLAVES.robotAyudaLienzo, false)
   const [abiertas, setAbiertas] = useState<Pestana[]>(() => (guia?.pestana ? [guia.pestana] : ['Movimientos', 'Robot']))
   const paletaRef = useRef<HTMLElement>(null)
   useEffect(() => {

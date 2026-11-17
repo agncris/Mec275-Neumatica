@@ -21,6 +21,7 @@ import { SonidoBanco } from '../vista3d/sonido'
 import { ponerNotacionEscena, type SimPLC } from './plantas3d/comun'
 import { type Notacion } from './notacion'
 import { crearEscena } from './plantas3d'
+import { CLAVES, guardarTexto, leerTexto } from '../persistencia'
 
 export type { SimPLC }
 
@@ -37,7 +38,7 @@ interface Props {
   play?: PlayEscena
 }
 
-const CLAVE_SONIDO = 'neumalab.plc.sonido'
+const CLAVE_SONIDO = CLAVES.plcSonido
 
 // ---------------------------------------------------------------------------
 // Componente
@@ -58,11 +59,7 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
     if (controlesRef.current) aplicarModoArrastre(controlesRef.current, modoArrastre)
   }, [modoArrastre])
   const [conSonido, setConSonido] = useState(() => {
-    try {
-      return localStorage.getItem(CLAVE_SONIDO) !== 'no'
-    } catch {
-      return true
-    }
+    return leerTexto(CLAVE_SONIDO) !== 'no'
   })
   const conSonidoRef = useRef(conSonido)
   conSonidoRef.current = conSonido
@@ -73,11 +70,7 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
   const celular = useCelular()
   // Rótulos grandes (S0, Y1, Z1…): se pueden ocultar si tapan algo.
   const [conRotulos, setConRotulos] = useState(() => {
-    try {
-      return localStorage.getItem('neumalab.plc.rotulos3d') !== 'no'
-    } catch {
-      return true
-    }
+    return leerTexto(CLAVES.plcRotulos3d) !== 'no'
   })
   const conRotulosRef = useRef(conRotulos)
   conRotulosRef.current = conRotulos
@@ -90,19 +83,11 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
   }
   useEffect(() => {
     aplicarRotulos(conRotulos)
-    try {
-      localStorage.setItem('neumalab.plc.rotulos3d', conRotulos ? 'si' : 'no')
-    } catch {
-      /* sin almacenamiento */
-    }
+    guardarTexto(CLAVES.plcRotulos3d, conRotulos ? 'si' : 'no')
   }, [conRotulos])
 
   useEffect(() => {
-    try {
-      localStorage.setItem(CLAVE_SONIDO, conSonido ? 'si' : 'no')
-    } catch {
-      /* sin almacenamiento */
-    }
+    guardarTexto(CLAVE_SONIDO, conSonido ? 'si' : 'no')
     if (conSonido) sonido().activar()
     else sonidoRef.current?.callar()
   }, [conSonido])

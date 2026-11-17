@@ -9,6 +9,7 @@ import ErrorBoundary from './components/ErrorBoundary'
 import MecBot from './components/MecBot'
 import { useDesplazarEnBordes } from './desplazarEnBordes'
 import { unidadVisible, VER_CNC, VER_ROBOTICA, type Unidad } from './unidades'
+import { CLAVES, guardarTexto, leerTexto } from './persistencia'
 
 const UnidadPLC = lazy(() => import('./plc/UnidadPLC'))
 // Las unidades no publicadas quedan fuera de la compilación (ver unidades.ts).
@@ -16,7 +17,7 @@ const UnidadCNC = VER_CNC ? lazy(() => import('./cnc/UnidadCNC')) : null
 const UnidadRobotica = VER_ROBOTICA ? lazy(() => import('./robot/UnidadRobotica')) : null
 
 const UNIDADES = (['neumatica', 'plc', 'cnc', 'robotica'] as Unidad[]).filter(unidadVisible)
-const CLAVE = 'neumalab.unidad'
+const CLAVE = CLAVES.unidad
 
 function unidadInicial(): Unidad {
   if (typeof window === 'undefined') return 'neumatica'
@@ -28,12 +29,8 @@ function unidadInicial(): Unidad {
   if (/[#&]rob=/.test(window.location.hash) && unidadVisible('robotica')) return 'robotica'
   const param = new URLSearchParams(window.location.search).get('unidad')
   if (UNIDADES.includes(param as Unidad)) return param as Unidad
-  try {
-    const guardada = localStorage.getItem(CLAVE)
-    return UNIDADES.includes(guardada as Unidad) ? (guardada as Unidad) : 'neumatica'
-  } catch {
-    return 'neumatica'
-  }
+  const guardada = leerTexto(CLAVE)
+  return UNIDADES.includes(guardada as Unidad) ? (guardada as Unidad) : 'neumatica'
 }
 
 export default function Raiz() {
@@ -51,11 +48,7 @@ export default function Raiz() {
     }
   }, [])
   useEffect(() => {
-    try {
-      localStorage.setItem(CLAVE, unidad)
-    } catch {
-      /* sin almacenamiento */
-    }
+    guardarTexto(CLAVE, unidad)
     try {
       const url = new URL(window.location.href)
       if (url.searchParams.get('unidad') !== unidad) {

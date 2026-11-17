@@ -4,6 +4,7 @@
  * pegan en PowerPoint como tabla y enlaces que llevan el trabajo dentro.
  */
 import { useEffect, useState } from 'react'
+import { CLAVES, guardarJson, leerJson } from './persistencia'
 
 export interface DatosAlumno {
   nombre: string
@@ -11,26 +12,18 @@ export interface DatosAlumno {
   companero: string
 }
 
-const CLAVE_ALUMNO = 'neumalab.alumno'
+const CLAVE_ALUMNO = CLAVES.alumno
 
 export function leerAlumno(): DatosAlumno {
-  try {
-    const d = JSON.parse(localStorage.getItem(CLAVE_ALUMNO) ?? '{}') as Partial<DatosAlumno>
-    return { nombre: typeof d.nombre === 'string' ? d.nombre : '', companero: typeof d.companero === 'string' ? d.companero : '' }
-  } catch {
-    return { nombre: '', companero: '' }
-  }
+  const d = (leerJson(CLAVE_ALUMNO) ?? {}) as Partial<DatosAlumno>
+  return { nombre: typeof d.nombre === 'string' ? d.nombre : '', companero: typeof d.companero === 'string' ? d.companero : '' }
 }
 
 /** Nombre del alumno, compartido por las cuatro unidades y recordado en este navegador. */
 export function useAlumno(): [DatosAlumno, (d: DatosAlumno) => void] {
   const [datos, setDatos] = useState<DatosAlumno>(leerAlumno)
   useEffect(() => {
-    try {
-      localStorage.setItem(CLAVE_ALUMNO, JSON.stringify(datos))
-    } catch {
-      /* sin almacenamiento */
-    }
+    guardarJson(CLAVE_ALUMNO, datos)
   }, [datos])
   return [datos, setDatos]
 }

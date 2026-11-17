@@ -31,7 +31,7 @@ Esta es la única fuente de reglas. `.cursor/rules/` apunta aquí.
 - `src/plc/`: unidad PLC (Ladder, plantas 3D). `src/cnc/`: unidad CNC (código G, máquinas 3D).
 - `src/robot/`: unidad Robótica (nodos, cinemática, KRL, escena 3D, guía de la tarea).
 - `src/vista3d/`: banco 3D de neumática, sonido, ViewCube. `src/components/`: piezas compartidas.
-- `src/unidades.ts`: banderas de publicación. `src/persistencia.ts`: guardado en el navegador.
+- `src/unidades.ts`: banderas de publicación. `src/persistencia.ts`: guardado en el navegador. Es el único archivo que toca `localStorage` y el único con claves `neumalab.*` (un test lo comprueba): para guardar algo usa `leerTexto`, `leerJson`, `guardarTexto`, `guardarJson`, `borrarClave` y agrega la clave a `CLAVES`.
 - `src/__tests__/`, `src/engine/__tests__/`: tests de lógica.
 - `api/`: función serverless de MecBot (la clave del modelo queda en el servidor). `public/`: imágenes y service worker.
 

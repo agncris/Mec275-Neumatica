@@ -3,6 +3,8 @@
  * ejercicio 1, el 2, la tarea…), en este navegador. Y un respaldo con todo,
  * en un solo archivo, para llevarlo a otro computador.
  */
+import { CLAVES, claveTrabajos, guardarJson, leerJson, leerTexto } from './persistencia'
+
 export type UnidadTrabajo = 'neumatica' | 'plc' | 'cnc' | 'robotica'
 export const UNIDADES_TRABAJO: UnidadTrabajo[] = ['neumatica', 'plc', 'cnc', 'robotica']
 
@@ -14,23 +16,15 @@ export interface TrabajoGuardado {
   dato: unknown
 }
 
-const clave = (u: UnidadTrabajo) => `neumalab.trabajos.${u}`
+const clave = (u: UnidadTrabajo) => claveTrabajos(u)
 
 export function listarTrabajos(u: UnidadTrabajo): TrabajoGuardado[] {
-  try {
-    const d = JSON.parse(localStorage.getItem(clave(u)) ?? '[]')
-    return Array.isArray(d) ? d.filter((t) => t && typeof t.id === 'string' && typeof t.nombre === 'string') : []
-  } catch {
-    return []
-  }
+  const d = leerJson(clave(u))
+  return Array.isArray(d) ? d.filter((t) => t && typeof t.id === 'string' && typeof t.nombre === 'string') : []
 }
 
 function escribir(u: UnidadTrabajo, lista: TrabajoGuardado[]): void {
-  try {
-    localStorage.setItem(clave(u), JSON.stringify(lista))
-  } catch {
-    throw new Error('No queda espacio en este navegador. Descarga un respaldo y borra trabajos que ya no uses.')
-  }
+  if (!guardarJson(clave(u), lista)) throw new Error('No queda espacio en este navegador. Descarga un respaldo y borra trabajos que ya no uses.')
 }
 
 /** Guarda (o reemplaza, si ya hay uno con ese nombre) un trabajo. */
@@ -69,17 +63,13 @@ export interface Respaldo {
 }
 
 /** Claves de las copias automáticas del trabajo abierto de cada unidad. */
-const CLAVES_ABIERTOS = ['neumalab.circuito-abierto', 'neumalab.circuito', 'neumalab.plc.programa', 'neumalab.cnc', 'neumalab.robot.definicion', 'neumalab.alumno']
+const CLAVES_ABIERTOS = [CLAVES.circuitoAbierto, CLAVES.circuito, CLAVES.plcPrograma, CLAVES.cnc, CLAVES.robotDefinicion, CLAVES.alumno]
 
 export function crearRespaldo(): Respaldo {
   const abiertos: Record<string, string> = {}
   for (const k of CLAVES_ABIERTOS) {
-    try {
-      const v = localStorage.getItem(k)
-      if (v !== null) abiertos[k] = v
-    } catch {
-      /* sin almacenamiento */
-    }
+    const v = leerTexto(k)
+    if (v !== null) abiertos[k] = v
   }
   return {
     formato: FORMATO_RESPALDO,

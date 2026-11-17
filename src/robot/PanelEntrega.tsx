@@ -6,6 +6,7 @@ import type { Simulacion } from './movimiento'
 import { MARCA_TAREA4, analizarTarea4, revisarTarea4 } from './tarea4'
 import type { Definicion, evaluar } from './nodos'
 import type { robotPorId } from './robots'
+import { CLAVES } from '../persistencia'
 
 /** Lo que se entrega en la tarea de Robótica: la revisión, las imágenes, el archivo y el video. */
 export default function PanelEntrega({
@@ -44,7 +45,7 @@ export default function PanelEntrega({
   return (
   <CajonEntregar
     unidad="Robótica"
-    clave="neumalab.robot.entrega"
+    clave={CLAVES.robotEntrega}
     trabajoSugerido="Tarea-4"
     onCerrar={onCerrar}
     revisar={() => {

@@ -43,6 +43,7 @@ import BarraPLC from './BarraPLC'
 import { useScanPLC } from './useScanPLC'
 import { CLAVE, CLAVE_TAREA, esProgramaPLC, leerGuardado, leerTarea, NOMBRE_TAREA, PLANTA_TAREA, tareaVacia, type Evento } from './datosPLC'
 import { ETAPAS_SILO, pasoSilo, checklistSilo, ejemploGuiadoSilo } from './procesoSilo'
+import { CLAVES, guardarJson, guardarTexto, leerTexto } from '../persistencia'
 
 const Planta3D = lazy(() => import('./Planta3D'))
 // La teoría, la ficha y la autoevaluación de Estudiar se cargan solo al entrar a Estudiar.
@@ -76,7 +77,7 @@ export default function UnidadPLC() {
   const acostado = useApaisado()
   const [seccion, setSeccionCruda] = useSeccionUnidad(ANCLAS_ESTUDIAR_PLC)
   const enTarea = seccion === 'tarea'
-  const panel = usePanelAcoplado<PestanaPLC>('neumalab.plc.panel', 'es', typeof window !== 'undefined' && window.innerHeight >= 860)
+  const panel = usePanelAcoplado<PestanaPLC>(CLAVES.plcPanel, 'es', typeof window !== 'undefined' && window.innerHeight >= 860)
   // Quien tenía abierta una pestaña que ya no existe (la tabla de datos) vuelve a Entradas y salidas.
   useEffect(() => {
     if (enTarea) {
@@ -107,21 +108,13 @@ export default function UnidadPLC() {
     } else if (panel.pestana === 'proceso') panel.onPestana('es')
   }
   const [notacion, setNotacion] = useState<Notacion>(() => {
-    try {
-      // Clave nueva: quien había elegido LogixPro vuelve a partir con la notación del apunte.
-      return localStorage.getItem('neumalab.plc.direcciones') === 'ab' ? 'ab' : 'siemens'
-    } catch {
-      return 'siemens'
-    }
+    // Clave nueva: quien había elegido LogixPro vuelve a partir con la notación del apunte.
+    return leerTexto(CLAVES.plcDirecciones) === 'ab' ? 'ab' : 'siemens'
   })
   const notacionRef = useRef(notacion)
   notacionRef.current = notacion
   useEffect(() => {
-    try {
-      localStorage.setItem('neumalab.plc.direcciones', notacion)
-    } catch {
-      /* sin almacenamiento */
-    }
+    guardarTexto(CLAVES.plcDirecciones, notacion)
   }, [notacion])
   /** Tipo de cada entrada libre del simulador de E/S (las que la planta no usa). */
   const [tiposLibres, setTiposLibres] = useState<Record<string, TipoLibre>>({})
@@ -151,11 +144,7 @@ export default function UnidadPLC() {
 
   // Guardado automático del programa.
   useEffect(() => {
-    try {
-      localStorage.setItem(enTarea ? CLAVE_TAREA : CLAVE, JSON.stringify(programa))
-    } catch {
-      /* sin almacenamiento */
-    }
+    guardarJson(enTarea ? CLAVE_TAREA : CLAVE, programa)
   }, [programa, enTarea])
 
   // Un enlace con un programa (#plc=…) lo abre, avisando si reemplaza el que había.
@@ -590,7 +579,7 @@ export default function UnidadPLC() {
       {seccion !== 'estudiar' ? (
         <BancoDividido<PestanaPLC>
           key={seccion}
-          clave="neumalab.plc.banco.v2"
+          clave={CLAVES.plcBanco}
           divisionInicial={0.42}
           anchoMin={340}
           barra={barra}

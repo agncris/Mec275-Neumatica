@@ -17,6 +17,7 @@ import { circuitoDesdeStore, useStore } from '../store'
 import { FUNCIONES_VDI, SimboloVDI } from '../symbols/SimbolosVDI'
 import CajonEntregar, { type PuntoRevision } from './banco/CajonEntregar'
 import ProcesoTarea, { enlaceEstudiar, type PasoProceso } from './banco/ProcesoTarea'
+import { CLAVES, leerJson } from '../persistencia'
 
 interface Props {
   onCerrar: () => void
@@ -181,7 +182,7 @@ export default function EntregaNeumatica({ onCerrar, capturarCircuito, capturarF
   return (
     <CajonEntregar
       unidad="Neumática"
-      clave="neumalab.neumatica.entrega"
+      clave={CLAVES.neumaticaEntrega}
       trabajoSugerido="Tarea-1"
       onCerrar={onCerrar}
       revisar={revisar}
@@ -248,7 +249,7 @@ export default function EntregaNeumatica({ onCerrar, capturarCircuito, capturarF
           deshabilitado: piezas.length === 0,
           porque: 'Primero arma el circuito.',
           hacer: (base) => {
-            const alumno = JSON.parse(localStorage.getItem('neumalab.alumno') ?? '{}') as { nombre?: string }
+            const alumno = (leerJson(CLAVES.alumno) ?? {}) as { nombre?: string }
             const entrega = crearEntrega({ nombre: alumno.nombre ?? '', rol: '' }, base, respuestas, { piezas, mangueras })
             descargarTexto(JSON.stringify(entrega, null, 2), `${base}.json`, 'application/json')
             return `Descargado: ${base}.json`

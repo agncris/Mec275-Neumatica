@@ -47,6 +47,7 @@ import { SimuladorCNC, volumenPieza } from './simulador'
 import type { VistaCNC } from './Maquina3D'
 import { CLAVE, CLAVE_TAREA, NOMBRE_TAREA, leerGuardado, leerTarea } from './datosCNC'
 import { type Estado } from './datosCNC'
+import { CLAVES, guardarJson as guardarClaveJson } from '../persistencia'
 
 const Maquina3D = lazy(() => import('./Maquina3D'))
 // La teoría, la ficha y la autoevaluación de Estudiar se cargan solo al entrar a Estudiar.
@@ -59,7 +60,7 @@ export default function UnidadCNC() {
   // Mientras la tarea no se publica, ni el enlace ?vista=tarea la abre.
   const seccion: SeccionUnidad = seccionPedida === 'tarea' && !VER_TAREA_CNC ? 'laboratorio' : seccionPedida
   const enTarea = seccion === 'tarea'
-  const panel = usePanelAcoplado<PestanaCNC>('neumalab.cnc.panel', 'preparacion', typeof window !== 'undefined' && window.innerHeight >= 860)
+  const panel = usePanelAcoplado<PestanaCNC>(CLAVES.cncPanel, 'preparacion', typeof window !== 'undefined' && window.innerHeight >= 860)
   const [entregaAbierta, setEntregaAbierta] = useState(false)
   const [misTrabajos, setMisTrabajos] = useState(false)
   const guia = useGuia('cnc')
@@ -139,11 +140,7 @@ export default function UnidadCNC() {
 
   // Guardado automático: la tarea y el laboratorio se guardan cada uno por su lado.
   useEffect(() => {
-    try {
-      localStorage.setItem(enTarea ? CLAVE_TAREA : CLAVE, JSON.stringify({ config, codigos, nombres }))
-    } catch {
-      /* sin almacenamiento */
-    }
+    guardarClaveJson(enTarea ? CLAVE_TAREA : CLAVE, { config, codigos, nombres })
   }, [config, codigos, nombres, enTarea])
 
   // Un enlace con un programa (#cnc=…) lo abre en su máquina, con su preparación.
@@ -621,7 +618,7 @@ export default function UnidadCNC() {
       {seccion !== 'estudiar' ? (
         <BancoDividido<PestanaCNC>
           key={seccion}
-          clave="neumalab.cnc.banco.v2"
+          clave={CLAVES.cncBanco}
           divisionInicial={0.42}
           anchoMin={340}
           barra={barra}

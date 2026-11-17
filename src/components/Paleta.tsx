@@ -10,6 +10,7 @@ import { SimboloPieza } from '../symbols/Simbolos'
 import { DESCRIPTORES } from './descriptores'
 import { useStore } from '../store'
 import { usePersistente } from './ui'
+import { CLAVES } from '../persistencia'
 
 interface Entrada {
   tipo: string
@@ -94,7 +95,7 @@ export default function Paleta({ plegada = false, onPlegar, deshabilitada = fals
   const agregarPieza = useStore((s) => s.agregarPieza)
   const iniciarColocacion = useStore((s) => s.iniciarColocacion)
   const [texto, setTexto] = useState('')
-  const [abiertos, setAbiertos] = usePersistente<Record<string, boolean>>('neumalab.paleta.grupos', {
+  const [abiertos, setAbiertos] = usePersistente<Record<string, boolean>>(CLAVES.paletaGrupos, {
     alimentacion: true,
     valvulas: true,
     actuadores: true,

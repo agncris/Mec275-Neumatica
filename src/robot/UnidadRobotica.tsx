@@ -44,6 +44,7 @@ import { HOME, robotPorId } from './robots'
 import type { VistaRobot } from './Robot3D'
 import { ANCLAS_ESTUDIAR_ROBOT } from './anclasEstudiar'
 import { BASE_DEFECTO, CLAVE, CLAVE_ANTES_EJEMPLO, CLAVE_TAREA, definicionGuardada, HERR_MANDO, leerGuardada, leerTarea, marcasDe, type Modo, NOMBRE_TAREA, programaDelMando } from './datosRobot'
+import { borrarClave, CLAVES, guardarJson as guardarClaveJson, leerJson } from '../persistencia'
 
 // La teoría, la ficha y las demos 3D de Estudiar se cargan solo al entrar a Estudiar.
 const EstudiarRobotica = lazy(() => import('./EstudiarRobotica'))
@@ -91,8 +92,8 @@ export default function UnidadRobotica() {
   // Mientras la tarea no se publica, ni el enlace ?vista=tarea la abre.
   const seccion: SeccionUnidad = seccionPedida === 'tarea' && !VER_TAREA_ROBOTICA ? 'laboratorio' : seccionPedida
   const enTarea = seccion === 'tarea'
-  const panel = usePanelAcoplado<PestanaRobot>('neumalab.robot.panel.v3', enTarea ? 'plano-tarea' : 'analisis', false, 280)
-  const [plegadoGuardado, setPlegado] = usePersistente<'abierto' | 'riel' | 'oculto'>('neumalab.robot.plegado', 'abierto')
+  const panel = usePanelAcoplado<PestanaRobot>(CLAVES.robotPanel, enTarea ? 'plano-tarea' : 'analisis', false, 280)
+  const [plegadoGuardado, setPlegado] = usePersistente<'abierto' | 'riel' | 'oculto'>(CLAVES.robotPlegado, 'abierto')
   // Antes se podía ocultar del todo y no quedaba cómo volver. Solo se colapsa a una tira.
   const plegado = plegadoGuardado === 'oculto' ? 'riel' : plegadoGuardado
   // Al entrar directo a la tarea (enlace ?vista=tarea) se ve primero el plano.
@@ -135,11 +136,8 @@ export default function UnidadRobotica() {
   useEffect(() => {
     // El ejemplo es una visita: no pisa la tarea guardada.
     if (enTarea && esEjemploGuiado(def)) return
-    try {
-      localStorage.setItem(enTarea ? CLAVE_TAREA : CLAVE, JSON.stringify(def))
-    } catch {
-      /* sin almacenamiento o definición demasiado grande */
-    }
+    // Sin almacenamiento o definición demasiado grande: no se guarda y listo.
+    guardarClaveJson(enTarea ? CLAVE_TAREA : CLAVE, def)
   }, [def, enTarea])
   useEffect(() => {
     if (!aviso) return
@@ -266,11 +264,7 @@ export default function UnidadRobotica() {
     if (enTarea && id === 'vacio') {
       if (!window.confirm('¿Empezar de cero? Se borra lo que llevas en la tarea.')) return
       setReproduciendo(false)
-      try {
-        localStorage.removeItem(CLAVE_ANTES_EJEMPLO)
-      } catch {
-        /* sin almacenamiento */
-      }
+      borrarClave(CLAVE_ANTES_EJEMPLO)
       setDef(tareaVaciaRobot())
       setSeleccion(null)
       setModo('visual')
@@ -379,11 +373,7 @@ export default function UnidadRobotica() {
   }
   const verEjemploGuiado = () => {
     if (esEjemploGuiado(defRef.current)) return
-    try {
-      localStorage.setItem(CLAVE_ANTES_EJEMPLO, JSON.stringify(defRef.current))
-    } catch {
-      /* sin almacenamiento */
-    }
+    guardarClaveJson(CLAVE_ANTES_EJEMPLO, defRef.current)
     setReproduciendo(false)
     setDef(ejemploGuiadoTarea())
     setSeleccion(null)
@@ -392,16 +382,9 @@ export default function UnidadRobotica() {
   }
   const volverDelEjemplo = () => {
     let previa: Definicion | null = null
-    try {
-      const crudo = localStorage.getItem(CLAVE_ANTES_EJEMPLO)
-      if (crudo) {
-        const d = JSON.parse(crudo)
-        if (esDefinicion(d) && !esEjemploGuiado(d)) previa = d
-      }
-      localStorage.removeItem(CLAVE_ANTES_EJEMPLO)
-    } catch {
-      /* sin almacenamiento */
-    }
+    const guardada = leerJson(CLAVE_ANTES_EJEMPLO)
+    if (esDefinicion(guardada) && !esEjemploGuiado(guardada)) previa = guardada
+    borrarClave(CLAVE_ANTES_EJEMPLO)
     const siguiente = previa ?? tareaAlAbrir(definicionGuardada(CLAVE_TAREA), null)
     setReproduciendo(false)
     setDef(siguiente)
@@ -412,11 +395,7 @@ export default function UnidadRobotica() {
   const seguirConElEjemplo = () => {
     const actual = defRef.current
     if (!esEjemploGuiado(actual)) return
-    try {
-      localStorage.removeItem(CLAVE_ANTES_EJEMPLO)
-    } catch {
-      /* sin almacenamiento */
-    }
+    borrarClave(CLAVE_ANTES_EJEMPLO)
     setDef({ ...actual, nombre: NOMBRE_TAREA })
     setAviso('Este contorno quedó como tu tarea. Sigue con las ranuras.')
   }
@@ -623,7 +602,7 @@ export default function UnidadRobotica() {
       {seccion !== 'estudiar' ? (
         <BancoDividido<PestanaRobot>
           key={seccion}
-          clave="neumalab.robot.escena.v4"
+          clave={CLAVES.robotEscena}
           clase="banco--robot"
           divisionInicial={0.42}
           anchoMin={340}

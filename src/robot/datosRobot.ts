@@ -7,57 +7,41 @@ import { esEjemploGuiado, tareaAlAbrir } from './tarea4'
 import type { Curva } from './geometria'
 import type { Previa } from './Robot3D'
 import type { robotPorId } from './robots'
+import { borrarClave, CLAVES, leerJson } from '../persistencia'
 
 /** Cómo se programa: con nodos o con el mando manual. */
 export type Modo = 'visual' | 'mando'
 
-export const CLAVE = 'neumalab.robot.definicion'
+export const CLAVE = CLAVES.robotDefinicion
 /**
  * La tarea de Robótica se trabaja en su propia sección, con su definición guardada
  * aparte del Laboratorio. El enunciado lo entrega el profesor; «Entregar» sólo
  * aparece ahí.
  */
-export const CLAVE_TAREA = 'neumalab.robot.tarea'
+export const CLAVE_TAREA = CLAVES.robotTarea
 /** Lo que había en la tarea antes de abrir el ejemplo guiado. */
-export const CLAVE_ANTES_EJEMPLO = 'neumalab.robot.tarea.antes-ejemplo'
+export const CLAVE_ANTES_EJEMPLO = CLAVES.robotAntesEjemplo
 export const NOMBRE_TAREA = 'Tarea Robótica'
 export const HERR_DEFECTO: Herramienta = { tipo: 'fresa', nombre: 'Husillo con fresa', largo: 200, diametro: 5 }
 export const HERR_MANDO: Herramienta = { tipo: 'ventosa', nombre: 'Ventosa de vacío', largo: 120, diametro: 40 }
 export const BASE_DEFECTO: Plano = planoXY(v(450, -150, 300))
 
 export function leerGuardada(): Definicion {
-  try {
-    const crudo = localStorage.getItem(CLAVE)
-    if (crudo) {
-      const d = JSON.parse(crudo)
-      if (esDefinicion(d)) return d
-    }
-  } catch {
-    /* sin almacenamiento */
-  }
+  const d = leerJson(CLAVE)
+  if (esDefinicion(d)) return d
   return EJEMPLOS_ROBOT[0].definicion()
 }
 
 export function definicionGuardada(clave: string): Definicion | null {
-  try {
-    const crudo = localStorage.getItem(clave)
-    if (!crudo) return null
-    const d = JSON.parse(crudo)
-    return esDefinicion(d) ? d : null
-  } catch {
-    return null
-  }
+  const d = leerJson(clave)
+  return esDefinicion(d) ? d : null
 }
 
 export function leerTarea(): Definicion {
   const guardada = definicionGuardada(CLAVE_TAREA)
   const previa = definicionGuardada(CLAVE_ANTES_EJEMPLO)
   if (guardada && esEjemploGuiado(guardada)) {
-    try {
-      localStorage.removeItem(CLAVE_ANTES_EJEMPLO)
-    } catch {
-      /* sin almacenamiento */
-    }
+    borrarClave(CLAVE_ANTES_EJEMPLO)
   }
   return tareaAlAbrir(guardada, previa)
 }

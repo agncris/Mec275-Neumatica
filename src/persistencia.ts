@@ -19,7 +19,115 @@ export interface CircuitoGuardado {
   }
 }
 
-const CLAVE = 'neumalab.circuito'
+/**
+ * Todas las claves con las que la app guarda cosas en este navegador (`localStorage`).
+ * Son las únicas: nadie más escribe una clave `neumalab.*` a mano (lo comprueba un test).
+ * No cambies un valor: quien ya trabajó perdería lo que tenía guardado.
+ */
+export const CLAVES = {
+  /** Nombre del alumno y de su compañero, compartido por las cuatro unidades. */
+  alumno: 'neumalab.alumno',
+  /** Qué unidad quedó abierta. */
+  unidad: 'neumalab.unidad',
+  // Neumática
+  circuito: 'neumalab.circuito',
+  circuitoAbierto: 'neumalab.circuito-abierto',
+  bancoVista: 'neumalab.banco.vista',
+  bancoPaletaPlegada: 'neumalab.banco.paleta-plegada',
+  bancoInspector: 'neumalab.banco.inspector',
+  bancoAnchoPaleta: 'neumalab.banco.ancho-paleta',
+  bancoAnchoInspector: 'neumalab.banco.ancho-inspector',
+  bancoInferior: 'neumalab.banco.inferior',
+  bancoAltoInferior: 'neumalab.banco.alto-inferior',
+  bancoInferiorAmpliado: 'neumalab.banco.inferior-ampliado',
+  banco3dSonido: 'neumalab.banco3d.sonido',
+  paletaGrupos: 'neumalab.paleta.grupos',
+  neumaticaEntrega: 'neumalab.neumatica.entrega',
+  // PLC
+  plcPrograma: 'neumalab.plc.programa',
+  plcTarea: 'neumalab.plc.tarea',
+  plcDirecciones: 'neumalab.plc.direcciones',
+  plcPanel: 'neumalab.plc.panel',
+  plcBanco: 'neumalab.plc.banco.v2',
+  plcEntrega: 'neumalab.plc.entrega',
+  plcRotulos3d: 'neumalab.plc.rotulos3d',
+  plcSonido: 'neumalab.plc.sonido',
+  // CNC
+  cnc: 'neumalab.cnc',
+  cncTarea: 'neumalab.cnc.tarea',
+  cncPanel: 'neumalab.cnc.panel',
+  cncBanco: 'neumalab.cnc.banco.v2',
+  cncEntrega: 'neumalab.cnc.entrega',
+  // Robótica
+  robotDefinicion: 'neumalab.robot.definicion',
+  robotTarea: 'neumalab.robot.tarea',
+  /** Lo que había en la tarea antes de abrir el ejemplo guiado. */
+  robotAntesEjemplo: 'neumalab.robot.tarea.antes-ejemplo',
+  robotPanel: 'neumalab.robot.panel.v3',
+  robotPlegado: 'neumalab.robot.plegado',
+  robotEscena: 'neumalab.robot.escena.v4',
+  robotEntrega: 'neumalab.robot.entrega',
+  robotPaleta: 'neumalab.robot.paleta.v1',
+  robotAyudaLienzo: 'neumalab.robot.lienzo.ayuda.v1',
+} as const
+
+/** Si ya vio la guía de inicio de esa unidad. */
+export const claveGuia = (unidad: string) => `neumalab.guia.${unidad}`
+/** Los trabajos con nombre de «Mis trabajos» de esa unidad. */
+export const claveTrabajos = (unidad: string) => `neumalab.trabajos.${unidad}`
+
+/** Lo guardado como texto. `null` si no hay nada o si el navegador no deja leer (incógnito, bloqueado). */
+export function leerTexto(clave: string): string | null {
+  try {
+    return localStorage.getItem(clave)
+  } catch {
+    // Sin almacenamiento: se actúa como si no hubiera nada guardado.
+    return null
+  }
+}
+
+/** Guarda un texto. Devuelve `false` si no se pudo (sin almacenamiento o lleno): quien llama decide si avisa. */
+export function guardarTexto(clave: string, valor: string): boolean {
+  try {
+    localStorage.setItem(clave, valor)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** Borra una clave. Si el navegador no deja, no pasa nada. */
+export function borrarClave(clave: string): void {
+  try {
+    localStorage.removeItem(clave)
+  } catch {
+    // Sin almacenamiento: no hay nada que borrar.
+  }
+}
+
+/** Lo guardado como JSON. `null` si no hay nada, si el JSON está roto o si el navegador no deja leer. */
+export function leerJson(clave: string): unknown {
+  const crudo = leerTexto(clave)
+  if (crudo === null) return null
+  try {
+    return JSON.parse(crudo)
+  } catch {
+    // Dato roto: se actúa como si no hubiera nada.
+    return null
+  }
+}
+
+/** Guarda un valor como JSON. Devuelve `false` si no se pudo guardar. */
+export function guardarJson(clave: string, valor: unknown): boolean {
+  try {
+    return guardarTexto(clave, JSON.stringify(valor))
+  } catch {
+    // Valor que no se puede pasar a JSON.
+    return false
+  }
+}
+
+const CLAVE = CLAVES.circuito
 
 /** Base64 seguro para UTF-8 y para viajar dentro de una URL. */
 function aBase64(texto: string): string {
@@ -63,22 +171,13 @@ export function esCircuitoValido(dato: unknown): dato is CircuitoGuardado {
 }
 
 export function guardarLocal(circuito: CircuitoGuardado): void {
-  try {
-    localStorage.setItem(CLAVE, JSON.stringify(circuito))
-  } catch {
-    // Modo incógnito o almacenamiento lleno: no es motivo para romper la app.
-  }
+  // Modo incógnito o almacenamiento lleno: no es motivo para romper la app.
+  guardarJson(CLAVE, circuito)
 }
 
 export function leerLocal(): CircuitoGuardado | null {
-  try {
-    const crudo = localStorage.getItem(CLAVE)
-    if (!crudo) return null
-    const dato = JSON.parse(crudo)
-    return esCircuitoValido(dato) ? dato : null
-  } catch {
-    return null
-  }
+  const dato = leerJson(CLAVE)
+  return esCircuitoValido(dato) ? dato : null
 }
 
 /** Circuito codificado en el fragmento de la URL (#c=...), si lo hay. */
