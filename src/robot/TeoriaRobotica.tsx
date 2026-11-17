@@ -120,33 +120,44 @@ export function TiposGenerales() {
 export function Componentes() {
   return (
     <div>
-      <svg viewBox="0 0 620 240" width="100%" style={{ maxWidth: 680, display: 'block', margin: '0 auto 10px' }} role="img" aria-label="Componentes de un robot de base fija">
-        {/* Manipulador */}
-        <rect x={60} y={190} width={90} height={20} rx={4} fill="#2b3036" />
-        <rect x={90} y={120} width={30} height={72} rx={6} fill="#f06a14" />
-        <rect x={100} y={60} width={130} height={26} rx={10} fill="#f06a14" transform="rotate(-20 105 73)" />
-        <rect x={215} y={40} width={90} height={18} rx={8} fill="#f06a14" />
-        <rect x={300} y={42} width={14} height={40} rx={3} fill="#555" />
-        <circle cx={105} cy={120} r={16} fill="#d85a0e" />
-        <circle cx={220} cy={49} r={13} fill="#d85a0e" />
-        {/* Controlador */}
-        <rect x={420} y={90} width={80} height={120} rx={6} fill="#6b7580" />
-        <rect x={432} y={104} width={56} height={34} rx={3} fill="#cfd6dc" />
-        <path d="M150 205 C 250 230, 350 230, 420 190" fill="none" stroke="#2b3036" strokeWidth={4} />
-        {/* Interfaz de control (teach pendant) */}
-        <rect x={540} y={110} width={50} height={70} rx={8} fill="#2b3036" />
-        <rect x={548} y={118} width={34} height={28} rx={3} fill="#9fe0a8" />
-        <path d="M500 150 C 520 150, 520 150, 540 150" fill="none" stroke="#2b3036" strokeWidth={3} />
-        {[
-          [120, 26, 'Estructura mecánica (brazo)'],
-          [455, 80, 'Controlador'],
-          [565, 100, 'smartPAD'],
-          [320, 100, 'Efector final'],
-        ].map(([x, y, t]) => (
-          <text key={String(t)} x={Number(x)} y={Number(y)} textAnchor="middle" fontSize={13} fontWeight={700} fill={TINTA}>
-            {t}
-          </text>
-        ))}
+      <svg viewBox="0 0 620 248" width="100%" style={{ maxWidth: 680, display: 'block', margin: '0 auto 10px' }} role="img" aria-label="Componentes de un robot de base fija: el brazo sale de la base y termina en el efector">
+        {/* Base y columna, unidas al hombro */}
+        <rect x={58} y={200} width={100} height={18} rx={4} fill="#2b3036" />
+        <rect x={93} y={132} width={30} height={72} rx={6} fill="#f06a14" />
+        {/* Hombro en (108, 132): el brazo y el antebrazo salen de esa articulación */}
+        <g transform="translate(108 132) rotate(-32)">
+          <rect x={0} y={-14} width={122} height={28} rx={12} fill="#f06a14" />
+          <circle cx={0} cy={0} r={16} fill="#d85a0e" />
+          <g transform="translate(122 0) rotate(26)">
+            <rect x={0} y={-10} width={96} height={20} rx={9} fill="#f06a14" />
+            <circle cx={0} cy={0} r={12} fill="#d85a0e" />
+            <g transform="translate(96 0)">
+              <rect x={0} y={-7} width={14} height={14} rx={2} fill="#5c656e" />
+              <rect x={10} y={-18} width={7} height={16} rx={2} fill="#2b3036" />
+              <rect x={10} y={2} width={7} height={16} rx={2} fill="#2b3036" />
+            </g>
+          </g>
+        </g>
+        {/* Controlador, cableado a la base */}
+        <rect x={420} y={98} width={80} height={120} rx={6} fill="#6b7580" />
+        <rect x={432} y={112} width={56} height={34} rx={3} fill="#cfd6dc" />
+        <path d="M158 210 C 250 236, 350 236, 420 198" fill="none" stroke="#2b3036" strokeWidth={4} />
+        {/* smartPAD, unido al controlador */}
+        <rect x={540} y={118} width={50} height={70} rx={8} fill="#2b3036" />
+        <rect x={548} y={126} width={34} height={28} rx={3} fill="#9fe0a8" />
+        <path d="M500 158 H 540" fill="none" stroke="#2b3036" strokeWidth={3} />
+        <text x={175} y={28} textAnchor="middle" fontSize={13} fontWeight={700} fill={TINTA}>
+          Estructura mecánica (brazo)
+        </text>
+        <text x={455} y={88} textAnchor="middle" fontSize={13} fontWeight={700} fill={TINTA}>
+          Controlador
+        </text>
+        <text x={565} y={108} textAnchor="middle" fontSize={13} fontWeight={700} fill={TINTA}>
+          smartPAD
+        </text>
+        <text x={318} y={128} textAnchor="middle" fontSize={13} fontWeight={700} fill={TINTA}>
+          Efector final
+        </text>
       </svg>
       <p style={p}>
         Un robot de base fija tiene <strong>seis partes básicas</strong>:
