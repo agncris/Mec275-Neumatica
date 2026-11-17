@@ -47,6 +47,17 @@ export default defineConfig(({ mode }) => {
   }
   return {
     plugins: [react(), mecbotEnDev()],
+    build: {
+      rollupOptions: {
+        output: {
+          // three.js en su propio trozo: lo comparten todas las escenas 3D y no entra en la carga inicial.
+          manualChunks(id: string) {
+            if (id.includes('node_modules/three-viewport-gizmo')) return 'gizmo'
+            if (id.includes('node_modules/three/')) return 'three'
+          },
+        },
+      },
+    },
     test: {
       globals: true,
       environment: 'node',
