@@ -53,21 +53,20 @@ export interface VistaRobot {
 const NARANJA = new THREE.MeshPhysicalMaterial({ color: 0xf15a12, metalness: 0.12, roughness: 0.34, clearcoat: 0.55, clearcoatRoughness: 0.28 })
 const NEGRO = new THREE.MeshStandardMaterial({ color: 0x1a1d22, metalness: 0.2, roughness: 0.62 })
 const GRIS = new THREE.MeshStandardMaterial({ color: 0xc5ccd4, metalness: 0.92, roughness: 0.22 })
-const MESON = new THREE.MeshStandardMaterial({ color: 0x2a3038, metalness: 0.45, roughness: 0.42 })
+const MESON = new THREE.MeshStandardMaterial({ color: 0x8b939c, metalness: 0.35, roughness: 0.48 })
 const ACERO = new THREE.MeshStandardMaterial({ color: 0xd5dae0, metalness: 0.95, roughness: 0.18 })
 const PLANCHA = new THREE.MeshStandardMaterial({ color: 0x9aa3ad, metalness: 0.72, roughness: 0.38 })
 const HUSILLO = new THREE.MeshStandardMaterial({ color: 0xd8dde3, metalness: 0.82, roughness: 0.28 })
 
-/** Degradado vertical oscuro: el viewport se lee como un estudio, no como una caja gris. */
-function fondoEstudio(): THREE.CanvasTexture {
+/** Fondo claro, el mismo tono que el resto de la app. */
+function fondoClaro(): THREE.CanvasTexture {
   const c = document.createElement('canvas')
   c.width = 2
   c.height = 256
   const g = c.getContext('2d')!
   const grad = g.createLinearGradient(0, 0, 0, 256)
-  grad.addColorStop(0, '#10141a')
-  grad.addColorStop(0.62, '#1a212a')
-  grad.addColorStop(1, '#2c343e')
+  grad.addColorStop(0, '#f7f8fa')
+  grad.addColorStop(1, '#e4e8ee')
   g.fillStyle = grad
   g.fillRect(0, 0, 2, 256)
   const t = new THREE.CanvasTexture(c)
@@ -332,23 +331,23 @@ export default function Robot3D({
 
     const escena = new THREE.Scene()
     const pmrem = new THREE.PMREMGenerator(renderer)
-    const fondo = fondoEstudio()
+    const fondo = fondoClaro()
     escena.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
-    escena.environmentIntensity = 1.15
+    escena.environmentIntensity = 0.55
     escena.background = fondo
     // Mundo con Z hacia arriba.
     const mundo = new THREE.Group()
     mundo.rotation.x = -Math.PI / 2
     escena.add(mundo)
-    const piso = new THREE.Mesh(new THREE.PlaneGeometry(8000, 8000), new THREE.MeshStandardMaterial({ color: 0x171c22, roughness: 0.92, metalness: 0.08 }))
+    const piso = new THREE.Mesh(new THREE.PlaneGeometry(8000, 8000), new THREE.MeshStandardMaterial({ color: 0xe7ebf0, roughness: 0.92, metalness: 0.02 }))
     piso.receiveShadow = true
     mundo.add(piso)
-    const grilla = new THREE.GridHelper(6000, 40, 0x3a4450, 0x2a323c)
+    const grilla = new THREE.GridHelper(6000, 40, 0x9aa3ad, 0xb7c0c9)
     grilla.rotation.x = Math.PI / 2
     grilla.position.z = 1
     for (const m of Array.isArray(grilla.material) ? grilla.material : [grilla.material]) {
       m.transparent = true
-      m.opacity = 0.45
+      m.opacity = 0.85
     }
     mundo.add(grilla)
     const ejesMundo = new THREE.AxesHelper(250)
@@ -366,7 +365,7 @@ export default function Robot3D({
     relleno.position.set(-1400, 900, -400)
     const contra = new THREE.DirectionalLight(0xffd2a8, 0.7)
     contra.position.set(-500, 1400, -2000)
-    escena.add(sol, relleno, contra, new THREE.HemisphereLight(0xb7c4d4, 0x14181e, 0.4))
+    escena.add(sol, relleno, contra, new THREE.HemisphereLight(0xf4f7fb, 0xd5dbe3, 0.65))
 
     const camara = new THREE.PerspectiveCamera(40, cont.clientWidth / Math.max(1, cont.clientHeight), 5, 30000)
     const controles = new OrbitControls(camara, renderer.domElement)
@@ -379,13 +378,13 @@ export default function Robot3D({
     controlesRef.current = controles
     aplicarModoArrastre(controles, modoArrastre)
 
-    // Claro sobre el estudio oscuro, un poco transparente. Al pasar el mouse la cara se oscurece.
+    // Gris con contraste sobre el fondo claro. Al pasar el mouse la cara se oscurece.
     const cara = {
-      color: '#f3f4f6',
-      labelColor: '#1a1a1a',
-      opacity: 0.88,
+      color: '#6d737b',
+      labelColor: '#ffffff',
+      opacity: 0.82,
       border: { size: 1.5, color: '#3a3a3a' },
-      hover: { color: '#4a4e54', labelColor: '#ffffff', opacity: 0.96, border: { size: 1.5, color: '#2a2a2a' } },
+      hover: { color: '#3a3e44', labelColor: '#ffffff', opacity: 0.96, border: { size: 1.5, color: '#2a2a2a' } },
     }
     const gizmo = new ViewportGizmo(camara, renderer, {
       container: cont,
@@ -643,7 +642,7 @@ export default function Robot3D({
   if (sinWebGL) return <p style={{ padding: 20, color: '#8a5b00' }}>Este navegador no tiene WebGL: la vista 3D no está disponible.</p>
   const llena = pantalla || alto === '100%'
   return (
-    <div ref={envolturaRef} style={{ position: 'relative', display: 'flex', flexDirection: 'column', height: llena ? '100%' : undefined, minHeight: 0, background: pantalla ? '#12161c' : undefined }}>
+    <div ref={envolturaRef} style={{ position: 'relative', display: 'flex', flexDirection: 'column', height: llena ? '100%' : undefined, minHeight: 0, background: pantalla ? '#eef1f4' : undefined }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginBottom: 8, flex: 'none' }}>
         <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>{encabezado}</div>
         <div style={{ marginLeft: 'auto', display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 8, flex: '1 1 240px' }} role="toolbar" aria-label="Vistas de la simulación">
@@ -678,7 +677,7 @@ export default function Robot3D({
         </div>
       </div>
       <div style={{ position: 'relative', flex: llena ? 1 : undefined, height: llena ? undefined : alto, minHeight: llena ? 0 : undefined, display: 'flex' }}>
-        <div ref={contRef} style={{ position: 'relative', width: '100%', flex: 1, minHeight: 0, borderRadius: 8, overflow: 'hidden', background: '#12161c' }} />
+        <div ref={contRef} style={{ position: 'relative', width: '100%', flex: 1, minHeight: 0, borderRadius: 8, overflow: 'hidden', background: '#e7ebf0' }} />
         <div className="flechas-cubo" role="group" aria-label="Girar la vista 90 grados">
           {(
             [
