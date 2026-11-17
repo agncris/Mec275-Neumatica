@@ -5,6 +5,7 @@
  */
 import { lazy, Suspense, useEffect, useState } from 'react'
 import App from './App'
+import MecBot from './components/MecBot'
 import { useDesplazarEnBordes } from './desplazarEnBordes'
 import { unidadVisible, VER_CNC, VER_ROBOTICA, type Unidad } from './unidades'
 
@@ -130,6 +131,7 @@ export default function Raiz() {
           Sin conexión: la app funciona igual y tu trabajo se guarda en este navegador.
         </p>
       )}
+      <MecBot />
       {unidad === 'neumatica' ? (
         <App />
       ) : (

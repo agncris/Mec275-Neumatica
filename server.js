@@ -23,6 +23,17 @@ app.use(
 
 app.get('/salud', (_req, res) => res.json({ ok: true }))
 
+app.post('/api/mecbot', express.json({ limit: '32kb' }), async (req, res) => {
+  try {
+    const { responder } = await import('./api/responder.js')
+    const texto = await responder(req.body?.mensajes)
+    res.json({ texto })
+  } catch (e) {
+    const codigo = e?.codigo || 'red'
+    res.status(e?.status || 502).json({ error: codigo })
+  }
+})
+
 // SPA: cualquier otra ruta devuelve el index para que el enrutado sea del cliente.
 app.get('*', (_req, res) => res.sendFile(path.join(DIST, 'index.html')))
 
