@@ -17,7 +17,7 @@ import { Line2 } from 'three/examples/jsm/lines/Line2.js'
 import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js'
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
-import { fondoTaller } from '../vista3d/realista'
+import { sombraContacto, solSuave } from '../vista3d/realista'
 import { crearViewCube } from '../vista3d/viewcube'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import type { Vec3 } from './gcode'
@@ -30,7 +30,7 @@ import {
   type HerramientaFresa,
   type HerramientaTorno,
 } from './maquinas'
-import { ALTO_GARRA, LARGO_BROCA, PiezaFresa, PiezaTorno, contrapuntoDe, type SimuladorCNC } from './simulador'
+import { ALTO_GARRA, PiezaFresa, PiezaTorno, contrapuntoDe, type SimuladorCNC } from './simulador'
 import { SonidoCNC } from './sonidoCNC'
 
 export interface VistaCNC {
@@ -49,14 +49,31 @@ const PLANO_CORTE = new THREE.Plane(new THREE.Vector3(0, 0, -1), 0)
 type Vista = 'iso' | 'frente' | 'arriba' | 'lado'
 
 const M = {
-  pintura: new THREE.MeshPhysicalMaterial({ color: 0xdfe4ea, metalness: 0.12, roughness: 0.42, clearcoat: 0.45, clearcoatRoughness: 0.35 }),
-  pinturaOscura: new THREE.MeshPhysicalMaterial({ color: 0x3e4650, metalness: 0.3, roughness: 0.42, clearcoat: 0.2 }),
-  acero: new THREE.MeshPhysicalMaterial({ color: 0xc5ccd4, metalness: 0.96, roughness: 0.2, clearcoat: 0.18 }),
-  aceroOscuro: new THREE.MeshPhysicalMaterial({ color: 0x5c656e, metalness: 0.9, roughness: 0.32 }),
-  fundicion: new THREE.MeshStandardMaterial({ color: 0x6a727b, metalness: 0.45, roughness: 0.62 }),
-  inserto: new THREE.MeshPhysicalMaterial({ color: 0xe2c15a, metalness: 0.85, roughness: 0.22, clearcoat: 0.3 }),
+  pintura: new THREE.MeshPhysicalMaterial({ color: 0x5e6b76, metalness: 0.22, roughness: 0.46, clearcoat: 0.28, clearcoatRoughness: 0.4 }),
+  pinturaOscura: new THREE.MeshPhysicalMaterial({ color: 0x3a444d, metalness: 0.34, roughness: 0.4, clearcoat: 0.22 }),
+  acero: new THREE.MeshPhysicalMaterial({ color: 0xc5ccd4, metalness: 0.96, roughness: 0.18, clearcoat: 0.28, envMapIntensity: 1.25 }),
+  aceroOscuro: new THREE.MeshPhysicalMaterial({ color: 0x4e585f, metalness: 0.88, roughness: 0.3, envMapIntensity: 1.1 }),
+  fundicion: new THREE.MeshPhysicalMaterial({ color: 0x343c44, metalness: 0.42, roughness: 0.46, clearcoat: 0.18, clearcoatRoughness: 0.45, envMapIntensity: 0.85 }),
+  inserto: new THREE.MeshPhysicalMaterial({ color: 0xe2c15a, metalness: 0.88, roughness: 0.18, clearcoat: 0.35, envMapIntensity: 1.3 }),
   negro: new THREE.MeshStandardMaterial({ color: 0x1c2126, metalness: 0.25, roughness: 0.5 }),
   naranja: new THREE.MeshPhysicalMaterial({ color: 0xe8792b, metalness: 0.15, roughness: 0.38, clearcoat: 0.4 }),
+}
+
+/** Cielo neutro y más claro que la bancada, para que la máquina se separe del fondo. */
+function fondoMaquina(): THREE.CanvasTexture {
+  const c = document.createElement('canvas')
+  c.width = 2
+  c.height = 256
+  const g = c.getContext('2d')!
+  const grad = g.createLinearGradient(0, 0, 0, 256)
+  grad.addColorStop(0, '#fbfcfd')
+  grad.addColorStop(0.5, '#f2f4f6')
+  grad.addColorStop(1, '#e6eaee')
+  g.fillStyle = grad
+  g.fillRect(0, 0, 2, 256)
+  const t = new THREE.CanvasTexture(c)
+  t.colorSpace = THREE.SRGBColorSpace
+  return t
 }
 
 function caja(w: number, h: number, d: number, mat: THREE.Material, r = 2): THREE.Mesh {
@@ -157,22 +174,32 @@ function perfilTorno(ext: Float32Array, int: Float32Array, z0: number, paso: num
 // ---------------------------------------------------------------------------
 // Herramientas
 // ---------------------------------------------------------------------------
-function modeloHerramientaTorno(h: HerramientaTorno): THREE.Group {
+/**
+ * Geometría visual del torno. El origen es el punto programado (el filo).
+ * El inserto sí llega al material; el cuello es angosto y el mango queda
+ * por encima del bruto, sesgado hacia el lado ya mecanizado y hacia la torreta.
+ */
+function modeloHerramientaTorno(h: HerramientaTorno, radioBruto: number): THREE.Group {
   const g = new THREE.Group()
-  const color = new THREE.MeshStandardMaterial({ color: h.color, metalness: 0.4, roughness: 0.45 })
+  const color = new THREE.MeshStandardMaterial({ color: h.color, metalness: 0.48, roughness: 0.38 })
   if (h.forma === 'broca') {
     const r = (h.medida ?? 8) / 2
     const punta = r * Math.tan((31 * Math.PI) / 180)
+    // Saliente largo: el portabrocas queda fuera de la cara, no dentro del agujero.
+    const salida = Math.min(78, Math.max(58, radioBruto + 36))
     const cono = new THREE.Mesh(new THREE.ConeGeometry(r, punta, 24), M.acero)
     cono.rotation.z = Math.PI / 2
     cono.position.x = punta / 2
-    const cuerpo = cil(r, LARGO_BROCA, M.acero, 24)
+    cono.castShadow = true
+    const cuerpo = cil(r * 0.96, salida, M.acero, 24)
     cuerpo.rotation.z = Math.PI / 2
-    cuerpo.position.x = punta + LARGO_BROCA / 2
-    const porta = caja(22, 26, 26, color, 3)
-    porta.position.set(punta + LARGO_BROCA + 8, 16, 0)
-    const barra = caja(20, 70, 20, M.aceroOscuro, 2)
-    barra.position.set(punta + LARGO_BROCA + 8, 55, 0)
+    cuerpo.position.x = punta + salida / 2
+    const porta = cil(r + 3, 12, color, 24, r + 5.5)
+    porta.rotation.z = Math.PI / 2
+    porta.position.x = punta + salida + 7
+    const barra = caja(11, 58, 11, M.aceroOscuro, 1.4)
+    barra.geometry.translate(0, 29, 0)
+    barra.position.set(punta + salida + 7, radioBruto + 6, -8)
     g.add(cono, cuerpo, porta, barra)
     return g
   }
@@ -192,18 +219,32 @@ function modeloHerramientaTorno(h: HerramientaTorno): THREE.Group {
   forma.lineTo(pts[pts.length - 1][0], alto)
   forma.lineTo(pts[0][0], alto)
   forma.closePath()
-  const geo = new THREE.ExtrudeGeometry(forma, { depth: 5, bevelEnabled: false })
-  geo.translate(0, 0, -2.5)
+  const geo = new THREE.ExtrudeGeometry(forma, { depth: 4.2, bevelEnabled: false })
+  geo.translate(0, 0, -2.1)
   const inserto = new THREE.Mesh(geo, h.forma === 'ranurado' ? M.acero : M.inserto)
   inserto.castShadow = true
-  const ancho = Math.max(8, b - a)
-  const cuerpo = caja(Math.min(20, ancho + 4), 50, 16, color, 2)
-  cuerpo.position.set((a + b) / 2, alto + 25, 0)
-  g.add(inserto, cuerpo)
+  const ranura = h.forma === 'ranurado'
+  const rosca = h.forma === 'roscado'
+  const anchoCuello = ranura ? Math.max(0.8, (h.medida ?? 4) * 0.8) : rosca ? 2.8 : 4.6
+  const profCuello = ranura ? Math.min(2.6, anchoCuello + 0.3) : 3.6
+  // El cuello no cruza la punta hacia el resalte sin mecanizar.
+  const xCuello = h.forma === 'izquierda' ? anchoCuello / 2 + 0.5 : h.forma === 'derecha' ? -(anchoCuello / 2 + 0.5) : ranura ? (a + b) / 2 : 0
+  const despeje = Math.min(70, Math.max(28, radioBruto + 14))
+  const altoCuello = despeje - alto
+  const cuello = caja(anchoCuello, altoCuello, profCuello, color, 0.2)
+  cuello.position.set(xCuello, alto + altoCuello / 2, 0)
+  // El mango nace en el despeje (por encima del bruto) y se inclina hacia la torreta.
+  const sesgo = h.forma === 'derecha' ? -1 : h.forma === 'izquierda' ? 1 : 0
+  const mango = caja(13, 34, 11, color, 1.4)
+  mango.geometry.translate(0, 17, 0)
+  mango.position.set(xCuello, despeje - 0.4, 0)
+  mango.rotation.z = -sesgo * 0.32
+  mango.rotation.x = -0.48
+  g.add(inserto, cuello, mango)
   return g
 }
 
-function modeloHerramientaFresa(h: HerramientaFresa): THREE.Group {
+function modeloHerramientaFresa(h: HerramientaFresa, altoBruto: number): THREE.Group {
   const g = new THREE.Group()
   const r = h.diametro / 2
   const color = new THREE.MeshStandardMaterial({ color: h.color, metalness: 0.5, roughness: 0.4 })
@@ -238,11 +279,14 @@ function modeloHerramientaFresa(h: HerramientaFresa): THREE.Group {
     }
     cuerpo = new THREE.Group().add(c, filos)
   }
-  const porta = cil(Math.max(r + 4, 12), 30, color, 32, Math.max(r + 4, 12) + 6)
-  porta.position.y = largo + 15
-  const cono = cil(18, 20, M.aceroOscuro, 32, 25)
-  cono.position.y = largo + 40
-  g.add(cuerpo, porta, cono)
+  // El vástago sigue el diámetro de la fresa; el porta queda por encima del bruto.
+  const salida = Math.max(largo + 18, altoBruto + 24)
+  const vastago = cil(Math.max(1.2, r * 0.92), Math.max(8, salida - largo), M.acero, 24)
+  vastago.position.y = largo + Math.max(8, salida - largo) / 2
+  const radioPorta = Math.min(18, Math.max(r + 2.2, 7))
+  const porta = cil(radioPorta, 16, color, 28, radioPorta + 1.5)
+  porta.position.y = salida + 8
+  g.add(cuerpo, vastago, porta)
   return g
 }
 
@@ -258,7 +302,7 @@ interface EscenaMaquina {
 }
 
 interface Trazo extends THREE.Group {
-  /** Marca en grueso el recorrido de una línea y deja el resto más suave. */
+  /** Marca el recorrido de una línea y deja el resto más suave. */
   marcar: (linea: number | null, trayectoria: boolean, ancho: number, alto: number) => void
 }
 
@@ -277,8 +321,8 @@ function lineasTrayectoria(sim: SimuladorCNC, aEscena: (p: Vec3) => THREE.Vector
   }
   const g = new THREE.Group() as Trazo
   const base = new THREE.Group()
-  const matRap = new THREE.LineDashedMaterial({ color: 0xff7a00, dashSize: 2.5, gapSize: 2, depthTest: false, transparent: true, opacity: 0.9 })
-  const matCor = new THREE.LineBasicMaterial({ color: 0x1668c7, depthTest: false, transparent: true, opacity: 0.95 })
+  const matRap = new THREE.LineDashedMaterial({ color: 0xff7a00, dashSize: 2.2, gapSize: 1.6, depthTest: false, transparent: true, opacity: 0.58 })
+  const matCor = new THREE.LineBasicMaterial({ color: 0x1668c7, depthTest: false, transparent: true, opacity: 0.5 })
   const hacer = (arr: number[], mat: THREE.LineBasicMaterial | THREE.LineDashedMaterial) => {
     if (!arr.length) return
     const geo = new THREE.BufferGeometry()
@@ -297,8 +341,8 @@ function lineasTrayectoria(sim: SimuladorCNC, aEscena: (p: Vec3) => THREE.Vector
   g.marcar = (linea, trayectoria, ancho, alto) => {
     base.visible = trayectoria
     const tenue = trayectoria && linea != null
-    matRap.opacity = tenue ? 0.22 : 0.9
-    matCor.opacity = tenue ? 0.22 : 0.95
+    matRap.opacity = tenue ? 0.16 : 0.58
+    matCor.opacity = tenue ? 0.14 : 0.5
     if (linea === puesta) {
       for (const m of materiales) m.resolution.set(ancho, alto)
       destaque.visible = linea != null
@@ -330,12 +374,13 @@ function lineasTrayectoria(sim: SimuladorCNC, aEscena: (p: Vec3) => THREE.Vector
       geo.setPositions(flat)
       const mat = new LineMaterial({
         color: p.tipo === 'rapido' ? 0xff7a00 : 0xff2d55,
-        linewidth: 5,
+        linewidth: 1.25,
         depthTest: false,
         transparent: true,
+        opacity: 0.72,
         dashed: p.tipo === 'rapido',
-        dashSize: 4,
-        gapSize: 2,
+        dashSize: 3,
+        gapSize: 1.8,
         resolution: new THREE.Vector2(ancho, alto),
       })
       materiales.push(mat)
@@ -433,7 +478,16 @@ function escenaTorno(sim: SimuladorCNC): EscenaMaquina {
   const R = pz.bruto.diametro / 2
   const mat = materialDe(sim.config.material)
   const tex = texturaRayada()
-  const matPieza = new THREE.MeshPhysicalMaterial({ color: mat.color, metalness: mat.metal, roughness: 0.26, clearcoat: 0.2, map: tex, side: THREE.DoubleSide })
+  const matPieza = new THREE.MeshPhysicalMaterial({
+    color: mat.color,
+    metalness: mat.metal,
+    roughness: mat.metal > 0.4 ? 0.18 : 0.42,
+    clearcoat: mat.metal > 0.4 ? 0.42 : 0.08,
+    clearcoatRoughness: 0.28,
+    envMapIntensity: mat.metal > 0.4 ? 1.45 : 0.6,
+    map: tex,
+    side: THREE.DoubleSide,
+  })
 
   // Bancada inclinada, cabezal y bandeja de viruta.
   const largoBanco = pz.bruto.largo + 260
@@ -494,9 +548,10 @@ function escenaTorno(sim: SimuladorCNC): EscenaMaquina {
   const tapa = cil(30, 44, M.pinturaOscura, 24)
   tapa.rotation.x = Math.PI / 2
   torreta.add(disco, tapa)
-  torreta.position.set(0, 110, -8)
-  const soporte = caja(70, 50, 60, M.pintura, 4)
-  soporte.position.set(0, 160, -20)
+  // La torreta queda detrás y por encima del bruto: el disco no baja al cilindro.
+  torreta.position.set(0, Math.max(128, R + 78), -R * 0.35 - 22)
+  const soporte = caja(64, 44, 52, M.pintura, 4)
+  soporte.position.set(0, Math.max(176, R + 126), -R * 0.45 - 30)
   carro.add(torreta, soporte)
   raiz.add(carro)
   let herr: THREE.Group | null = null
@@ -504,19 +559,22 @@ function escenaTorno(sim: SimuladorCNC): EscenaMaquina {
   let hHerr: unknown = null
   let giroTorreta = 0
 
-  const boquilla = cil(2.5, 40, M.naranja, 12)
-  boquilla.rotation.z = 0.9
+  const boquilla = cil(2.2, 20, M.naranja, 12)
+  boquilla.position.set(12, Math.max(48, R + 18), -16)
+  boquilla.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(-0.22, -0.9, 0.32).normalize())
   carro.add(boquilla)
-  boquilla.position.set(22, 35, 18)
 
   const viruta = new Viruta(mat.color, -R - 58, 1)
   const refri = new Refrigerante()
-  raiz.add(viruta.malla, refri.puntos)
+  const contacto = sombraContacto(Math.max(78, R + 36))
+  contacto.rotation.x = -Math.PI / 2
+  contacto.position.set(pz.z0 + pz.bruto.largo * 0.32, -R - 58.4, 18)
+  raiz.add(viruta.malla, refri.puntos, contacto)
 
   const aEscena = (p: Vec3) => new THREE.Vector3(p.z, p.x / 2, 0.5)
   const tray = lineasTrayectoria(sim, aEscena)
   raiz.add(tray)
-  const marca = new THREE.Mesh(new THREE.SphereGeometry(1.4, 12, 8), new THREE.MeshBasicMaterial({ color: 0xff2d55, depthTest: false }))
+  const marca = new THREE.Mesh(new THREE.SphereGeometry(0.7, 10, 8), new THREE.MeshBasicMaterial({ color: 0xff2d55, depthTest: false }))
   marca.renderOrder = 11
   raiz.add(marca)
 
@@ -575,7 +633,7 @@ function escenaTorno(sim: SimuladorCNC): EscenaMaquina {
         hHerr = hNueva
         if (herr) carro.remove(herr)
         const h = hNueva
-        herr = h ? modeloHerramientaTorno(h) : new THREE.Group()
+        herr = h ? modeloHerramientaTorno(h, R) : new THREE.Group()
         carro.add(herr)
         giroTorreta += Math.PI / 6
       }
@@ -587,7 +645,7 @@ function escenaTorno(sim: SimuladorCNC): EscenaMaquina {
       const corte = s.cortando
       if (corte > 0) viruta.emitir(new THREE.Vector3(p.x, p.y, 2), Math.min(4, 1 + Math.floor(corte)), new THREE.Vector3(0.5, 0.2, 1))
       viruta.actualizar(dt)
-      refri.actualizar(dt, !!paso?.refrigerante && !s.terminado, new THREE.Vector3(p.x + 30, p.y + 55, 26), new THREE.Vector3(p.x + 1, p.y + 1, 2))
+      refri.actualizar(dt, !!paso?.refrigerante && !s.terminado, new THREE.Vector3(p.x + 8, p.y + Math.max(36, R + 8), -10), new THREE.Vector3(p.x + 0.4, p.y + 1.2, 1))
     },
   }
 }
@@ -673,7 +731,16 @@ function escenaFresa(sim: SimuladorCNC): EscenaMaquina {
   const raiz = new THREE.Group()
   const { largo: L, ancho: W, alto: H } = pz.bruto
   const mat = materialDe(sim.config.material)
-  const matPieza = new THREE.MeshPhysicalMaterial({ color: mat.color, metalness: mat.metal * 0.85, roughness: 0.32, clearcoat: 0.12, vertexColors: true, side: THREE.DoubleSide })
+  const matPieza = new THREE.MeshPhysicalMaterial({
+    color: mat.color,
+    metalness: mat.metal * 0.9,
+    roughness: mat.metal > 0.4 ? 0.22 : 0.45,
+    clearcoat: mat.metal > 0.4 ? 0.32 : 0.06,
+    clearcoatRoughness: 0.32,
+    envMapIntensity: mat.metal > 0.4 ? 1.3 : 0.5,
+    vertexColors: true,
+    side: THREE.DoubleSide,
+  })
   const { malla, actualizar: actualizarMalla } = mallaFresa(pz, matPieza)
   raiz.add(malla)
   let versionPieza = pz.version
@@ -698,13 +765,18 @@ function escenaFresa(sim: SimuladorCNC): EscenaMaquina {
   const columna = caja(120, 420, 110, M.pintura, 6)
   columna.position.set(L / 2, 60, -W - 170)
   raiz.add(columna)
+  const contacto = sombraContacto(Math.max(L, W) * 0.55)
+  contacto.rotation.x = -Math.PI / 2
+  contacto.position.set(L / 2, -H - 29.2, -W / 2)
+  raiz.add(contacto)
 
-  // Cabezal (sube y baja con Z) y husillo.
+  // Cabezal (sube y baja con Z). La nariz queda por encima del bruto aunque la fresa baje al fondo.
   const cabezal = new THREE.Group()
-  const caja1 = caja(90, 120, 150, M.pintura, 6)
-  caja1.position.set(0, 150, -70)
-  const nariz = cil(34, 40, M.pinturaOscura, 40)
-  nariz.position.set(0, 88, 0)
+  const despejeHusillo = Math.max(100, H + 46)
+  const caja1 = caja(90, 110, 130, M.pintura, 6)
+  caja1.position.set(0, despejeHusillo + 72, -78)
+  const nariz = cil(26, 26, M.pinturaOscura, 40)
+  nariz.position.set(0, despejeHusillo, 0)
   cabezal.add(caja1, nariz)
   const husillo = new THREE.Group()
   husillo.position.y = 0
@@ -715,9 +787,9 @@ function escenaFresa(sim: SimuladorCNC): EscenaMaquina {
   let hHerr: unknown = null
   let angulo = 0
 
-  const boquilla = cil(2.5, 50, M.naranja, 12)
-  boquilla.rotation.z = -0.8
-  boquilla.position.set(40, 70, 20)
+  const boquilla = cil(2.2, 24, M.naranja, 12)
+  boquilla.position.set(28, despejeHusillo - 8, 16)
+  boquilla.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(-0.35, -0.88, -0.15).normalize())
   cabezal.add(boquilla)
 
   const viruta = new Viruta(mat.color, -H - 30, 0.8)
@@ -758,7 +830,7 @@ function escenaFresa(sim: SimuladorCNC): EscenaMaquina {
         hHerr = hNueva
         if (herr) husillo.remove(herr)
         const h = hNueva
-        herr = h ? modeloHerramientaFresa(h) : new THREE.Group()
+        herr = h ? modeloHerramientaFresa(h, H) : new THREE.Group()
         husillo.add(herr)
       }
       if (herr) herr.rotation.y = angulo
@@ -767,7 +839,7 @@ function escenaFresa(sim: SimuladorCNC): EscenaMaquina {
       const corte = s.cortando
       if (corte > 0) viruta.emitir(new THREE.Vector3(p.x, p.y + 1, p.z), Math.min(4, 1 + Math.floor(corte / 4)), new THREE.Vector3(0, 0.5, 0.5))
       viruta.actualizar(dt)
-      refri.actualizar(dt, !!paso?.refrigerante && !s.terminado, new THREE.Vector3(p.x + 58, p.y + 50, p.z + 20), new THREE.Vector3(p.x + 3, p.y + 2, p.z + 1))
+      refri.actualizar(dt, !!paso?.refrigerante && !s.terminado, new THREE.Vector3(p.x + 18, p.y + despejeHusillo - 16, p.z + 8), new THREE.Vector3(p.x + 2, p.y + 2, p.z + 1))
     },
   }
 }
@@ -829,13 +901,13 @@ export default function Maquina3D({
     const escena = new THREE.Scene()
     const pmrem = new THREE.PMREMGenerator(renderer)
     escena.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
-    escena.environmentIntensity = 1.05
-    escena.background = fondoTaller()
-    const sol = new THREE.DirectionalLight(0xfff4e6, 2.0)
-    sol.castShadow = true
-    sol.shadow.mapSize.set(2048, 2048)
-    sol.shadow.bias = -0.0005
-    escena.add(sol, sol.target, new THREE.HemisphereLight(0xf2f6ff, 0x5d6168, 0.45))
+    escena.environmentIntensity = 1.2
+    escena.background = fondoMaquina()
+    const sol = solSuave(0xfff6ec, 2.15)
+    sol.shadow.normalBias = 2.2
+    sol.shadow.bias = -0.0006
+    sol.shadow.radius = 2.5
+    escena.add(sol, sol.target, new THREE.HemisphereLight(0xf7f8fa, 0x8a8178, 0.62))
 
     const camara = new THREE.PerspectiveCamera(35, cont.clientWidth / Math.max(1, cont.clientHeight), 1, 6000)
     const controles = new OrbitControls(camara, renderer.domElement)
@@ -944,8 +1016,8 @@ export default function Maquina3D({
     return <p style={{ padding: 20, color: '#8a5b00' }}>Este navegador no tiene WebGL: la vista 3D no está disponible. El editor y la vista 2D siguen funcionando.</p>
   }
   return (
-    <div ref={envolturaRef} style={{ position: 'relative', height: pantalla ? '100%' : typeof alto === 'string' ? alto : undefined, background: '#dde2e7' }}>
-      <div ref={contRef} style={{ width: '100%', height: pantalla ? '100%' : alto, borderRadius: 8, overflow: 'hidden', background: '#dde2e7' }} />
+    <div ref={envolturaRef} style={{ position: 'relative', height: pantalla ? '100%' : typeof alto === 'string' ? alto : undefined, background: '#eef1f4' }}>
+      <div ref={contRef} style={{ width: '100%', height: pantalla ? '100%' : alto, borderRadius: 8, overflow: 'hidden', background: '#eef1f4' }} />
       <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 4 }}>
         {(
           [
