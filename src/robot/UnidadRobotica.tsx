@@ -1696,24 +1696,25 @@ function pasoGuiado(def: Definicion): PasoAhora {
 function PlanoTarea({ paso, checklist, onEstudiar, onEjemplo, ejemplo, onVolver, onSeguir }: { paso: PasoAhora; checklist: PuntoRevisionTarea[]; onEstudiar: (ancla: string) => void; onEjemplo: () => void; ejemplo: boolean; onVolver: () => void; onSeguir: () => void }) {
   return (
     <div data-plano-tarea="si" style={{ fontSize: '0.84rem', color: '#1c2733', lineHeight: 1.45 }}>
-      {ejemplo && (
-        <div className="tarea-ejemplo" data-ejemplo-tarea="si">
-          <p>
-            <strong>Estás mirando el ejemplo.</strong> No reemplaza tu tarea. «Volver a mi tarea» recupera lo que tenías. «Seguir con este contorno» lo deja como punto de partida y las ranuras las haces tú.
-          </p>
-          <span>
-            <button type="button" onClick={onVolver} style={botonPrimario()} data-volver-tarea="si">
-              Volver a mi tarea
-            </button>
-            <button type="button" onClick={onSeguir} style={botonSecundario} data-seguir-ejemplo="si" title="Deja este contorno en tu tarea, en lugar de lo que tenías">
-              Seguir con este contorno
-            </button>
-          </span>
-        </div>
-      )}
       <section className="proceso" aria-label="Proceso de la tarea" data-paso-ahora={ejemplo ? 'ejemplo' : paso.id}>
+        <div className="tarea-accion">
+          {ejemplo ? (
+            <>
+              <button type="button" className="tarea-accion__principal" onClick={onVolver} data-volver-tarea="si">
+                Volver a mi tarea
+              </button>
+              <button type="button" className="tarea-accion__secundario" onClick={onSeguir} data-seguir-ejemplo="si" title="Deja este contorno en tu tarea, en lugar de lo que tenías">
+                Seguir con este contorno
+              </button>
+            </>
+          ) : (
+            <button type="button" className="tarea-accion__principal" onClick={onEjemplo} data-ver-ejemplo="si">
+              Ver el ejemplo del contorno
+            </button>
+          )}
+        </div>
         <p style={{ margin: 0, fontWeight: 700 }}>
-          {ejemplo ? 'Ejemplo del contorno' : `Paso ${paso.numero} de ${paso.total} · ${paso.titulo}`}
+          {ejemplo ? 'Ejemplo del contorno. No es tu entrega.' : `Paso ${paso.numero} de ${paso.total} · ${paso.titulo}`}
         </p>
         {ejemplo ? (
           <p style={{ margin: '6px 0 0' }}>Curve (CONTORNO) → Offset +2,5 → Move Z −5 → Toolpath → husillo encendido, espera y apagado → Core. Sirve para mirar cómo se conecta. Las nueve ranuras quedan para tu tarea.</p>
@@ -1750,11 +1751,6 @@ function PlanoTarea({ paso, checklist, onEstudiar, onEjemplo, ejemplo, onVolver,
         <li>El programa KRL se puede leer.</li>
       </ul>
       <p style={{ margin: '0 0 6px' }}>
-        {ejemplo ? null : (
-          <button type="button" onClick={onEjemplo} style={botonSuave} data-ver-ejemplo="si">
-            Ver el ejemplo del contorno
-          </button>
-        )}{' '}
         <button type="button" onClick={() => onEstudiar('parametrica')} style={enlaceEstudiar}>
           ¿No recuerdas la diferencia entre LIN y CIR? → Estudiar
         </button>

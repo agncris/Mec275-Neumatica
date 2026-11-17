@@ -1055,6 +1055,42 @@ body.arrastrando-borde * {
   margin: 0;
   flex: 1;
 }
+.tarea-accion {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+.tarea-accion__principal {
+  flex: 1 1 200px;
+  min-height: 44px;
+  border: none;
+  border-radius: 8px;
+  background: #0e7a43;
+  color: #fff;
+  font: inherit;
+  font-size: 0.98rem;
+  font-weight: 750;
+  padding: 0.45rem 1rem;
+  cursor: pointer;
+  box-shadow: 0 2px 0 #0a5c32;
+}
+.tarea-accion__principal:hover {
+  background: #0b6b3a;
+}
+.tarea-accion__secundario {
+  flex: 1 1 160px;
+  min-height: 44px;
+  border: 1px solid #c6ced6;
+  border-radius: 8px;
+  background: #fff;
+  color: #1c2733;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 650;
+  padding: 0.45rem 0.8rem;
+  cursor: pointer;
+}
 .tarea-ejemplo {
   flex: none;
   display: flex;
