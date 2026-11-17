@@ -9,11 +9,11 @@
  * Rhino) y se gira para three.js, que usa Y hacia arriba.
  */
 import { type PlayEscena } from '../components/HudEscena'
-import { aplicarModoArrastre, cursoresCamara, girarCuadrante, zoomCamara, type LadoCubo, type ModoArrastre } from '../components/mandoCamara'
+import { aplicarModoArrastre, girarCuadrante, zoomCamara, type LadoCubo, type ModoArrastre } from '../components/mandoCamara'
 import BotonPantallaCompleta, { usePantallaCompleta } from '../components/PantallaCompleta'
 import { useEffect, useRef, useState, type CSSProperties, type MutableRefObject, type ReactNode } from 'react'
-import { crearViewCube, type ViewCube } from '../vista3d/viewcube'
-import { bucleVisible } from '../vista3d/visible'
+import { crearEscena } from '../vista3d/escena'
+import { type ViewCube } from '../vista3d/viewcube'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { entornoEstudio, sombraContacto } from '../vista3d/realista'
@@ -359,15 +359,22 @@ export default function Robot3D({
   useEffect(() => {
     const cont = contRef.current
     if (!cont) return
-    let renderer: THREE.WebGLRenderer
-    try {
-      renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true })
-    } catch {
+    const base = crearEscena(cont, {
+      preserveDrawingBuffer: true,
+      camara: { fov: 40, near: 5, far: 30000 },
+      controles: { enableDamping: true, dampingFactor: 0.08, zoomToCursor: true },
+      modoArrastre,
+      viewCube: { id: 'viewcube-robot', alInicio: () => accion.current?.('iso') },
+      // Dibujar solo cuando algo cambia: con todo quieto, la escena no llama a render.
+      // Se enciende con la cámara, el puntero, el tamaño y cualquier cambio de
+      // `vista.current` (ver `cambioVista`).
+      soloSiCambia: true,
+    })
+    if (!base) {
       setSinWebGL(true)
       return
     }
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-    renderer.setSize(cont.clientWidth, cont.clientHeight)
+    const { renderer, escena, camara, controles, cubo: gizmo, marcarSucio } = base
     renderer.outputColorSpace = THREE.SRGBColorSpace
     renderer.toneMapping = THREE.ACESFilmicToneMapping
     renderer.toneMappingExposure = 0.98
@@ -375,10 +382,8 @@ export default function Robot3D({
     renderer.shadowMap.type = THREE.PCFSoftShadowMap
     renderer.domElement.style.display = 'block'
     renderer.domElement.dataset.robot3d = 'si'
-    cont.appendChild(renderer.domElement)
     onCanvas?.(renderer.domElement)
 
-    const escena = new THREE.Scene()
     const pmrem = entornoEstudio(renderer, escena, 0.8)
     const fondo = fondoContraste()
     escena.background = fondo
@@ -416,15 +421,7 @@ export default function Robot3D({
     contra.position.set(-500, 1400, -2000)
     escena.add(sol, relleno, contra, new THREE.HemisphereLight(0xeaf0f7, 0x8d98a6, 0.4))
 
-    const camara = new THREE.PerspectiveCamera(40, cont.clientWidth / Math.max(1, cont.clientHeight), 5, 30000)
-    const controles = new OrbitControls(camara, renderer.domElement)
-    // El botón del medio desplaza la vista. Lo engancha cursoresCamara.
-    controles.enableDamping = true
-    controles.dampingFactor = 0.08
-    controles.zoomToCursor = true
     controlesRef.current = controles
-    aplicarModoArrastre(controles, modoArrastre)
-    const quitarCursores = cursoresCamara(controles, renderer.domElement)
 
     // Partes que se rehacen al cambiar el robot, la herramienta o la definición.
     let robot: ModeloArmado | null = null
@@ -469,19 +466,8 @@ export default function Robot3D({
       marcarSucio()
     }
     encuadrar('iso')
-    const gizmo = crearViewCube(camara, renderer, controles, cont, 'viewcube-robot', () => accion.current?.('iso'))
     gizmoRef.current = gizmo
 
-    // Dibujar solo cuando algo cambia: con todo quieto, la escena no llama a render.
-    // `sucio` se enciende con la cámara, el puntero (el cubo de vistas resalta al pasar
-    // el mouse), el tamaño y cualquier cambio de `vista.current` (ver `cambioVista`).
-    let sucio = true
-    const marcarSucio = () => {
-      sucio = true
-    }
-    controles.addEventListener('change', marcarSucio)
-    const eventosPuntero = ['pointermove', 'pointerdown', 'pointerup', 'pointerleave', 'wheel'] as const
-    for (const e of eventosPuntero) cont.addEventListener(e, marcarSucio, { passive: true })
     const prev = { q: '', V: null as null | Record<string, unknown> }
     const claves = ['modelo', 'pedestal', 'herramienta', 'base', 'espesor', 'placa', 'previa', 'seleccion', 'sim', 'indice', 'corriendo', 'husillo', 'alcance', 'marcas'] as const
     const cambioVista = (V: VistaRobot) => {
@@ -492,22 +478,10 @@ export default function Robot3D({
       prev.V = Object.fromEntries(claves.map((k) => [k, V[k]]))
       return cambio
     }
-    const observador = new ResizeObserver(() => {
-      sucio = true
-      renderer.setSize(cont.clientWidth, cont.clientHeight)
-      camara.aspect = cont.clientWidth / Math.max(1, cont.clientHeight)
-      camara.updateProjectionMatrix()
-      gizmo.actualizar()
-    })
-    observador.observe(cont)
 
-    let antes = performance.now()
-    const cuadro = () => {
-      const ahora = performance.now()
-      const dt = Math.min(0.1, (ahora - antes) / 1000)
-      antes = ahora
+    base.alCuadro((dt, ahora) => {
       const V = vista.current
-      if (cambioVista(V)) sucio = true
+      if (cambioVista(V)) marcarSucio()
       const hayViruta = virutas.malla.count > 0
       // Robot y herramienta.
       const kR = `${V.modelo.id}|${V.pedestal}|${V.herramienta.tipo}|${V.herramienta.largo}|${V.herramienta.diametro}`
@@ -703,34 +677,21 @@ export default function Robot3D({
         const meta = 520
         if (Math.abs(d - meta) > 4) camara.position.copy(controles.target).addScaledVector(dir.normalize(), d + (meta - d) * (1 - Math.pow(0.002, dt)))
       }
-      if (controles.update()) sucio = true
-      // Lo que se mueve solo (reproducción, husillo, viruta, cámara de detalle, cubo de vistas) dibuja siempre.
+      // Lo que se mueve solo (reproducción, husillo, viruta, cámara de detalle) dibuja siempre
+      // (la base se ocupa de los controles y del cubo de vistas).
       // Grabando video también: captureStream solo toma cuadros cuando el lienzo se vuelve a dibujar.
-      if (V.corriendo || V.husillo || detalleRef.current || grabandoRef.current || hayViruta || virutas.malla.count > 0 || gizmo.animando()) sucio = true
-      if (!sucio) return
-      sucio = false
-      renderer.render(escena, camara)
-      gizmo.render()
-    }
-    const pararBucle = bucleVisible(cont, cuadro, { alMostrar: marcarSucio })
+      if (V.corriendo || V.husillo || detalleRef.current || grabandoRef.current || hayViruta || virutas.malla.count > 0) marcarSucio()
+    })
 
     return () => {
-      pararBucle()
-      controles.removeEventListener('change', marcarSucio)
-      for (const e of eventosPuntero) cont.removeEventListener(e, marcarSucio)
+      base.destruir()
       virutas.dispose()
       stock?.dispose()
-      observador.disconnect()
       controlesRef.current = null
       gizmoRef.current = null
       onCanvas?.(null)
-      gizmo.dispose()
-      quitarCursores()
-      controles.dispose()
-      renderer.dispose()
       pmrem.dispose()
       fondo.dispose()
-      cont.removeChild(renderer.domElement)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
