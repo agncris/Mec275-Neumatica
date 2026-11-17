@@ -348,13 +348,13 @@ export default function Robot3D({
     controlesRef.current = controles
     aplicarModoArrastre(controles, modoArrastre)
 
-    // ViewCube claro, como el de Autodesk: el gris no compite con el robot.
+    // Más oscuro que el fondo (#dfe3e8), un poco transparente. Al pasar el mouse la cara se pone gris oscuro.
     const cara = {
-      color: '#f3f3f3',
-      labelColor: '#3c3c3c',
-      opacity: 0.94,
-      border: { size: 1, color: '#c5c5c5' },
-      hover: { color: '#d6eaf8', labelColor: '#1f1f1f', opacity: 1, border: { size: 1, color: '#7eb6e0' } },
+      color: '#6d737b',
+      labelColor: '#111111',
+      opacity: 0.82,
+      border: { size: 1.5, color: '#3a3a3a' },
+      hover: { color: '#4a4e54', labelColor: '#ffffff', opacity: 0.96, border: { size: 1.5, color: '#2a2a2a' } },
     }
     const gizmo = new ViewportGizmo(camara, renderer, {
       container: cont,
@@ -368,29 +368,29 @@ export default function Robot3D({
       resolution: 256,
       id: 'viewcube-robot',
       background: { enabled: false },
-      font: { family: 'system-ui, sans-serif', weight: 500 },
+      font: { family: 'system-ui, sans-serif', weight: 600 },
       corners: {
         enabled: true,
-        color: '#d6eaf8',
+        color: '#8d939b',
         opacity: 0,
         scale: 0.18,
         radius: 0.2,
-        hover: { color: '#7eb6e0', opacity: 0.85, scale: 0.22 },
+        hover: { color: '#3a3e44', opacity: 0.95, scale: 0.22 },
       },
       edges: {
         enabled: true,
-        color: '#d0d0d0',
-        opacity: 0.55,
+        color: '#5c6168',
+        opacity: 0.75,
         scale: 0.7,
         radius: 0.12,
-        hover: { color: '#7eb6e0', opacity: 0.9, scale: 0.85 },
+        hover: { color: '#3a3e44', opacity: 0.95, scale: 0.85 },
       },
-      front: { ...cara, label: 'Front' },
-      top: { ...cara, label: 'Top' },
-      right: { ...cara, label: 'Right' },
-      left: { ...cara, label: 'Left' },
-      bottom: { ...cara, label: 'Bottom' },
-      back: { ...cara, label: 'Back' },
+      front: { ...cara, label: 'Frente' },
+      top: { ...cara, label: 'Arriba' },
+      right: { ...cara, label: 'Derecha' },
+      left: { ...cara, label: 'Izquierda' },
+      bottom: { ...cara, label: 'Abajo' },
+      back: { ...cara, label: 'Atrás' },
     })
     gizmo.attachControls(controles as Parameters<ViewportGizmo['attachControls']>[0])
     gizmoRef.current = gizmo
