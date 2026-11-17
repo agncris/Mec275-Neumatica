@@ -130,6 +130,8 @@ interface Props {
   alto?: number | string
   /** En la tarea: el siguiente paso, y el bloque que conviene arrastrar. */
   guia?: { id: string; numero: number; total: number; titulo: string; accion: string; pestana?: Pestana; destacar?: string }
+  onDeshacer?: () => void
+  puedeDeshacer?: boolean
 }
 
 type Arrastre =
@@ -137,7 +139,7 @@ type Arrastre =
   | { tipo: 'fondo'; x: number; y: number; tx: number; ty: number }
   | { tipo: 'cable'; de?: { id: string; j: number }; a?: { id: string; i: number }; x: number; y: number; agregar: boolean }
 
-export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onSeleccionar, alto = 460, guia }: Props) {
+export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onSeleccionar, alto = 460, guia, onDeshacer, puedeDeshacer = false }: Props) {
   const tactil = useTactil()
   const svgRef = useRef<SVGSVGElement>(null)
   const [vista, setVista] = useState({ tx: 20, ty: 40, k: 0.8 })
@@ -623,6 +625,11 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
           </div>
         )}
         <div style={{ position: 'absolute', right: 8, bottom: 8, display: 'flex', gap: 4 }}>
+          {onDeshacer && (
+            <button type="button" onClick={onDeshacer} disabled={!puedeDeshacer} style={{ ...botonMini, opacity: puedeDeshacer ? 1 : 0.45 }} title="Deshacer (Ctrl+Z)">
+              Deshacer
+            </button>
+          )}
           <button onClick={() => zoomCentro(1 / 1.25)} style={{ ...botonMini, minWidth: 34 }} aria-label="Alejar" title="Alejar">
             −
           </button>

@@ -750,7 +750,7 @@ export default function UnidadRobotica() {
           </p>
         )}
         <div className="relleno">
-          <EditorNodos def={def} evaluacion={evaluacion} onCambiar={setDef} seleccion={seleccion} onSeleccionar={setSeleccion} alto="100%" guia={pasoTarea ?? undefined} />
+          <EditorNodos def={def} evaluacion={evaluacion} onCambiar={setDef} seleccion={seleccion} onSeleccionar={setSeleccion} alto="100%" guia={pasoTarea ?? undefined} onDeshacer={deshacer} puedeDeshacer={historial.current.puedeDeshacer} />
         </div>
         {evaluacion.ciclo && <p style={{ color: '#b3261e', fontSize: '0.86rem', margin: '6px 0 0' }}>⚠ Hay un ciclo en los cables.</p>}
         <div style={{ maxHeight: 150, overflow: 'auto', flex: 'none' }}>
