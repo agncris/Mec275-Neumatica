@@ -181,7 +181,8 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
     const y0 = Math.min(...ys) - 72
     const x1 = Math.max(...def.nodos.map((n) => n.x + medidas(n, componente(n.tipo)).w)) + 72
     const y1 = Math.max(...def.nodos.map((n) => n.y + medidas(n, componente(n.tipo)).h)) + 72
-    const k = Math.min(1, Math.max(0.35, Math.min(r.width / (x1 - x0), r.height / (y1 - y0))))
+    // Encuadrar muestra siempre todo, aunque el lienzo sea angosto y los bloques queden chicos.
+    const k = Math.min(1, Math.max(0.12, Math.min(r.width / (x1 - x0), r.height / (y1 - y0))))
     setVista({ k, tx: (r.width - (x1 - x0) * k) / 2 - x0 * k, ty: (r.height - (y1 - y0) * k) / 2 - y0 * k })
   }
   const nombreDef = def.nombre + def.nodos.length
