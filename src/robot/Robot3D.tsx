@@ -60,9 +60,9 @@ function fondoContraste(): THREE.CanvasTexture {
   c.height = 256
   const g = c.getContext('2d')!
   const grad = g.createLinearGradient(0, 0, 0, 256)
-  grad.addColorStop(0, '#dde5ee')
-  grad.addColorStop(0.5, '#b3bfcc')
-  grad.addColorStop(1, '#7f8b99')
+  grad.addColorStop(0, '#bcd3ea')
+  grad.addColorStop(0.55, '#d9e4ee')
+  grad.addColorStop(1, '#e8e4dc')
   g.fillStyle = grad
   g.fillRect(0, 0, 2, 256)
   const t = new THREE.CanvasTexture(c)
@@ -73,9 +73,9 @@ function fondoContraste(): THREE.CanvasTexture {
 const NARANJA = new THREE.MeshPhysicalMaterial({ color: 0xf15a12, metalness: 0.18, roughness: 0.28, clearcoat: 0.72, clearcoatRoughness: 0.22 })
 const NEGRO = new THREE.MeshPhysicalMaterial({ color: 0x1a1d22, metalness: 0.35, roughness: 0.46, clearcoat: 0.3, clearcoatRoughness: 0.4 })
 const GRIS = new THREE.MeshPhysicalMaterial({ color: 0xd7dde4, metalness: 0.96, roughness: 0.16, clearcoat: 0.25 })
-const MESON = new THREE.MeshStandardMaterial({ color: 0x737c86, metalness: 0.62, roughness: 0.3, envMapIntensity: 1.3 })
-const ACERO = new THREE.MeshPhysicalMaterial({ color: 0xe4e8ed, metalness: 1, roughness: 0.14, clearcoat: 0.15 })
-const HUSILLO = new THREE.MeshPhysicalMaterial({ color: 0xe8ecef, metalness: 0.9, roughness: 0.2, clearcoat: 0.35 })
+const MESON = new THREE.MeshStandardMaterial({ color: 0x2c3a4c, metalness: 0.55, roughness: 0.34, envMapIntensity: 1.2 })
+const ACERO = new THREE.MeshPhysicalMaterial({ color: 0xf4f1ea, metalness: 1, roughness: 0.12, clearcoat: 0.2 })
+const HUSILLO = new THREE.MeshPhysicalMaterial({ color: 0x2a323d, metalness: 0.75, roughness: 0.28, clearcoat: 0.5, clearcoatRoughness: 0.2 })
 
 function caja(w: number, h: number, d: number, mat: THREE.Material, r = 6): THREE.Mesh {
   const m = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 2, Math.min(r, w / 3, h / 3, d / 3)), mat)
@@ -377,15 +377,15 @@ export default function Robot3D({
     const mundo = new THREE.Group()
     mundo.rotation.x = -Math.PI / 2
     escena.add(mundo)
-    const piso = new THREE.Mesh(new THREE.PlaneGeometry(8000, 8000), new THREE.MeshStandardMaterial({ color: 0xaeb7c1, roughness: 0.62, metalness: 0.12, envMapIntensity: 0.9 }))
+    const piso = new THREE.Mesh(new THREE.PlaneGeometry(8000, 8000), new THREE.MeshStandardMaterial({ color: 0xcdc3b3, roughness: 0.82, metalness: 0.04, envMapIntensity: 0.6 }))
     piso.receiveShadow = true
     mundo.add(piso)
-    const grilla = new THREE.GridHelper(6000, 40, 0x9aa3ad, 0xb7c0c9)
+    const grilla = new THREE.GridHelper(6000, 40, 0x9c9384, 0xb3a999)
     grilla.rotation.x = Math.PI / 2
     grilla.position.z = 1
     for (const m of Array.isArray(grilla.material) ? grilla.material : [grilla.material]) {
       m.transparent = true
-      m.opacity = 0.45
+      m.opacity = 0.35
     }
     mundo.add(grilla)
     const ejesMundo = new THREE.AxesHelper(250)

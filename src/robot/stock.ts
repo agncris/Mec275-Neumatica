@@ -14,7 +14,7 @@ const CELDA_MM = 1.25
 const MAX_CELDAS = 220
 const UMBRAL_MM = 0.15
 
-const CRUDO = new THREE.Color(0xc9d1d9)
+const CRUDO = new THREE.Color(0xe3e7ea)
 const CORTADO = new THREE.Color(0x39434d)
 const FONDO = new THREE.Color(0x12161a)
 const CALOR = new THREE.Color(0xff9a3c)
