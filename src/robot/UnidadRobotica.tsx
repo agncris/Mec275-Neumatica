@@ -7,15 +7,11 @@
 import { BotonNuevo, botonPrimario, botonSecundario, estiloAviso, Menu, useEsEstrecha, usePersistente } from '../components/ui'
 import BancoDividido, { TituloArea } from '../components/banco/BancoDividido'
 import { usePanelAcoplado, type PestanaPanel } from '../components/banco/PanelAcoplado'
-import PaginaEstudiar, { type SeccionEstudio } from '../components/banco/PaginaEstudiar'
 import SubnavUnidad, { seccionDeLaUrl, useSeccionUnidad, type SeccionUnidad } from '../components/banco/SubnavUnidad'
 import { VER_TAREA_ROBOTICA } from '../unidades'
 import CajonEntregar from '../components/banco/CajonEntregar'
 import MisTrabajos from '../components/banco/MisTrabajos'
 import GuiaInicio, { GUIA_ROBOT, useGuia } from '../components/banco/GuiaInicio'
-import Autoevaluacion from '../components/Autoevaluacion'
-import FichaRobot from './FichaRobot'
-import { PREGUNTAS_ROBOT } from './preguntasRobot'
 import { ETIQUETA_GRUPO, PRACTICA_ROBOT, type GrupoPractica } from './practica'
 import { adaptarATarea, analizarTarea4, ejemploGuiadoTarea, esEjemploGuiado, MARCA_TAREA4, revisarTarea4, tareaAlAbrir, tareaVaciaRobot, type PuntoRevisionTarea } from './tarea4'
 import { guiaTarea, type ItemAvance, type PasoTarea } from './guiaTarea'
@@ -45,10 +41,11 @@ import {
 } from './nodos'
 import { HOME, robotPorId } from './robots'
 import type { Previa, VistaRobot } from './Robot3D'
-import { Componentes, FichaTecnica, GradosLibertad, PracticaRobot, ProgramacionParametrica, QueEsRobot, SerieVsRobotica, SaltarAPractica, TiposGenerales } from './TeoriaRobotica'
+import { ANCLAS_ESTUDIAR_ROBOT } from './anclasEstudiar'
 
 const Robot3D = lazy(() => import('./Robot3D'))
-const TiposRobot = lazy(() => import('./TiposRobot'))
+// La teoría, la ficha y las demos 3D de Estudiar se cargan solo al entrar a Estudiar.
+const EstudiarRobotica = lazy(() => import('./EstudiarRobotica'))
 
 const CLAVE = 'neumalab.robot.definicion'
 /**
@@ -233,7 +230,7 @@ export default function UnidadRobotica() {
   }
   const [modo, setModo] = useState<Modo>('visual')
   const estrecha = useEsEstrecha()
-  const [seccionPedida, setSeccionCruda] = useSeccionUnidad(SECCIONES_ROBOT.map((x) => x.id))
+  const [seccionPedida, setSeccionCruda] = useSeccionUnidad(ANCLAS_ESTUDIAR_ROBOT)
   // Mientras la tarea no se publica, ni el enlace ?vista=tarea la abre.
   const seccion: SeccionUnidad = seccionPedida === 'tarea' && !VER_TAREA_ROBOTICA ? 'laboratorio' : seccionPedida
   const enTarea = seccion === 'tarea'
@@ -1192,15 +1189,9 @@ export default function UnidadRobotica() {
           conCajon={entregaAbierta && enTarea && !estrecha}
         />
       ) : (
-        <PracticaRobot.Provider value={setSeccion}>
-          <PaginaEstudiar
-            etiqueta="Estudiar robótica"
-            titulo="Estudiar · Robótica"
-            descripcion="Teoría de la unidad. Al final de cada tema puedes probarlo en el Laboratorio o en la Tarea."
-            pie="NeumaLab · MEC275 — Unidad 4: Robótica industrial"
-            secciones={SECCIONES_ROBOT}
-          />
-        </PracticaRobot.Provider>
+        <Suspense fallback={<p style={{ padding: 24, color: '#51606f', textAlign: 'center' }}>Abriendo Estudiar…</p>}>
+          <EstudiarRobotica setSeccion={setSeccion} />
+        </Suspense>
       )}
       {guia.visible && seccion !== 'estudiar' && <GuiaInicio unidad="Robótica" pasos={GUIA_ROBOT} onCerrar={guia.cerrar} />}
       {misTrabajos && (
@@ -1335,28 +1326,6 @@ export default function UnidadRobotica() {
 
 type PestanaRobot = 'analisis' | 'krl' | 'ficha' | 'plano-tarea'
 
-const SECCIONES_ROBOT: SeccionEstudio[] = [
-  { id: 'practica', indice: 'Autoevaluación', titulo: 'Autoevaluación · practica con preguntas al azar', contenido: <Autoevaluacion generadores={PREGUNTAS_ROBOT} /> },
-  { id: 'ficha', indice: 'Ficha de repaso', titulo: 'Ficha de repaso · para imprimir', contenido: <FichaRobot /> },
-  {
-    id: 'tipos-3d',
-    indice: 'Tipos de robots en 3D',
-    titulo: 'Tipos de robots de base fija (en 3D)',
-    contenido: (
-      <Suspense fallback={<p>Cargando…</p>}>
-        <TiposRobot />
-      </Suspense>
-    ),
-  },
-  { id: 'que-es', indice: '¿Qué es un robot industrial?', titulo: '¿Qué es un robot industrial?', contenido: <QueEsRobot /> },
-  { id: 'serie', indice: 'Fabricación en serie', titulo: 'Fabricación en serie y robótica industrial', contenido: <SerieVsRobotica /> },
-  { id: 'tipos', indice: 'Tipos de robots', titulo: 'Tipos de robots', contenido: <TiposGenerales /> },
-  { id: 'componentes', indice: 'Componentes', titulo: 'Componentes de un robot de base fija', contenido: <Componentes /> },
-  { id: 'grados', indice: 'Grados de libertad', titulo: 'Grados de libertad y singularidades', contenido: <GradosLibertad /> },
-  { id: 'ficha-tecnica', indice: 'Ficha técnica', titulo: 'Ficha técnica: cómo elegir el robot', contenido: <FichaTecnica /> },
-  { id: 'parametrica', indice: 'Programación paramétrica', titulo: 'Programación paramétrica en NeumaLab', contenido: <ProgramacionParametrica /> },
-  { id: 'como-usar', indice: 'Cómo usar esta unidad', titulo: 'Cómo usar esta unidad', contenido: <ComoUsar /> },
-]
 
 /** Posiciones de los puntos enseñados (para marcarlos en 3D). */
 const cacheMarcas = new WeakMap<PuntoEnsenado[], V3[]>()
@@ -1593,53 +1562,6 @@ function Analisis({ sim, onIr, onEstudiar }: { sim: Simulacion; onIr: (p: Simula
 
 const enlaceEstudiar: React.CSSProperties = { border: 'none', background: 'transparent', color: '#1668c7', fontWeight: 600, cursor: 'pointer', padding: 0, fontSize: 'inherit', textDecoration: 'underline' }
 
-function ComoUsar() {
-  const li: React.CSSProperties = { marginBottom: 4 }
-  return (
-    <ol style={{ margin: 0, paddingLeft: 20, lineHeight: 1.55 }}>
-      <li style={li}>
-        <strong>Programación visual:</strong> elige un bloque en Movimientos, Robot, Herramientas, Trayectoria o Utilidades y arrástralo al lienzo (o haz clic). Conecta la salida, a la derecha, con la entrada, a la izquierda. Todo se recalcula al instante.
-      </li>
-      <li style={li}>
-        <strong>Plano DXF:</strong> «Abrir DXF» trae las curvas de tu plano (líneas, arcos, círculos, polilíneas); el componente
-        Curve (Crv) las entrega, filtradas por capa si quieres. El ejemplo 3 trae un plano de práctica.
-      </li>
-      <li style={li}>
-        <strong>La base:</strong> en el Core defines dónde está la pieza respecto del robot (X, Y y la altura del mesón). La
-        herramienta apunta en contra de la Z de cada plano: con planos XY, baja vertical sobre la pieza.
-      </li>
-      <li style={li}>
-        <strong>Simular y analizar:</strong> ▶ recorre el programa (como KUKA|play). La trayectoria se pinta verde si todo va
-        bien, naranjo si hay avisos (cerca de un límite o de una singularidad) y roja si hay errores (fuera de alcance, fuera
-        del rango de un eje, saltos bruscos, choques del brazo o la herramienta con el mesón o la plancha). Haz clic en un
-        problema para ir a ese momento.
-      </li>
-      <li style={li}>
-        <strong>Entregar:</strong> a Aula van el PDF de la plantilla, el json y el video. «Guardar definición» baja el json
-        (con el plano); «● Grabar video» graba la simulación. «Exportar KRL» descarga el .src para el controlador: no se
-        sube. «Croquis…» baja la pieza acotada y el posicionamiento (planta y elevación) para pegarlos en la plantilla; la
-        ficha técnica del robot está en el panel de la derecha.
-      </li>
-      <li style={li}>
-        <SaltarAPractica>Abrir el Laboratorio</SaltarAPractica>
-        <SaltarAPractica destino="tarea">Abrir la Tarea</SaltarAPractica>
-      </li>
-      <li style={li}>
-        <strong>Mando manual:</strong> mueve el robot eje por eje o en X/Y/Z, graba puntos PTP o LIN y reprodúcelos: es el
-        teach-in/playback.
-      </li>
-      <li style={li}>
-        <strong>Otro robot:</strong> en el componente Robot elige «Personalizado» y escribe las medidas de sus eslabones (d1,
-        a1, a2, a3, d4, d6) sacadas de su ficha; los rangos y velocidades se toman del modelo parecido que elijas.
-      </li>
-      <li style={li}>
-        <strong>El trabajo se hace en NeumaLab.</strong> Los bloques se llaman como en Grasshopper (Curve, LIN, PTP, Core).
-        Los robots tienen los rangos y velocidades de sus fichas y una geometría muy parecida a la real. El código KRL es
-        de estudio: revísalo antes de usarlo en un robot real.
-      </li>
-    </ol>
-  )
-}
 
 const botonSuave: React.CSSProperties = { border: '1px solid #c6ced6', background: '#fff', color: '#33475c', padding: '0.35rem 0.75rem', borderRadius: 7, fontSize: '0.85rem', cursor: 'pointer' }
 const rotulo: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.85rem', color: '#5a6b7d' }

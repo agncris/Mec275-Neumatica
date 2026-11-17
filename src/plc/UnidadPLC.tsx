@@ -10,15 +10,12 @@ import { BotonNuevo, botonPrimario, estiloAviso, Menu, useApaisado, useEsEstrech
 import BancoDividido, { TituloArea } from '../components/banco/BancoDividido'
 import ProcesoTarea, { enlaceEstudiar, type PasoProceso } from '../components/banco/ProcesoTarea'
 import { usePanelAcoplado, type PestanaPanel } from '../components/banco/PanelAcoplado'
-import PaginaEstudiar, { type SeccionEstudio } from '../components/banco/PaginaEstudiar'
 import SubnavUnidad, { seccionDeLaUrl, useSeccionUnidad, type SeccionUnidad } from '../components/banco/SubnavUnidad'
 import CajonEntregar from '../components/banco/CajonEntregar'
 import MisTrabajos from '../components/banco/MisTrabajos'
 import GuiaInicio, { GUIA_PLC, useGuia } from '../components/banco/GuiaInicio'
-import Autoevaluacion from '../components/Autoevaluacion'
-import FichaPLC from './FichaPLC'
-import { PREGUNTAS_PLC } from './preguntasPLC'
 import { copiarTabla, descargarTexto, limpiarEnlace, trabajoDelEnlace } from '../entregar'
+import { ANCLAS_ESTUDIAR_PLC } from './anclasEstudiar'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { exportarPng, nombreSeguro } from '../exportar'
 import EditorLadder from './EditorLadder'
@@ -47,9 +44,10 @@ import {
 import { PLANTAS, crearPlanta, type Mando } from './plantas'
 import { formatear, type Notacion } from './notacion'
 import type { SimPLC } from './Planta3D'
-import { CicloScan, ComponentesPLC, ElegirPLC, EntradasSalidas, QueEsPLC, Sensores, SimbolosLadder } from './TeoriaPLC'
 
 const Planta3D = lazy(() => import('./Planta3D'))
+// La teoría, la ficha y la autoevaluación de Estudiar se cargan solo al entrar a Estudiar.
+const EstudiarPLC = lazy(() => import('./EstudiarPLC'))
 
 const CLAVE = 'neumalab.plc.programa'
 
@@ -204,7 +202,7 @@ export default function UnidadPLC() {
   const [aviso, setAviso] = useState<string | null>(null)
   const estrecha = useEsEstrecha()
   const acostado = useApaisado()
-  const [seccion, setSeccionCruda] = useSeccionUnidad(SECCIONES_PLC.map((x) => x.id))
+  const [seccion, setSeccionCruda] = useSeccionUnidad(ANCLAS_ESTUDIAR_PLC)
   const enTarea = seccion === 'tarea'
   const panel = usePanelAcoplado<PestanaPLC>('neumalab.plc.panel', 'es', typeof window !== 'undefined' && window.innerHeight >= 860)
   // Quien tenía abierta una pestaña que ya no existe (la tabla de datos) vuelve a Entradas y salidas.
@@ -894,13 +892,9 @@ export default function UnidadPLC() {
           conCajon={entregaAbierta && !estrecha}
         />
       ) : (
-        <PaginaEstudiar
-          etiqueta="Estudiar PLC"
-          titulo="Estudiar · PLC"
-          descripcion="Teoría de la unidad. Los programas de ejemplo y los ejercicios se abren en el Laboratorio."
-          pie="NeumaLab · MEC275 — Unidad 2: Controlador Lógico Programable · Ladder"
-          secciones={SECCIONES_PLC}
-        />
+        <Suspense fallback={<p style={{ padding: 24, color: '#51606f', textAlign: 'center' }}>Abriendo Estudiar…</p>}>
+          <EstudiarPLC />
+        </Suspense>
       )}
       {guia.visible && seccion !== 'estudiar' && <GuiaInicio unidad="PLC" pasos={GUIA_PLC} onCerrar={guia.cerrar} />}
       {eligiendoPlanta && (
@@ -1027,17 +1021,6 @@ export default function UnidadPLC() {
 
 type PestanaPLC = 'proceso' | 'es' | 'registro'
 
-const SECCIONES_PLC: SeccionEstudio[] = [
-  { id: 'practica', indice: 'Autoevaluación', titulo: 'Autoevaluación · practica con preguntas al azar', contenido: <Autoevaluacion generadores={PREGUNTAS_PLC} /> },
-  { id: 'ficha', indice: 'Ficha de repaso', titulo: 'Ficha de repaso · para imprimir', contenido: <FichaPLC /> },
-  { id: 'que-es', indice: '¿Qué es un PLC?', titulo: '¿Qué es un PLC y para qué se usa?', contenido: <QueEsPLC /> },
-  { id: 'componentes', indice: 'Componentes', titulo: 'Componentes de un PLC', contenido: <ComponentesPLC /> },
-  { id: 'entradas-salidas', indice: 'Entradas y salidas', titulo: 'Entradas, salidas y direcciones', contenido: <EntradasSalidas /> },
-  { id: 'elegir', indice: 'Cómo elegir un PLC', titulo: '¿Cómo elegir un PLC?', contenido: <ElegirPLC /> },
-  { id: 'sensores', indice: 'Sensores', titulo: 'Sensores que se conectan al PLC', contenido: <Sensores /> },
-  { id: 'ladder', indice: 'Ladder', titulo: 'Programación Ladder · contactos y bobinas', contenido: <SimbolosLadder /> },
-  { id: 'scan', indice: 'Ciclo de scan', titulo: 'Cómo ejecuta el PLC tu programa: el ciclo de scan', contenido: <CicloScan /> },
-]
 
 type TipoLibre = 'interruptor' | 'NA' | 'NC'
 
