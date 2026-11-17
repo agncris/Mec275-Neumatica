@@ -141,7 +141,7 @@ export default function BarraRobot({
           </button>
         )}
         {grabando && (
-          <button onClick={alternarGrabacion} style={{ ...botonSecundario, color: '#fff', background: '#c62828', borderColor: '#c62828' }}>
+          <button onClick={alternarGrabacion} style={{ ...botonSecundario, color: '#fff', background: 'var(--rojo)', borderColor: 'var(--rojo)' }}>
             ■ {estrecha ? 'Detener' : 'Detener grabación'}
           </button>
         )}

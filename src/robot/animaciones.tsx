@@ -53,11 +53,11 @@ export function FiguraSvg({
         <button
           type="button"
           onClick={() => setPausa((v) => !v)}
-          style={{ flex: 'none', border: '1px solid #c6ced6', background: '#fff', color: TINTA, fontWeight: 650, borderRadius: 8, padding: '0.25rem 0.7rem', cursor: 'pointer', fontSize: '0.82rem' }}
+          style={{ flex: 'none', border: '1px solid var(--borde)', background: '#fff', color: TINTA, fontWeight: 650, borderRadius: 8, padding: '0.25rem 0.7rem', cursor: 'pointer', fontSize: '0.82rem' }}
         >
           {pausa ? 'Reanudar' : 'Pausar'}
         </button>
-        <span style={{ fontSize: '0.86rem', lineHeight: 1.45, color: '#26323f' }}>{etiqueta}</span>
+        <span style={{ fontSize: '0.86rem', lineHeight: 1.45, color: 'var(--tinta-oscura)' }}>{etiqueta}</span>
       </figcaption>
     </figure>
   )

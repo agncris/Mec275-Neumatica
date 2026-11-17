@@ -85,10 +85,10 @@ export default function AreaPrograma({
         }
       >
         Programa
-        {def.dxf ? <span style={{ fontWeight: 400, fontSize: '0.8rem', color: '#51606f' }}>· {def.dxf.nombre}</span> : null}
+        {def.dxf ? <span style={{ fontWeight: 400, fontSize: '0.8rem', color: 'var(--tinta-suave)' }}>· {def.dxf.nombre}</span> : null}
       </TituloArea>
       {enunciado && (
-        <p data-enunciado="si" style={{ margin: '0 0 6px', padding: '6px 10px', background: '#eef4fb', border: '1px solid #c9d9ee', borderRadius: 6, fontSize: '0.84rem', color: '#1c2733', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+        <p data-enunciado="si" style={{ margin: '0 0 6px', padding: '6px 10px', background: '#eef4fb', border: '1px solid #c9d9ee', borderRadius: 6, fontSize: '0.84rem', color: 'var(--texto)', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
           <span style={{ flex: 1 }}>{enunciado}</span>
           <button onClick={() => setEnunciado(null)} aria-label="Ocultar el enunciado" title="Ocultar el enunciado" style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '1rem', lineHeight: 1 }}>
             ✕
@@ -113,7 +113,7 @@ export default function AreaPrograma({
       <div className="relleno">
         <EditorNodos def={def} evaluacion={evaluacion} onCambiar={setDef} seleccion={seleccion} onSeleccionar={setSeleccion} alto="100%" guia={ejemploEnTarea ? undefined : (pasoTarea ?? undefined)} mirandoEjemplo={ejemploEnTarea} soloLienzo={entregando} onDeshacer={deshacer} puedeDeshacer={puedeDeshacer} />
       </div>
-      {evaluacion.ciclo && <p style={{ color: '#b3261e', fontSize: '0.86rem', margin: '6px 0 0' }}>⚠ Hay un ciclo en los cables.</p>}
+      {evaluacion.ciclo && <p style={{ color: 'var(--rojo-error)', fontSize: '0.86rem', margin: '6px 0 0' }}>⚠ Hay un ciclo en los cables.</p>}
       <div style={{ maxHeight: 150, overflow: 'auto', flex: 'none' }}>
         <Propiedades
           key={nodoSel?.id ?? 'nada'}

@@ -12,19 +12,19 @@ function ideaDe(texto: string): { idea: string; ancla: string; pregunta: string 
 export default function Analisis({ sim, onIr, onEstudiar }: { sim: Simulacion; onIr: (p: Simulacion['problemas'][number]) => void; onEstudiar: (ancla: string) => void }) {
   return (
     <div style={{ marginTop: 8 }} data-lista-analisis="si">
-      <p style={{ margin: '0 0 4px', fontSize: '0.84rem', color: '#33475c' }}>
+      <p style={{ margin: '0 0 4px', fontSize: '0.84rem', color: 'var(--tinta)' }}>
         <strong>Análisis:</strong> {sim.muestras.length} posiciones calculadas · recorrido lineal {Math.round(sim.largoCorte)} mm · tiempo {sim.tiempo.toFixed(1)} s
       </p>
-      {sim.problemas.length === 0 && <p style={{ margin: 0, fontSize: '0.84rem', color: '#0a6b3c' }}>El robot llega a todos los puntos sin salirse de lo que sus ejes pueden girar.</p>}
+      {sim.problemas.length === 0 && <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--verde-oscuro)' }}>El robot llega a todos los puntos sin salirse de lo que sus ejes pueden girar.</p>}
       {sim.problemas.slice(0, 12).map((p, i) => {
         const idea = ideaDe(p.texto)
         return (
           <div key={i} style={{ margin: '6px 0' }}>
-            <p style={{ margin: 0, fontSize: '0.84rem', color: p.nivel === 'error' ? '#c62828' : '#8a5b00', cursor: 'pointer' }} onClick={() => onIr(p)} title="Ir a ese momento">
+            <p style={{ margin: 0, fontSize: '0.84rem', color: p.nivel === 'error' ? 'var(--rojo)' : 'var(--naranjo-aviso)', cursor: 'pointer' }} onClick={() => onIr(p)} title="Ir a ese momento">
               {p.nivel === 'error' ? '✕' : '⚠'} {p.t.toFixed(1)} s · {p.texto}
             </p>
             {idea && (
-              <p style={{ margin: '1px 0 0 16px', fontSize: '0.8rem', color: '#33475c' }}>
+              <p style={{ margin: '1px 0 0 16px', fontSize: '0.8rem', color: 'var(--tinta)' }}>
                 {idea.idea}{' '}
                 <button type="button" onClick={() => onEstudiar(idea.ancla)} style={enlaceEstudiar}>
                   {idea.pregunta} → Estudiar
@@ -34,7 +34,7 @@ export default function Analisis({ sim, onIr, onEstudiar }: { sim: Simulacion; o
           </div>
         )
       })}
-      {sim.problemas.length > 12 && <p style={{ margin: 0, fontSize: '0.8rem', color: '#5a6b7d' }}>… y {sim.problemas.length - 12} más.</p>}
+      {sim.problemas.length > 12 && <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--tinta-tenue)' }}>… y {sim.problemas.length - 12} más.</p>}
     </div>
   )
 }

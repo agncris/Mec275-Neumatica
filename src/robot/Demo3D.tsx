@@ -42,7 +42,7 @@ const boton: CSSProperties = { border: '1px solid #c6ced6', background: '#fff', 
 function Escena({ vista }: { vista: React.MutableRefObject<VistaRobot> }) {
   return (
     <div style={{ height: 340, display: 'flex', flexDirection: 'column', padding: 8 }}>
-      <Suspense fallback={<p style={{ padding: 20, color: '#51606f' }}>Montando el robot…</p>}>
+      <Suspense fallback={<p style={{ padding: 20, color: 'var(--tinta-suave)' }}>Montando el robot…</p>}>
         <Robot3D vista={vista} alto="100%" sinDetalle />
       </Suspense>
     </div>
@@ -111,7 +111,7 @@ export function DemoAlcance() {
           <input type="range" min={250} max={1200} step={10} value={d} onChange={(e) => setD(Number(e.target.value))} aria-label="Distancia de la pieza a la base" />
           <span style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{d} mm</span>
         </label>
-        <p role="status" style={{ margin: '8px 0 0', fontSize: '0.86rem', lineHeight: 1.45, padding: '6px 8px', borderRadius: 6, background: llega ? '#eef6f1' : '#fdecea', border: `1px solid ${llega ? '#cfe5d8' : '#f3c1bc'}`, color: llega ? '#1d5a3a' : '#8a1c14' }}>
+        <p role="status" style={{ margin: '8px 0 0', fontSize: '0.86rem', lineHeight: 1.45, padding: '6px 8px', borderRadius: 6, background: llega ? '#eef6f1' : 'var(--fondo-rojo)', border: `1px solid ${llega ? '#cfe5d8' : '#f3c1bc'}`, color: llega ? '#1d5a3a' : '#8a1c14' }}>
           {llega
             ? `Llega. La esfera azul es el alcance del ${MODELO.nombre.split(' (')[0]} (${MODELO.alcance} mm hasta la muñeca). La herramienta sigue más allá, pero el límite lo pone la muñeca.`
             : sol.falla === 'limite'
@@ -200,7 +200,7 @@ export function DemoMovimientos() {
           </button>
         </div>
         <input type="range" min={0} max={1} step={0.005} value={p} onChange={(e) => { setCorre(false); setP(Number(e.target.value)) }} aria-label="Avance del movimiento" style={{ width: '100%' }} />
-        <p role="status" style={{ margin: '8px 0 0', fontSize: '0.86rem', lineHeight: 1.45, padding: '6px 8px', borderRadius: 6, background: '#f7f9fb', border: '1px solid #e0e5eb', color: '#26323f' }}>
+        <p role="status" style={{ margin: '8px 0 0', fontSize: '0.86rem', lineHeight: 1.45, padding: '6px 8px', borderRadius: 6, background: '#f7f9fb', border: '1px solid var(--borde-suave)', color: 'var(--tinta-oscura)' }}>
           <strong style={{ color: COLOR_MODO[modo] }}>{TEXTO_MODO[modo].split(':')[0]}</strong>
           {TEXTO_MODO[modo].slice(TEXTO_MODO[modo].indexOf(':'))} La línea verde es el recorrido de este movimiento; las rojas, el de los otros dos.
         </p>

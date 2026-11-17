@@ -174,10 +174,10 @@ export default function Mando({ modelo, herramienta, pedestal, q, onQ, puntos, o
       {aviso && <p style={{ margin: '6px 0 0', color: '#ffb86b' }}>⚠ {aviso}</p>}
 
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10, alignItems: 'center' }}>
-        <button style={{ ...tecla, background: '#1668c7' }} onClick={() => grabar('PTP')} data-grabar="PTP">
+        <button style={{ ...tecla, background: 'var(--azul)' }} onClick={() => grabar('PTP')} data-grabar="PTP">
           ● Grabar punto PTP
         </button>
-        <button style={{ ...tecla, background: '#1668c7' }} onClick={() => grabar('LIN')} data-grabar="LIN">
+        <button style={{ ...tecla, background: 'var(--azul)' }} onClick={() => grabar('LIN')} data-grabar="LIN">
           ● Grabar punto LIN
         </button>
         <label style={{ display: 'flex', gap: 4, alignItems: 'center' }} title="Estado de la salida 1 (pinza/ventosa) al llegar al punto">
@@ -200,7 +200,7 @@ export default function Mando({ modelo, herramienta, pedestal, q, onQ, puntos, o
         {!puntos.length && <li style={{ listStyle: 'none', marginLeft: -22, color: '#9aa4ae' }}>Mueve el robot y graba puntos: después se reproducen en orden.</li>}
       </ol>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
-        <button style={{ ...tecla, background: '#12a35a' }} onClick={onReproducir} disabled={!puntos.length} data-reproducir="si">
+        <button style={{ ...tecla, background: 'var(--verde-vivo)' }} onClick={onReproducir} disabled={!puntos.length} data-reproducir="si">
           {reproduciendo ? '■ Detener' : '▶ Reproducir (playback)'}
         </button>
         <button style={tecla} onClick={() => onPuntos(puntos.slice(0, -1))} disabled={!puntos.length}>

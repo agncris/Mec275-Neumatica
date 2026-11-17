@@ -25,7 +25,7 @@ export default function FichaModelo({ modeloVista }: { modeloVista: ReturnType<t
           ))}
         </tbody>
       </table>
-      <p style={{ fontSize: '0.78rem', color: '#5f6b78' }}>Datos de las fichas técnicas publicadas de cada modelo. Para un trabajo formal, cita la ficha oficial de KUKA.</p>
+      <p style={{ fontSize: '0.78rem', color: 'var(--tinta-gris)' }}>Datos de las fichas técnicas publicadas de cada modelo. Para un trabajo formal, cita la ficha oficial de KUKA.</p>
     </>
   )
 }

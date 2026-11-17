@@ -542,7 +542,7 @@ export default function UnidadRobotica() {
           }}
         />
       ) : (
-        <p style={{ margin: 0, fontSize: '0.86rem', color: '#51606f' }}>
+        <p style={{ margin: 0, fontSize: '0.86rem', color: 'var(--tinta-suave)' }}>
           Cuando haya una simulación, aquí se revisan el alcance, los límites de los ejes y las singularidades. <button type="button" onClick={() => irAEstudiar('grados')} style={enlaceEstudiar}>¿Qué es una singularidad? → Estudiar</button>
         </p>
       ),
@@ -555,7 +555,7 @@ export default function UnidadRobotica() {
         modo === 'visual' && sim ? (
           <CodigoKRL sim={sim} t={tRef.current} seguir={reproduciendo} />
         ) : (
-          <p style={{ margin: 0, fontSize: '0.86rem', color: '#51606f' }}>
+          <p style={{ margin: 0, fontSize: '0.86rem', color: 'var(--tinta-suave)' }}>
             {modo === 'visual' ? 'Todavía no hay programa: conecta comandos, robot y herramienta al Core.' : 'En el mando manual, el programa KRL de tus puntos se descarga desde Exportar.'}
           </p>
         ),
@@ -582,7 +582,7 @@ export default function UnidadRobotica() {
             : 'Arrastra desde una salida (derecha) hasta una entrada (izquierda) para conectar · doble clic en el fondo para buscar un componente.'}
       </span>
       {simActiva && (errores.length > 0 || avisosSim.length > 0) && (
-        <button onClick={abrirAnalisis} style={{ marginLeft: 'auto', border: 'none', background: 'transparent', color: errores.length ? '#b3261e' : '#7a4f00', fontWeight: 700, cursor: 'pointer', fontSize: '0.82rem' }}>
+        <button onClick={abrirAnalisis} style={{ marginLeft: 'auto', border: 'none', background: 'transparent', color: errores.length ? 'var(--rojo-error)' : 'var(--naranjo-texto)', fontWeight: 700, cursor: 'pointer', fontSize: '0.82rem' }}>
           ⚠ {errores.length ? `${errores.length} error(es)` : `${avisosSim.length} aviso(s)`}
         </button>
       )}
@@ -610,7 +610,7 @@ export default function UnidadRobotica() {
           anchoFijoIzquierda={modo === 'visual' && !entregaAbierta ? 560 : undefined}
           plegado={estrecha ? 'abierto' : plegado}
           onPlegado={setPlegado}
-          riel={<span style={{ writingMode: 'vertical-rl', fontSize: '0.75rem', fontWeight: 700, color: '#51606f', letterSpacing: '0.04em' }}>{modo === 'visual' ? 'PROGRAMA' : 'MANDO'}</span>}
+          riel={<span style={{ writingMode: 'vertical-rl', fontSize: '0.75rem', fontWeight: 700, color: 'var(--tinta-suave)', letterSpacing: '0.04em' }}>{modo === 'visual' ? 'PROGRAMA' : 'MANDO'}</span>}
           barra={barra}
           izquierda={{ id: 'programa', titulo: modo === 'visual' ? 'Programa' : 'Mando', contenido: areaPrograma }}
           derecha={{ id: 'simulacion', titulo: 'Simulación', tituloCorto: '3D', contenido: areaSimulacion }}
@@ -619,7 +619,7 @@ export default function UnidadRobotica() {
           conCajon={entregaAbierta && enTarea && !estrecha}
         />
       ) : (
-        <Suspense fallback={<p style={{ padding: 24, color: '#51606f', textAlign: 'center' }}>Abriendo Estudiar…</p>}>
+        <Suspense fallback={<p style={{ padding: 24, color: 'var(--tinta-suave)', textAlign: 'center' }}>Abriendo Estudiar…</p>}>
           <EstudiarRobotica setSeccion={setSeccion} />
         </Suspense>
       )}

@@ -485,8 +485,8 @@ export default function TiposRobot() {
           aria-pressed={tipo === t}
           style={{
             border: `2px solid ${tipo === t ? '#33475c' : '#c6ced6'}`,
-            background: tipo === t ? '#33475c' : '#fff',
-            color: tipo === t ? '#fff' : '#33475c',
+            background: tipo === t ? 'var(--tinta)' : '#fff',
+            color: tipo === t ? '#fff' : 'var(--tinta)',
             borderRadius: 999,
             padding: '0.25rem 0.8rem',
             fontWeight: 600,
@@ -506,7 +506,7 @@ export default function TiposRobot() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))', gap: 14, alignItems: 'start' }}>
         <div ref={contRef} style={{ width: '100%', height: 360, borderRadius: 8, overflow: 'hidden' }} />
         <div>
-          <h3 style={{ margin: '0 0 4px', color: '#33475c' }}>
+          <h3 style={{ margin: '0 0 4px', color: 'var(--tinta)' }}>
             {info.nombre} · {info.gdl} grados de libertad
           </h3>
           <p style={{ margin: '0 0 6px', lineHeight: 1.5 }}>{info.texto}</p>
@@ -521,7 +521,7 @@ export default function TiposRobot() {
               <span>
                 <span
                   title={j.clase === 'R' ? 'Rotacional: gira' : 'Prismática: se desliza'}
-                  style={{ display: 'inline-block', width: 18, textAlign: 'center', borderRadius: 4, background: j.clase === 'R' ? '#1668c7' : '#0e7a43', color: '#fff', fontWeight: 700, marginRight: 5 }}
+                  style={{ display: 'inline-block', width: 18, textAlign: 'center', borderRadius: 4, background: j.clase === 'R' ? 'var(--azul)' : 'var(--verde)', color: '#fff', fontWeight: 700, marginRight: 5 }}
                 >
                   {j.clase}
                 </span>
@@ -540,9 +540,9 @@ export default function TiposRobot() {
               </span>
             </label>
           ))}
-          <p style={{ margin: '8px 0 0', fontSize: '0.8rem', color: '#5a6b7d' }}>
-            <span style={{ background: '#1668c7', color: '#fff', borderRadius: 4, padding: '0 4px', fontWeight: 700 }}>R</span> rotacional (gira) ·{' '}
-            <span style={{ background: '#0e7a43', color: '#fff', borderRadius: 4, padding: '0 4px', fontWeight: 700 }}>P</span> prismática (se desliza)
+          <p style={{ margin: '8px 0 0', fontSize: '0.8rem', color: 'var(--tinta-tenue)' }}>
+            <span style={{ background: 'var(--azul)', color: '#fff', borderRadius: 4, padding: '0 4px', fontWeight: 700 }}>R</span> rotacional (gira) ·{' '}
+            <span style={{ background: 'var(--verde)', color: '#fff', borderRadius: 4, padding: '0 4px', fontWeight: 700 }}>P</span> prismática (se desliza)
             {tipo === 'delta' ? ' · en el delta los deslizadores mueven la plataforma; los brazos se calculan solos.' : ''}
           </p>
         </div>

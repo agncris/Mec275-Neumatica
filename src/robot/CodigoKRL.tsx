@@ -22,7 +22,7 @@ export default function CodigoKRL({ sim, t, seguir }: { sim: Simulacion; t: numb
   }, [explicada])
   return (
     <>
-      <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: '#51606f' }}>
+      <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: 'var(--tinta-suave)' }}>
         El programa que se genera para el controlador KUKA ({filas.length} líneas). Cada línea dice qué hace. Elige una para ver sus palabras.
         {seguir && activa >= 0 ? ` Ahora va por la línea ${activa + 1}.` : ''} Descárgalo desde Exportar.
       </p>
@@ -58,21 +58,21 @@ export default function CodigoKRL({ sim, t, seguir }: { sim: Simulacion; t: numb
           )
         })}
       </pre>
-      <p style={{ margin: '8px 0 6px', fontSize: '0.82rem', color: '#51606f' }}>Línea {explicada + 1}. Cada palabra, como en el código G.</p>
+      <p style={{ margin: '8px 0 6px', fontSize: '0.82rem', color: 'var(--tinta-suave)' }}>Línea {explicada + 1}. Cada palabra, como en el código G.</p>
       <code style={{ display: 'block', background: '#f4f6f9', padding: '6px 8px', borderRadius: 6, marginBottom: 6, whiteSpace: 'pre-wrap' }}>{vistas[explicada]?.codigo || ' '}</code>
       {explicacion.length ? (
         <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '0.88rem' }} data-explicacion-krl="si">
           <tbody>
             {explicacion.map((e, i) => (
               <tr key={i}>
-                <td style={{ padding: '4px 8px', borderBottom: '1px solid #eef1f4', fontFamily: 'ui-monospace, Menlo, monospace', fontWeight: 700, whiteSpace: 'nowrap', verticalAlign: 'top' }}>{e.palabra}</td>
-                <td style={{ padding: '4px 8px', borderBottom: '1px solid #eef1f4' }}>{e.texto}</td>
+                <td style={{ padding: '4px 8px', borderBottom: '1px solid var(--fondo-gris)', fontFamily: 'ui-monospace, Menlo, monospace', fontWeight: 700, whiteSpace: 'nowrap', verticalAlign: 'top' }}>{e.palabra}</td>
+                <td style={{ padding: '4px 8px', borderBottom: '1px solid var(--fondo-gris)' }}>{e.texto}</td>
               </tr>
             ))}
           </tbody>
         </table>
       ) : (
-        <p style={{ color: '#5f6b78', fontSize: '0.86rem' }}>Línea vacía.</p>
+        <p style={{ color: 'var(--tinta-gris)', fontSize: '0.86rem' }}>Línea vacía.</p>
       )}
     </>
   )

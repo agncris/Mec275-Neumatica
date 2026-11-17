@@ -18,7 +18,7 @@ export function SaltarAPractica({ children, destino = 'laboratorio' }: { childre
   if (destino === 'tarea' && !VER_TAREA_ROBOTICA) return null
   return (
     <p style={{ margin: '0.75rem 0 0' }}>
-      <button type="button" onClick={() => ir(destino)} style={{ border: '1px solid #c6ced6', background: '#fff', color: '#1668c7', fontWeight: 650, borderRadius: 8, padding: '0.3rem 0.75rem', cursor: 'pointer', fontSize: '0.86rem' }}>
+      <button type="button" onClick={() => ir(destino)} style={{ border: '1px solid var(--borde)', background: '#fff', color: 'var(--azul)', fontWeight: 650, borderRadius: 8, padding: '0.3rem 0.75rem', cursor: 'pointer', fontSize: '0.86rem' }}>
         {children}
       </button>
     </p>

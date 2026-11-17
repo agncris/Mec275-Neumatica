@@ -471,7 +471,7 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
             {/* Corto a propósito: el lienzo es angosto. Los micro pasos y el porqué están en la pestaña Plano. */}
             <p style={{ margin: '4px 0 0' }}>{guia.accion}</p>
             {guia.pista && <p style={{ margin: '4px 0 0', color: '#6b4200', fontWeight: 600 }}>Te falta: {guia.pista}</p>}
-            {guia.listo && <p style={{ margin: '4px 0 0', color: '#33475c' }}>Listo cuando: {guia.listo}</p>}
+            {guia.listo && <p style={{ margin: '4px 0 0', color: 'var(--tinta)' }}>Listo cuando: {guia.listo}</p>}
           </div>
         )}
         {!guia && def.nodos.length > 0 && !ayudaCerrada && !mirandoEjemplo && (
@@ -614,7 +614,7 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
               left: Math.min(buscador.x, 9999),
               top: buscador.y,
               background: '#fff',
-              border: '1px solid #8a97a5',
+              border: '1px solid var(--gris-claro)',
               borderRadius: 6,
               boxShadow: '0 4px 14px rgba(0,0,0,0.2)',
               width: 280,
@@ -633,7 +633,7 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
                   setBuscador(null)
                 }
               }}
-              style={{ width: '100%', padding: '6px 8px', border: 'none', borderBottom: '1px solid #e0e5eb', outline: 'none', fontSize: '0.88rem' }}
+              style={{ width: '100%', padding: '6px 8px', border: 'none', borderBottom: '1px solid var(--borde-suave)', outline: 'none', fontSize: '0.88rem' }}
             />
             {coincidencias.map((c) => (
               <button
@@ -644,7 +644,7 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
                 }}
                 style={{ display: 'block', width: '100%', textAlign: 'left', border: 'none', background: '#fff', padding: '4px 8px', cursor: 'pointer', fontSize: '0.82rem' }}
               >
-                <strong>{c.nombre}</strong> <span style={{ color: '#5f6b78' }}>({c.corto}) · {c.pestana}</span>
+                <strong>{c.nombre}</strong> <span style={{ color: 'var(--tinta-gris)' }}>({c.corto}) · {c.pestana}</span>
               </button>
             ))}
           </div>

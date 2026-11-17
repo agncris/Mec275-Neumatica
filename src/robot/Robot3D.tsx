@@ -703,10 +703,10 @@ export default function Robot3D({
     return () => cancelAnimationFrame(id)
   }, [pantalla])
 
-  if (sinWebGL) return <p style={{ padding: 20, color: '#8a5b00' }}>Este navegador no tiene WebGL: la vista 3D no está disponible.</p>
+  if (sinWebGL) return <p style={{ padding: 20, color: 'var(--naranjo-aviso)' }}>Este navegador no tiene WebGL: la vista 3D no está disponible.</p>
   const llena = pantalla || alto === '100%'
   return (
-    <div ref={envolturaRef} style={{ position: 'relative', display: 'flex', flexDirection: 'column', height: llena ? '100%' : undefined, minHeight: 0, background: pantalla ? '#eef1f4' : undefined }}>
+    <div ref={envolturaRef} style={{ position: 'relative', display: 'flex', flexDirection: 'column', height: llena ? '100%' : undefined, minHeight: 0, background: pantalla ? 'var(--fondo-gris)' : undefined }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginBottom: 8, flex: 'none' }}>
         <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>{encabezado}</div>
         <div style={{ marginLeft: 'auto', display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 8, flex: '1 1 240px' }} role="toolbar" aria-label="Vistas de la simulación">
@@ -724,9 +724,9 @@ export default function Robot3D({
                 onClick={() => accion.current?.(v)}
                 aria-pressed={vistaActual === v}
                 style={{
-                  border: '1px solid #e0e5eb',
-                  background: vistaActual === v ? '#33475c' : '#fff',
-                  color: vistaActual === v ? '#fff' : '#51606f',
+                  border: '1px solid var(--borde-suave)',
+                  background: vistaActual === v ? 'var(--tinta)' : '#fff',
+                  color: vistaActual === v ? '#fff' : 'var(--tinta-suave)',
                   borderRadius: 8,
                   padding: '4px 10px',
                   fontSize: '0.8rem',
@@ -744,7 +744,7 @@ export default function Robot3D({
             aria-pressed={detalle}
             title="La cámara sigue a la herramienta y se acerca al corte"
             data-detalle-corte="si"
-            style={{ border: '1px solid #e0e5eb', background: detalle ? '#33475c' : '#fff', color: detalle ? '#fff' : '#51606f', borderRadius: 8, padding: '4px 10px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 600 }}
+            style={{ border: '1px solid var(--borde-suave)', background: detalle ? 'var(--tinta)' : '#fff', color: detalle ? '#fff' : 'var(--tinta-suave)', borderRadius: 8, padding: '4px 10px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 600 }}
           >
             Seguir el corte
           </button>
@@ -786,8 +786,8 @@ export default function Robot3D({
               height: 46,
               borderRadius: 12,
               border: 'none',
-              background: play.corriendo ? '#ffa726' : '#0e7a43',
-              color: play.corriendo ? '#1c2733' : '#fff',
+              background: play.corriendo ? '#ffa726' : 'var(--verde)',
+              color: play.corriendo ? 'var(--texto)' : '#fff',
               fontSize: '1.15rem',
               lineHeight: 1,
               cursor: play.deshabilitado ? 'default' : 'pointer',

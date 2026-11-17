@@ -56,7 +56,7 @@ export default function AreaSimulacion({
   return (
   <>
     <div className="relleno">
-      <Suspense fallback={<p style={{ padding: 20, color: '#51606f' }}>Montando la celda…</p>}>
+      <Suspense fallback={<p style={{ padding: 20, color: 'var(--tinta-suave)' }}>Montando la celda…</p>}>
         <Robot3D
           vista={vista}
           onCanvas={(c) => (canvasRef.current = c)}
@@ -65,12 +65,12 @@ export default function AreaSimulacion({
           encabezado={
             <>
               <h2 style={{ margin: 0, fontSize: '1rem' }}>Simulación 3D</h2>
-              <span style={{ fontWeight: 400, fontSize: '0.8rem', color: '#51606f' }}>{modeloVista.nombre}</span>
+              <span style={{ fontWeight: 400, fontSize: '0.8rem', color: 'var(--tinta-suave)' }}>{modeloVista.nombre}</span>
               {simActiva && (
                 <button
                   onClick={abrirAnalisis}
                   title="Ver el análisis de la simulación"
-                  style={{ ...estadoChip, border: 'none', cursor: 'pointer', background: errores.length ? '#b3261e' : avisosSim.length ? '#a35200' : '#0e7a43' }}
+                  style={{ ...estadoChip, border: 'none', cursor: 'pointer', background: errores.length ? 'var(--rojo-error)' : avisosSim.length ? '#a35200' : 'var(--verde)' }}
                   data-analisis={errores.length ? 'error' : avisosSim.length ? 'aviso' : 'ok'}
                 >
                   {errores.length ? `${errores.length} error(es)` : avisosSim.length ? `${avisosSim.length} aviso(s)` : 'sin problemas'}
@@ -121,14 +121,14 @@ export default function AreaSimulacion({
         </select>
       </div>
     ) : (
-      <p style={{ margin: '8px 0 0', fontSize: '0.8rem', color: '#51606f' }}>
+      <p style={{ margin: '8px 0 0', fontSize: '0.8rem', color: 'var(--tinta-suave)' }}>
         {modo === 'visual'
           ? 'Cuando el Core tenga comandos, robot y herramienta, aquí aparece el reproductor.'
           : 'Mueve los ejes de abajo, graba puntos en el mando y pulsa «Reproducir».'}
       </p>
     )}
     <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 4 }}>
-      <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: '0.8rem', color: '#51606f' }}>
+      <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: '0.8rem', color: 'var(--tinta-suave)' }}>
         <input type="checkbox" checked={alcance} onChange={(e) => setAlcance(e.target.checked)} /> Alcance
       </label>
     </div>
