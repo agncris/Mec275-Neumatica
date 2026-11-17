@@ -16,14 +16,16 @@ import { rotuloPieza } from '../rotulos'
 import { circuitoDesdeStore, useStore } from '../store'
 import { FUNCIONES_VDI, SimboloVDI } from '../symbols/SimbolosVDI'
 import CajonEntregar, { type PuntoRevision } from './banco/CajonEntregar'
+import ProcesoTarea, { enlaceEstudiar, type PasoProceso } from './banco/ProcesoTarea'
 
 interface Props {
   onCerrar: () => void
   capturarCircuito: () => Promise<string | { error: string }>
   capturarFase: () => Promise<string | { error: string }>
+  onEstudiar?: (ancla: string) => void
 }
 
-export default function EntregaNeumatica({ onCerrar, capturarCircuito, capturarFase }: Props) {
+export default function EntregaNeumatica({ onCerrar, capturarCircuito, capturarFase, onEstudiar }: Props) {
   const piezas = useStore((s) => s.piezas)
   const mangueras = useStore((s) => s.mangueras)
   const respuestas = useStore((s) => s.respuestas)
@@ -167,6 +169,15 @@ export default function EntregaNeumatica({ onCerrar, capturarCircuito, capturarF
     </div>
   )
 
+  const a = analizarCircuito(circuitoDesdeStore(piezas, mangueras))
+  const pasoEntrega: PasoProceso = !piezas.length
+    ? { id: 'montar', numero: 1, total: 4, titulo: 'Armar el circuito', donde: 'El banco, a la izquierda del cajón.', accion: 'Arrastra la alimentación, las válvulas y los actuadores. Une un puerto con otro.', listo: 'Hay fichas en el banco y no quedan puertos sueltos.' }
+    : a.erroresMontaje.length > 0 || a.sinMovimiento
+      ? { id: 'probar', numero: 2, total: 4, titulo: 'Probar que se mueve', donde: '▶ Simular, en la barra.', accion: 'Dale aire y pulsa el inicio. Si nada se mueve, revisa la alimentación y los pilotajes.', listo: 'Al pulsar el inicio, un actuador se mueve.' }
+      : vdi.length === 0
+        ? { id: 'vdi', numero: 3, total: 4, titulo: 'Contar qué hace la máquina', donde: 'El diagrama VDI, más abajo en este cajón.', accion: 'Pon una función por cada movimiento, en el orden en que ocurre, y anota a qué corresponde.', listo: 'El diagrama tiene al menos una función.' }
+        : { id: 'entregar', numero: 4, total: 4, titulo: 'Bajar lo que va en el informe', donde: 'Los pasos 3 y 4 de este cajón.', accion: 'Descarga el diagrama, la imagen del circuito y el archivo .json. El PDF lo armas en la plantilla del profesor.', listo: 'Tienes el PDF y el .json para subir a Aula.' }
+
   return (
     <CajonEntregar
       unidad="Neumática"
@@ -174,6 +185,17 @@ export default function EntregaNeumatica({ onCerrar, capturarCircuito, capturarF
       trabajoSugerido="Tarea-1"
       onCerrar={onCerrar}
       revisar={revisar}
+      guia={
+        <ProcesoTarea etapas={['Montar', 'Probar', 'VDI', 'Entregar']} paso={pasoEntrega}>
+          {onEstudiar && (
+            <p style={{ margin: '8px 0 0' }}>
+              <button type="button" onClick={() => onEstudiar(pasoEntrega.id === 'vdi' ? 'vdi' : pasoEntrega.id === 'probar' ? 'cascada' : 'iso')} style={enlaceEstudiar}>
+                ¿No recuerdas este paso? → Estudiar
+              </button>
+            </p>
+          )}
+        </ProcesoTarea>
+      }
       extra={{ titulo: 'Diagrama de funcionamiento VDI 2860', contenido: armadorVdi }}
       presentacion={[
         {

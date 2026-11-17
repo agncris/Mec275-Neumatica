@@ -387,6 +387,7 @@ export default function App() {
     if (origenCable) return `Cableando desde ${origenCable.componente}.${origenCable.puerto}: ${tactil ? 'toca' : 'haz clic en'} el puerto de destino · Esc cancela.`
     if (seleccion?.clase === 'pieza') return `${seleccion.id} seleccionada: arrástrala para moverla · sus propiedades están a la derecha · Supr la borra.`
     if (seleccion?.clase === 'manguera') return `Manguera ${seleccion.id} seleccionada: Supr la quita.`
+    if (avisosCircuito[0]) return `Siguiente: ${avisosCircuito[0]}`
     if (bancoVacio) return 'Modo edición: arrastra una ficha desde la paleta al tablero, o carga un ejemplo.'
     return tactil
       ? 'Modo edición: toca un puerto y luego el de destino para unirlos · toca una ficha para ver sus propiedades.'
@@ -731,6 +732,23 @@ export default function App() {
               ⚠ {avisosCircuito.length} {avisosCircuito.length === 1 ? 'aviso' : 'avisos'}
             </button>
           )}
+          {!estrecha && (avisosCircuito.length > 0 || bancoVacio) && (
+            <button
+              type="button"
+              onClick={() => {
+                const ancla = /cascada|pilot|bloquean/i.test(avisosCircuito[0] ?? '') ? 'cascada' : /vdi|función|funcion/i.test(avisosCircuito[0] ?? '') ? 'vdi' : 'iso'
+                try {
+                  window.history.replaceState(null, '', `#${ancla}`)
+                } catch {
+                  /* sin historial */
+                }
+                setSeccion('estudiar')
+              }}
+              style={{ border: 'none', background: 'transparent', color: '#1668c7', fontWeight: 600, cursor: 'pointer', fontSize: '0.82rem' }}
+            >
+              → Estudiar
+            </button>
+          )}
         </div>
       </main>
 
@@ -797,7 +815,22 @@ export default function App() {
         <PaginaNeumaticaEstudiar alCargarCircuito={() => setSeccion('laboratorio')} />
       )}
 
-      {entregaAbierta && <EntregaNeumatica onCerrar={() => setEntregaAbierta(false)} capturarCircuito={capturarCircuito} capturarFase={capturarFase} />}
+      {entregaAbierta && (
+        <EntregaNeumatica
+          onCerrar={() => setEntregaAbierta(false)}
+          capturarCircuito={capturarCircuito}
+          capturarFase={capturarFase}
+          onEstudiar={(ancla) => {
+            try {
+              window.history.replaceState(null, '', `#${ancla}`)
+            } catch {
+              /* sin historial */
+            }
+            setEntregaAbierta(false)
+            setSeccion('estudiar')
+          }}
+        />
+      )}
 
       {/* Diagrama de fase fuera de la vista: de aquí salen el PNG y la imagen de la entrega. */}
       <div aria-hidden style={{ position: 'fixed', left: -10000, top: 0, width: 640, pointerEvents: 'none' }}>

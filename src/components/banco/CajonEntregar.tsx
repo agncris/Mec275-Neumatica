@@ -41,6 +41,8 @@ interface Props {
   revisar?: () => PuntoRevision[]
   /** Herramientas propias de la unidad (p. ej. armar el diagrama VDI). */
   extra?: { titulo: string; contenido: ReactNode }
+  /** El proceso de la tarea, arriba del cajón. */
+  guia?: ReactNode
 }
 
 const BOTON: Record<AccionEntrega['tipo'], string> = {
@@ -51,7 +53,7 @@ const BOTON: Record<AccionEntrega['tipo'], string> = {
   video: 'Grabar',
 }
 
-export default function CajonEntregar({ unidad, clave, trabajoSugerido, onCerrar, presentacion, archivos, revisar, extra }: Props) {
+export default function CajonEntregar({ unidad, clave, trabajoSugerido, onCerrar, presentacion, archivos, revisar, extra, guia }: Props) {
   const [alumno, setAlumno] = useAlumno()
   const [guardado, setTrabajo] = usePersistente(`${clave}.trabajo`, trabajoSugerido)
   // Antes se sugería «Trabajo-N»; ahora las evaluaciones se llaman «Tarea N».
@@ -103,6 +105,7 @@ export default function CajonEntregar({ unidad, clave, trabajoSugerido, onCerrar
           Respondes las preguntas en la <strong>plantilla que te entregó el profesor</strong> (PPT) y la guardas como PDF. Desde aquí sacas lo que pegas en ella y el
           archivo de la app (.json) que subes a Aula junto con tu PDF.
         </p>
+        {guia}
 
         <h3 style={titulo}>1 · Tus datos</h3>
         <div style={{ display: 'grid', gap: 8 }}>

@@ -8,6 +8,7 @@
  */
 import { BotonNuevo, botonPrimario, estiloAviso, Menu, useApaisado, useEsEstrecha } from '../components/ui'
 import BancoDividido, { TituloArea } from '../components/banco/BancoDividido'
+import ProcesoTarea, { enlaceEstudiar, type PasoProceso } from '../components/banco/ProcesoTarea'
 import { usePanelAcoplado, type PestanaPanel } from '../components/banco/PanelAcoplado'
 import PaginaEstudiar, { type SeccionEstudio } from '../components/banco/PaginaEstudiar'
 import SubnavUnidad, { seccionDeLaUrl, useSeccionUnidad, type SeccionUnidad } from '../components/banco/SubnavUnidad'
@@ -37,6 +38,7 @@ import {
   programaVacio,
   revisarPrograma,
   scan,
+  escalonVacio,
   type EstadoPLC,
   type FlujoEscalon,
   type IdPlanta,
@@ -63,6 +65,75 @@ const DT = 0.02
 const CLAVE_TAREA = 'neumalab.plc.tarea'
 const PLANTA_TAREA: IdPlanta = 'silo'
 const NOMBRE_TAREA = 'Tarea 2'
+
+const ETAPAS_SILO = ['Nombrar', 'Marcha', 'Cinta', 'Llenar', 'Pilotos', 'Probar']
+
+function dirsPrograma(p: ProgramaPLC): { contactos: Set<string>; bobinas: Set<string> } {
+  const contactos = new Set<string>()
+  const bobinas = new Set<string>()
+  for (const e of p.escalones) {
+    for (const fila of e.celdas) for (const c of fila) if (c.tipo === 'contacto') contactos.add(c.dir)
+    for (const b of e.bobinas) if (b) bobinas.add(b.dir)
+  }
+  return { contactos, bobinas }
+}
+
+function pasoSilo(p: ProgramaPLC): PasoProceso {
+  const { contactos, bobinas } = dirsPrograma(p)
+  const total = ETAPAS_SILO.length
+  const base = { total }
+  const nombrados = new Set(p.simbolos.filter((s) => s.nombre.trim()).map((s) => s.dir))
+  if (!['I0.0', 'I0.1', 'I0.3', 'I0.4'].every((d) => nombrados.has(d))) {
+    return { ...base, id: 'nombrar', numero: 1, titulo: 'Ponerle nombre a las entradas', donde: 'La pestaña E/S, abajo.', accion: 'Escribe el nombre de START, STOP, PROX y LEVEL. El cableado de la planta ya dice qué es cada una.', listo: 'Esas cuatro entradas tienen nombre.' }
+  }
+  if (![...bobinas].some((d) => d.startsWith('M'))) {
+    return { ...base, id: 'marcha', numero: 2, titulo: 'Dejar el sistema en marcha', donde: 'El primer escalón del diagrama.', accion: 'Un contacto de START y uno de STOP, y una bobina de marca (M). La marca recuerda que se pulsó marcha.', listo: 'Hay una bobina M.' }
+  }
+  if (!bobinas.has('Q0.0')) {
+    return { ...base, id: 'cinta', numero: 3, titulo: 'Mover la cinta', donde: 'Un escalón nuevo, debajo de la marcha.', accion: 'La bobina Q0.0 es el motor. Piensa cuándo debe avanzar y cuándo debe parar: el sensor PROX (I0.3) dice si hay una caja en posición.', listo: 'Hay una bobina Q0.0.' }
+  }
+  if (!bobinas.has('Q0.1') || (!contactos.has('I0.3') && !contactos.has('I0.4'))) {
+    return { ...base, id: 'llenar', numero: 4, titulo: 'Llenar la caja', donde: 'Otro escalón.', accion: 'Q0.1 abre la válvula. PROX dice que la caja está debajo; LEVEL (I0.4) dice que ya está llena. Decide con cuál cortas el llenado.', listo: 'Hay una bobina Q0.1 y un contacto de PROX o de LEVEL.' }
+  }
+  if (!['Q0.2', 'Q0.3', 'Q0.4'].some((d) => bobinas.has(d))) {
+    return { ...base, id: 'pilotos', numero: 5, titulo: 'Encender los pilotos', donde: 'Escalones aparte, uno por piloto.', accion: 'RUN (Q0.2) cuando el sistema está en marcha, FILL (Q0.3) mientras llena y FULL (Q0.4) cuando LEVEL está activo.', listo: 'Hay al menos una bobina Q0.2, Q0.3 o Q0.4.' }
+  }
+  return { ...base, id: 'probar', numero: 6, titulo: 'Probarlo con la planta', donde: '▶ RUN, a la izquierda, y la pestaña Registro.', accion: 'Pulsa START. Mira si la cinta para bajo el silo, si la caja se llena y si después sigue. STOP tiene que poder parar.', listo: 'En el registro no queda el aviso de una caja que pasó sin llenar.' }
+}
+
+function checklistSilo(p: ProgramaPLC): Array<{ ok: boolean; texto: string }> {
+  const { contactos, bobinas } = dirsPrograma(p)
+  const avisos = revisarPrograma(p)
+  const tiene = (dirs: string[]) => dirs.every((d) => contactos.has(d) || bobinas.has(d))
+  return [
+    { ok: contactos.size > 0 && bobinas.size > 0, texto: contactos.size > 0 && bobinas.size > 0 ? 'Hay contactos y bobinas.' : 'El diagrama todavía no tiene un contacto y una bobina.' },
+    { ok: tiene(['I0.0', 'I0.1']), texto: tiene(['I0.0', 'I0.1']) ? 'Usa START y STOP.' : 'Faltan START (I0.0) o STOP (I0.1).' },
+    { ok: contactos.has('I0.3') && contactos.has('I0.4'), texto: contactos.has('I0.3') && contactos.has('I0.4') ? 'Lee PROX y LEVEL.' : 'Falta leer PROX (I0.3) o LEVEL (I0.4).' },
+    { ok: bobinas.has('Q0.0') && bobinas.has('Q0.1'), texto: bobinas.has('Q0.0') && bobinas.has('Q0.1') ? 'Comanda la cinta y la válvula.' : 'Falta la bobina del motor (Q0.0) o de la válvula (Q0.1).' },
+    { ok: ['Q0.2', 'Q0.3', 'Q0.4'].every((d) => bobinas.has(d)), texto: ['Q0.2', 'Q0.3', 'Q0.4'].every((d) => bobinas.has(d)) ? 'Los tres pilotos tienen bobina.' : 'Falta un piloto: RUN (Q0.2), FILL (Q0.3) o FULL (Q0.4).' },
+    { ok: avisos.length === 0, texto: avisos.length === 0 ? 'El diagrama no tiene avisos de escritura.' : avisos[0] },
+  ]
+}
+
+function ejemploGuiadoSilo(): ProgramaPLC {
+  const marcha = escalonVacio()
+  marcha.comentario = 'Memoria de marcha. La cinta, la válvula y los pilotos van en los escalones de abajo.'
+  marcha.celdas[0][0] = { tipo: 'contacto', modo: 'NA', dir: 'I0.0' }
+  marcha.celdas[0][1] = { tipo: 'contacto', modo: 'NC', dir: 'I0.1' }
+  marcha.bobinas[0] = { tipo: 'normal', dir: 'M0.0' }
+  return {
+    version: 1,
+    tipo: 'programa-plc',
+    nombre: NOMBRE_TAREA,
+    planta: 'silo',
+    simbolos: [
+      { dir: 'I0.0', nombre: 'START', descripcion: 'Pulsador de marcha' },
+      { dir: 'I0.1', nombre: 'STOP', descripcion: 'Pulsador de paro' },
+      { dir: 'M0.0', nombre: 'MARCHA', descripcion: 'El sistema quedó en marcha' },
+    ],
+    escalones: [marcha, escalonVacio()],
+  }
+}
 
 function leerJson(clave: string): ProgramaPLC | null {
   try {
@@ -138,6 +209,11 @@ export default function UnidadPLC() {
   const panel = usePanelAcoplado<PestanaPLC>('neumalab.plc.panel', 'es', typeof window !== 'undefined' && window.innerHeight >= 860)
   // Quien tenía abierta una pestaña que ya no existe (la tabla de datos) vuelve a Entradas y salidas.
   useEffect(() => {
+    if (enTarea) {
+      panel.onPestana('proceso')
+      panel.onAbrir(true)
+      return
+    }
     if (!['es', 'registro'].includes(panel.pestana)) panel.onPestana('es')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -155,6 +231,10 @@ export default function UnidadPLC() {
       setEntregaAbierta(false)
     }
     setSeccionCruda(s)
+    if (s === 'tarea') {
+      panel.onPestana('proceso')
+      panel.onAbrir(true)
+    } else if (panel.pestana === 'proceso') panel.onPestana('es')
   }
   const [notacion, setNotacion] = useState<Notacion>(() => {
     try {
@@ -600,6 +680,9 @@ export default function UnidadPLC() {
       </TituloArea>
       )}
       {corriendo && <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: '#51606f' }}>El PLC está ejecutando el programa. Pásalo a STOP para editarlo.</p>}
+      {!corriendo && !programa.escalones.some((e) => e.bobinas.some(Boolean)) && (
+        <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: '#33475c' }}>El escalón está vacío. Elige un contacto, haz clic en una casilla y cierra con una bobina a la derecha. Ctrl+Z deshace.</p>
+      )}
       <EditorLadder
         programa={programa}
         onCambiar={setPrograma}
@@ -612,7 +695,10 @@ export default function UnidadPLC() {
         <div style={{ marginTop: 8 }} data-avisos-plc="si">
           {avisos.map((a, i) => (
             <p key={i} style={{ color: '#7a4f00', margin: '3px 0', fontSize: '0.86rem' }}>
-              ⚠ {a}
+              ⚠ {a}{' '}
+              <button type="button" onClick={() => irAEstudiar('ladder')} style={enlaceEstudiar}>
+                → Estudiar
+              </button>
             </p>
           ))}
         </div>
@@ -695,7 +781,55 @@ export default function UnidadPLC() {
       </ol>
     )
 
+  const irAEstudiar = (ancla: string) => {
+    try {
+      window.history.replaceState(null, '', `#${ancla}`)
+    } catch {
+      /* sin historial */
+    }
+    setSeccion('estudiar')
+  }
+  const verEjemploGuiado = () => {
+    if (!window.confirm('Se reemplaza el programa por un ejemplo a medias: la memoria de marcha con START y STOP. No mueve la cinta ni abre la válvula. ¿Seguir?')) return
+    setCorriendo(false)
+    setPrograma(ejemploGuiadoSilo())
+    setAviso('Ejemplo guiado cargado. La marca M0.0 queda en marcha; la cinta, la válvula y los pilotos van en los escalones de abajo.')
+  }
+  const pasoTarea = enTarea ? pasoSilo(programa) : null
+  const checklistTarea = enTarea ? checklistSilo(programa) : []
+
   const pestanas: Array<PestanaPanel<PestanaPLC>> = [
+    ...(pasoTarea
+      ? [
+          {
+            id: 'proceso' as const,
+            titulo: 'Proceso de la tarea',
+            tituloCorto: 'Proceso',
+            contenido: (
+              <div data-plano-tarea="si">
+                <ProcesoTarea etapas={ETAPAS_SILO} paso={pasoTarea}>
+                  <p style={{ margin: '8px 0 0' }}>
+                    <button type="button" onClick={verEjemploGuiado} style={botonSuave}>
+                      Ver ejemplo guiado
+                    </button>{' '}
+                    <button type="button" onClick={() => irAEstudiar(pasoTarea.id === 'probar' ? 'scan' : pasoTarea.id === 'nombrar' ? 'entradas-salidas' : 'ladder')} style={enlaceEstudiar}>
+                      ¿No recuerdas este paso? → Estudiar
+                    </button>
+                  </p>
+                </ProcesoTarea>
+                <p style={{ margin: '8px 0 6px', fontSize: '0.84rem', color: '#33475c' }}>{PLANTAS.silo.resumen}</p>
+                <ul style={{ margin: 0, paddingLeft: 0, listStyle: 'none' }} data-checklist-tarea="si">
+                  {checklistTarea.map((p) => (
+                    <li key={p.texto} style={{ margin: '2px 0', fontSize: '0.84rem', color: p.ok ? '#0a6b3c' : '#8a5b00' }}>
+                      {p.ok ? '✓' : '☐'} {p.texto}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ),
+          },
+        ]
+      : []),
     {
       id: 'es',
       titulo: 'Entradas y salidas',
@@ -747,11 +881,13 @@ export default function UnidadPLC() {
       {seccion !== 'estudiar' ? (
         <BancoDividido<PestanaPLC>
           key={seccion}
-          clave="neumalab.plc.banco"
+          clave="neumalab.plc.banco.v2"
+          divisionInicial={0.42}
+          anchoMin={340}
           barra={barra}
           izquierda={{ id: 'programa', titulo: 'Programa', contenido: areaPrograma }}
           derecha={{ id: 'planta', titulo: 'Planta', contenido: areaPlanta }}
-          inferior={{ etiqueta: 'Entradas, tablas y registro', pestanas, estado: panel }}
+          inferior={{ etiqueta: enTarea ? 'Proceso, entradas y registro' : 'Entradas, tablas y registro', pestanas, estado: panel }}
           estado={barraEstado}
           movil={movil}
           onMovil={setMovil}
@@ -889,7 +1025,7 @@ export default function UnidadPLC() {
   )
 }
 
-type PestanaPLC = 'es' | 'registro'
+type PestanaPLC = 'proceso' | 'es' | 'registro'
 
 const SECCIONES_PLC: SeccionEstudio[] = [
   { id: 'practica', indice: 'Autoevaluación', titulo: 'Autoevaluación · practica con preguntas al azar', contenido: <Autoevaluacion generadores={PREGUNTAS_PLC} /> },

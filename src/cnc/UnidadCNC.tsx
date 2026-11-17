@@ -8,6 +8,7 @@
  */
 import { acercar, BotonNuevo, botonPrimario, botonSecundario, estiloAviso, Menu, useEsEstrecha, useTactil } from '../components/ui'
 import BancoDividido, { TituloArea } from '../components/banco/BancoDividido'
+import ProcesoTarea, { enlaceEstudiar, type PasoProceso } from '../components/banco/ProcesoTarea'
 import { usePanelAcoplado, type PestanaPanel } from '../components/banco/PanelAcoplado'
 import PaginaEstudiar, { type SeccionEstudio } from '../components/banco/PaginaEstudiar'
 import SubnavUnidad, { seccionDeLaUrl, useSeccionUnidad, type SeccionUnidad } from '../components/banco/SubnavUnidad'
@@ -18,7 +19,7 @@ import Autoevaluacion from '../components/Autoevaluacion'
 import FichaCNC from './FichaCNC'
 import { PREGUNTAS_CNC } from './preguntasCNC'
 import { baseArchivo, copiarTabla, descargarTexto, leerAlumno, limpiarEnlace, trabajoDelEnlace } from '../entregar'
-import { crearTrabajo, herramientasLlamadas, leerTrabajo, revisarTrabajo, TAREA_3, type ResumenTrabajo } from './trabajo'
+import { crearTrabajo, herramientasLlamadas, leerTrabajo, revisarTrabajo, TAREA_3, type PuntoRevision, type ResumenTrabajo } from './trabajo'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { exportarPng, nombreSeguro } from '../exportar'
 import EditorGcode, { type EditorGcodeRef } from './EditorGcode'
@@ -245,6 +246,32 @@ export default function UnidadCNC() {
     panel.onAbrir(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+  const [checklistTarea, setChecklistTarea] = useState<PuntoRevision[]>([])
+  useEffect(() => {
+    if (!enTarea) return
+    const id = window.setTimeout(() => {
+      try {
+        setChecklistTarea(revisarTrabajo(config, codigo).puntos)
+      } catch {
+        setChecklistTarea([])
+      }
+    }, 500)
+    return () => window.clearTimeout(id)
+  }, [enTarea, config, codigo])
+  const irAEstudiar = (ancla: string) => {
+    try {
+      window.history.replaceState(null, '', `#${ancla}`)
+    } catch {
+      /* sin historial */
+    }
+    setSeccion('estudiar')
+  }
+  const verEjemploGuiado = () => {
+    if (!window.confirm('Se reemplaza el programa por un ejemplo a medias: una sola pasada recta, con husillo y fin. No es la pieza del plano. ¿Seguir?')) return
+    setEstado('listo')
+    setCodigo(EJEMPLO_GUIADO_TORNO)
+    setAviso('Ejemplo guiado cargado. Mira cómo se acerca y corta una recta, y reemplaza esa pasada por las cotas del plano.')
+  }
 
   useEffect(() => {
     if (!revisionAlAbrir) return
@@ -623,6 +650,9 @@ export default function UnidadCNC() {
           {textoEstado[estado][0]}
         </span>
       </TituloArea>
+      {!/\bG0?[123]\b/i.test(codigo.replace(/\(.*?\)/g, '').replace(/;.*/g, '')) && (
+        <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: '#33475c' }}>G00 sólo se acerca. Para cortar escribe G01 (recta) o G02/G03 (arco), con avance F. Ctrl+Z deshace.</p>
+      )}
       <div className="relleno" style={{ minHeight: 220 }}>
         <EditorGcode
           ref={editor}
@@ -635,8 +665,8 @@ export default function UnidadCNC() {
           alto="100%"
         />
       </div>
-      <div style={{ maxHeight: '30%', overflow: 'auto', flexShrink: 0 }}>
-        <Revision resultado={resultado} errores={errores} avisos={avisosProg} irA={irA} />
+        <div style={{ maxHeight: '30%', overflow: 'auto', flexShrink: 0 }}>
+        <Revision resultado={resultado} errores={errores} avisos={avisosProg} irA={irA} onEstudiar={irAEstudiar} />
       </div>
     </>
   )
@@ -690,8 +720,13 @@ export default function UnidadCNC() {
       {sim.consejos.length > 0 && (
         <div style={{ marginTop: 8 }}>
           {sim.consejos.map((c, i) => (
-            <p key={i} style={{ color: '#7a4f00', margin: '3px 0', fontSize: '0.85rem', cursor: 'pointer' }} onClick={() => irA(c.linea)}>
-              💡 Línea {c.linea + 1}: {c.texto}
+            <p key={i} style={{ color: '#7a4f00', margin: '3px 0', fontSize: '0.85rem' }}>
+              <button type="button" onClick={() => irA(c.linea)} style={{ border: 'none', background: 'transparent', color: 'inherit', cursor: 'pointer', padding: 0, font: 'inherit', textAlign: 'left' }}>
+                💡 Línea {c.linea + 1}: {c.texto}
+              </button>{' '}
+              <button type="button" onClick={() => irAEstudiar('torno')} style={enlaceEstudiar}>
+                → Estudiar
+              </button>
             </p>
           ))}
         </div>
@@ -706,7 +741,7 @@ export default function UnidadCNC() {
             id: 'plano-tarea' as const,
             titulo: 'Plano de la Tarea 3',
             tituloCorto: 'Plano',
-            contenido: <PlanoTarea />,
+            contenido: <PlanoTarea codigo={codigo} checklist={checklistTarea} onEstudiar={irAEstudiar} onEjemplo={verEjemploGuiado} />,
           },
         ]
       : []),
@@ -797,7 +832,9 @@ export default function UnidadCNC() {
       {seccion !== 'estudiar' ? (
         <BancoDividido<PestanaCNC>
           key={seccion}
-          clave="neumalab.cnc.banco"
+          clave="neumalab.cnc.banco.v2"
+          divisionInicial={0.42}
+          anchoMin={340}
           barra={barra}
           izquierda={{ id: 'programa', titulo: 'Programa', contenido: areaPrograma }}
           derecha={{ id: 'maquina', titulo: 'Máquina', contenido: areaMaquina }}
@@ -1077,7 +1114,7 @@ function Preparacion({
   )
 }
 
-function Revision({ resultado, errores, avisos, irA }: { resultado: ResultadoGcode; errores: ResultadoGcode['diagnosticos']; avisos: ResultadoGcode['diagnosticos']; irA: (n: number) => void }) {
+function Revision({ resultado, errores, avisos, irA, onEstudiar }: { resultado: ResultadoGcode; errores: ResultadoGcode['diagnosticos']; avisos: ResultadoGcode['diagnosticos']; irA: (n: number) => void; onEstudiar: (ancla: string) => void }) {
   const sinC = resultado.sinComentario
   return (
     <div style={{ marginTop: 8 }} data-revision-cnc="si">
@@ -1094,7 +1131,12 @@ function Revision({ resultado, errores, avisos, irA }: { resultado: ResultadoGco
         </p>
       ))}
       {errores.length > 0 && (
-        <p style={{ margin: '3px 0', fontSize: '0.82rem', color: '#5a6b7d' }}>Con errores, la máquina ejecuta el programa sólo hasta la línea anterior al primer error.</p>
+        <p style={{ margin: '3px 0', fontSize: '0.82rem', color: '#5a6b7d' }}>
+          Con errores, la máquina ejecuta el programa sólo hasta la línea anterior al primer error.{' '}
+          <button type="button" onClick={() => onEstudiar('bloque')} style={enlaceEstudiar}>
+            ¿Cómo se escribe un bloque? → Estudiar
+          </button>
+        </p>
       )}
       {sinC.length > 0 && (
         <p style={{ margin: '3px 0', fontSize: '0.82rem', color: '#5a6b7d' }}>
@@ -1467,14 +1509,79 @@ const celda: React.CSSProperties = { padding: '4px 8px', borderBottom: '1px soli
 const celdaNum: React.CSSProperties = { padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid #eef1f4' }
 
 
-/** El plano de fabricación de la Tarea 3 (el mismo del enunciado), a mano mientras se programa. */
-function PlanoTarea() {
+const ETAPAS_CNC = ['Unidades', 'Husillo', 'Acercar', 'Cortar', 'Cerrar', 'Revisar']
+
+/** Código sin comentarios, para ver qué instrucciones ya escribió el alumno. */
+function codigoUtil(codigo: string): string {
+  return codigo.replace(/\(.*?\)/g, ' ').replace(/;.*/g, ' ')
+}
+
+/** Una sola pasada recta. No trae las cotas de la pieza. */
+const EJEMPLO_GUIADO_TORNO = `%
+( Ejemplo a medias: una pasada recta. No es la pieza del plano. )
+N10 G21 G90 G94          ( milímetros, absolutas, mm/min )
+N20 T0101                ( herramienta de desbaste )
+N30 M03 S800             ( husillo horario )
+N40 G00 X42 Z2           ( acercarse sin tocar )
+N50 G01 Z-10 F120        ( una recta de ejemplo: cámbiala por las cotas del plano )
+N60 G00 X46              ( retirar )
+N70 G00 Z2               ( volver )
+( Aquí siguen las demás pasadas. Los arcos van con G02 o G03. )
+N900 G28                 ( volver a la referencia )
+N910 M05                 ( parar el husillo )
+N920 M30                 ( fin de programa )
+%
+`
+
+function pasoCnc(codigo: string): PasoProceso {
+  const u = codigoUtil(codigo)
+  const total = ETAPAS_CNC.length
+  const base = { total }
+  if (!/\bG21\b/i.test(u)) {
+    return { ...base, id: 'unidades', numero: 1, titulo: 'Trabajar en milímetros', donde: 'La primera línea útil del programa.', accion: 'Escribe G21. Al lado, entre paréntesis, di que son milímetros.', listo: 'En el programa se lee G21.' }
+  }
+  if (!/\bM0?[34]\b/i.test(u)) {
+    return { ...base, id: 'husillo', numero: 2, titulo: 'Prender el husillo', donde: 'Debajo de G21, antes de mover la herramienta.', accion: 'Escribe M03 y la velocidad S (por ejemplo M03 S800). M03 gira en sentido horario.', listo: 'Hay un M03 o un M04 con su S.' }
+  }
+  if (!/\bG00\b/i.test(u)) {
+    return { ...base, id: 'acercar', numero: 3, titulo: 'Acercarse sin cortar', donde: 'Antes del primer corte.', accion: 'Con G00 lleva la herramienta cerca del bruto, sin tocarlo. En el torno, X es diámetro.', listo: 'Hay un G00 antes del corte.' }
+  }
+  if (!/\bG0?[123]\b/i.test(u)) {
+    return { ...base, id: 'cortar', numero: 4, titulo: 'Cortar con las cotas del plano', donde: 'Debajo del acercamiento.', accion: 'G01 corta en recta y G02 o G03 en arco. Pon el avance con F. Saca las medidas de la lámina, no las inventes.', listo: 'Hay al menos un G01, G02 o G03.' }
+  }
+  if (!/\bM(30|0?2)\b/i.test(u)) {
+    return { ...base, id: 'cerrar', numero: 5, titulo: 'Terminar el programa', donde: 'La última línea útil.', accion: 'Para el husillo con M05 y cierra con M30.', listo: 'El programa termina en M30 o M02.' }
+  }
+  return { ...base, id: 'revisar', numero: 6, titulo: 'Probar el ciclo y leer el checklist', donde: 'El botón ▶ Ciclo, junto a la máquina, y el checklist de abajo.', accion: 'Corre el ciclo. Si salta una alarma o una pasada queda muy profunda, vuelve a esa línea. El checklist no califica: avisa lo que falta.', listo: 'El checklist de abajo queda en verde y la simulación llega al final.' }
+}
+
+/** El plano de la tarea, con el proceso arriba y un solo paso abierto. */
+function PlanoTarea({ codigo, checklist, onEstudiar, onEjemplo }: { codigo: string; checklist: PuntoRevision[]; onEstudiar: (ancla: string) => void; onEjemplo: () => void }) {
+  const paso = pasoCnc(codigo)
   return (
     <div data-plano-tarea="si">
-      <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: '#51606f' }}>
-        Pieza 1, cotas en mm. En el torno, X se programa en diámetro y el cero del programa va en la cara frontal, sobre el eje. Toca el plano para verlo
-        grande.
+      <ProcesoTarea etapas={ETAPAS_CNC} paso={paso}>
+        <p style={{ margin: '8px 0 0' }}>
+          <button type="button" onClick={onEjemplo} style={botonSuave}>
+            Ver ejemplo guiado
+          </button>{' '}
+          <button type="button" onClick={() => onEstudiar(paso.id === 'revisar' ? 'torno' : 'codigos')} style={enlaceEstudiar}>
+            ¿No recuerdas el código de este paso? → Estudiar
+          </button>
+        </p>
+      </ProcesoTarea>
+      <p style={{ margin: '8px 0 6px', fontSize: '0.82rem', color: '#51606f' }}>
+        Pieza 1, cotas en mm. En el torno, X se programa en diámetro y el cero del programa va en la cara frontal, sobre el eje.
       </p>
+      {checklist.length > 0 && (
+        <ul style={{ margin: '0 0 8px', paddingLeft: 0, listStyle: 'none' }} data-checklist-tarea="si">
+          {checklist.map((p) => (
+            <li key={p.texto} style={{ margin: '2px 0', fontSize: '0.84rem', color: p.ok ? '#0a6b3c' : '#8a5b00' }}>
+              {p.ok ? '✓' : '☐'} {p.texto}
+            </li>
+          ))}
+        </ul>
+      )}
       <a href="/plano-tarea3-cnc.png" target="_blank" rel="noreferrer" title="Abrir el plano en grande">
         <img src="/plano-tarea3-cnc.png" alt="Plano de fabricación de la Tarea 3: pieza 1 con ranuras, tramo cónico, tramo curvo, hombro de Ø80 y punta redondeada de Ø40" style={{ width: '100%', maxWidth: 900, height: 'auto', display: 'block', border: '1px solid #dbe1e8', borderRadius: 6, background: '#fff' }} />
       </a>
