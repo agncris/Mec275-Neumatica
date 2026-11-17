@@ -1656,6 +1656,10 @@ interface PasoAhora {
   donde: string
   accion: string
   listo: string
+  /** Por qué se hace este paso. */
+  por?: string
+  /** Micro pasos, en el orden en que se hacen. */
+  pasos?: string[]
   pestana?: 'Trayectoria' | 'Movimientos'
   destacar?: string
   /** Bloque que se selecciona solo, para mostrar su panel. */
@@ -1665,7 +1669,7 @@ interface PasoAhora {
 }
 
 /** Un solo paso, el que sigue, según lo que ya está en el lienzo. */
-function pasoGuiado(def: Definicion): PasoAhora {
+function pasoGuiadoBase(def: Definicion): PasoAhora {
   const total = ETAPAS_TAREA.length
   const tipoDe = (id: string) => def.nodos.find((n) => n.id === id)?.tipo
   const curvas = def.nodos.filter((n) => n.tipo === 'curvaDXF')
@@ -1698,6 +1702,48 @@ function pasoGuiado(def: Definicion): PasoAhora {
     return { ...base, id: 'ranuras', numero: 6, titulo: 'Repetir con las ranuras', pestana: 'Trayectoria', destacar: 'curvaDXF', donde: 'Otra Curve, con la capa RANURAS.', accion: 'Arrastra otra Curve, elige RANURAS y repite Offset (D = −2,5), Move (Z = −5) y Toolpath. El Merge solo acepta tres cables: pon otro Merge a la salida del primero y conecta ahí el recorrido de las ranuras. Apaga el husillo (Set Digital Out en FALSE) después de los dos recorridos.', listo: 'El checklist dice que la trayectoria recorre 10 de 10 trazos.' }
   }
   return { ...base, id: 'cerrar', numero: 6, titulo: 'Revisar el checklist', donde: 'La lista de esta lámina y la pestaña Análisis.', accion: 'Pulsa ▶. Si un trazo queda en el borde y no compensado, revisa el signo de Offset. Si la fresa no atraviesa, Move tiene que estar en Z = −5. Si hay un LIN en el aire, el acercamiento tiene que ser PTP.', listo: 'El checklist queda en verde.' }
+}
+
+const DETALLE_PASO: Record<string, { por: string; pasos: string[] }> = {
+  curva: {
+    por: 'Sin el dibujo, el robot no sabe dónde cortar. Curve lee las líneas del plano que ya viene cargado.',
+    pasos: ['Abre la pestaña Trayectoria de la paleta (a la izquierda).', 'Busca «Crv» (borde azul) y arrástralo al lienzo gris, o haz clic para dejarlo en el centro.', 'Mira que el bloque tenga salidas a la derecha.'],
+  },
+  capa: {
+    por: 'El plano tiene dos capas. Si no eliges, el robot sigue todas las líneas juntas, también las que no son tu trazo.',
+    pasos: ['Haz clic en el bloque Crv del lienzo.', 'En el panel de abajo, abre la lista «Capa».', 'Elige CONTORNO. Más adelante usarás otra Curve para RANURAS.'],
+  },
+  offset: {
+    por: 'La fresa tiene 5 mm de diámetro. Si sigue la línea tal cual, corta 2,5 mm de más hacia un lado. Offset la corre el radio de la fresa.',
+    pasos: ['En Trayectoria, arrastra «Offset Curve» al lienzo.', 'Arrastra desde el punto de la derecha de Crv (salida C) hasta el punto de la izquierda de Offset.', 'Haz clic en Offset y deja D = 2,5 para el contorno (hacia afuera).'],
+  },
+  bajar: {
+    por: 'La plancha tiene 5 mm de espesor. La fresa debe bajar esos 5 mm para atravesarla. Si no, solo la raya.',
+    pasos: ['En Trayectoria, arrastra «Move» al lienzo.', 'Conecta la salida de Offset a la entrada de Move.', 'Haz clic en Move y escribe Z = -5. X e Y quedan en 0.'],
+  },
+  path: {
+    por: 'Aquí se convierte la curva en movimientos del robot: se acerca en el aire (PTP), corta (LIN) y sale en el aire (PTP).',
+    pasos: ['Abre la pestaña Movimientos y arrastra «Toolpath» al lienzo.', 'Conecta la salida de Move a su entrada.', 'Déjalo con PTP de acercamiento, LIN de corte y PTP de salida.'],
+  },
+  core: {
+    por: 'El husillo es el motor de la fresa. Si no está encendido, la fresa no corta. El Core junta todo el programa y es lo que se simula.',
+    pasos: ['Arrastra «Set Digital Out» y déjalo en TRUE.', 'Arrastra «Wait» y pon 1 s (el husillo tarda en tomar velocidad).', 'Junta Set Digital Out, Wait y el Toolpath con «Merge», en ese orden.', 'Lleva la salida de Merge a la entrada C del Core, y pulsa ▶.'],
+  },
+  ranuras: {
+    por: 'Las nueve aberturas se cortan por dentro: la fresa tiene que quedar dentro de la abertura, por eso el Offset es negativo.',
+    pasos: ['Arrastra otra Curve y elige la capa RANURAS.', 'Repite Offset con D = -2,5, Move con Z = -5 y Toolpath.', 'Pon un segundo Merge para sumar el recorrido de las ranuras al del contorno.', 'Apaga el husillo (Set Digital Out en FALSE) antes de terminar.'],
+  },
+  cerrar: {
+    por: 'Antes de entregar, la app revisa lo mismo que la pauta: recorrido, profundidad, husillo y movimientos.',
+    pasos: ['Pulsa ▶ y mira la simulación completa.', 'Abre Entregar Tarea Robótica y pulsa Revisar.', 'Si algo queda en rojo o con ☐, arregla ese punto y vuelve a revisar.'],
+  },
+}
+
+/** Un solo paso, el que sigue, con su porqué y los micro pasos. */
+function pasoGuiado(def: Definicion): PasoAhora {
+  const p = pasoGuiadoBase(def)
+  const d = DETALLE_PASO[p.id]
+  return d ? { ...p, ...d } : p
 }
 
 /** El plano de la tarea, con el proceso arriba y un solo paso abierto. */
@@ -1744,9 +1790,16 @@ function PlanoTarea({ paso, checklist, onEstudiar, onEjemplo, ejemplo, onVolver,
               <dt>Dónde</dt>
               <dd>{paso.donde}</dd>
               <dt>Haz esto</dt>
-              <dd>{paso.accion}</dd>
+              <dd>
+                {paso.pasos ? (
+                  <ol style={{ margin: 0, paddingLeft: 18 }}>
+                    {paso.pasos.map((t) => <li key={t}>{t}</li>)}
+                  </ol>
+                ) : paso.accion}
+              </dd>
               <dt>Listo</dt>
               <dd>{paso.listo}</dd>
+              {paso.por && (<><dt>Por qué</dt><dd>{paso.por}</dd></>)}
             </dl>
           </>
         )}

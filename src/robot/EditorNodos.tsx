@@ -129,7 +129,7 @@ interface Props {
   /** En píxeles, o '100%' para llenar el área. */
   alto?: number | string
   /** En la tarea: el siguiente paso, y el bloque que conviene arrastrar. */
-  guia?: { id: string; numero: number; total: number; titulo: string; accion: string; pestana?: Pestana; destacar?: string }
+  guia?: { id: string; numero: number; total: number; titulo: string; accion: string; listo?: string; por?: string; pasos?: string[]; pestana?: Pestana; destacar?: string }
   /** El ejemplo está abierto: no invita a seguir armando sobre ese lienzo. */
   mirandoEjemplo?: boolean
   onDeshacer?: () => void
@@ -459,12 +459,21 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
         )}
       </aside>
       <div className={typeof alto === 'string' ? 'editor-nodos__lienzo' : undefined} style={typeof alto === 'string' ? undefined : { position: 'relative' }}>
-        {def.nodos.length > 0 && !ayudaCerrada && !mirandoEjemplo && (
+        {guia && !mirandoEjemplo && (
+          <div className="lienzo-ayuda lienzo-ayuda--barra lienzo-ayuda--paso" data-guia-paso={guia.id} style={{ display: 'block' }}>
+            <p style={{ margin: 0 }}><strong>Paso {guia.numero} de {guia.total} · {guia.titulo}</strong></p>
+            {guia.pasos ? (
+              <ol style={{ margin: '4px 0 0', paddingLeft: 18 }}>{guia.pasos.map((x) => <li key={x}>{x}</li>)}</ol>
+            ) : (
+              <p style={{ margin: '4px 0 0' }}>{guia.accion}</p>
+            )}
+            {guia.listo && <p style={{ margin: '4px 0 0', color: '#33475c' }}>Listo cuando: {guia.listo}</p>}
+          </div>
+        )}
+        {!guia && def.nodos.length > 0 && !ayudaCerrada && !mirandoEjemplo && (
           <div className="lienzo-ayuda lienzo-ayuda--barra">
             <p>
-              {guia
-                ? guia.accion
-                : 'Arrastra un bloque desde Componentes, o haz clic para dejarlo en el centro.'}{' '}
+              Arrastra un bloque desde Componentes, o haz clic para dejarlo en el centro.{' '}
               La salida (derecha) se conecta con la entrada (izquierda).
             </p>
             <button type="button" onClick={() => setAyudaCerrada(true)}>
