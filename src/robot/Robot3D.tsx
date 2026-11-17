@@ -2,8 +2,8 @@
  * Celda robótica en 3D: el brazo KUKA articulado eje por eje, su pedestal,
  * el mesón con la plancha, la herramienta montada, la vista previa de la
  * geometría de la definición (curvas, puntos y planos, como en Rhino), la
- * trayectoria coloreada según el análisis y la huella que deja la
- * herramienta sobre la plancha.
+ * trayectoria coloreada según el análisis y la ranura que la fresa
+ * deja en la plancha, con el diámetro y la profundidad reales.
  *
  * La escena está en milímetros; el robot usa Z hacia arriba (como KUKA y
  * Rhino) y se gira para three.js, que usa Y hacia arriba.
@@ -91,6 +91,28 @@ function cil(r: number, l: number, mat: THREE.Material, eje: 'x' | 'y' | 'z', se
 }
 
 const tv = (p: V3) => new THREE.Vector3(p.x, p.y, p.z)
+
+interface SegRanura {
+  ax: number
+  ay: number
+  bx: number
+  by: number
+  pa: number
+  pb: number
+  ia: number
+  ib: number
+}
+
+/** Distancia de un punto al segmento ab, y el parámetro 0..1 del punto más cercano. */
+function distSegmento(px: number, py: number, ax: number, ay: number, bx: number, by: number): { d: number; t: number } {
+  const abx = bx - ax
+  const aby = by - ay
+  const den = abx * abx + aby * aby
+  const t = den < 1e-8 ? 0 : Math.max(0, Math.min(1, ((px - ax) * abx + (py - ay) * aby) / den))
+  const dx = px - (ax + abx * t)
+  const dy = py - (ay + aby * t)
+  return { d: Math.hypot(dx, dy), t }
+}
 
 interface ModeloArmado {
   raiz: THREE.Group
@@ -226,9 +248,9 @@ function lineasPrevia(p: Previa, base: Plano, color: number, tamPlano: number): 
   const M = matrizPlano(base)
   const w = (q: V3) => {
     const r = aplicar(M, q)
-    return new THREE.Vector3(base.o.x + r.x, base.o.y + r.y, base.o.z + r.z)
+    return new THREE.Vector3(base.o.x + r.x, base.o.y + r.y, base.o.z + r.z + 0.35)
   }
-  const mat = new THREE.LineBasicMaterial({ color, depthTest: false, transparent: true, opacity: 0.95 })
+  const mat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.9 })
   for (const c of p.curvas) {
     if (c.length < 2) continue
     const geo = new THREE.BufferGeometry().setFromPoints([...c.map(w), w(c[0])])
@@ -435,8 +457,8 @@ export default function Robot3D({
     let selObj: Previa | null = null
     let simObj: Simulacion | null = null
     let camino: THREE.Line | null = null
-    let huella: THREE.LineSegments | null = null
-    let huellaIdx: number[] = []
+    let tapa: THREE.Mesh | null = null
+    let claveCorte = ''
     let alcance: THREE.Mesh | null = null
     let marcas: THREE.Group | null = null
     let marcasObj: V3[] | null = null
@@ -493,16 +515,29 @@ export default function Robot3D({
       }
       // Mesón y plancha.
       const pl = V.placa ?? { x0: -20, y0: -20, x1: 220, y1: 170 }
+      const w = pl.x1 - pl.x0
+      const h = pl.y1 - pl.y0
       const kM = `${V.base.o.x}|${V.base.o.y}|${V.base.o.z}|${V.base.x.x}|${V.base.x.y}|${V.espesor}|${pl.x0}|${pl.y0}|${pl.x1}|${pl.y1}`
       if (kM !== claveMesa) {
-        if (mesa) mundo.remove(mesa)
+        if (mesa) {
+          if (tapa) {
+            const mat = tapa.material as THREE.MeshStandardMaterial
+            mat.map?.dispose()
+            mat.dispose()
+          }
+          mesa.traverse((o) => {
+            const m = o as THREE.Mesh
+            if (m.geometry) m.geometry.dispose()
+          })
+          mundo.remove(mesa)
+        }
+        tapa = null
+        claveCorte = ''
         mesa = new THREE.Group()
         const ang = Math.atan2(V.base.x.y, V.base.x.x)
         const g = new THREE.Group()
         g.position.set(V.base.o.x, V.base.o.y, 0)
         g.rotation.z = ang
-        const w = pl.x1 - pl.x0
-        const h = pl.y1 - pl.y0
         const zTop = V.base.o.z - V.espesor
         if (zTop > 15) {
           const tapa = caja(w + 160, h + 160, 30, MESON, 4)
@@ -520,9 +555,84 @@ export default function Robot3D({
           }
         }
         if (V.espesor > 0) {
-          const plancha = caja(w, h, V.espesor, PLANCHA, 1)
-          plancha.position.set(pl.x0 + w / 2, pl.y0 + h / 2, V.base.o.z - V.espesor / 2)
-          g.add(plancha)
+          const cx = pl.x0 + w / 2
+          const cy = pl.y0 + h / 2
+          const zc = V.base.o.z - V.espesor / 2
+          const grosor = 1.6
+          const sur = caja(w, grosor, V.espesor, PLANCHA, 0.3)
+          sur.position.set(cx, pl.y0 + grosor / 2, zc)
+          const norte = caja(w, grosor, V.espesor, PLANCHA, 0.3)
+          norte.position.set(cx, pl.y1 - grosor / 2, zc)
+          const oeste = caja(grosor, h, V.espesor, PLANCHA, 0.3)
+          oeste.position.set(pl.x0 + grosor / 2, cy, zc)
+          const este = caja(grosor, h, V.espesor, PLANCHA, 0.3)
+          este.position.set(pl.x1 - grosor / 2, cy, zc)
+          const fondo = caja(w, h, 0.8, PLANCHA, 0.2)
+          fondo.position.set(cx, cy, V.base.o.z - V.espesor + 0.4)
+          // La cara de arriba es una malla fina: al simular, los vértices bajan
+          // según el diámetro de la fresa y la Z del TCP.
+          const res = Math.max(48, Math.min(240, Math.ceil(Math.max(w, h) / 1.05)))
+          const geo = new THREE.PlaneGeometry(w, h, res, res)
+          const nVerts = (res + 1) * (res + 1)
+          // Textura de la cara: la ranura se dibuja con el diámetro real, así se lee
+          // aunque la cámara esté lejos. La malla, además, baja esos vértices.
+          const sMax = 1400
+          const cw = w >= h ? sMax : Math.max(32, Math.round((sMax * w) / h))
+          const ch = h >= w ? sMax : Math.max(32, Math.round((sMax * h) / w))
+          const lienzo = document.createElement('canvas')
+          lienzo.width = cw
+          lienzo.height = ch
+          const tex = new THREE.CanvasTexture(lienzo)
+          tex.colorSpace = THREE.SRGBColorSpace
+          tex.anisotropy = 8
+          const segmentos: SegRanura[] = []
+          const dibujar = (indice: number) => {
+            const ctx = lienzo.getContext('2d')
+            if (!ctx) return
+            const vv = vista.current
+            ctx.fillStyle = '#9aa3ad'
+            ctx.fillRect(0, 0, cw, ch)
+            ctx.lineCap = 'round'
+            ctx.lineJoin = 'round'
+            const px = (x: number) => ((x - pl.x0) / w) * cw
+            const py = (y: number) => ((pl.y1 - y) / h) * ch
+            const ancho = Math.max(1.25, (Math.max(0.4, vv.herramienta.diametro) / w) * cw)
+            const tope = Math.max(0.4, vv.espesor)
+            for (const s of segmentos) {
+              if (indice + 1e-4 < s.ia) continue
+              let ax = s.ax
+              let ay = s.ay
+              let bx = s.bx
+              let by = s.by
+              let pa = s.pa
+              let pb = s.pb
+              if (indice < s.ib) {
+                const t = Math.max(0, Math.min(1, (indice - s.ia) / Math.max(1e-4, s.ib - s.ia)))
+                bx = ax + (s.bx - ax) * t
+                by = ay + (s.by - ay) * t
+                pb = pa + (s.pb - pa) * t
+              }
+              const k = Math.min(1, Math.max(pa, pb) / tope)
+              const mix = (a: number, b: number) => Math.round(a + (b - a) * k)
+              ctx.strokeStyle = `rgb(${mix(78, 18)},${mix(84, 22)},${mix(92, 26)})`
+              ctx.lineWidth = ancho
+              ctx.beginPath()
+              ctx.moveTo(px(ax), py(ay))
+              ctx.lineTo(px(bx), py(by))
+              ctx.stroke()
+            }
+            tex.needsUpdate = true
+          }
+          dibujar(-1)
+          tapa = new THREE.Mesh(
+            geo,
+            new THREE.MeshStandardMaterial({ map: tex, color: 0xffffff, metalness: 0.28, roughness: 0.55, side: THREE.DoubleSide }),
+          )
+          tapa.position.set(cx, cy, V.base.o.z)
+          tapa.castShadow = true
+          tapa.receiveShadow = true
+          tapa.userData = { res, prof: new Float32Array(nVerts), cuando: new Float32Array(nVerts).fill(1e9), ultimo: -1, segmentos, dibujar }
+          g.add(sur, norte, oeste, este, fondo, tapa)
         }
         const ejesBase = new THREE.AxesHelper(80)
         ejesBase.position.set(0, 0, V.base.o.z + 0.5)
@@ -541,43 +651,132 @@ export default function Robot3D({
         prevObj = V.previa
         selObj = V.seleccion
       }
-      // Trayectoria simulada y huella sobre la plancha.
+      // Trayectoria en el aire (análisis) y ranura en la plancha.
       if (V.sim !== simObj) {
-        if (camino) mundo.remove(camino)
-        if (huella) mundo.remove(huella)
+        if (camino) {
+          mundo.remove(camino)
+          camino.geometry.dispose()
+          ;(camino.material as THREE.Material).dispose()
+        }
         camino = null
-        huella = null
-        huellaIdx = []
         if (V.sim && V.sim.muestras.length > 1) {
           const ms = V.sim.muestras
-          const geo = new THREE.BufferGeometry().setFromPoints(ms.map((m) => tv(m.tcp)))
+          const corta = V.herramienta.tipo === 'fresa' || V.herramienta.tipo === 'taladro'
+          const enAire = (z: number) => V.base.o.z - z < 0.12
+          const pts: THREE.Vector3[] = []
           const col: number[] = []
-          for (const m of ms) col.push(...(m.estado === 'error' ? [0.85, 0.1, 0.1] : m.estado === 'aviso' ? [0.95, 0.55, 0.05] : [0.12, 0.62, 0.3]))
-          geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3))
-          camino = new THREE.Line(geo, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.8, depthTest: false }))
-          camino.renderOrder = 4
-          mundo.add(camino)
-          const pos: number[] = []
+          const tono = (estado: string) => (estado === 'error' ? [0.85, 0.1, 0.1] : estado === 'aviso' ? [0.95, 0.55, 0.05] : [0.12, 0.62, 0.3])
           for (let i = 1; i < ms.length; i++) {
-            if (ms[i].enPieza && ms[i - 1].enPieza) {
-              pos.push(ms[i - 1].tcp.x, ms[i - 1].tcp.y, V.base.o.z + 0.6, ms[i].tcp.x, ms[i].tcp.y, V.base.o.z + 0.6)
-              huellaIdx.push(i)
-            }
+            const a = ms[i - 1]
+            const b = ms[i]
+            // Dentro del material la marca es la ranura, no la línea del centro.
+            if (corta && !enAire(a.tcp.z) && !enAire(b.tcp.z)) continue
+            pts.push(tv(a.tcp), tv(b.tcp))
+            col.push(...tono(a.estado), ...tono(b.estado))
           }
-          if (pos.length) {
-            const hg = new THREE.BufferGeometry()
-            hg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3))
-            huella = new THREE.LineSegments(hg, new THREE.LineBasicMaterial({ color: 0x1b1f24 }))
-            mundo.add(huella)
+          if (pts.length > 1) {
+            const geo = new THREE.BufferGeometry().setFromPoints(pts)
+            geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3))
+            camino = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.7 }))
+            camino.renderOrder = 4
+            mundo.add(camino)
           }
         }
         simObj = V.sim
+        claveCorte = ''
       }
-      if (huella) {
-        // Sólo lo ya recorrido.
-        let k = 0
-        while (k < huellaIdx.length && huellaIdx[k] <= V.indice) k++
-        huella.geometry.setDrawRange(0, k * 2)
+      const kC = `${claveMesa}|${V.herramienta.tipo}|${V.herramienta.diametro}|${V.espesor}`
+      if (tapa && kC !== claveCorte) {
+        const ud = tapa.userData as { res: number; prof: Float32Array; cuando: Float32Array; ultimo: number; segmentos: SegRanura[]; dibujar: (indice: number) => void }
+        ud.prof.fill(0)
+        ud.cuando.fill(1e9)
+        ud.segmentos.length = 0
+        const corta = V.herramienta.tipo === 'fresa' || V.herramienta.tipo === 'taladro'
+        const radio = Math.max(0.4, V.herramienta.diametro / 2)
+        const sim = V.sim
+        if (corta && sim && sim.muestras.length > 1 && V.espesor > 0) {
+          const ang = Math.atan2(V.base.x.y, V.base.x.x)
+          const ca = Math.cos(ang)
+          const sa = Math.sin(ang)
+          const localDe = (p: V3) => {
+            const dx = p.x - V.base.o.x
+            const dy = p.y - V.base.o.y
+            return { x: ca * dx + sa * dy, y: -sa * dx + ca * dy, z: p.z }
+          }
+          const profDe = (z: number) => Math.max(0, Math.min(V.espesor, V.base.o.z - z))
+          const RES = ud.res
+          const N = RES + 1
+          const x0 = pl.x0
+          const y1p = pl.y1
+          const pintar = (ax: number, ay: number, bx: number, by: number, pa: number, pb: number, ia: number, ib: number) => {
+            const minx = Math.min(ax, bx) - radio
+            const maxx = Math.max(ax, bx) + radio
+            const miny = Math.min(ay, by) - radio
+            const maxy = Math.max(ay, by) + radio
+            const ix0 = Math.max(0, Math.floor(((minx - pl.x0) / w) * RES) - 1)
+            const ix1 = Math.min(RES, Math.ceil(((maxx - pl.x0) / w) * RES) + 1)
+            const iyDe = (y: number) => ((pl.y1 - y) / h) * RES
+            const iy0 = Math.max(0, Math.floor(Math.min(iyDe(miny), iyDe(maxy))) - 1)
+            const iy1 = Math.min(RES, Math.ceil(Math.max(iyDe(miny), iyDe(maxy))) + 1)
+            for (let iy = iy0; iy <= iy1; iy++) {
+              const ly = y1p - (iy / RES) * h
+              for (let ix = ix0; ix <= ix1; ix++) {
+                const lx = x0 + (ix / RES) * w
+                const { d, t } = distSegmento(lx, ly, ax, ay, bx, by)
+                if (d > radio) continue
+                const k = iy * N + ix
+                const p = pa + (pb - pa) * t
+                if (p > ud.prof[k]) ud.prof[k] = p
+                const id = ia + (ib - ia) * t
+                if (id < ud.cuando[k]) ud.cuando[k] = id
+              }
+            }
+          }
+          const ms = sim.muestras
+          const loc = ms.map((m) => localDe(m.tcp))
+          for (let i = 1; i < ms.length; i++) {
+            const a = loc[i - 1]
+            const b = loc[i]
+            let pa = profDe(a.z)
+            let pb = profDe(b.z)
+            if (pa < 0.12 && pb < 0.12) continue
+            let ax = a.x
+            let ay = a.y
+            let bx = b.x
+            let by = b.y
+            let ia = i - 1
+            let ib = i
+            if (pa < 0.12) {
+              const t = (0.12 - pa) / (pb - pa)
+              ax = a.x + (b.x - a.x) * t
+              ay = a.y + (b.y - a.y) * t
+              pa = 0.12
+              ia = i - 1 + t
+            } else if (pb < 0.12) {
+              const t = (pa - 0.12) / (pa - pb)
+              bx = a.x + (b.x - a.x) * t
+              by = a.y + (b.y - a.y) * t
+              pb = 0.12
+              ib = i - 1 + t
+            }
+            pintar(ax, ay, bx, by, pa, pb, ia, ib)
+            ud.segmentos.push({ ax, ay, bx, by, pa, pb, ia, ib })
+          }
+        }
+        ud.dibujar(V.indice)
+        ud.ultimo = -1
+        claveCorte = kC
+      }
+      if (tapa) {
+        const ud = tapa.userData as { prof: Float32Array; cuando: Float32Array; ultimo: number; dibujar: (indice: number) => void }
+        if (ud.ultimo !== V.indice) {
+          const pos = tapa.geometry.attributes.position as THREE.BufferAttribute
+          for (let i = 0; i < ud.prof.length; i++) pos.setZ(i, ud.cuando[i] <= V.indice ? -ud.prof[i] : 0)
+          pos.needsUpdate = true
+          tapa.geometry.computeVertexNormals()
+          ud.dibujar(V.indice)
+          ud.ultimo = V.indice
+        }
       }
       // Alcance máximo aproximado (esfera centrada en el hombro).
       if (V.alcance && !alcance) {
