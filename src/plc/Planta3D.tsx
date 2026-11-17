@@ -316,7 +316,7 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
       }}
     >
       {sinWebGL && (
-        <p style={{ padding: 24, color: '#33475c' }}>
+        <p style={{ padding: 24, color: 'var(--tinta)' }}>
           Tu navegador no tiene WebGL activado, así que no puede dibujar la planta en 3D. El panel de entradas y salidas
           funciona igual.
         </p>
@@ -326,7 +326,7 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
           {celular ? '⌖' : 'Encuadrar'}
         </button>
         <button
-          style={{ ...boton, background: conSonido ? '#1668c7' : '#fff', color: conSonido ? '#fff' : '#33475c' }}
+          style={{ ...boton, background: conSonido ? 'var(--azul)' : '#fff', color: conSonido ? '#fff' : 'var(--tinta)' }}
           onClick={() => {
             if (!conSonido) sonido().activar()
             setConSonido((v) => !v)
@@ -338,7 +338,7 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
           {celular ? (conSonido ? '🔊' : '🔇') : conSonido ? '🔊 Sonido' : '🔇 Sonido'}
         </button>
         <button
-          style={{ ...boton, background: conRotulos ? '#1668c7' : '#fff', color: conRotulos ? '#fff' : '#33475c' }}
+          style={{ ...boton, background: conRotulos ? 'var(--azul)' : '#fff', color: conRotulos ? '#fff' : 'var(--tinta)' }}
           onClick={() => setConRotulos((v) => !v)}
           aria-pressed={conRotulos}
           title="Muestra u oculta los rótulos grandes de sensores y actuadores (S0, Y1, Z1…)"

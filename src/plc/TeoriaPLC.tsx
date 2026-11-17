@@ -176,7 +176,7 @@ export function ElegirPLC() {
             ))}
           </tbody>
         </table>
-        <p style={{ ...p, marginTop: 8, fontSize: '0.86rem', color: '#5a6b7d' }}>
+        <p style={{ ...p, marginTop: 8, fontSize: '0.86rem', color: 'var(--tinta-tenue)' }}>
           Los dos ejercicios de esta unidad caben de sobra en un micro PLC: usan 6 y 7 de sus E/S.
         </p>
       </div>

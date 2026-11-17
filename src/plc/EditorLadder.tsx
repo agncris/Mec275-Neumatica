@@ -601,7 +601,7 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
             </span>
           ))}
           {celular && (
-            <div style={{ gridColumn: '1 / -1', flex: 'none', display: acostado && escalonSel === null ? 'none' : 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap', fontSize: '0.8rem', color: '#51606f' }} data-barra-escalon="si">
+            <div style={{ gridColumn: '1 / -1', flex: 'none', display: acostado && escalonSel === null ? 'none' : 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap', fontSize: '0.8rem', color: 'var(--tinta-suave)' }} data-barra-escalon="si">
               {escalonSel !== null && programa.escalones[escalonSel] ? (
                 <>
                   <strong style={{ color: TINTA }}>Escalón {String(escalonSel).padStart(3, '0')}:</strong>
@@ -612,7 +612,7 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
                       ['✕', 'Borra el escalón', () => borrarEscalon(escalonSel)],
                     ] as Array<[string, string, () => void]>
                   ).map(([txt, titulo, fn]) => (
-                    <button key={txt} onClick={fn} title={titulo} aria-label={titulo} style={{ border: '1px solid #c6ced6', background: '#fff', color: TINTA, borderRadius: 6, padding: '0 10px', fontWeight: 600 }}>
+                    <button key={txt} onClick={fn} title={titulo} aria-label={titulo} style={{ border: '1px solid var(--borde)', background: '#fff', color: TINTA, borderRadius: 6, padding: '0 10px', fontWeight: 600 }}>
                       {txt}
                     </button>
                   ))}
@@ -624,7 +624,7 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
           )}
         </div>
       )}
-      <div style={{ overflowX: 'auto', border: '1px solid #e0e5eb', borderRadius: 8, background: '#fff' }}>
+      <div style={{ overflowX: 'auto', border: '1px solid var(--borde-suave)', borderRadius: 8, background: '#fff' }}>
         <svg
           id="ladder-svg"
           viewBox={`0 0 ${ANCHO} ${altoTotal}`}
@@ -646,7 +646,7 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
           >
             ＋ Escalón
           </button>
-          <span style={{ fontSize: '0.8rem', color: pista ? '#8a5b00' : '#5a6b7d', fontWeight: pista ? 700 : 400 }} role={pista ? 'status' : undefined}>
+          <span style={{ fontSize: '0.8rem', color: pista ? 'var(--naranjo-aviso)' : 'var(--tinta-tenue)', fontWeight: pista ? 700 : 400 }} role={pista ? 'status' : undefined}>
             {pista ? `⚠ ${pista}` : herramienta === 'rama'
               ? 'Haz clic en una franja azul para unir dos filas en ese punto; las de abajo del todo abren una rama nueva.'
               : herramienta === 'seleccionar'
@@ -668,7 +668,7 @@ export default function EditorLadder({ programa, onCambiar, flujos, estado, edit
         />
       )}
       {editable && escalonSel !== null && programa.escalones[escalonSel] && (
-        <label style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 6, fontSize: '0.84rem', color: '#5a6b7d' }}>
+        <label style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 6, fontSize: '0.84rem', color: 'var(--tinta-tenue)' }}>
           Comentario del escalón {String(escalonSel).padStart(3, '0')}:
           <input
             value={programa.escalones[escalonSel].comentario ?? ''}
@@ -792,8 +792,8 @@ function Propiedades({
             />
           </label>
         )}
-        <span style={{ color: '#5a6b7d' }}>{explicarBobina(b)}</span>
-        <button onClick={onCerrar} style={{ marginLeft: 'auto', border: 'none', background: 'transparent', cursor: 'pointer', color: '#5a6b7d' }}>
+        <span style={{ color: 'var(--tinta-tenue)' }}>{explicarBobina(b)}</span>
+        <button onClick={onCerrar} style={{ marginLeft: 'auto', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--tinta-tenue)' }}>
           ✕
         </button>
       </div>
@@ -853,8 +853,8 @@ function Propiedades({
             })
           }
         />
-        <span style={{ color: '#5a6b7d' }}>Deja pasar la corriente mientras la comparación sea verdadera.</span>
-        <button onClick={onCerrar} style={{ marginLeft: 'auto', border: 'none', background: 'transparent', cursor: 'pointer', color: '#5a6b7d' }}>
+        <span style={{ color: 'var(--tinta-tenue)' }}>Deja pasar la corriente mientras la comparación sea verdadera.</span>
+        <button onClick={onCerrar} style={{ marginLeft: 'auto', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--tinta-tenue)' }}>
           ✕
         </button>
       </div>
@@ -901,10 +901,10 @@ function Propiedades({
           ])}
         </select>
       </label>
-      <span style={{ color: '#5a6b7d' }}>
+      <span style={{ color: 'var(--tinta-tenue)' }}>
         {celda.modo === 'NA' ? 'Deja pasar la corriente cuando su dirección vale 1.' : 'Deja pasar la corriente cuando su dirección vale 0.'}
       </span>
-      <button onClick={onCerrar} style={{ marginLeft: 'auto', border: 'none', background: 'transparent', cursor: 'pointer', color: '#5a6b7d' }}>
+      <button onClick={onCerrar} style={{ marginLeft: 'auto', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--tinta-tenue)' }}>
         ✕
       </button>
     </div>

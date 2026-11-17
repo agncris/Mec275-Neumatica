@@ -37,7 +37,7 @@ export default function TarjetaEjercicio({
         <h2 style={{ margin: 0, fontSize: '1.02rem', color: '#5c4b1f' }}>📝 Ejercicio para resolver · {ejercicio.titulo}</h2>
         <button
           onClick={() => setResultado(ejercicio.verificar(programa))}
-          style={{ border: 'none', background: '#0e7a43', color: '#fff', borderRadius: 8, padding: '0.4rem 0.9rem', fontWeight: 700, cursor: 'pointer' }}
+          style={{ border: 'none', background: 'var(--verde)', color: '#fff', borderRadius: 8, padding: '0.4rem 0.9rem', fontWeight: 700, cursor: 'pointer' }}
           title="Prueba tu programa contra la planta simulada, paso por paso"
         >
           ✓ Verificar mi programa
@@ -56,16 +56,16 @@ export default function TarjetaEjercicio({
             marginTop: 10,
             padding: '0.6rem 0.8rem',
             borderRadius: 8,
-            background: resultado.ok ? '#e7f7ef' : '#fff4e5',
+            background: resultado.ok ? 'var(--fondo-verde)' : '#fff4e5',
             border: `1px solid ${resultado.ok ? '#a9dcc4' : '#f0c98a'}`,
           }}
         >
-          <strong style={{ color: resultado.ok ? '#0a6b3c' : '#8a5b00' }}>
+          <strong style={{ color: resultado.ok ? 'var(--verde-oscuro)' : 'var(--naranjo-aviso)' }}>
             {resultado.ok ? '¡Tu programa cumple el enunciado completo!' : 'Todavía no: revisa lo que falla.'}
           </strong>
           <ul style={{ margin: '6px 0 0', paddingLeft: '1.1rem', lineHeight: 1.55, fontSize: '0.88rem' }}>
             {resultado.mensajes.map((m, i) => (
-              <li key={i} style={{ color: m.ok ? '#0a6b3c' : '#8a3b00' }}>
+              <li key={i} style={{ color: m.ok ? 'var(--verde-oscuro)' : '#8a3b00' }}>
                 {m.ok ? '✓' : '✗'} {m.texto}
               </li>
             ))}
@@ -75,7 +75,7 @@ export default function TarjetaEjercicio({
       {abierta && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 380px), 1fr))', gap: 16, marginTop: 10 }}>
           <div>
-            <ol style={{ margin: 0, paddingLeft: '1.2rem', lineHeight: 1.55, fontSize: '0.9rem', color: '#26323f' }}>
+            <ol style={{ margin: 0, paddingLeft: '1.2rem', lineHeight: 1.55, fontSize: '0.9rem', color: 'var(--tinta-oscura)' }}>
               {ejercicio.enunciado.map((t, i) => (
                 <li key={i} style={{ marginBottom: 3 }}>
                   {t}

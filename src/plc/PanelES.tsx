@@ -69,8 +69,8 @@ export default function PanelES({
         style={{
           marginLeft: 'auto',
           border: `1px solid ${f === undefined ? '#c6ced6' : '#c62828'}`,
-          background: f === undefined ? '#fff' : '#fdecea',
-          color: f === undefined ? '#5f6b78' : '#c62828',
+          background: f === undefined ? '#fff' : 'var(--fondo-rojo)',
+          color: f === undefined ? 'var(--tinta-gris)' : 'var(--rojo)',
           borderRadius: 4,
           padding: '0 5px',
           minWidth: 28,
@@ -170,7 +170,7 @@ export default function PanelES({
             style={{ ...campoES, flex: 1, minWidth: 0, width: '100%', boxSizing: 'border-box' }}
           />
         </div>
-        {origen && <span style={{ color: '#5f6b78', fontSize: '0.74rem', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>{origen}</span>}
+        {origen && <span style={{ color: 'var(--tinta-gris)', fontSize: '0.74rem', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>{origen}</span>}
       </div>
     )
   }
@@ -183,21 +183,21 @@ export default function PanelES({
   if (parte === 'mandos')
     return mandos.length > 0 ? (
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-        <span style={{ fontSize: '0.8rem', color: '#51606f' }}>Mandos de la planta:</span>
+        <span style={{ fontSize: '0.8rem', color: 'var(--tinta-suave)' }}>Mandos de la planta:</span>
         {mandos.map((m) => botonMando(m.dir, m.nombre, m.tipo, colores[m.color]))}
       </div>
     ) : null
   return (
     <div>
       {Object.keys(forzados).length > 0 && (
-        <p style={{ margin: '0 0 8px', padding: '4px 8px', background: '#fdecea', border: '1px solid #f1b0ab', borderRadius: 6, color: '#8e1c1c', fontSize: '0.8rem' }} data-aviso-forzado="si">
+        <p style={{ margin: '0 0 8px', padding: '4px 8px', background: 'var(--fondo-rojo)', border: '1px solid #f1b0ab', borderRadius: 6, color: '#8e1c1c', fontSize: '0.8rem' }} data-aviso-forzado="si">
           ⚠ Hay E/S forzadas ({Object.entries(forzados).map(([d, v]) => `${formatear(d, notacion)}=${v ? 1 : 0}`).join(', ')}): valen eso sin importar el programa ni la planta. Úsalo sólo para probar y quítalo después.{' '}
-          <button onClick={() => Object.keys(forzados).forEach((d) => onForzar(d, null))} style={{ border: '1px solid #c62828', background: '#fff', color: '#c62828', borderRadius: 4, cursor: 'pointer', fontSize: '0.76rem' }}>
+          <button onClick={() => Object.keys(forzados).forEach((d) => onForzar(d, null))} style={{ border: '1px solid var(--rojo)', background: '#fff', color: 'var(--rojo)', borderRadius: 4, cursor: 'pointer', fontSize: '0.76rem' }}>
             Quitar todos
           </button>
         </p>
       )}
-      <p style={{ margin: '0 0 8px', fontSize: '0.8rem', color: '#51606f' }}>
+      <p style={{ margin: '0 0 8px', fontSize: '0.8rem', color: 'var(--tinta-suave)' }}>
         Identifica los elementos de la máquina: los que el PLC lee van en <strong>Entradas</strong> y los que acciona, en <strong>Salidas</strong>. Agrega una
         fila por elemento, elige su dirección y escribe su símbolo y su descripción: esos nombres aparecen en tu diagrama Ladder.
       </p>
@@ -209,7 +209,7 @@ export default function PanelES({
           return (
             <div key={zona} data-zona-es={zona}>
               <p style={subRotulo}>{zona === 'I' ? 'Entradas' : 'Salidas'}</p>
-              {filas.length === 0 && <p style={{ margin: '2px 0 6px', fontSize: '0.78rem', color: '#5f6b78' }}>Todavía no agregas {zona === 'I' ? 'entradas' : 'salidas'}.</p>}
+              {filas.length === 0 && <p style={{ margin: '2px 0 6px', fontSize: '0.78rem', color: 'var(--tinta-gris)' }}>Todavía no agregas {zona === 'I' ? 'entradas' : 'salidas'}.</p>}
               {filas.map((d) => {
                 const libre = !cableado.includes(d)
                 const tipo = tiposLibres[d] ?? 'interruptor'
@@ -385,7 +385,7 @@ export function TablaSimbolos({
           ＋ Añadir símbolo
         </button>
       )}
-      <p style={{ margin: '6px 0 0', fontSize: '0.8rem', color: '#5a6b7d' }}>
+      <p style={{ margin: '6px 0 0', fontSize: '0.8rem', color: 'var(--tinta-tenue)' }}>
         Si usas marcas (por ejemplo una memoria de marcha), añádelas aquí con su símbolo y descripción.
       </p>
     </div>

@@ -369,17 +369,17 @@ export default function UnidadPLC() {
       {(!acostado || (corriendo && pausado)) && (
       <TituloArea>
         Programa Ladder{programa.nombre ? ` · ${programa.nombre}` : ''}
-        <span style={{ ...estadoPLC, background: corriendo ? '#0e7a43' : '#a35200' }}>{corriendo ? (pausado ? 'RUN · en pausa' : 'RUN') : 'STOP'}</span>
+        <span style={{ ...estadoPLC, background: corriendo ? 'var(--verde)' : '#a35200' }}>{corriendo ? (pausado ? 'RUN · en pausa' : 'RUN') : 'STOP'}</span>
         {corriendo && pausado && (
-          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#33475c' }} data-barridos="si">
+          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--tinta)' }} data-barridos="si">
             Barrido nº {barridosRef.current}
           </span>
         )}
       </TituloArea>
       )}
-      {corriendo && <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: '#51606f' }}>El PLC está ejecutando el programa. Pásalo a STOP para editarlo.</p>}
+      {corriendo && <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: 'var(--tinta-suave)' }}>El PLC está ejecutando el programa. Pásalo a STOP para editarlo.</p>}
       {!corriendo && !programa.escalones.some((e) => e.bobinas.some(Boolean)) && (
-        <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: '#33475c' }}>El escalón está vacío. Elige un contacto, haz clic en una casilla y cierra con una bobina a la derecha. Ctrl+Z deshace.</p>
+        <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: 'var(--tinta)' }}>El escalón está vacío. Elige un contacto, haz clic en una casilla y cierra con una bobina a la derecha. Ctrl+Z deshace.</p>
       )}
       <EditorLadder
         programa={programa}
@@ -392,7 +392,7 @@ export default function UnidadPLC() {
       {avisos.length > 0 && (
         <div style={{ marginTop: 8 }} data-avisos-plc="si">
           {avisos.map((a, i) => (
-            <p key={i} style={{ color: '#7a4f00', margin: '3px 0', fontSize: '0.86rem' }}>
+            <p key={i} style={{ color: 'var(--naranjo-texto)', margin: '3px 0', fontSize: '0.86rem' }}>
               ⚠ {a}{' '}
               <button type="button" onClick={() => irAEstudiar('ladder')} style={enlaceEstudiar}>
                 → Estudiar
@@ -409,13 +409,13 @@ export default function UnidadPLC() {
       <TituloArea>
         Planta · {descripcion.nombre}
         {!enTarea && (
-        <button onClick={() => setEligiendoPlanta(true)} style={{ border: 'none', background: 'transparent', color: '#1668c7', fontWeight: 600, fontSize: '0.84rem', cursor: 'pointer', padding: '2px 4px' }} title={descripcion.resumen}>
+        <button onClick={() => setEligiendoPlanta(true)} style={{ border: 'none', background: 'transparent', color: 'var(--azul)', fontWeight: 600, fontSize: '0.84rem', cursor: 'pointer', padding: '2px 4px' }} title={descripcion.resumen}>
           Cambiar
         </button>
         )}
       </TituloArea>
       <div className="relleno">
-        <Suspense fallback={<p style={{ padding: 20, color: '#51606f' }}>Montando la planta…</p>}>
+        <Suspense fallback={<p style={{ padding: 20, color: 'var(--tinta-suave)' }}>Montando la planta…</p>}>
           <Planta3D
             sim={simRef}
             version={version}
@@ -444,12 +444,12 @@ export default function UnidadPLC() {
         {panelES('mandos')}
         {sim.planta.acciones().length > 0 && (
           <>
-            <span style={{ fontSize: '0.8rem', color: '#51606f', marginLeft: 6 }}>En la planta:</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--tinta-suave)', marginLeft: 6 }}>En la planta:</span>
             {sim.planta.acciones().map((a) => (
               <button
                 key={a.id}
                 title={a.titulo}
-                style={{ ...botonSuave, borderColor: '#1668c7', color: '#1668c7', fontWeight: 600 }}
+                style={{ ...botonSuave, borderColor: 'var(--azul)', color: 'var(--azul)', fontWeight: 600 }}
                 onClick={() => {
                   sim.planta.accion(a.id)
                   setFotograma((f) => f + 1)
@@ -466,12 +466,12 @@ export default function UnidadPLC() {
 
   const registro =
     eventos.length === 0 ? (
-      <p style={{ color: '#51606f', margin: 0, fontSize: '0.88rem' }}>Pulsa ▶ RUN y acciona la planta: aquí aparece lo que va ocurriendo, en orden.</p>
+      <p style={{ color: 'var(--tinta-suave)', margin: 0, fontSize: '0.88rem' }}>Pulsa ▶ RUN y acciona la planta: aquí aparece lo que va ocurriendo, en orden.</p>
     ) : (
       <ol style={{ margin: 0, paddingLeft: 0, listStyle: 'none', lineHeight: 1.55, fontSize: '0.88rem' }} data-registro="si">
         {eventos.map((e, i) => (
           <li key={`${e.t}-${i}`} style={{ opacity: i === eventos.length - 1 ? 1 : 0.8, color: e.aviso ? '#8a3b00' : undefined }}>
-            <code style={{ color: '#51606f', marginRight: 8 }}>t={e.t.toFixed(1)} s</code>
+            <code style={{ color: 'var(--tinta-suave)', marginRight: 8 }}>t={e.t.toFixed(1)} s</code>
             {e.aviso ? '⚠ ' : ''}
             {e.mensaje}
           </li>
@@ -515,10 +515,10 @@ export default function UnidadPLC() {
                     </button>
                   </p>
                 </ProcesoTarea>
-                <p style={{ margin: '8px 0 6px', fontSize: '0.84rem', color: '#33475c' }}>{PLANTAS.silo.resumen}</p>
+                <p style={{ margin: '8px 0 6px', fontSize: '0.84rem', color: 'var(--tinta)' }}>{PLANTAS.silo.resumen}</p>
                 <ul style={{ margin: 0, paddingLeft: 0, listStyle: 'none' }} data-checklist-tarea="si">
                   {checklistTarea.map((p) => (
-                    <li key={p.texto} style={{ margin: '2px 0', fontSize: '0.84rem', color: p.ok ? '#0a6b3c' : '#8a5b00' }}>
+                    <li key={p.texto} style={{ margin: '2px 0', fontSize: '0.84rem', color: p.ok ? 'var(--verde-oscuro)' : 'var(--naranjo-aviso)' }}>
                       {p.ok ? '✓' : '☐'} {p.texto}
                     </li>
                   ))}
@@ -535,7 +535,7 @@ export default function UnidadPLC() {
       contenido: (
         <>
           {panelES('tabla')}
-          <p style={{ margin: '14px 0 4px', fontSize: '0.8rem', color: '#5a6b7d', fontWeight: 700 }}>Marcas (memorias internas)</p>
+          <p style={{ margin: '14px 0 4px', fontSize: '0.8rem', color: 'var(--tinta-tenue)', fontWeight: 700 }}>Marcas (memorias internas)</p>
           <TablaSimbolos programa={programa} onCambiar={setPrograma} editable={!corriendo} notacion={notacion} />
         </>
       ),
@@ -563,7 +563,7 @@ export default function UnidadPLC() {
           ⚠ E/S forzadas
         </button>
       )}
-      {avisos.length > 0 && <span style={{ marginLeft: hayForzados ? 0 : 'auto', color: '#7a4f00', fontWeight: 700 }}>⚠ {avisos.length} {avisos.length === 1 ? 'aviso' : 'avisos'}</span>}
+      {avisos.length > 0 && <span style={{ marginLeft: hayForzados ? 0 : 'auto', color: 'var(--naranjo-texto)', fontWeight: 700 }}>⚠ {avisos.length} {avisos.length === 1 ? 'aviso' : 'avisos'}</span>}
     </>
   )
 
@@ -592,7 +592,7 @@ export default function UnidadPLC() {
           conCajon={entregaAbierta && !estrecha}
         />
       ) : (
-        <Suspense fallback={<p style={{ padding: 24, color: '#51606f', textAlign: 'center' }}>Abriendo Estudiar…</p>}>
+        <Suspense fallback={<p style={{ padding: 24, color: 'var(--tinta-suave)', textAlign: 'center' }}>Abriendo Estudiar…</p>}>
           <EstudiarPLC />
         </Suspense>
       )}

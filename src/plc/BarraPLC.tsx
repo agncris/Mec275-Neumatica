@@ -61,7 +61,7 @@ export default function BarraPLC({
     </span>
   ) : (
     <button onClick={() => setEligiendoPlanta(true)} className="boton-planta" title="Elegir la planta, o empezar un ejercicio o un ejemplo" aria-label={`Planta: ${descripcion.nombre}. Elegir planta, ejercicio o ejemplo`} data-boton-planta="si" style={{ width: acostado ? 'clamp(64px, 17vw - 44px, 170px)' : estrecha ? '28vw' : 'auto', maxWidth: 360 }}>
-      {!estrecha && <span style={{ color: '#51606f' }}>Planta:</span>}
+      {!estrecha && <span style={{ color: 'var(--tinta-suave)' }}>Planta:</span>}
       <span style={{ fontWeight: 600 }}>{descripcion.nombre}</span>
       <span aria-hidden style={{ fontSize: '0.7rem', flex: 'none' }}>
         ▾

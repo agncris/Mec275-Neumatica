@@ -54,8 +54,8 @@ export default function SelectorPlanta({ actual, notacion, ejercicioActual, onUs
   const chips = (lista: typeof entradas) => (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
       {lista.map((s) => (
-        <span key={s.dir} title={s.descripcion} style={{ border: '1px solid #dbe1e8', borderRadius: 6, padding: '1px 6px', fontSize: '0.8rem', background: '#f7f9fb' }}>
-          <code style={{ color: '#51606f' }}>{formatear(s.dir, notacion)}</code> <strong>{s.nombre}</strong>
+        <span key={s.dir} title={s.descripcion} style={{ border: '1px solid var(--borde-tenue)', borderRadius: 6, padding: '1px 6px', fontSize: '0.8rem', background: '#f7f9fb' }}>
+          <code style={{ color: 'var(--tinta-suave)' }}>{formatear(s.dir, notacion)}</code> <strong>{s.nombre}</strong>
         </span>
       ))}
     </div>
@@ -73,11 +73,11 @@ export default function SelectorPlanta({ actual, notacion, ejercicioActual, onUs
         className="selector-planta"
         data-selector-planta="si"
       >
-        <div style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid #e0e5eb' }}>
+        <div style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid var(--borde-suave)' }}>
           <h2 id="titulo-plantas" style={{ margin: 0, fontSize: '1.08rem' }}>
             Elegir planta
           </h2>
-          <span style={{ marginLeft: 10, fontSize: '0.84rem', color: '#51606f' }}>La máquina que controla tu programa</span>
+          <span style={{ marginLeft: 10, fontSize: '0.84rem', color: 'var(--tinta-suave)' }}>La máquina que controla tu programa</span>
           <button onClick={onCerrar} className="boton-icono" style={{ marginLeft: 'auto' }} aria-label="Cerrar">
             ✕
           </button>
@@ -99,7 +99,7 @@ export default function SelectorPlanta({ actual, notacion, ejercicioActual, onUs
                 <AnimacionPlanta id={p.id} ancho={60} />
                 <span style={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 }}>
                   <span style={{ fontWeight: 600 }}>{p.nombre}</span>
-                  <span style={{ fontSize: '0.76rem', color: '#51606f' }}>
+                  <span style={{ fontSize: '0.76rem', color: 'var(--tinta-suave)' }}>
                     {p.id === actual ? 'En uso · ' : ''}
                     {cuenta(p.id) ? `${cuenta(p.id)} ejemplo${cuenta(p.id) === 1 ? '' : 's'} o ejercicio${cuenta(p.id) === 1 ? '' : 's'}` : 'Para programar libre'}
                   </span>
@@ -113,9 +113,9 @@ export default function SelectorPlanta({ actual, notacion, ejercicioActual, onUs
             </div>
             <h3 style={{ margin: '0 0 4px', fontSize: '1.02rem' }}>
               {planta.nombre}
-              {vista === actual && <span style={{ marginLeft: 8, fontSize: '0.74rem', fontWeight: 700, color: '#fff', background: '#0e7a43', borderRadius: 6, padding: '1px 7px', verticalAlign: 'middle' }}>EN USO</span>}
+              {vista === actual && <span style={{ marginLeft: 8, fontSize: '0.74rem', fontWeight: 700, color: '#fff', background: 'var(--verde)', borderRadius: 6, padding: '1px 7px', verticalAlign: 'middle' }}>EN USO</span>}
             </h3>
-            <p style={{ margin: '0 0 8px', fontSize: '0.88rem', color: '#33475c', lineHeight: 1.5 }}>{planta.resumen}</p>
+            <p style={{ margin: '0 0 8px', fontSize: '0.88rem', color: 'var(--tinta)', lineHeight: 1.5 }}>{planta.resumen}</p>
             <div style={{ display: 'grid', gap: 6, marginBottom: 10 }}>
               <div>
                 <div style={rotulo}>Entradas (sensores y mandos)</div>
@@ -135,9 +135,9 @@ export default function SelectorPlanta({ actual, notacion, ejercicioActual, onUs
                     <li key={e.id} style={fila}>
                       <span style={{ flex: 1 }}>
                         {e.titulo}
-                        {e.id === ejercicioActual && <span style={{ color: '#0a6b3c', fontWeight: 600 }}> · abierto</span>}
+                        {e.id === ejercicioActual && <span style={{ color: 'var(--verde-oscuro)', fontWeight: 600 }}> · abierto</span>}
                       </span>
-                      <button onClick={() => onEjercicio(e)} style={{ ...boton, background: '#0e7a43', borderColor: '#0e7a43', color: '#fff' }} data-empezar-ejercicio={e.id}>
+                      <button onClick={() => onEjercicio(e)} style={{ ...boton, background: 'var(--verde)', borderColor: 'var(--verde)', color: '#fff' }} data-empezar-ejercicio={e.id}>
                         Empezar
                       </button>
                     </li>
@@ -160,11 +160,11 @@ export default function SelectorPlanta({ actual, notacion, ejercicioActual, onUs
                 </ul>
               </>
             )}
-            {ejercicios.length + ejemplos.length === 0 && <p style={{ fontSize: '0.86rem', color: '#51606f' }}>Esta planta no trae ejemplos: es para que programes lo que quieras con ella.</p>}
+            {ejercicios.length + ejemplos.length === 0 && <p style={{ fontSize: '0.86rem', color: 'var(--tinta-suave)' }}>Esta planta no trae ejemplos: es para que programes lo que quieras con ella.</p>}
 
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', borderTop: '1px solid #e0e5eb', paddingTop: 10, marginTop: 10 }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', borderTop: '1px solid var(--borde-suave)', paddingTop: 10, marginTop: 10 }}>
               {vista !== actual && (
-                <button onClick={() => onUsarPlanta(vista)} style={{ ...boton, background: '#1668c7', borderColor: '#1668c7', color: '#fff' }} data-usar-planta="si" title="Conserva tu programa y cambia sólo la máquina (y su cableado en la tabla de símbolos)">
+                <button onClick={() => onUsarPlanta(vista)} style={{ ...boton, background: 'var(--azul)', borderColor: 'var(--azul)', color: '#fff' }} data-usar-planta="si" title="Conserva tu programa y cambia sólo la máquina (y su cableado en la tabla de símbolos)">
                   Usar esta planta con mi programa
                 </button>
               )}
