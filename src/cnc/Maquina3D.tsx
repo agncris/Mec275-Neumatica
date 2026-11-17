@@ -30,7 +30,7 @@ import {
   type HerramientaFresa,
   type HerramientaTorno,
 } from './maquinas'
-import { ALTO_GARRA, PiezaFresa, PiezaTorno, type SimuladorCNC } from './simulador'
+import { ALTO_GARRA, LARGO_BROCA, PiezaFresa, PiezaTorno, contrapuntoDe, type SimuladorCNC } from './simulador'
 import { SonidoCNC } from './sonidoCNC'
 
 export interface VistaCNC {
@@ -166,13 +166,13 @@ function modeloHerramientaTorno(h: HerramientaTorno): THREE.Group {
     const cono = new THREE.Mesh(new THREE.ConeGeometry(r, punta, 24), M.acero)
     cono.rotation.z = Math.PI / 2
     cono.position.x = punta / 2
-    const cuerpo = cil(r, 60, M.acero, 24)
+    const cuerpo = cil(r, LARGO_BROCA, M.acero, 24)
     cuerpo.rotation.z = Math.PI / 2
-    cuerpo.position.x = punta + 30
-    const porta = caja(26, 26, 26, color, 3)
-    porta.position.x = punta + 70
+    cuerpo.position.x = punta + LARGO_BROCA / 2
+    const porta = caja(22, 26, 26, color, 3)
+    porta.position.set(punta + LARGO_BROCA + 8, 16, 0)
     const barra = caja(20, 70, 20, M.aceroOscuro, 2)
-    barra.position.set(punta + 70, 45, 0)
+    barra.position.set(punta + LARGO_BROCA + 8, 55, 0)
     g.add(cono, cuerpo, porta, barra)
     return g
   }
@@ -471,8 +471,17 @@ function escenaTorno(sim: SimuladorCNC): EscenaMaquina {
   pieza.receiveShadow = true
   giro.add(pieza)
   raiz.add(giro)
+  // Contrapunto: el cuerpo queda en la bancada y el punto, en el eje.
+  const contra = contrapuntoDe(pz)
+  const quill = cil(contra.radio, contra.z1 - contra.z0, M.acero, 40)
+  quill.rotation.z = Math.PI / 2
+  quill.position.x = (contra.z0 + contra.z1) / 2
+  const cuerpoContra = caja(70, contra.radio * 2 + 30, 90, M.pinturaOscura, 4)
+  cuerpoContra.position.set(contra.z1 - 20, -R - 20, 0)
+  const baseContra = caja(90, 36, 110, M.fundicion, 3)
+  baseContra.position.set(contra.z1 - 10, -R - 55, 0)
+  raiz.add(quill, cuerpoContra, baseContra)
   let versionPieza = -1
-  let ultimaGeo = 0
 
   // Parte tronzada que cae a la bandeja.
   let caida: { malla: THREE.Mesh; vy: number; vx: number; listo: boolean } | null = null
@@ -511,7 +520,8 @@ function escenaTorno(sim: SimuladorCNC): EscenaMaquina {
   marca.renderOrder = 11
   raiz.add(marca)
 
-  const caja3 = new THREE.Box3(new THREE.Vector3(pz.z0 - 60, -R - 40, -R - 20), new THREE.Vector3(pz.z1 + 60, R + 70, R + 20))
+  const contraCaja = contrapuntoDe(pz)
+  const caja3 = new THREE.Box3(new THREE.Vector3(pz.z0 - 60, -R - 40, -R - 20), new THREE.Vector3(contraCaja.z1 + 20, R + 70, R + 20))
   let angulo = 0
 
   return {
@@ -527,11 +537,9 @@ function escenaTorno(sim: SimuladorCNC): EscenaMaquina {
         matPieza.clippingPlanes = planos
         matPieza.needsUpdate = true
       }
-      // Geometría de la pieza (a lo más ~12 veces por segundo mientras corta).
-      const ahora = performance.now()
-      if (pz.version !== versionPieza && (ahora - ultimaGeo > 80 || s.terminado || s.alarma)) {
+      // La pieza se reconstruye en el mismo fotograma en que el filo arranca material.
+      if (pz.version !== versionPieza) {
         versionPieza = pz.version
-        ultimaGeo = ahora
         pieza.geometry.dispose()
         pieza.geometry = geometriaRevolucion(perfilTorno(pz.ext, pz.int, pz.z0, 0.1))
       }

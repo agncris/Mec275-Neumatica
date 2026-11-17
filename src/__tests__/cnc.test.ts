@@ -150,6 +150,26 @@ describe('simulación de mecanizado', () => {
     const { sim } = correr('G21\nT0101\nM03 S1500\nG00 X30 Z-10\nM30', TORNO)
     expect(sim.alarma?.texto).toMatch(/rápido/)
     expect(sim.alarma?.linea).toBe(3)
+    const pz = sim.pieza as PiezaTorno
+    expect(pz.ext[pz.indice(-10)] * 2).toBeCloseTo(40, 1)
+    expect(pz.ext[pz.indice(0)] * 2).toBeCloseTo(40, 1)
+  })
+  it('alarma: avanzar hacia la cara con la herramienta izquierda', () => {
+    const { sim } = correr('G21\nT0101\nM03 S1500\nG00 X44 Z-25\nG01 X36 F150\nG01 Z-5 F200\nM30', TORNO)
+    expect(sim.alarma?.texto).toMatch(/cara/)
+    const pz = sim.pieza as PiezaTorno
+    expect(pz.ext[pz.indice(-8)] * 2).toBeCloseTo(40, 0)
+  })
+  it('alarma: la herramienta toca el contrapunto', () => {
+    const { sim } = correr('G21\nT0101\nM03 S1500\nG00 X0 Z80\nM30', TORNO)
+    expect(sim.alarma?.texto).toMatch(/contrapunto/)
+  })
+  it('alarma: un rápido de la fresa no baja el bruto', () => {
+    const { sim } = correr('G21\nT1 M06\nM03 S1500\nG00 X20 Y20 Z-3\nM30', FRESA)
+    expect(sim.alarma?.texto).toMatch(/rápido/)
+    const pz = sim.pieza as PiezaFresa
+    const h = pz.h[Math.round(20 / pz.celda) * pz.nx + Math.round(20 / pz.celda)]
+    expect(h).toBeCloseTo(0, 2)
   })
   it('alarma: cortar con el husillo detenido', () => {
     const { sim } = correr('G21\nT0101\nG00 X36 Z2\nG01 Z-20 F200\nM30', TORNO)

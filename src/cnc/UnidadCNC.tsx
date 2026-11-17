@@ -1324,8 +1324,9 @@ function ComoUsar() {
       </li>
       <li style={li}>
         <strong>Como en la máquina real,</strong> se detiene con una alarma si la herramienta entra al material en rápido
-        (G00), si corta con el husillo detenido, si choca con las garras del plato o con la mesa, o si la broca se mueve de
-        lado. Los consejos 💡 (por ejemplo, pasadas muy profundas) no detienen la simulación.
+        (G00), si corta con el husillo detenido, si avanza contra el filo, si el portaherramientas se entierra, si choca
+        con las garras del plato, con el contrapunto o con la mesa, o si la broca se mueve de lado. El bruto no se come
+        en un choque. Los consejos 💡 (por ejemplo, pasadas muy profundas) no detienen la simulación.
       </li>
       <li style={li}>
         <strong>Para el informe:</strong> «Trayectoria (PNG)» descarga el dibujo 2D con los puntos, «Copiar tabla» copia

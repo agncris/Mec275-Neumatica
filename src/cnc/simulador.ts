@@ -9,9 +9,11 @@
  *    altura de las celdas que toca.
  *
  * Como en la máquina real, se detiene con una ALARMA si la herramienta entra
- * al material en rápido (G00), si corta con el husillo detenido o si choca
- * con el plato, las garras o la mesa. Los consejos (pasadas muy profundas,
- * etc.) se anotan sin detener nada.
+ * al material en rápido (G00), si corta con el husillo detenido, si avanza
+ * contra el filo, si el portaherramientas se entierra, o si choca con el
+ * plato, las garras, el contrapunto o la mesa. Un choque no arranca material:
+ * el bruto queda como estaba. Los consejos (pasadas muy profundas, etc.) se
+ * anotan sin detener nada.
  */
 import type { Paso, ResultadoGcode, Vec3 } from './gcode'
 import {
@@ -29,6 +31,16 @@ import {
 export const RES_TORNO = 0.1
 /** Cuánto sobresalen las garras del plato por sobre el bruto (mm). */
 export const ALTO_GARRA = 10
+/** Cuánto sobresale el inserto antes del portaherramientas (mm en radio). */
+const ALTO_INSERTO = 8
+/** Largo del cuerpo de la broca detrás de la punta (mm). El resto sube a la torreta. */
+export const LARGO_BROCA = 16
+
+/** Contrapunto, delante de la cara, centrado en el eje. */
+export function contrapuntoDe(pz: PiezaTorno): { z0: number; z1: number; radio: number } {
+  const z0 = pz.z1 + 56
+  return { z0, z1: z0 + 78, radio: 24 }
+}
 
 export class PiezaTorno {
   readonly tipo = 'torno'
@@ -39,6 +51,8 @@ export class PiezaTorno {
   readonly int: Float32Array
   /** Parte que se cortó con el tronzado (cae a la bandeja). */
   tronzada: { z: number; ext: Float32Array; int: Float32Array; z0: number } | null = null
+  /** 1 donde el exterior se cortó hasta el agujero (un taladro no separa la pieza). */
+  readonly corteFuera: Uint8Array
   version = 0
   constructor(readonly bruto: BrutoTorno) {
     this.z1 = bruto.sobremetal
@@ -46,6 +60,7 @@ export class PiezaTorno {
     const n = Math.round(bruto.largo / RES_TORNO) + 1
     this.ext = new Float32Array(n).fill(bruto.diametro / 2)
     this.int = new Float32Array(n)
+    this.corteFuera = new Uint8Array(n)
   }
   get n() {
     return this.ext.length
@@ -104,6 +119,8 @@ export class SimuladorCNC {
   private consejosDados = new Set<string>()
   private cosAxial = 1
   private saliendo = false
+  /** Avance en Z del tramo en curso (positivo hacia la cara). */
+  private dzMov = 0
   private lineaBloque: number | null = null
   /** Celdas cortadas a más de 2,5 mm de profundidad, por línea. */
   private hondas = new Map<number, number>()
@@ -234,6 +251,7 @@ export class SimuladorCNC {
         // radio es X/2): lo que realmente come el filo.
         const dr = (b.x - a.x) / 2
         const dzs = b.z - a.z
+        this.dzMov = dzs
         this.cosAxial = Math.abs(dzs) / Math.max(1e-9, Math.hypot(dr, dzs))
         // Alejarse del eje sin moverse en Z no puede cortar nada nuevo (la
         // herramienta sale por donde entró; en una rosca, por el surco).
@@ -286,6 +304,10 @@ export class SimuladorCNC {
     } else if (q.z < pz.z0 + 0.5 && Math.abs(rTip) < R + 45) {
       return this.detener(p, 'Choque: la broca llega al plato.')
     }
+    if (this.tocaContrapunto(pz, h, q, rTip)) {
+      const c = contrapuntoDe(pz)
+      return this.detener(p, `Choque: la herramienta T${h.t} toca el contrapunto (delante de la cara, desde Z${c.z0.toFixed(0)}, Ø${c.radio * 2}). Retírala en X antes de avanzar en Z.`)
+    }
     if (this.saliendo && h.forma !== 'broca') return true
     let arrancado = 0
     let profundidad = 0
@@ -301,6 +323,7 @@ export class SimuladorCNC {
       const rb = (h.medida ?? 8) / 2
       const punta = rb * Math.tan((31 * Math.PI) / 180)
       const i0 = Math.max(0, pz.indice(q.z))
+      const copiaInt = pz.int.slice(i0)
       for (let i = i0; i < pz.n; i++) {
         const dz = pz.zDe(i) - q.z
         const r = dz >= punta ? rb : (dz / punta) * rb
@@ -310,22 +333,53 @@ export class SimuladorCNC {
           if (pz.int[i] >= pz.ext[i] - 1e-4) pz.int[i] = pz.ext[i]
         }
       }
+      if (arrancado > 0 && (p.tipo === 'rapido' || p.husillo === 'off' || p.rpm <= 0)) {
+        pz.int.set(copiaInt, i0)
+        if (p.tipo === 'rapido') return this.detener(p, 'Choque: la herramienta entra al material en avance rápido (G00). Para cortar usa G01, G02 o G03.')
+        return this.detener(p, 'La herramienta corta con el husillo detenido: enciéndelo antes con M03 (o M04) y una velocidad S.')
+      }
     } else {
       const i0 = Math.max(0, pz.indice(q.z + dz0))
       const i1 = Math.min(pz.n - 1, pz.indice(q.z + dz1))
+      const haciaCara = this.dzMov > 0.05
+      const haciaPlato = this.dzMov < -0.05
+      const flancoMalo =
+        (h.forma === 'izquierda' && haciaCara) ||
+        (h.forma === 'derecha' && haciaPlato) ||
+        (h.forma === 'ranurado' && (haciaCara || haciaPlato))
+      if (h.forma === 'ranurado' && (haciaCara || haciaPlato)) {
+        const i = pz.indice(q.z)
+        if (i >= 0 && i < pz.n && rTip < pz.ext[i] - 0.3) {
+          return this.detener(p, `Choque: la cuchilla T${h.t} se desplaza en Z dentro del material. Una cuchilla de ranurar sólo baja en X.`)
+        }
+      }
+      const copiaExt = i1 >= i0 ? pz.ext.slice(i0, i1 + 1) : null
+      const copiaInt = i1 >= i0 ? pz.int.slice(i0, i1 + 1) : null
+      const copiaMarca = i1 >= i0 ? pz.corteFuera.slice(i0, i1 + 1) : null
+      const restaurar = () => {
+        if (!copiaExt || !copiaInt || !copiaMarca) return
+        pz.ext.set(copiaExt, i0)
+        pz.int.set(copiaInt, i0)
+        pz.corteFuera.set(copiaMarca, i0)
+      }
+      let choqueFlanco = false
+      let choquePorta = false
       // Roscando, el filo en V pasa una vez por vuelta: deja un surco cada
       // «paso» mm (se dibuja como anillos, la hélice no se ve en este modelo).
       const rosca = p.paso && h.forma === 'roscado' ? { paso: p.paso, z0: p.puntos[0].z } : null
       for (let i = i0; i <= i1; i++) {
+        const dz = pz.zDe(i) - q.z
         let e: number | null
         if (rosca) {
           let f = (pz.zDe(i) - rosca.z0) % rosca.paso
           if (f < 0) f += rosca.paso
           if (f > rosca.paso / 2) f -= rosca.paso
           e = envolventeTorno(h, f)
-        } else e = envolventeTorno(h, pz.zDe(i) - q.z)
+        } else e = envolventeTorno(h, dz)
         if (e === null) continue
         const r = Math.max(0, rTip + e)
+        if (flancoMalo && Math.abs(dz) > 0.45 && pz.ext[i] > r + 0.35) choqueFlanco = true
+        if (h.forma !== 'roscado' && Math.abs(dz) <= 0.45 && pz.ext[i] > rTip + ALTO_INSERTO + 0.2 && r < pz.ext[i] - 0.2) choquePorta = true
         if (r < pz.ext[i] - 1e-4) {
           const quita = pz.ext[i] - Math.max(r, pz.int[i])
           if (quita > 0) {
@@ -334,8 +388,22 @@ export class SimuladorCNC {
             if (quita * this.cosAxial > 2.55) hondas++
           }
           pz.ext[i] = Math.max(r, 0)
-          if (pz.ext[i] <= pz.int[i]) pz.ext[i] = pz.int[i]
+          if (pz.ext[i] <= pz.int[i]) {
+            pz.ext[i] = pz.int[i]
+            pz.corteFuera[i] = 1
+          }
         }
+      }
+      if (arrancado > 0 && (p.tipo === 'rapido' || choqueFlanco || choquePorta || p.husillo === 'off' || p.rpm <= 0)) {
+        restaurar()
+        if (p.tipo === 'rapido') return this.detener(p, 'Choque: la herramienta entra al material en avance rápido (G00). Para cortar usa G01, G02 o G03.')
+        if (choqueFlanco) {
+          const lado = h.forma === 'derecha' ? 'el plato (Z−)' : 'la cara (Z+)'
+          const bien = h.forma === 'derecha' ? 'la cara (Z+)' : 'el plato (Z−)'
+          return this.detener(p, `Choque: T${h.t} avanza hacia ${lado} y el filo no mira para ese lado. Esa herramienta corta hacia ${bien}.`)
+        }
+        if (choquePorta) return this.detener(p, `Choque: el portaherramientas de T${h.t} se entierra en la pieza. La pasada es más honda que el inserto (${ALTO_INSERTO} mm en radio).`)
+        return this.detener(p, 'La herramienta corta con el husillo detenido: enciéndelo antes con M03 (o M04) y una velocidad S.')
       }
     }
     if (arrancado > 0) {
@@ -359,12 +427,23 @@ export class SimuladorCNC {
     return true
   }
 
+  /** La punta o el cuerpo corto de la herramienta entran al contrapunto. */
+  private tocaContrapunto(pz: PiezaTorno, h: ReturnType<typeof herramientaTorno>, q: Vec3, rTip: number): boolean {
+    if (!h) return false
+    const c = contrapuntoDe(pz)
+    if (Math.abs(rTip) >= c.radio - 0.05) return false
+    const [dz0, dz1] = h.forma === 'broca' ? [0, LARGO_BROCA] : rangoTorno(h)
+    const zA = q.z + dz0
+    const zB = q.z + dz1
+    return zB > c.z0 + 0.05 && zA < c.z1 - 0.05
+  }
+
   /** Si el radio exterior llega al agujero en algún punto, la pieza se separa. */
   private revisarTronzado(pz: PiezaTorno) {
     if (pz.tronzada) return
     const iG = pz.indice(pz.zGarras)
     for (let i = pz.n - 2; i > iG; i--) {
-      if (pz.ext[i] - pz.int[i] > 1e-3 || pz.ext[i + 1] - pz.int[i + 1] <= 1e-3) continue
+      if (!pz.corteFuera[i] || pz.ext[i] - pz.int[i] > 1e-3 || pz.ext[i + 1] - pz.int[i + 1] <= 1e-3) continue
       // Lo que queda hacia la cara (i+1 … n−1) se separa, salvo que sea
       // sólo la viruta fina que deja el refrentado.
       let volumen = 0
@@ -394,6 +473,10 @@ export class SimuladorCNC {
     const j1 = Math.min(pz.ny - 1, Math.ceil((q.y + r) / c))
     let arrancado = 0
     let profundidad = 0
+    let filoEnterrado = false
+    const filo = Math.max(18, h.diametro * 2.5)
+    const antes: number[] = []
+    const cuales: number[] = []
     for (let j = j0; j <= j1; j++) {
       for (let i = i0; i <= i1; i++) {
         const d = Math.hypot(i * c - q.x, j * c - q.y)
@@ -401,28 +484,34 @@ export class SimuladorCNC {
         if (extra === null) continue
         const z = Math.max(-b.alto, q.z + extra)
         const k = j * pz.nx + i
+        // El mango, por encima del filo, no corta: si la pared llega hasta ahí, choca.
+        if (h.forma !== 'broca' && d > r * 0.2 && pz.h[k] > q.z + filo) filoEnterrado = true
         if (z < pz.h[k] - 1e-4) {
           const quita = pz.h[k] - z
+          cuales.push(k)
+          antes.push(pz.h[k])
           arrancado += quita
           profundidad = Math.max(profundidad, quita)
           pz.h[k] = z
         }
       }
     }
-    if (arrancado > 0) {
-      if (p.tipo === 'rapido') {
-        return this.detener(p, 'Choque: la herramienta entra al material en avance rápido (G00). Baja con G01 para cortar.')
-      }
-      if (p.husillo === 'off' || p.rpm <= 0) {
+    const restaurar = () => {
+      for (let n = 0; n < cuales.length; n++) pz.h[cuales[n]] = antes[n]
+    }
+    if (arrancado > 0 || filoEnterrado) {
+      const lateral = h.forma === 'broca' && (Math.abs(q.x - p.puntos[0].x) > 0.01 || Math.abs(q.y - p.puntos[0].y) > 0.01)
+      if (p.tipo === 'rapido' || filoEnterrado || lateral || p.husillo === 'off' || p.rpm <= 0) {
+        restaurar()
+        if (p.tipo === 'rapido') return this.detener(p, 'Choque: la herramienta entra al material en avance rápido (G00). Baja con G01 para cortar.')
+        if (lateral) return this.detener(p, 'La broca sólo puede avanzar en Z: al moverse de lado dentro del material se rompe.')
+        if (filoEnterrado) return this.detener(p, `Choque: el mango de T${h.t} choca con la pieza. El filo mide ${filo.toFixed(0)} mm; baja por etapas o usa una herramienta más larga.`)
         return this.detener(p, 'La fresa corta con el husillo detenido: enciéndelo antes con M03 y una velocidad S.')
       }
       pz.version++
       this.cortando += arrancado * c * c
       if (h.forma !== 'broca' && profundidad > h.diametro + 0.05) {
         this.consejo(p.linea, `prof-${p.linea}`, `Pasada de ${profundidad.toFixed(1)} mm de profundidad con una fresa de Ø${h.diametro}: conviene bajar por etapas (no más que el diámetro).`)
-      }
-      if (h.forma === 'broca' && (Math.abs(q.x - p.puntos[0].x) > 0.01 || Math.abs(q.y - p.puntos[0].y) > 0.01)) {
-        return this.detener(p, 'La broca sólo puede avanzar en Z: al moverse de lado dentro del material se rompe.')
       }
     }
     return true
