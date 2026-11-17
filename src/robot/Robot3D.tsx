@@ -319,6 +319,7 @@ export default function Robot3D({
   onCanvas,
   play,
   encabezado,
+  sinDetalle = false,
 }: {
   vista: MutableRefObject<VistaRobot>
   alto?: number | string
@@ -327,6 +328,8 @@ export default function Robot3D({
   play?: PlayEscena
   /** Título y avisos, a la izquierda de los controles de vista. */
   encabezado?: ReactNode
+  /** Sin el botón «Seguir el corte» (en Estudiar no hay corte). */
+  sinDetalle?: boolean
 }) {
   const contRef = useRef<HTMLDivElement>(null)
   const envolturaRef = useRef<HTMLDivElement>(null)
@@ -737,6 +740,7 @@ export default function Robot3D({
                 {t}
               </button>
             ))}
+          {!sinDetalle && (
           <button
             type="button"
             onClick={() => setDetalle((d) => !d)}
@@ -747,6 +751,7 @@ export default function Robot3D({
           >
             Seguir el corte
           </button>
+          )}
           <BotonPantallaCompleta activa={pantalla} onAlternar={alternarPantalla} estilo={{ border: '1px solid #e0e5eb', background: '#fff', color: '#51606f', borderRadius: 8, padding: '4px 10px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 600 }} />
         </div>
       </div>

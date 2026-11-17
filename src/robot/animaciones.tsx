@@ -80,13 +80,13 @@ export function FiguraGrados() {
       <rect x={88} y={140} width={24} height={52} rx={6} fill={NARANJA} />
       <g transform="translate(100 138)">
         <g>
-          <animateTransform attributeName="transform" type="rotate" values="24;-28;-28;8;8" keyTimes="0;0.16;0.5;0.66;1" dur="12s" repeatCount="indefinite" />
+          <animateTransform attributeName="transform" type="rotate" values="8;-28;-28;8;8" keyTimes="0;0.16;0.5;0.66;1" dur="12s" repeatCount="indefinite" />
           <rect x={0} y={-11} width={90} height={22} rx={11} fill={NARANJA} />
           <circle r={14} fill={HOMBRO} />
           <text x={-4} y={4} fill="#fff" fontSize={11} fontWeight={700}>2</text>
           <g transform="translate(90 0)">
             <g>
-              <animateTransform attributeName="transform" type="rotate" values="30;30;64;64;0;0" keyTimes="0;0.16;0.34;0.5;0.66;1" dur="12s" repeatCount="indefinite" />
+              <animateTransform attributeName="transform" type="rotate" values="20;20;64;64;0;0" keyTimes="0;0.16;0.34;0.5;0.66;1" dur="12s" repeatCount="indefinite" />
               <rect x={0} y={-8} width={74} height={16} rx={8} fill={NARANJA} />
               <circle r={11} fill={HOMBRO} />
               <text x={-4} y={4} fill="#fff" fontSize={11} fontWeight={700}>3</text>
@@ -133,8 +133,8 @@ export function FiguraAlcance() {
       <path d="M 167 94 A 120 120 0 0 1 206 217" fill="none" stroke={AZUL} strokeWidth={1.5} strokeDasharray="5 4" />
       <circle cx={158} cy={168} r={5} fill={VERDE} />
       <text x={168} y={164} fill={VERDE} fontSize={12} fontWeight={700}>dentro</text>
-      <circle cx={250} cy={70} r={5} fill="#a15c00" />
-      <text x={260} y={74} fill="#a15c00" fontSize={12} fontWeight={700}>fuera de alcance</text>
+      <circle cx={520} cy={150} r={5} fill="#a15c00" />
+      <text x={448} y={172} fill="#a15c00" fontSize={12} fontWeight={700}>fuera de alcance</text>
       <g transform="translate(90 186)">
         <g>
           <animateTransform attributeName="transform" type="rotate" values="-50;15;-50" keyTimes="0;0.5;1" dur="6s" repeatCount="indefinite" />
@@ -144,9 +144,9 @@ export function FiguraAlcance() {
           <rect x={120} y={-3} width={42} height={6} rx={1} fill="#2b3036" />
         </g>
       </g>
-      <text x={250} y={40} fill={TINTA} fontSize={13} fontWeight={700}>Alcance hasta la muñeca</text>
-      <text x={250} y={62} fill="#51606f" fontSize={12}>El punto azul es el centro de la muñeca.</text>
-      <text x={250} y={80} fill="#51606f" fontSize={12}>La barra negra es la herramienta.</text>
+      <text x={300} y={36} fill={TINTA} fontSize={13} fontWeight={700}>Alcance hasta la muñeca</text>
+      <text x={300} y={56} fill="#51606f" fontSize={12}>El punto azul es el centro de la muñeca.</text>
+      <text x={300} y={74} fill="#51606f" fontSize={12}>La barra negra es la herramienta.</text>
     </FiguraSvg>
   )
 }
@@ -157,15 +157,15 @@ const FIN = '300 150'
 /** PTP, LIN y CIR salen y llegan al mismo sitio, con recorridos distintos. */
 export function FiguraMovimientos() {
   const lin = `${INICIO} L ${FIN}`
-  const cir = `${INICIO} Q 185 36 ${FIN}`
-  const ptp = `${INICIO} Q 185 198 ${FIN}`
+  const cir = `${INICIO} Q 185 -40 ${FIN}`
+  const ptp = `${INICIO} Q 185 200 ${FIN}`
   return (
     <FiguraSvg viewBox="0 0 640 230" ariaLabel="Tres recorridos entre los mismos dos puntos: PTP se curva, LIN va recto y CIR pasa por un punto auxiliar" etiqueta="Los tres salen del mismo punto y llegan al mismo. PTP no va en línea recta: sirve para acercarse y alejarse en el aire. LIN corta en recta. CIR corta en arco y necesita un punto auxiliar.">
       <path d={ptp} fill="none" stroke={NARANJA} strokeWidth={2} />
       <path d={lin} fill="none" stroke={VERDE} strokeWidth={2} />
       <path d={cir} fill="none" stroke={AZUL} strokeWidth={2} />
-      <circle cx={185} cy={36} r={4} fill={AZUL} />
-      <text x={194} y={40} fill={AZUL} fontSize={12} fontWeight={700}>punto auxiliar</text>
+      <circle cx={185} cy={55} r={4} fill={AZUL} />
+      <text x={196} y={50} fill={AZUL} fontSize={12} fontWeight={700}>punto auxiliar</text>
       <circle r={6} fill={VERDE}><animateMotion dur="4.5s" repeatCount="indefinite" path={lin} /></circle>
       <circle r={6} fill={AZUL}><animateMotion dur="4.5s" repeatCount="indefinite" path={cir} /></circle>
       <circle r={6} fill={NARANJA}><animateMotion dur="4.5s" repeatCount="indefinite" path={ptp} /></circle>

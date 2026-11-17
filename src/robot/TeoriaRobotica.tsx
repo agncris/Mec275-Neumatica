@@ -7,6 +7,7 @@
 import { createContext, useContext, type ReactNode } from 'react'
 import { VER_TAREA_ROBOTICA } from '../unidades'
 import { FiguraAlcance, FiguraGrados, FiguraMovimientos, FiguraSvg } from './animaciones'
+import { DemoAlcance, DemoEjes } from './Demo3D'
 import { ROBOTS } from './robots'
 
 /** El botón «probarlo» de Estudiar llama a esto para abrir el Laboratorio o la Tarea. */
@@ -195,6 +196,8 @@ export function GradosLibertad() {
         <strong>6 GDL</strong>; un SCARA tiene 4 (X, Y, Z y giro de la herramienta) y un cartesiano, 3.
       </p>
       <FiguraGrados />
+      <p style={p}>Ahora muévelo tú: es el mismo robot de la simulación.</p>
+      <DemoEjes />
       <p style={p}>
         En un KUKA de 6 ejes, A1, A2 y A3 llevan la muñeca a su lugar y A4, A5 y A6 orientan la herramienta. Cuando A5
         queda en 0°, A4 y A6 quedan alineados y el robot pierde un grado de libertad: es una{' '}
@@ -229,6 +232,8 @@ export function FichaTecnica() {
         <strong>diagrama de cargas</strong>, cuánto peso soporta según lo lejos del flange que esté el centro de gravedad.
       </p>
       <FiguraAlcance />
+      <p style={p}>Y aquí, con el robot en 3D: aleja la pieza hasta que ya no llegue.</p>
+      <DemoAlcance />
       <p style={p}>
         Robots disponibles en este simulador (valores orientativos: confirma en la ficha oficial):
       </p>
