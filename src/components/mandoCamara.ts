@@ -52,37 +52,79 @@ export function aplicarModoArrastre(c: OrbitControls, modo: ModoArrastre) {
  */
 export function cursoresCamara(c: OrbitControls, el: HTMLElement): () => void {
   let pulsado = false
+  let rueda: { x: number; y: number } | null = null
   const gestoBoton = (button: number) => {
     const codigo = button === 0 ? c.mouseButtons.LEFT : button === 1 ? c.mouseButtons.MIDDLE : button === 2 ? c.mouseButtons.RIGHT : -1
     return gestoDe(codigo ?? -1)
   }
   const reposo = () => {
-    if (!pulsado) pintarCursor(el, gestoBoton(0), false)
+    if (!pulsado && !rueda) pintarCursor(el, gestoBoton(0), false)
   }
   alSoltarModo.set(c, reposo)
   reposo()
+  // La rueda se arrastra aquí, y no por OrbitControls: en el Mac el clic del
+  // medio llega con Ctrl y esos controles lo convierten en un giro.
+  const alRueda = (e: PointerEvent) => {
+    if (e.button !== 1) return
+    e.preventDefault()
+    e.stopImmediatePropagation()
+    rueda = { x: e.clientX, y: e.clientY }
+    pulsado = true
+    pintarCursor(el, 'arrastrar', true)
+    try {
+      el.setPointerCapture(e.pointerId)
+    } catch {
+      /* el puntero ya no está */
+    }
+  }
+  const moverRueda = (e: PointerEvent) => {
+    if (!rueda) return
+    const dx = e.clientX - rueda.x
+    const dy = e.clientY - rueda.y
+    rueda = { x: e.clientX, y: e.clientY }
+    if (dx === 0 && dy === 0) return
+    const ctrl = c as OrbitControls & { _pan: (x: number, y: number) => void }
+    ctrl._pan(dx * c.panSpeed, dy * c.panSpeed)
+    c.update()
+  }
+  const soltarRueda = (e: PointerEvent) => {
+    if (!rueda) return
+    if (e.type !== 'pointercancel' && e.button !== 1) return
+    rueda = null
+    pulsado = false
+    reposo()
+  }
   const alBajar = (e: PointerEvent) => {
-    if (e.button === 1) e.preventDefault()
+    if (e.button === 1) return
     const gesto = gestoBoton(e.button)
     if (!gesto) return
     pulsado = true
     pintarCursor(el, gesto, true)
   }
-  const alSubir = () => {
+  const alSubir = (e: PointerEvent) => {
+    if (e.button === 1) return
     pulsado = false
     reposo()
   }
   const bloquearRueda = (e: MouseEvent) => {
     if (e.button === 1) e.preventDefault()
   }
+  el.addEventListener('pointerdown', alRueda, true)
+  el.addEventListener('pointermove', moverRueda)
+  el.addEventListener('pointerup', soltarRueda)
+  el.addEventListener('pointercancel', soltarRueda)
   el.addEventListener('pointerdown', alBajar)
-  el.addEventListener('mousedown', bloquearRueda)
+  el.addEventListener('mousedown', bloquearRueda, true)
   window.addEventListener('pointerup', alSubir)
   window.addEventListener('pointercancel', alSubir)
   return () => {
     alSoltarModo.delete(c)
+    el.removeEventListener('pointerdown', alRueda, true)
+    el.removeEventListener('pointermove', moverRueda)
+    el.removeEventListener('pointerup', soltarRueda)
+    el.removeEventListener('pointercancel', soltarRueda)
     el.removeEventListener('pointerdown', alBajar)
-    el.removeEventListener('mousedown', bloquearRueda)
+    el.removeEventListener('mousedown', bloquearRueda, true)
     window.removeEventListener('pointerup', alSubir)
     window.removeEventListener('pointercancel', alSubir)
     el.style.cursor = ''

@@ -496,13 +496,21 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
             svgRef.current?.focus()
             setArrastre({ tipo: 'fondo', x: e.clientX, y: e.clientY, tx: vista.tx, ty: vista.ty })
           }}
-          onPointerDownCapture={dedoAbajo}
+          onPointerDownCapture={(e) => {
+            dedoAbajo(e)
+            if (e.button !== 1) return
+            e.preventDefault()
+            e.stopPropagation()
+            svgRef.current?.setPointerCapture?.(e.pointerId)
+            setArrastre({ tipo: 'fondo', x: e.clientX, y: e.clientY, tx: vista.tx, ty: vista.ty })
+          }}
+          onMouseDown={(e) => e.button === 1 && e.preventDefault()}
           onPointerMoveCapture={dedoMueve}
           onPointerUpCapture={dedoArriba}
           onPointerCancelCapture={dedoArriba}
           onPointerMove={(e) => !pinza.current && onPointerMove(e)}
           onPointerUp={onPointerUp}
-          onPointerLeave={() => arrastre?.tipo !== 'cable' && setArrastre(null)}
+          onPointerLeave={(e) => (e.buttons & 4) === 0 && arrastre?.tipo !== 'cable' && setArrastre(null)}
           onWheel={onWheel}
           onDragOver={(e) => {
             if ([...e.dataTransfer.types].includes('text/neumalab-nodo')) e.preventDefault()

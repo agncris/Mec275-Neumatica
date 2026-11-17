@@ -590,6 +590,7 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
 
   const onPointerUp = (e: React.PointerEvent) => {
     if (soloLectura) return
+    if (e.button === 1 && svgRef.current) svgRef.current.style.cursor = ''
     if (panRef.current) {
       const clicSinMover = Math.abs((coordsSvg(e).x - panRef.current.px)) < 3 && Math.abs((coordsSvg(e).y - panRef.current.py)) < 3
       panRef.current = null
@@ -617,6 +618,7 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
   const onPointerCancel = () => {
     arrastreRef.current = null
     panRef.current = null
+    if (svgRef.current) svgRef.current.style.cursor = ''
     setArrastrando(null)
   }
 
@@ -835,7 +837,17 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
         preserveAspectRatio="xMidYMid meet"
         style={{ display: 'block', cursor: modo === 'editar' && iman ? 'crosshair' : 'default' }}
         onWheel={onWheel}
-        onPointerDownCapture={onDedoAbajo}
+        onPointerDownCapture={(e) => {
+          onDedoAbajo(e)
+          if (e.button !== 1 || soloLectura) return
+          e.preventDefault()
+          e.stopPropagation()
+          const pos = coordsSvg(e)
+          panRef.current = { x: view.x, y: view.y, px: pos.x, py: pos.y }
+          svgRef.current?.setPointerCapture?.(e.pointerId)
+          if (svgRef.current) svgRef.current.style.cursor = 'grabbing'
+        }}
+        onMouseDown={(e) => e.button === 1 && e.preventDefault()}
         onPointerMoveCapture={onDedoMueve}
         onPointerUpCapture={onDedoArriba}
         onPointerCancelCapture={onDedoArriba}

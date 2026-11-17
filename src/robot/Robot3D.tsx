@@ -376,7 +376,7 @@ export default function Robot3D({
 
     const camara = new THREE.PerspectiveCamera(40, cont.clientWidth / Math.max(1, cont.clientHeight), 5, 30000)
     const controles = new OrbitControls(camara, renderer.domElement)
-    // El botón del medio (la rueda apretada) también gira la cámara, sin el autodesplazamiento del navegador.
+    // El botón del medio desplaza la vista. Lo engancha cursoresCamara.
     controles.enableDamping = true
     controles.dampingFactor = 0.08
     controles.zoomToCursor = true

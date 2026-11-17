@@ -440,7 +440,7 @@ export default function TiposRobot() {
     const cam = new THREE.PerspectiveCamera(38, cont.clientWidth / cont.clientHeight, 10, 10000)
     cam.position.set(1100, 900, 1300)
     const ctrl = new OrbitControls(cam, renderer.domElement)
-    // El botón del medio (la rueda apretada) también gira la cámara, sin el autodesplazamiento del navegador.
+    // El botón del medio desplaza la vista. Lo engancha cursoresCamara.
     aplicarModoArrastre(ctrl, 'girar')
     const quitarCursores = cursoresCamara(ctrl, renderer.domElement)
     ctrl.target.set(0, 280, 0)
