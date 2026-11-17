@@ -19,3 +19,5 @@ jobs:
       - run: npm run lint
       - run: npm run build
       - run: npm test
+      # Recorrido corto por cada unidad en el Chrome que ya trae el runner (no se baja ningún navegador).
+      - run: npm run e2e
