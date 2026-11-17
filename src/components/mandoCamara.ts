@@ -13,11 +13,80 @@ const TOUCH = { ROTATE: 0, PAN: 1, DOLLY_PAN: 2 } as const
 export type ModoArrastre = 'girar' | 'mover' | 'zoom'
 export type VistaCamara = 'iso' | 'frente' | 'lado' | 'arriba'
 
+const CURSOR_GIRAR = `url("data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none"><path d="M16 5.5a10.5 10.5 0 0 1 9 5" stroke="#1c2733" stroke-width="2.4" stroke-linecap="round"/><path d="M24.2 5.2 26 11.2 20.2 9.6" stroke="#1c2733" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 26.5a10.5 10.5 0 0 1-9-5" stroke="#1c2733" stroke-width="2.4" stroke-linecap="round"/><path d="M7.8 26.8 6 20.8 11.8 22.4" stroke="#1c2733" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>')}") 16 16, grab`
+const CURSOR_MOVER = 'all-scroll'
+const CURSOR_MOVIENDO = 'grabbing'
+const CURSOR_ZOOM = 'ns-resize'
+
+type Gesto = 'rotar' | 'arrastrar' | 'zoom'
+
+function gestoDe(codigo: number): Gesto | null {
+  if (codigo === MOUSE.ROTATE) return 'rotar'
+  if (codigo === MOUSE.PAN) return 'arrastrar'
+  if (codigo === MOUSE.DOLLY) return 'zoom'
+  return null
+}
+
+function pintarCursor(el: HTMLElement, gesto: Gesto | null, activo: boolean) {
+  if (gesto === 'rotar') el.style.cursor = CURSOR_GIRAR
+  else if (gesto === 'arrastrar') el.style.cursor = activo ? CURSOR_MOVIENDO : CURSOR_MOVER
+  else if (gesto === 'zoom') el.style.cursor = CURSOR_ZOOM
+  else el.style.cursor = ''
+}
+
+const alSoltarModo = new WeakMap<OrbitControls, () => void>()
+
 export function aplicarModoArrastre(c: OrbitControls, modo: ModoArrastre) {
   c.mouseButtons.LEFT = modo === 'mover' ? MOUSE.PAN : modo === 'zoom' ? MOUSE.DOLLY : MOUSE.ROTATE
   c.mouseButtons.RIGHT = modo === 'mover' ? MOUSE.ROTATE : MOUSE.PAN
+  // El botón de la rueda desplaza la vista, sea cual sea el modo del botón izquierdo.
+  c.mouseButtons.MIDDLE = MOUSE.PAN
   // Con un dedo, Zoom no gira: se acerca con + y −. Dos dedos siguen pellizcando.
   c.touches.ONE = modo === 'mover' ? TOUCH.PAN : modo === 'zoom' ? TOUCH.DOLLY_PAN : TOUCH.ROTATE
+  alSoltarModo.get(c)?.()
+}
+
+/**
+ * El cursor del lienzo dice qué está pasando: flechas de giro al rotar,
+ * mano al desplazar con el botón izquierdo o con el de la rueda.
+ */
+export function cursoresCamara(c: OrbitControls, el: HTMLElement): () => void {
+  let pulsado = false
+  const gestoBoton = (button: number) => {
+    const codigo = button === 0 ? c.mouseButtons.LEFT : button === 1 ? c.mouseButtons.MIDDLE : button === 2 ? c.mouseButtons.RIGHT : -1
+    return gestoDe(codigo ?? -1)
+  }
+  const reposo = () => {
+    if (!pulsado) pintarCursor(el, gestoBoton(0), false)
+  }
+  alSoltarModo.set(c, reposo)
+  reposo()
+  const alBajar = (e: PointerEvent) => {
+    if (e.button === 1) e.preventDefault()
+    const gesto = gestoBoton(e.button)
+    if (!gesto) return
+    pulsado = true
+    pintarCursor(el, gesto, true)
+  }
+  const alSubir = () => {
+    pulsado = false
+    reposo()
+  }
+  const bloquearRueda = (e: MouseEvent) => {
+    if (e.button === 1) e.preventDefault()
+  }
+  el.addEventListener('pointerdown', alBajar)
+  el.addEventListener('mousedown', bloquearRueda)
+  window.addEventListener('pointerup', alSubir)
+  window.addEventListener('pointercancel', alSubir)
+  return () => {
+    alSoltarModo.delete(c)
+    el.removeEventListener('pointerdown', alBajar)
+    el.removeEventListener('mousedown', bloquearRueda)
+    window.removeEventListener('pointerup', alSubir)
+    window.removeEventListener('pointercancel', alSubir)
+    el.style.cursor = ''
+  }
 }
 
 /** Acerca (true) o aleja (false) manteniendo el punto al que mira la cámara. */

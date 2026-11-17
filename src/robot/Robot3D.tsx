@@ -9,7 +9,7 @@
  * Rhino) y se gira para three.js, que usa Y hacia arriba.
  */
 import { type PlayEscena } from '../components/HudEscena'
-import { aplicarModoArrastre, girarCuadrante, zoomCamara, type LadoCubo, type ModoArrastre } from '../components/mandoCamara'
+import { aplicarModoArrastre, cursoresCamara, girarCuadrante, zoomCamara, type LadoCubo, type ModoArrastre } from '../components/mandoCamara'
 import BotonPantallaCompleta, { usePantallaCompleta } from '../components/PantallaCompleta'
 import { useEffect, useRef, useState, type CSSProperties, type MutableRefObject, type ReactNode } from 'react'
 import { crearViewCube, type ViewCube } from '../vista3d/viewcube'
@@ -377,13 +377,12 @@ export default function Robot3D({
     const camara = new THREE.PerspectiveCamera(40, cont.clientWidth / Math.max(1, cont.clientHeight), 5, 30000)
     const controles = new OrbitControls(camara, renderer.domElement)
     // El botón del medio (la rueda apretada) también gira la cámara, sin el autodesplazamiento del navegador.
-    controles.mouseButtons.MIDDLE = THREE.MOUSE.ROTATE
-    renderer.domElement.addEventListener('mousedown', (e) => e.button === 1 && e.preventDefault())
     controles.enableDamping = true
     controles.dampingFactor = 0.08
     controles.zoomToCursor = true
     controlesRef.current = controles
     aplicarModoArrastre(controles, modoArrastre)
+    const quitarCursores = cursoresCamara(controles, renderer.domElement)
 
     // Partes que se rehacen al cambiar el robot, la herramienta o la definición.
     let robot: ModeloArmado | null = null
@@ -762,6 +761,7 @@ export default function Robot3D({
       gizmoRef.current = null
       onCanvas?.(null)
       gizmo.dispose()
+      quitarCursores()
       controles.dispose()
       renderer.dispose()
       pmrem.dispose()

@@ -6,6 +6,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import { aplicarModoArrastre, cursoresCamara } from '../components/mandoCamara'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { calidadRender, entornoEstudio, fondoTaller, pisoHormigon, solSuave } from '../vista3d/realista'
 import { crearViewCube } from '../vista3d/viewcube'
@@ -440,8 +441,8 @@ export default function TiposRobot() {
     cam.position.set(1100, 900, 1300)
     const ctrl = new OrbitControls(cam, renderer.domElement)
     // El botón del medio (la rueda apretada) también gira la cámara, sin el autodesplazamiento del navegador.
-    ctrl.mouseButtons.MIDDLE = THREE.MOUSE.ROTATE
-    renderer.domElement.addEventListener('mousedown', (e) => e.button === 1 && e.preventDefault())
+    aplicarModoArrastre(ctrl, 'girar')
+    const quitarCursores = cursoresCamara(ctrl, renderer.domElement)
     ctrl.target.set(0, 280, 0)
     ctrl.enableDamping = true
     ctrl.update()
@@ -489,6 +490,7 @@ export default function TiposRobot() {
     return () => {
       vivo = false
       obs.disconnect()
+      quitarCursores()
       ctrl.dispose()
       cubo.dispose()
       renderer.dispose()

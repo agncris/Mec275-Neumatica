@@ -8,7 +8,7 @@
  * fresadora X va a la derecha, Y hacia el fondo y Z hacia arriba.
  */
 import HudEscena, { type PlayEscena } from '../components/HudEscena'
-import { aplicarModoArrastre, zoomCamara, type ModoArrastre } from '../components/mandoCamara'
+import { aplicarModoArrastre, cursoresCamara, zoomCamara, type ModoArrastre } from '../components/mandoCamara'
 import BotonPantallaCompleta, { usePantallaCompleta } from '../components/PantallaCompleta'
 import { useEffect, useRef, useState, type MutableRefObject } from 'react'
 import * as THREE from 'three'
@@ -759,13 +759,12 @@ export default function Maquina3D({
     const camara = new THREE.PerspectiveCamera(35, cont.clientWidth / Math.max(1, cont.clientHeight), 1, 6000)
     const controles = new OrbitControls(camara, renderer.domElement)
     // El botón del medio (la rueda apretada) también gira la cámara, sin el autodesplazamiento del navegador.
-    controles.mouseButtons.MIDDLE = THREE.MOUSE.ROTATE
-    renderer.domElement.addEventListener('mousedown', (e) => e.button === 1 && e.preventDefault())
     controles.enableDamping = true
     controles.dampingFactor = 0.08
     controles.zoomToCursor = true
     controlesRef.current = controles
     aplicarModoArrastre(controles, modoArrastre)
+    const quitarCursores = cursoresCamara(controles, renderer.domElement)
 
     let actual: { sim: SimuladorCNC; esc: EscenaMaquina; maquina: string } | null = null
     const encuadrar = (v: Vista) => {
@@ -847,6 +846,7 @@ export default function Maquina3D({
       sonido.cerrar()
       controlesRef.current = null
       onCanvas?.(null)
+      quitarCursores()
       controles.dispose()
       cubo.dispose()
       renderer.dispose()

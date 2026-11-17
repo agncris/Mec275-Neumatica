@@ -14,7 +14,7 @@
  * pisarlos.
  */
 import HudEscena, { type PlayEscena } from '../components/HudEscena'
-import { aplicarModoArrastre, saltarVista, zoomCamara, type ModoArrastre, type VistaCamara } from '../components/mandoCamara'
+import { aplicarModoArrastre, cursoresCamara, saltarVista, zoomCamara, type ModoArrastre, type VistaCamara } from '../components/mandoCamara'
 import { acercar, useTactil } from '../components/ui'
 import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
@@ -561,8 +561,6 @@ export default function Banco3D({ motor, llenar = false, play }: Props) {
     const camara = new THREE.PerspectiveCamera(32, cont.clientWidth / Math.max(1, cont.clientHeight), 0.01, 20)
     const controles = new OrbitControls(camara, renderer.domElement)
     // El botón del medio (la rueda apretada) también gira la cámara, sin el autodesplazamiento del navegador.
-    controles.mouseButtons.MIDDLE = THREE.MOUSE.ROTATE
-    renderer.domElement.addEventListener('mousedown', (e) => e.button === 1 && e.preventDefault())
     controles.enableDamping = true
     controles.dampingFactor = 0.08
     controles.minDistance = 0.15
@@ -571,6 +569,7 @@ export default function Banco3D({ motor, llenar = false, play }: Props) {
     controles.zoomToCursor = true
     controlesRef.current = controles
     aplicarModoArrastre(controles, modoArrastre)
+    const quitarCursores = cursoresCamara(controles, renderer.domElement)
     const encuadrar = () => {
       const aspecto = cont.clientWidth / Math.max(1, cont.clientHeight)
       const vfov = THREE.MathUtils.degToRad(camara.fov)
@@ -729,6 +728,7 @@ export default function Banco3D({ motor, llenar = false, play }: Props) {
       renderer.domElement.removeEventListener('pointerdown', onDown)
       window.removeEventListener('pointerup', onUp)
       controlesRef.current = null
+      quitarCursores()
       controles.dispose()
       cubo.dispose()
       escena.traverse((o) => {
