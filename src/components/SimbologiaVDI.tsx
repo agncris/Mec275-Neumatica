@@ -75,12 +75,12 @@ export default function SimbologiaVDI() {
             setElegida(null)
             setRonda((r) => r + 1)
           }}
-          style={{ ...boton, background: practicando ? '#33475c' : '#0e7a43' }}
+          style={{ ...boton, background: practicando ? 'var(--tinta)' : 'var(--verde)' }}
         >
           {practicando ? 'Ver la tabla completa' : '▶ Practicar para el control'}
         </button>
         {practicando && intentos > 0 && (
-          <span style={{ fontSize: '0.86rem', color: '#33475c' }}>
+          <span style={{ fontSize: '0.86rem', color: 'var(--tinta)' }}>
             Aciertos: <strong>{aciertos}</strong> de {intentos}
           </span>
         )}
@@ -95,7 +95,7 @@ export default function SimbologiaVDI() {
               height: 130,
               margin: '0 auto 12px',
               padding: 10,
-              border: '1px solid #dbe1e8',
+              border: '1px solid var(--borde-tenue)',
               borderRadius: 10,
               background: '#fff',
             }}
@@ -133,7 +133,7 @@ export default function SimbologiaVDI() {
                     border: `1.5px solid ${borde}`,
                     background: fondo,
                     fontSize: '0.88rem',
-                    color: '#33475c',
+                    color: 'var(--tinta)',
                     cursor: respondida ? 'default' : 'pointer',
                   }}
                 >
@@ -149,7 +149,7 @@ export default function SimbologiaVDI() {
                 setElegida(null)
                 setRonda((r) => r + 1)
               }}
-              style={{ ...boton, background: '#1668c7', marginTop: 10 }}
+              style={{ ...boton, background: 'var(--azul)', marginTop: 10 }}
             >
               Siguiente símbolo ▶
             </button>
@@ -173,7 +173,7 @@ export default function SimbologiaVDI() {
                   <div
                     key={f.n}
                     style={{
-                      border: '1px solid #dbe1e8',
+                      border: '1px solid var(--borde-tenue)',
                       borderRadius: 8,
                       padding: '8px 6px',
                       background: '#fff',
@@ -183,8 +183,8 @@ export default function SimbologiaVDI() {
                     <div style={{ width: 62, height: 62, margin: '0 auto' }}>
                       <SimboloVDI n={f.n} />
                     </div>
-                    <div style={{ fontSize: '0.66rem', color: '#5f6b78', marginTop: 4 }}>{f.n}</div>
-                    <div style={{ fontSize: '0.74rem', color: '#33475c', lineHeight: 1.35 }}>
+                    <div style={{ fontSize: '0.66rem', color: 'var(--tinta-gris)', marginTop: 4 }}>{f.n}</div>
+                    <div style={{ fontSize: '0.74rem', color: 'var(--tinta)', lineHeight: 1.35 }}>
                       {f.nombre}
                     </div>
                   </div>

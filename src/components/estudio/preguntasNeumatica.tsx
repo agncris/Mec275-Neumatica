@@ -170,7 +170,7 @@ const vdi: Generador = (azar) => {
         style={{
           width: 90,
           height: 90,
-          border: '1px solid #e0e5eb',
+          border: '1px solid var(--borde-suave)',
           borderRadius: 8,
           background: '#fff',
           padding: 4,

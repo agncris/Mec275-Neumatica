@@ -233,12 +233,12 @@ export default function SimbologiaISO() {
             setElegida(null)
             setRonda((r) => r + 1)
           }}
-          style={{ ...boton, background: practicando ? '#33475c' : '#0e7a43' }}
+          style={{ ...boton, background: practicando ? 'var(--tinta)' : 'var(--verde)' }}
         >
           {practicando ? 'Ver la tabla completa' : '▶ Practicar para el control'}
         </button>
         {practicando && intentos > 0 && (
-          <span style={{ fontSize: '0.86rem', color: '#33475c' }}>
+          <span style={{ fontSize: '0.86rem', color: 'var(--tinta)' }}>
             Aciertos: <strong>{aciertos}</strong> de {intentos}
           </span>
         )}
@@ -253,7 +253,7 @@ export default function SimbologiaISO() {
               height: 140,
               margin: '0 auto 12px',
               padding: 10,
-              border: '1px solid #dbe1e8',
+              border: '1px solid var(--borde-tenue)',
               borderRadius: 10,
               background: '#fff',
             }}
@@ -291,7 +291,7 @@ export default function SimbologiaISO() {
                     border: `1.5px solid ${borde}`,
                     background: fondo,
                     fontSize: '0.88rem',
-                    color: '#33475c',
+                    color: 'var(--tinta)',
                     cursor: respondida ? 'default' : 'pointer',
                   }}
                 >
@@ -307,7 +307,7 @@ export default function SimbologiaISO() {
                 setElegida(null)
                 setRonda((r) => r + 1)
               }}
-              style={{ ...boton, background: '#1668c7', marginTop: 10 }}
+              style={{ ...boton, background: 'var(--azul)', marginTop: 10 }}
             >
               Siguiente símbolo ▶
             </button>
@@ -331,7 +331,7 @@ export default function SimbologiaISO() {
                   <div
                     key={f.n}
                     style={{
-                      border: '1px solid #dbe1e8',
+                      border: '1px solid var(--borde-tenue)',
                       borderRadius: 8,
                       padding: '8px 6px',
                       background: '#fff',
@@ -341,7 +341,7 @@ export default function SimbologiaISO() {
                     <div style={{ width: '100%', height: 74, margin: '0 auto' }}>
                       <SimboloISO item={f} />
                     </div>
-                    <div style={{ fontSize: '0.74rem', color: '#33475c', lineHeight: 1.35, marginTop: 4 }}>
+                    <div style={{ fontSize: '0.74rem', color: 'var(--tinta)', lineHeight: 1.35, marginTop: 4 }}>
                       {f.nombre}
                     </div>
                   </div>

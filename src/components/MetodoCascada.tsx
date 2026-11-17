@@ -46,7 +46,7 @@ export default function MetodoCascada({ alCargar }: { alCargar?: () => void } = 
     <>
 
       {/* 1 — La idea en una frase ------------------------------------------- */}
-      <p style={{ ...parrafo, fontSize: '1rem', borderLeft: '3px solid #12a35a', paddingLeft: 12, marginTop: 14 }}>
+      <p style={{ ...parrafo, fontSize: '1rem', borderLeft: '3px solid var(--verde-vivo)', paddingLeft: 12, marginTop: 14 }}>
         Un final de carrera no da un pulso: <strong>manda sin parar</strong> mientras esté pisado. Si
         esa orden estorba, la solución es quitarle el aire:{' '}
         <strong>sin aire no manda, aunque siga pisado</strong>.
@@ -67,10 +67,10 @@ export default function MetodoCascada({ alCargar }: { alCargar?: () => void } = 
         <strong>▶ Simular</strong> y mantén la válvula <strong>M</strong>.
       </p>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <button onClick={() => cargar(CIRCUITO_BLOQUEADO, 'Método cascada · circuito bloqueado')} style={{ ...boton, background: '#b3261e' }}>
+        <button onClick={() => cargar(CIRCUITO_BLOQUEADO, 'Método cascada · circuito bloqueado')} style={{ ...boton, background: 'var(--rojo-error)' }}>
           Cargar el montaje que se bloquea
         </button>
-        <button onClick={() => cargar(CIRCUITO_CASCADA, 'Método cascada · con grupos')} style={{ ...boton, background: '#0e7a43' }}>
+        <button onClick={() => cargar(CIRCUITO_CASCADA, 'Método cascada · con grupos')} style={{ ...boton, background: 'var(--verde)' }}>
           Cargar el circuito en cascada
         </button>
       </div>
@@ -86,7 +86,7 @@ export default function MetodoCascada({ alCargar }: { alCargar?: () => void } = 
         actuador se repita. Escribe la tuya y compruébalo:
       </p>
       <label style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', margin: '0 0 10px' }}>
-        <span style={{ fontSize: '0.88rem', color: '#33475c' }}>Secuencia:</span>
+        <span style={{ fontSize: '0.88rem', color: 'var(--tinta)' }}>Secuencia:</span>
         <input
           value={secuencia}
           onChange={(e) => setSecuencia(e.target.value)}
@@ -96,18 +96,18 @@ export default function MetodoCascada({ alCargar }: { alCargar?: () => void } = 
             padding: '0.4rem 0.6rem',
             fontSize: '1rem',
             fontFamily: 'ui-monospace, Menlo, monospace',
-            border: '1px solid #c6ced6',
+            border: '1px solid var(--borde)',
             borderRadius: 6,
             minWidth: 220,
           }}
         />
-        <span style={{ fontSize: '0.8rem', color: '#5a6b7d' }}>
+        <span style={{ fontSize: '0.8rem', color: 'var(--tinta-tenue)' }}>
           Prueba también <code style={codigo}>A+ A- B+ B-</code>
         </span>
       </label>
 
       {analisis.error && (
-        <p style={{ ...parrafo, color: '#b3261e' }}>⚠ {analisis.error}</p>
+        <p style={{ ...parrafo, color: 'var(--rojo-error)' }}>⚠ {analisis.error}</p>
       )}
 
       {analisis.grupos.length > 0 && (
@@ -165,7 +165,7 @@ export default function MetodoCascada({ alCargar }: { alCargar?: () => void } = 
       <div style={{ overflowX: 'auto' }}>
         <table style={tabla}>
           <tbody>
-            <tr style={{ background: '#f3f5f7' }}>
+            <tr style={{ background: 'var(--fondo-claro)' }}>
               <td style={{ ...celda, width: 260, fontWeight: 600 }}>
                 El <strong>primer</strong> movimiento de cada grupo
               </td>
@@ -177,7 +177,7 @@ export default function MetodoCascada({ alCargar }: { alCargar?: () => void } = 
                 los manda el final de carrera del movimiento anterior, alimentado desde esa misma línea
               </td>
             </tr>
-            <tr style={{ background: '#f3f5f7' }}>
+            <tr style={{ background: 'var(--fondo-claro)' }}>
               <td style={{ ...celda, fontWeight: 600 }}>
                 El <strong>último</strong> final de carrera de un grupo
               </td>
@@ -197,7 +197,7 @@ export default function MetodoCascada({ alCargar }: { alCargar?: () => void } = 
         <table style={tabla}>
           <tbody>
             {PASOS_EJEMPLO.map(([t, texto], i) => (
-              <tr key={i} style={{ background: i % 2 ? '#f3f5f7' : '#fff' }}>
+              <tr key={i} style={{ background: i % 2 ? 'var(--fondo-claro)' : '#fff' }}>
                 <td style={{ ...celda, width: 90, fontFamily: 'ui-monospace, Menlo, monospace', whiteSpace: 'nowrap' }}>
                   {t}
                 </td>

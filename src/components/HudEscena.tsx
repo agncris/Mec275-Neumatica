@@ -100,8 +100,8 @@ export default function HudEscena({
               style={{
                 ...chip,
                 flex: 1,
-                background: modo === id ? '#33475c' : 'rgba(255,255,255,0.95)',
-                color: modo === id ? '#fff' : '#33475c',
+                background: modo === id ? 'var(--tinta)' : 'rgba(255,255,255,0.95)',
+                color: modo === id ? '#fff' : 'var(--tinta)',
                 fontWeight: 600,
               }}
             >
@@ -117,7 +117,7 @@ export default function HudEscena({
             +
           </button>
         </div>
-        <p style={{ margin: 0, fontSize: '0.72rem', color: '#51606f', lineHeight: 1.3 }}>{AYUDA[modo]}</p>
+        <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--tinta-suave)', lineHeight: 1.3 }}>{AYUDA[modo]}</p>
       </div>
       {play && (
         <div style={{ position: 'absolute', left: '50%', bottom: 16, transform: 'translateX(-50%)', zIndex: 4 }}>
@@ -139,8 +139,8 @@ function VistaBoton({ id, actual, onVista }: { id: VistaCamara; actual?: VistaCa
       style={{
         ...chip,
         minWidth: 64,
-        background: activo ? '#33475c' : 'rgba(255,255,255,0.95)',
-        color: activo ? '#fff' : '#33475c',
+        background: activo ? 'var(--tinta)' : 'rgba(255,255,255,0.95)',
+        color: activo ? '#fff' : 'var(--tinta)',
         fontWeight: 600,
       }}
     >

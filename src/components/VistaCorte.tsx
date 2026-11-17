@@ -162,8 +162,8 @@ export default function VistaCorte({ motor }: { motor: Motor | null }) {
                 }}
                 style={{
                   border: `1px solid ${activa ? '#33475c' : '#c6ced6'}`,
-                  background: activa ? '#33475c' : '#fff',
-                  color: activa ? '#fff' : '#33475c',
+                  background: activa ? 'var(--tinta)' : '#fff',
+                  color: activa ? '#fff' : 'var(--tinta)',
                   borderRadius: 999,
                   padding: '0.22rem 0.7rem',
                   fontSize: '0.8rem',
@@ -179,14 +179,14 @@ export default function VistaCorte({ motor }: { motor: Motor | null }) {
       )}
 
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 8, flexWrap: 'wrap' }}>
-        <strong style={{ fontSize: '0.92rem', color: '#33475c' }}>
+        <strong style={{ fontSize: '0.92rem', color: 'var(--tinta)' }}>
           {pieza.id} — {DESCRIPTORES[tipo]?.nombre}
           {tipo === 'valvula32' ? (na ? ' NA' : ' NC') : ''}
           {esValvula(tipo) && tipo !== 'valvula32' ? (biestable ? ' biestable' : ' monoestable') : ''}
         </strong>
 
         {enVivo ? (
-          <span style={{ fontSize: '0.8rem', color: '#0e7a43', fontWeight: 600 }}>
+          <span style={{ fontSize: '0.8rem', color: 'var(--verde)', fontWeight: 600 }}>
             ● sincronizada con la simulación
           </span>
         ) : esValvula(tipo) ? (
@@ -196,14 +196,14 @@ export default function VistaCorte({ motor }: { motor: Motor | null }) {
               // Escuchador global: así se suelta aunque el puntero salga del botón
               window.addEventListener('pointerup', () => setAccionadaDemo(false), { once: true })
             }}
-            style={{ ...botonDemo, background: accionadaDemo ? '#0a5c33' : '#0e7a43' }}
+            style={{ ...botonDemo, background: accionadaDemo ? '#0a5c33' : 'var(--verde)' }}
           >
             Accionar (mantener)
           </button>
         ) : tipo === 'cilindroSimpleEfecto' ? (
           <button
             onClick={() => setAccionadaDemo((v) => !v)}
-            style={{ ...botonDemo, background: accionadaDemo ? '#1668c7' : '#8a97a5' }}
+            style={{ ...botonDemo, background: accionadaDemo ? 'var(--azul)' : 'var(--gris-claro)' }}
           >
             {accionadaDemo ? 'Con aire' : 'Sin aire'}
           </button>
@@ -211,13 +211,13 @@ export default function VistaCorte({ motor }: { motor: Motor | null }) {
           <span style={{ display: 'flex', gap: 6 }}>
             <button
               onClick={() => setAireDemo('A')}
-              style={{ ...botonDemo, background: aireDemo === 'A' ? '#1668c7' : '#8a97a5' }}
+              style={{ ...botonDemo, background: aireDemo === 'A' ? 'var(--azul)' : 'var(--gris-claro)' }}
             >
               Aire por A
             </button>
             <button
               onClick={() => setAireDemo('B')}
-              style={{ ...botonDemo, background: aireDemo === 'B' ? '#1668c7' : '#8a97a5' }}
+              style={{ ...botonDemo, background: aireDemo === 'B' ? 'var(--azul)' : 'var(--gris-claro)' }}
             >
               Aire por B
             </button>
@@ -235,8 +235,8 @@ export default function VistaCorte({ motor }: { motor: Motor | null }) {
         {tipo === 'cilindroDobleEfecto' && <CorteCilindroDoble posicion={posicion} presiones={presiones} />}
       </div>
 
-      <p style={{ margin: '8px 0 0', fontSize: '0.86rem', color: '#33475c', lineHeight: 1.5 }}>{leyenda}</p>
-      <p style={{ margin: '6px 0 0', fontSize: '0.78rem', color: '#5a6b7d' }}>
+      <p style={{ margin: '8px 0 0', fontSize: '0.86rem', color: 'var(--tinta)', lineHeight: 1.5 }}>{leyenda}</p>
+      <p style={{ margin: '6px 0 0', fontSize: '0.78rem', color: 'var(--tinta-tenue)' }}>
         <span style={{ color: '#1f7bd4', fontWeight: 700 }}>■</span> aire a presión ·{' '}
         <span style={{ color: '#8fc7ea', fontWeight: 700 }}>■</span> comunicado con la atmósfera
       </p>

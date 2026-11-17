@@ -26,9 +26,9 @@ export default function FichaRepaso({ titulo, children }: { titulo: string; chil
   }
   return (
     <div>
-      <p style={{ margin: '0 0 8px', color: '#33475c' }}>
+      <p style={{ margin: '0 0 8px', color: 'var(--tinta)' }}>
         Lo esencial en una página.{' '}
-        <button onClick={imprimir} style={{ border: '1px solid #1668c7', background: '#fff', color: '#1668c7', borderRadius: 8, padding: '0.3rem 0.8rem', fontWeight: 600, cursor: 'pointer', minHeight: 34 }} data-imprimir-ficha="si">
+        <button onClick={imprimir} style={{ border: '1px solid var(--azul)', background: '#fff', color: 'var(--azul)', borderRadius: 8, padding: '0.3rem 0.8rem', fontWeight: 600, cursor: 'pointer', minHeight: 34 }} data-imprimir-ficha="si">
           🖨 Imprimir o guardar como PDF
         </button>
       </p>

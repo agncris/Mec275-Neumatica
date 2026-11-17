@@ -157,7 +157,7 @@ export default function Autoevaluacion({ generadores, descripcion }: { generador
           .puntaje-salta { animation: none; }
         }
       `}</style>
-      <p style={{ margin: '0 0 8px', color: '#33475c', lineHeight: 1.55 }}>
+      <p style={{ margin: '0 0 8px', color: 'var(--tinta)', lineHeight: 1.55 }}>
         {descripcion ?? 'Preguntas de práctica generadas al azar: cada vez son distintas. Al responder ves la explicación.'}
       </p>
       <div
@@ -165,15 +165,15 @@ export default function Autoevaluacion({ generadores, descripcion }: { generador
         aria-atomic="true"
         style={{ margin: '0 0 12px', padding: '10px 12px', borderRadius: 10, background: '#f4f7fb', border: '1px solid #d5dee8', display: 'grid', gap: 4 }}
       >
-        <p data-conteo-preguntas="si" style={{ margin: 0, fontWeight: 700, color: '#1c2733', fontSize: '1rem' }}>
+        <p data-conteo-preguntas="si" style={{ margin: 0, fontWeight: 700, color: 'var(--texto)', fontSize: '1rem' }}>
           {textoConteo(posible)}
         </p>
-        <p data-puntaje="si" style={{ margin: 0, color: '#1c2733', fontSize: '0.95rem', lineHeight: 1.45 }}>
-          {'Puntaje: '}<span key={aciertos} className="puntaje-salta" style={{ fontWeight: 800, fontSize: '1.35rem', fontVariantNumeric: 'tabular-nums', color: '#1668c7' }}>{aciertos}</span>{`${respondidas > 0 ? ` de ${respondidas} ${respondidas === 1 ? 'respondida' : 'respondidas'}` : ''}. Total posible: ${posible}.${racha >= 2 ? ` Racha de ${racha}.` : ''}`}
+        <p data-puntaje="si" style={{ margin: 0, color: 'var(--texto)', fontSize: '0.95rem', lineHeight: 1.45 }}>
+          {'Puntaje: '}<span key={aciertos} className="puntaje-salta" style={{ fontWeight: 800, fontSize: '1.35rem', fontVariantNumeric: 'tabular-nums', color: 'var(--azul)' }}>{aciertos}</span>{`${respondidas > 0 ? ` de ${respondidas} ${respondidas === 1 ? 'respondida' : 'respondidas'}` : ''}. Total posible: ${posible}.${racha >= 2 ? ` Racha de ${racha}.` : ''}`}
         </p>
       </div>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 10 }}>
-        <span style={{ fontSize: '0.82rem', color: '#51606f' }}>Temas:</span>
+        <span style={{ fontSize: '0.82rem', color: 'var(--tinta-suave)' }}>Temas:</span>
         {generadores.map((g) => {
           const activo = temas.includes(g.tema)
           return (
@@ -182,7 +182,7 @@ export default function Autoevaluacion({ generadores, descripcion }: { generador
               type="button"
               aria-pressed={activo}
               onClick={() => alternarTema(g.tema)}
-              style={{ border: `1px solid ${activo ? '#33475c' : '#c6ced6'}`, background: activo ? '#33475c' : '#fff', color: activo ? '#fff' : '#33475c', borderRadius: 999, padding: '0.2rem 0.7rem', fontSize: '0.8rem', cursor: 'pointer', minHeight: 30 }}
+              style={{ border: `1px solid ${activo ? '#33475c' : '#c6ced6'}`, background: activo ? 'var(--tinta)' : '#fff', color: activo ? '#fff' : 'var(--tinta)', borderRadius: 999, padding: '0.2rem 0.7rem', fontSize: '0.8rem', cursor: 'pointer', minHeight: 30 }}
             >
               {g.tema}
             </button>
@@ -190,18 +190,18 @@ export default function Autoevaluacion({ generadores, descripcion }: { generador
         })}
       </div>
       {cerrada || !pregunta ? (
-        <div style={{ border: '1px solid #dbe1e8', borderRadius: 10, padding: '12px 14px', background: '#fbfcfd' }}>
-          <p style={{ margin: '0 0 10px', color: '#1c2733', lineHeight: 1.5 }}>Terminaste esta tanda. {textoPuntaje(aciertos, respondidas, posible)}</p>
+        <div style={{ border: '1px solid var(--borde-tenue)', borderRadius: 10, padding: '12px 14px', background: '#fbfcfd' }}>
+          <p style={{ margin: '0 0 10px', color: 'var(--texto)', lineHeight: 1.5 }}>Terminaste esta tanda. {textoPuntaje(aciertos, respondidas, posible)}</p>
           <button type="button" onClick={nuevaTanda} style={botonPrimario} data-otra-tanda="si">
             Otra tanda
           </button>
         </div>
       ) : (
-        <div style={{ border: '1px solid #dbe1e8', borderRadius: 10, padding: '12px 14px', background: '#fbfcfd' }}>
-          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#51606f', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+        <div style={{ border: '1px solid var(--borde-tenue)', borderRadius: 10, padding: '12px 14px', background: '#fbfcfd' }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--tinta-suave)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
             Pregunta {indice + 1} de {posible} · {pregunta.tema}
           </div>
-          <p style={{ margin: '4px 0 10px', fontWeight: 600, color: '#1c2733', lineHeight: 1.5 }} data-enunciado="si">
+          <p style={{ margin: '4px 0 10px', fontWeight: 600, color: 'var(--texto)', lineHeight: 1.5 }} data-enunciado="si">
             {pregunta.enunciado}
           </p>
           {pregunta.figura && <div style={{ marginBottom: 10, overflowX: 'auto' }}>{pregunta.figura}</div>}
@@ -219,7 +219,7 @@ export default function Autoevaluacion({ generadores, descripcion }: { generador
                   disabled={elegida !== null}
                   data-opcion={i}
                   data-correcta={elegida !== null && esCorrecta ? 'si' : undefined}
-                  style={{ textAlign: 'left', border: `1.5px solid ${borde}`, background: fondo, color: '#1c2733', borderRadius: 8, padding: '0.5rem 0.7rem', cursor: elegida === null ? 'pointer' : 'default', fontSize: '0.92rem', minHeight: 40, fontFamily: /^[A-Z]{1,3}[:\d]/.test(op) ? 'ui-monospace, Menlo, monospace' : 'inherit' }}
+                  style={{ textAlign: 'left', border: `1.5px solid ${borde}`, background: fondo, color: 'var(--texto)', borderRadius: 8, padding: '0.5rem 0.7rem', cursor: elegida === null ? 'pointer' : 'default', fontSize: '0.92rem', minHeight: 40, fontFamily: /^[A-Z]{1,3}[:\d]/.test(op) ? 'ui-monospace, Menlo, monospace' : 'inherit' }}
                 >
                   {elegida !== null && esCorrecta ? '✓ ' : elegida !== null && marcada ? '✗ ' : ''}
                   {op}
@@ -228,7 +228,7 @@ export default function Autoevaluacion({ generadores, descripcion }: { generador
             })}
           </div>
           {elegida !== null && (
-            <div role="status" style={{ marginTop: 10, padding: '0.55rem 0.7rem', borderRadius: 8, background: aciertoActual ? '#e7f7ef' : '#fff4e5', color: '#26323f', fontSize: '0.9rem', lineHeight: 1.5 }}>
+            <div role="status" style={{ marginTop: 10, padding: '0.55rem 0.7rem', borderRadius: 8, background: aciertoActual ? 'var(--fondo-verde)' : '#fff4e5', color: 'var(--tinta-oscura)', fontSize: '0.9rem', lineHeight: 1.5 }}>
               <strong>{aciertoActual ? 'Correcto. ' : 'No es esa. '}</strong>
               {mensajeAcierto ? `${mensajeAcierto} ` : ''}
               {pregunta.explicacion}

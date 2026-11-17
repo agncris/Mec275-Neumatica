@@ -58,17 +58,17 @@ export default function AyudaAtajos({ onCerrar, tactil, onGuia }: { onCerrar: ()
         <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '0.9rem' }}>
           <tbody>
             {filas.map(([k, v]) => (
-              <tr key={k} style={{ borderTop: '1px solid #eef1f4' }}>
+              <tr key={k} style={{ borderTop: '1px solid var(--fondo-gris)' }}>
                 <td style={{ padding: '7px 10px 7px 0', whiteSpace: 'nowrap', verticalAlign: 'top' }}>
-                  <kbd style={{ background: '#f1f4f7', border: '1px solid #c6ced6', borderRadius: 5, padding: '1px 6px', fontFamily: 'inherit', fontSize: '0.84rem' }}>{k}</kbd>
+                  <kbd style={{ background: '#f1f4f7', border: '1px solid var(--borde)', borderRadius: 5, padding: '1px 6px', fontFamily: 'inherit', fontSize: '0.84rem' }}>{k}</kbd>
                 </td>
-                <td style={{ padding: '7px 0', color: '#33475c' }}>{v}</td>
+                <td style={{ padding: '7px 0', color: 'var(--tinta)' }}>{v}</td>
               </tr>
             ))}
           </tbody>
         </table>
         {onGuia && (
-          <button onClick={onGuia} style={{ marginTop: 12, border: '1px solid #1668c7', background: '#fff', color: '#1668c7', borderRadius: 8, padding: '0.35rem 0.8rem', fontWeight: 600, cursor: 'pointer', minHeight: 36 }} data-abrir-guia="si">
+          <button onClick={onGuia} style={{ marginTop: 12, border: '1px solid var(--azul)', background: '#fff', color: 'var(--azul)', borderRadius: 8, padding: '0.35rem 0.8rem', fontWeight: 600, cursor: 'pointer', minHeight: 36 }} data-abrir-guia="si">
             Ver la guía de inicio
           </button>
         )}

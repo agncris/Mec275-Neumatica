@@ -34,23 +34,23 @@ export default function GuiaInicio({ unidad, pasos, onCerrar }: { unidad: string
   return (
     <div role="dialog" aria-labelledby="titulo-guia" aria-describedby="texto-guia" className="guia-inicio" data-guia-inicio={unidad}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#51606f', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--tinta-suave)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
           Para partir · {unidad} · {i + 1} de {pasos.length}
         </span>
         <button onClick={onCerrar} className="boton-icono" style={{ marginLeft: 'auto' }} aria-label="Cerrar la guía">
           ✕
         </button>
       </div>
-      <h2 id="titulo-guia" style={{ margin: '2px 0 4px', fontSize: '1rem', color: '#1c2733' }}>
+      <h2 id="titulo-guia" style={{ margin: '2px 0 4px', fontSize: '1rem', color: 'var(--texto)' }}>
         {paso.titulo}
       </h2>
-      <p id="texto-guia" style={{ margin: 0, fontSize: '0.9rem', lineHeight: 1.5, color: '#26323f' }}>
+      <p id="texto-guia" style={{ margin: 0, fontSize: '0.9rem', lineHeight: 1.5, color: 'var(--tinta-oscura)' }}>
         {paso.texto}
       </p>
       <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 10 }}>
         <div aria-hidden style={{ display: 'flex', gap: 4 }}>
           {pasos.map((_, k) => (
-            <span key={k} style={{ width: 7, height: 7, borderRadius: 99, background: k === i ? '#1668c7' : '#c6ced6' }} />
+            <span key={k} style={{ width: 7, height: 7, borderRadius: 99, background: k === i ? 'var(--azul)' : 'var(--borde)' }} />
           ))}
         </div>
         {i > 0 && (
@@ -58,12 +58,12 @@ export default function GuiaInicio({ unidad, pasos, onCerrar }: { unidad: string
             ← Atrás
           </button>
         )}
-        <button onClick={() => (ultimo ? onCerrar() : setI(i + 1))} style={{ ...boton, marginLeft: i > 0 ? 0 : 'auto', background: '#1668c7', color: '#fff', borderColor: '#1668c7' }} data-guia-siguiente="si">
+        <button onClick={() => (ultimo ? onCerrar() : setI(i + 1))} style={{ ...boton, marginLeft: i > 0 ? 0 : 'auto', background: 'var(--azul)', color: '#fff', borderColor: 'var(--azul)' }} data-guia-siguiente="si">
           {ultimo ? 'Listo' : 'Siguiente →'}
         </button>
       </div>
       {!ultimo && (
-        <button onClick={onCerrar} style={{ border: 'none', background: 'transparent', color: '#51606f', fontSize: '0.8rem', marginTop: 6, padding: 0, cursor: 'pointer', textDecoration: 'underline' }}>
+        <button onClick={onCerrar} style={{ border: 'none', background: 'transparent', color: 'var(--tinta-suave)', fontSize: '0.8rem', marginTop: 6, padding: 0, cursor: 'pointer', textDecoration: 'underline' }}>
           Saltar la guía (la vuelves a ver con «?»)
         </button>
       )}

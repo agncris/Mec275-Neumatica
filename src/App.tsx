@@ -395,7 +395,7 @@ export default function App() {
       onClick={() => setModo(simulando ? 'editar' : 'simular')}
       disabled={bancoVacio}
       title={bancoVacio ? 'Coloca al menos una ficha en el banco para poder simular' : 'Atajo: barra espaciadora'}
-      style={{ ...botonPrimario(simulando), ...(bancoVacio ? { background: '#dfe4ea', color: '#51606f' } : {}), minHeight: 36, padding: estrecha ? '0.4rem 0.7rem' : '0.4rem 1rem' }}
+      style={{ ...botonPrimario(simulando), ...(bancoVacio ? { background: '#dfe4ea', color: 'var(--tinta-suave)' } : {}), minHeight: 36, padding: estrecha ? '0.4rem 0.7rem' : '0.4rem 1rem' }}
       data-simular="si"
     >
       {simulando ? '■ Detener' : '▶ Simular'}
@@ -510,7 +510,7 @@ export default function App() {
     <div className="banco__lienzo" data-vista={vista}>
       {vista === 'banco3d' ? (
         <>
-          <Suspense fallback={<p style={{ padding: 20, color: '#51606f' }}>Montando el banco…</p>}>
+          <Suspense fallback={<p style={{ padding: 20, color: 'var(--tinta-suave)' }}>Montando el banco…</p>}>
             <Banco3D motor={motor} llenar play={playEscena} />
           </Suspense>
           {/* La pizarra sigue montada, oculta, para poder exportar el circuito. */}
@@ -690,7 +690,7 @@ export default function App() {
                     «
                   </button>
                   {avisosCircuito.length > 0 && (
-                    <span title={`${avisosCircuito.length} avisos del circuito`} style={{ marginTop: 6, color: '#7a4f00', fontSize: '0.8rem', fontWeight: 700 }}>
+                    <span title={`${avisosCircuito.length} avisos del circuito`} style={{ marginTop: 6, color: 'var(--naranjo-texto)', fontSize: '0.8rem', fontWeight: 700 }}>
                       ⚠{avisosCircuito.length}
                     </span>
                   )}
@@ -706,7 +706,7 @@ export default function App() {
             {textoEstado}
           </span>
           {!estrecha && (
-            <span style={{ color: '#51606f', whiteSpace: 'nowrap' }}>
+            <span style={{ color: 'var(--tinta-suave)', whiteSpace: 'nowrap' }}>
               {piezas.length} fichas · {mangueras.length} mangueras
             </span>
           )}
@@ -716,7 +716,7 @@ export default function App() {
                 setInspectorAbierto(true)
                 setPestanaInspector('propiedades')
               }}
-              style={{ border: 'none', background: 'transparent', color: '#7a4f00', fontWeight: 700, cursor: 'pointer', fontSize: '0.82rem' }}
+              style={{ border: 'none', background: 'transparent', color: 'var(--naranjo-texto)', fontWeight: 700, cursor: 'pointer', fontSize: '0.82rem' }}
             >
               ⚠ {avisosCircuito.length} {avisosCircuito.length === 1 ? 'aviso' : 'avisos'}
             </button>
@@ -733,7 +733,7 @@ export default function App() {
                 }
                 setSeccion('estudiar')
               }}
-              style={{ border: 'none', background: 'transparent', color: '#1668c7', fontWeight: 600, cursor: 'pointer', fontSize: '0.82rem' }}
+              style={{ border: 'none', background: 'transparent', color: 'var(--azul)', fontWeight: 600, cursor: 'pointer', fontSize: '0.82rem' }}
             >
               → Estudiar
             </button>
@@ -801,7 +801,7 @@ export default function App() {
 
         </>
       ) : (
-        <Suspense fallback={<p style={{ padding: 24, color: '#51606f', textAlign: 'center' }}>Abriendo Estudiar…</p>}>
+        <Suspense fallback={<p style={{ padding: 24, color: 'var(--tinta-suave)', textAlign: 'center' }}>Abriendo Estudiar…</p>}>
           <PaginaNeumaticaEstudiar alCargarCircuito={() => setSeccion('laboratorio')} />
         </Suspense>
       )}

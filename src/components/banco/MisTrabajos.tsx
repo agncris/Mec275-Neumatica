@@ -92,12 +92,12 @@ export default function MisTrabajos({ unidad, nombreActual, actual, abrir, onCer
 
         <div style={{ display: 'flex', gap: 6, margin: '10px 0' }}>
           <input value={nombre} onChange={(e) => setNombre(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && guardar()} aria-label="Nombre del trabajo" placeholder="Ej.: Tarea 2" style={entrada} data-nombre-trabajo="si" />
-          <button onClick={guardar} style={{ ...boton, background: '#0e7a43', color: '#fff', borderColor: '#0e7a43' }} data-guardar-trabajo="si">
+          <button onClick={guardar} style={{ ...boton, background: 'var(--verde)', color: '#fff', borderColor: 'var(--verde)' }} data-guardar-trabajo="si">
             Guardar el trabajo abierto
           </button>
         </div>
         {mensaje && (
-          <p role="status" style={{ ...pie, color: mensaje.startsWith('⚠') ? '#8a3b00' : '#0a6b3c' }}>
+          <p role="status" style={{ ...pie, color: mensaje.startsWith('⚠') ? '#8a3b00' : 'var(--verde-oscuro)' }}>
             {mensaje}
           </p>
         )}
@@ -107,7 +107,7 @@ export default function MisTrabajos({ unidad, nombreActual, actual, abrir, onCer
         ) : (
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 6 }} data-lista-trabajos="si">
             {lista.map((t) => (
-              <li key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', border: '1px solid #e0e5eb', borderRadius: 8 }}>
+              <li key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', border: '1px solid var(--borde-suave)', borderRadius: 8 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   {renombrando === t.id ? (
                     <input
@@ -125,7 +125,7 @@ export default function MisTrabajos({ unidad, nombreActual, actual, abrir, onCer
                   ) : (
                     <div style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.nombre}</div>
                   )}
-                  <div style={{ fontSize: '0.78rem', color: '#51606f' }}>Guardado el {fecha(t.fecha)}</div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--tinta-suave)' }}>Guardado el {fecha(t.fecha)}</div>
                 </div>
                 <button
                   onClick={() => {
@@ -134,7 +134,7 @@ export default function MisTrabajos({ unidad, nombreActual, actual, abrir, onCer
                     if (error) return setMensaje(`⚠ ${error}`)
                     onCerrar()
                   }}
-                  style={{ ...boton, color: '#1668c7', borderColor: '#1668c7' }}
+                  style={{ ...boton, color: 'var(--azul)', borderColor: 'var(--azul)' }}
                   data-abrir-trabajo={t.nombre}
                 >
                   Abrir
@@ -149,7 +149,7 @@ export default function MisTrabajos({ unidad, nombreActual, actual, abrir, onCer
                     refrescar()
                   }}
                   className="boton-icono"
-                  style={{ color: '#b3261e' }}
+                  style={{ color: 'var(--rojo-error)' }}
                   aria-label={`Borrar ${t.nombre}`}
                   title="Borrar"
                 >

@@ -86,7 +86,7 @@ export default function DiagramaEspacioFase({ motor, idSvg = 'diagrama-fase-svg'
 
   if (cilindros.length === 0 || (detenida && registro.historia.length < 2)) {
     return (
-      <p style={{ color: '#5a6b7d', margin: 0, fontSize: '0.9rem' }}>
+      <p style={{ color: 'var(--tinta-tenue)', margin: 0, fontSize: '0.9rem' }}>
         Pulsa <strong>▶ Simular</strong> con al menos un cilindro en la pizarra para ver aquí su
         diagrama de recorrido-tiempo.
       </p>
@@ -102,8 +102,8 @@ export default function DiagramaEspacioFase({ motor, idSvg = 'diagrama-fase-svg'
 
   const selector = (
     <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', position: 'sticky', top: -6, left: 0, zIndex: 1, background: '#fff', padding: '4px 0' }}>
-      {detenida && <span style={{ fontSize: '0.8rem', color: '#7a4f00', marginRight: 6 }}>Simulación detenida: es el diagrama de la última.</span>}
-      <span style={{ fontSize: '0.8rem', color: '#51606f' }}>Eje horizontal:</span>
+      {detenida && <span style={{ fontSize: '0.8rem', color: 'var(--naranjo-texto)', marginRight: 6 }}>Simulación detenida: es el diagrama de la última.</span>}
+      <span style={{ fontSize: '0.8rem', color: 'var(--tinta-suave)' }}>Eje horizontal:</span>
       {(
         [
           ['pasos', 'Pasos (desplazamiento-paso)'],
@@ -114,13 +114,13 @@ export default function DiagramaEspacioFase({ motor, idSvg = 'diagrama-fase-svg'
           key={m}
           onClick={() => setModoEje(m)}
           style={{
-            border: '1px solid #c6ced6',
+            border: '1px solid var(--borde)',
             borderRadius: 6,
             padding: '0.15rem 0.55rem',
             fontSize: '0.78rem',
             cursor: 'pointer',
-            background: modoEje === m ? '#33475c' : '#fff',
-            color: modoEje === m ? '#fff' : '#33475c',
+            background: modoEje === m ? 'var(--tinta)' : '#fff',
+            color: modoEje === m ? '#fff' : 'var(--tinta)',
           }}
         >
           {etiqueta}
@@ -141,7 +141,7 @@ export default function DiagramaEspacioFase({ motor, idSvg = 'diagrama-fase-svg'
       <div>
         {selector}
         {pasos.length === 0 ? (
-          <p style={{ color: '#5a6b7d', margin: 0, fontSize: '0.88rem' }}>
+          <p style={{ color: 'var(--tinta-tenue)', margin: 0, fontSize: '0.88rem' }}>
             Acciona el circuito: cada vez que un actuador complete una carrera aparecerá un paso.
           </p>
         ) : (

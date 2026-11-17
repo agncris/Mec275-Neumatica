@@ -81,16 +81,16 @@ export default function PaginaEstudiar({ titulo, descripcion, secciones, pie, et
       </nav>
       <div>
         <h1 style={{ margin: '0 0 4px', fontSize: '1.4rem' }}>{titulo}</h1>
-        <p style={{ margin: '0 0 12px', color: '#51606f' }}>{descripcion}</p>
+        <p style={{ margin: '0 0 12px', color: 'var(--tinta-suave)' }}>{descripcion}</p>
         {secciones.map((s) => (
           <section key={s.id} id={s.id} style={tarjeta} aria-labelledby={`t-${s.id}`}>
-            <h2 id={`t-${s.id}`} style={{ margin: '0 0 10px', fontSize: '1.1rem', color: '#1c2733' }}>
+            <h2 id={`t-${s.id}`} style={{ margin: '0 0 10px', fontSize: '1.1rem', color: 'var(--texto)' }}>
               {s.titulo}
             </h2>
             {s.contenido}
           </section>
         ))}
-        <footer style={{ margin: '1.5rem 0 0.5rem', color: '#5f6b78', fontSize: '0.8rem', textAlign: 'center' }}>{pie}</footer>
+        <footer style={{ margin: '1.5rem 0 0.5rem', color: 'var(--tinta-gris)', fontSize: '0.8rem', textAlign: 'center' }}>{pie}</footer>
       </div>
     </main>
   )

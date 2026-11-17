@@ -77,10 +77,10 @@ export default function CajonEntregar({ unidad, clave, trabajoSugerido, onCerrar
     return (
       <li key={a.id} style={estiloFila} data-entrega={a.id}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 600, color: '#1c2733' }}>{a.titulo}</div>
-          {(a.deshabilitado ? a.porque : a.detalle) && <div style={{ fontSize: '0.8rem', color: '#51606f', marginTop: 1 }}>{a.deshabilitado ? a.porque : a.detalle}</div>}
+          <div style={{ fontWeight: 600, color: 'var(--texto)' }}>{a.titulo}</div>
+          {(a.deshabilitado ? a.porque : a.detalle) && <div style={{ fontSize: '0.8rem', color: 'var(--tinta-suave)', marginTop: 1 }}>{a.deshabilitado ? a.porque : a.detalle}</div>}
           {mensajes[a.id] && (
-            <div role="status" style={{ fontSize: '0.8rem', color: mensajes[a.id].startsWith('⚠') ? '#8a3b00' : '#0a6b3c', marginTop: 2 }}>
+            <div role="status" style={{ fontSize: '0.8rem', color: mensajes[a.id].startsWith('⚠') ? '#8a3b00' : 'var(--verde-oscuro)', marginTop: 2 }}>
               {mensajes[a.id]}
             </div>
           )}
@@ -94,7 +94,7 @@ export default function CajonEntregar({ unidad, clave, trabajoSugerido, onCerrar
 
   return (
     <aside className="cajon" aria-label={`Entregar · ${unidad}`} data-cajon-entregar="si">
-      <div style={{ display: 'flex', alignItems: 'center', padding: '10px 14px 6px', borderBottom: '1px solid #e0e5eb' }}>
+      <div style={{ display: 'flex', alignItems: 'center', padding: '10px 14px 6px', borderBottom: '1px solid var(--borde-suave)' }}>
         <strong style={{ fontSize: '1.02rem' }}>Entregar tu tarea · {unidad}</strong>
         <button onClick={onCerrar} className="boton-icono" style={{ marginLeft: 'auto' }} aria-label="Cerrar">
           ✕
@@ -111,7 +111,7 @@ export default function CajonEntregar({ unidad, clave, trabajoSugerido, onCerrar
         <div style={{ display: 'grid', gap: 8 }}>
           <label style={campo}>
             <span>
-              Nombre y apellido <span aria-hidden style={{ color: '#b3261e', fontWeight: 700 }}>*</span>
+              Nombre y apellido <span aria-hidden style={{ color: 'var(--rojo-error)', fontWeight: 700 }}>*</span>
             </span>
             <input value={alumno.nombre} onChange={(e) => setAlumno({ ...alumno, nombre: e.target.value })} placeholder="Ej.: Nombre Apellido" aria-required="true" style={entrada} data-alumno-nombre="si" />
           </label>
@@ -133,14 +133,14 @@ export default function CajonEntregar({ unidad, clave, trabajoSugerido, onCerrar
           <>
             <h3 style={titulo}>2 · Revisa tu trabajo</h3>
             <p style={pie}>La revisión no te pone nota ni te da la respuesta: sólo te avisa de lo que conviene arreglar antes de entregar.</p>
-            <button onClick={() => setRevision(revisar())} style={{ ...botonAccion, background: '#0e7a43', color: '#fff', borderColor: '#0e7a43' }} data-revisar="si">
+            <button onClick={() => setRevision(revisar())} style={{ ...botonAccion, background: 'var(--verde)', color: '#fff', borderColor: 'var(--verde)' }} data-revisar="si">
               Revisar
             </button>
             {revision && (
               <ul style={{ listStyle: 'none', padding: 0, margin: '8px 0 0', display: 'grid', gap: 5 }} data-revision="si">
                 {revision.map((r, i) => (
-                  <li key={i} style={{ display: 'flex', gap: 8, padding: '0.4rem 0.6rem', borderRadius: 7, border: `1px solid ${r.ok ? '#a9dcc4' : '#f0c36d'}`, background: r.ok ? '#f2fbf6' : '#fdf6e3', fontSize: '0.85rem', color: '#33475c', lineHeight: 1.45 }}>
-                    <span style={{ fontWeight: 700, color: r.ok ? '#0a6b3c' : '#8a5b00' }}>{r.ok ? '✓' : '⚠'}</span>
+                  <li key={i} style={{ display: 'flex', gap: 8, padding: '0.4rem 0.6rem', borderRadius: 7, border: `1px solid ${r.ok ? '#a9dcc4' : '#f0c36d'}`, background: r.ok ? '#f2fbf6' : '#fdf6e3', fontSize: '0.85rem', color: 'var(--tinta)', lineHeight: 1.45 }}>
+                    <span style={{ fontWeight: 700, color: r.ok ? 'var(--verde-oscuro)' : 'var(--naranjo-aviso)' }}>{r.ok ? '✓' : '⚠'}</span>
                     <span>{r.texto}</span>
                   </li>
                 ))}
@@ -157,7 +157,7 @@ export default function CajonEntregar({ unidad, clave, trabajoSugerido, onCerrar
         )}
 
         <h3 style={titulo}>{revisar ? '3' : '2'} · Para pegar en tu presentación</h3>
-        {sinNombre && <p style={{ ...pie, color: '#7a4f00' }}>Escribe tu nombre en el paso 1 para descargar.</p>}
+        {sinNombre && <p style={{ ...pie, color: 'var(--naranjo-texto)' }}>Escribe tu nombre en el paso 1 para descargar.</p>}
         <ul style={lista}>{presentacion.map(fila)}</ul>
 
         <h3 style={titulo}>{revisar ? '4' : '3'} · Archivos que subes junto con tu PDF</h3>

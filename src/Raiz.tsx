@@ -103,12 +103,12 @@ export default function Raiz() {
               e.preventDefault()
               cambiarUnidad('neumatica')
             }}
-            style={{ display: 'flex', alignItems: 'baseline', gap: 8, textDecoration: 'none', color: '#1c2733', flexShrink: 0 }}
+            style={{ display: 'flex', alignItems: 'baseline', gap: 8, textDecoration: 'none', color: 'var(--texto)', flexShrink: 0 }}
             title="NeumaLab · laboratorio virtual del curso MEC275"
             className="barra-superior__marca"
           >
             <strong style={{ fontSize: '1.08rem', letterSpacing: '-0.01em' }}>NeumaLab</strong>
-            <span className="barra-superior__curso" style={{ fontSize: '0.78rem', fontWeight: 700, color: '#51606f' }}>
+            <span className="barra-superior__curso" style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--tinta-suave)' }}>
               MEC275
             </span>
           </a>
@@ -125,13 +125,13 @@ export default function Raiz() {
         </div>
       </div>
       {sinConexion && (
-        <p role="status" data-sin-conexion="si" style={{ position: 'fixed', right: 12, bottom: 12, zIndex: 90, margin: 0, padding: '0.35rem 0.7rem', background: '#33475c', color: '#fff', borderRadius: 8, fontSize: '0.82rem', boxShadow: '0 4px 14px rgba(0,0,0,0.2)' }}>
+        <p role="status" data-sin-conexion="si" style={{ position: 'fixed', right: 12, bottom: 12, zIndex: 90, margin: 0, padding: '0.35rem 0.7rem', background: 'var(--tinta)', color: '#fff', borderRadius: 8, fontSize: '0.82rem', boxShadow: '0 4px 14px rgba(0,0,0,0.2)' }}>
           Sin conexión: la app funciona igual y tu trabajo se guarda en este navegador.
         </p>
       )}
       <MecBot />
       <ErrorBoundary key={unidad} alVolver={() => cambiarUnidad('neumatica')}>
-        <Suspense fallback={<p role="status" style={{ padding: 24, color: '#5a6b7d', textAlign: 'center' }}>{unidad === 'neumatica' ? 'Abriendo el laboratorio…' : 'Abriendo la unidad…'}</p>}>
+        <Suspense fallback={<p role="status" style={{ padding: 24, color: 'var(--tinta-tenue)', textAlign: 'center' }}>{unidad === 'neumatica' ? 'Abriendo el laboratorio…' : 'Abriendo la unidad…'}</p>}>
           {unidad === 'neumatica' ? <UnidadNeumatica /> : unidad === 'plc' ? <UnidadPLC /> : unidad === 'cnc' && UnidadCNC ? <UnidadCNC /> : unidad === 'robotica' && UnidadRobotica ? <UnidadRobotica /> : null}
         </Suspense>
       </ErrorBoundary>

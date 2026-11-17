@@ -137,7 +137,7 @@ export default function PanelAcoplado<T extends string>({
                 data-pestana-inferior={p.id}
               >
                 {nombre(p)}
-                {!!p.contador && <span style={{ marginLeft: 6, fontWeight: 500, color: '#51606f' }}>({p.contador})</span>}
+                {!!p.contador && <span style={{ marginLeft: 6, fontWeight: 500, color: 'var(--tinta-suave)' }}>({p.contador})</span>}
               </button>
             ))}
           </div>
@@ -189,7 +189,7 @@ export default function PanelAcoplado<T extends string>({
         />
       )}
       {encabezado && <div className="panel-acoplado__encabezado" data-encabezado-panel="si">{encabezado}</div>}
-      <div role="tablist" aria-label={etiqueta} style={{ display: 'flex', alignItems: 'stretch', padding: '0 4px', borderBottom: abierto ? '1px solid #e0e5eb' : 'none', overflowX: 'auto', flex: 'none' }}>
+      <div role="tablist" aria-label={etiqueta} style={{ display: 'flex', alignItems: 'stretch', padding: '0 4px', borderBottom: abierto ? '1px solid var(--borde-suave)' : 'none', overflowX: 'auto', flex: 'none' }}>
         {pestanas.map((p) => (
           <button
             key={p.id}
@@ -203,7 +203,7 @@ export default function PanelAcoplado<T extends string>({
             data-pestana-inferior={p.id}
           >
             {p.titulo}
-            {!!p.contador && <span style={{ marginLeft: 6, fontWeight: 500, color: '#51606f' }}>({p.contador})</span>}
+            {!!p.contador && <span style={{ marginLeft: 6, fontWeight: 500, color: 'var(--tinta-suave)' }}>({p.contador})</span>}
           </button>
         ))}
         {!fijo && (

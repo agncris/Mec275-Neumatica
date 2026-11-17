@@ -14,7 +14,7 @@ export default function Propiedades() {
 
   if (!seleccion) {
     return (
-      <p style={{ color: '#5a6b7d', margin: 0 }}>
+      <p style={{ color: 'var(--tinta-tenue)', margin: 0 }}>
         Selecciona una ficha o una manguera del tablero para ver y cambiar sus propiedades. Para
         cablear, haz clic en un puerto y luego en el puerto de destino.
       </p>

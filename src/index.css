@@ -1,3 +1,31 @@
+:root {
+  /* Colores de la interfaz. Los .tsx usan var(--...) en vez del hex escrito a mano. */
+  --texto: #1c2733;
+  --tinta: #33475c;
+  --tinta-oscura: #26323f;
+  --tinta-suave: #51606f;
+  --tinta-gris: #5f6b78;
+  --tinta-tenue: #5a6b7d;
+  --gris-claro: #8a97a5;
+  --negro: #14181d;
+  --carbon: #2b3036;
+  --azul: #1668c7;
+  --borde: #c6ced6;
+  --borde-tenue: #dbe1e8;
+  --borde-suave: #e0e5eb;
+  --fondo-gris: #eef1f4;
+  --fondo-claro: #f3f5f7;
+  --verde: #0e7a43;
+  --verde-oscuro: #0a6b3c;
+  --verde-vivo: #12a35a;
+  --fondo-verde: #e7f7ef;
+  --rojo: #c62828;
+  --rojo-error: #b3261e;
+  --fondo-rojo: #fdecea;
+  --naranjo-aviso: #8a5b00;
+  --naranjo-texto: #7a4f00;
+}
+
 * {
   box-sizing: border-box;
 }

@@ -758,7 +758,7 @@ export default function Banco3D({ motor, llenar = false, play }: Props) {
       }}
     >
       {sinWebGL && (
-        <p style={{ padding: 24, color: '#33475c' }}>
+        <p style={{ padding: 24, color: 'var(--tinta)' }}>
           Tu navegador no tiene WebGL activado, así que no puede dibujar el banco en 3D. Usa la vista Esquema o
           Taller.
         </p>
@@ -776,14 +776,14 @@ export default function Banco3D({ motor, llenar = false, play }: Props) {
           Encuadrar
         </button>
         <button
-          style={{ ...boton, background: resaltarAire ? '#1668c7' : '#fff', color: resaltarAire ? '#fff' : '#33475c' }}
+          style={{ ...boton, background: resaltarAire ? 'var(--azul)' : '#fff', color: resaltarAire ? '#fff' : 'var(--tinta)' }}
           onClick={() => setResaltarAire((v) => !v)}
           title="Tiñe de azul claro las mangueras que tienen aire"
         >
           {resaltarAire ? '✓ Ver el aire' : 'Ver el aire'}
         </button>
         <button
-          style={{ ...boton, background: conSonido ? '#1668c7' : '#fff', color: conSonido ? '#fff' : '#33475c' }}
+          style={{ ...boton, background: conSonido ? 'var(--azul)' : '#fff', color: conSonido ? '#fff' : 'var(--tinta)' }}
           onClick={() => {
             if (!conSonido) sonido().activar()
             setConSonido((v) => !v)
@@ -811,7 +811,7 @@ export default function Banco3D({ motor, llenar = false, play }: Props) {
       )}
       {motor && mandos.length > 0 && (
         <div style={panelMandos}>
-          <span style={{ fontSize: '0.72rem', color: '#5a6b7d' }}>Mandos</span>
+          <span style={{ fontSize: '0.72rem', color: 'var(--tinta-tenue)' }}>Mandos</span>
           {mandos.map((p) => (
             <button
               key={p.id}

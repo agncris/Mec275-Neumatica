@@ -194,20 +194,20 @@ export default function Paleta({ plegada = false, onPlegar, deshabilitada = fals
                 onClick={() => setAbiertos((a) => ({ ...a, [g.id]: !abierto }))}
                 aria-expanded={abierto}
                 className="cabeza-grupo"
-                style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', border: 'none', background: 'transparent', padding: '6px 4px', cursor: 'pointer', fontWeight: 700, fontSize: '0.78rem', color: '#33475c', textTransform: 'uppercase', letterSpacing: '0.03em', minHeight: 32, textAlign: 'left' }}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', border: 'none', background: 'transparent', padding: '6px 4px', cursor: 'pointer', fontWeight: 700, fontSize: '0.78rem', color: 'var(--tinta)', textTransform: 'uppercase', letterSpacing: '0.03em', minHeight: 32, textAlign: 'left' }}
               >
                 <span aria-hidden style={{ width: 10 }}>{abierto ? '▾' : '▸'}</span>
                 {g.titulo}
-                <span style={{ marginLeft: 'auto', fontWeight: 500, color: '#51606f' }}>{g.entradas.length}</span>
+                <span style={{ marginLeft: 'auto', fontWeight: 500, color: 'var(--tinta-suave)' }}>{g.entradas.length}</span>
               </button>
               {abierto && g.entradas.map((e) => ficha(e, false))}
             </section>
           )
         })}
-        {!grupos.length && <p style={{ fontSize: '0.84rem', color: '#51606f', padding: '6px 8px', margin: 0 }}>No hay componentes con «{texto}».</p>}
+        {!grupos.length && <p style={{ fontSize: '0.84rem', color: 'var(--tinta-suave)', padding: '6px 8px', margin: 0 }}>No hay componentes con «{texto}».</p>}
       </div>
       {deshabilitada && (
-        <p role="note" style={{ position: 'absolute', left: 8, right: 8, top: 44, margin: 0, padding: '0.5rem 0.6rem', background: '#fff', border: '1px solid #c6ced6', borderRadius: 8, fontSize: '0.84rem', color: '#33475c', boxShadow: '0 4px 12px rgba(28,39,51,0.12)', textAlign: 'center' }}>
+        <p role="note" style={{ position: 'absolute', left: 8, right: 8, top: 44, margin: 0, padding: '0.5rem 0.6rem', background: '#fff', border: '1px solid var(--borde)', borderRadius: 8, fontSize: '0.84rem', color: 'var(--tinta)', boxShadow: '0 4px 12px rgba(28,39,51,0.12)', textAlign: 'center' }}>
           Detén la simulación para editar el circuito.
         </p>
       )}

@@ -27,9 +27,9 @@ export default class ErrorBoundary extends Component<Props, Estado> {
   render() {
     if (!this.state.fallo) return this.props.children
     return (
-      <div role="alert" style={{ maxWidth: 520, margin: '48px auto', padding: '0 16px', textAlign: 'center', color: '#33475c' }}>
+      <div role="alert" style={{ maxWidth: 520, margin: '48px auto', padding: '0 16px', textAlign: 'center', color: 'var(--tinta)' }}>
         <h2 style={{ margin: '0 0 8px' }}>Algo falló en esta unidad</h2>
-        <p style={{ margin: '0 0 16px', color: '#51606f' }}>Tu trabajo sigue guardado en este navegador. Recarga la página o vuelve a Neumática.</p>
+        <p style={{ margin: '0 0 16px', color: 'var(--tinta-suave)' }}>Tu trabajo sigue guardado en este navegador. Recarga la página o vuelve a Neumática.</p>
         <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
           <button type="button" onClick={() => window.location.reload()}>
             Recargar

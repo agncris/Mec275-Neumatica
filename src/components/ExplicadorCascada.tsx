@@ -161,22 +161,22 @@ export default function ExplicadorCascada() {
     <div>
       {/* controles */}
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
-        <div style={{ display: 'flex', border: '1px solid #c6ced6', borderRadius: 8, overflow: 'hidden' }}>
+        <div style={{ display: 'flex', border: '1px solid var(--borde)', borderRadius: 8, overflow: 'hidden' }}>
           <button
             onClick={() => cambiarModo(false)}
-            style={{ ...pestana, background: !conCascada ? ROJO : '#fff', color: !conCascada ? '#fff' : '#33475c' }}
+            style={{ ...pestana, background: !conCascada ? ROJO : '#fff', color: !conCascada ? '#fff' : 'var(--tinta)' }}
           >
             Sin cascada
           </button>
           <button
             onClick={() => cambiarModo(true)}
-            style={{ ...pestana, background: conCascada ? VERDE : '#fff', color: conCascada ? '#fff' : '#33475c' }}
+            style={{ ...pestana, background: conCascada ? VERDE : '#fff', color: conCascada ? '#fff' : 'var(--tinta)' }}
           >
             Con cascada
           </button>
         </div>
 
-        <button onClick={() => setReproduciendo((r) => !r)} style={{ ...boton, background: '#33475c', borderColor: '#33475c', color: '#fff' }}>
+        <button onClick={() => setReproduciendo((r) => !r)} style={{ ...boton, background: 'var(--tinta)', borderColor: 'var(--tinta)', color: '#fff' }}>
           {reproduciendo ? '⏸ Pausa' : '▶ Reproducir'}
         </button>
         <button
@@ -199,7 +199,7 @@ export default function ExplicadorCascada() {
         >
           Siguiente ▶
         </button>
-        <span style={{ fontSize: '0.82rem', color: '#5a6b7d' }}>
+        <span style={{ fontSize: '0.82rem', color: 'var(--tinta-tenue)' }}>
           Paso {Math.min(i, pasos.length - 1) + 1} de {pasos.length}
         </span>
       </div>
@@ -346,14 +346,14 @@ export default function ExplicadorCascada() {
           background: paso.clave ? '#fdf6e3' : '#f7f9fb',
           fontSize: '0.9rem',
           lineHeight: 1.55,
-          color: '#33475c',
+          color: 'var(--tinta)',
           minHeight: '3.2em',
         }}
       >
         {paso.texto}
       </p>
 
-      <p style={{ margin: '8px 0 0', fontSize: '0.78rem', color: '#5a6b7d' }}>
+      <p style={{ margin: '8px 0 0', fontSize: '0.78rem', color: 'var(--tinta-tenue)' }}>
         <span style={{ color: VERDE, fontWeight: 700 }}>●</span> rodillo pisado ·{' '}
         <span style={{ color: AZUL, fontWeight: 700 }}>—</span> con aire (manda) ·{' '}
         <span style={{ color: GRIS, fontWeight: 700 }}>—</span> sin aire (no manda)

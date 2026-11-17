@@ -15,7 +15,7 @@ export default function TablaNomenclatura() {
   return (
     <>
 
-      <p style={{ fontSize: '0.88rem', color: '#33475c', lineHeight: 1.55, margin: '10px 0' }}>
+      <p style={{ fontSize: '0.88rem', color: 'var(--tinta)', lineHeight: 1.55, margin: '10px 0' }}>
         La designación de una válvula se lee <strong>vías / posiciones</strong>. Una{' '}
         <strong>3/2</strong> tiene 3 orificios útiles (vías) y 2 posiciones de trabajo; una{' '}
         <strong>5/2</strong> tiene 5 vías y 2 posiciones. En el símbolo, cada{' '}
@@ -27,7 +27,7 @@ export default function TablaNomenclatura() {
       <div style={{ overflowX: 'auto' }}>
         <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '0.86rem', minWidth: 460 }}>
           <thead>
-            <tr style={{ background: '#51606f', color: '#fff' }}>
+            <tr style={{ background: 'var(--tinta-suave)', color: '#fff' }}>
               <th style={{ ...celda, textAlign: 'left', width: 110 }}>Norma ISO</th>
               <th style={{ ...celda, textAlign: 'left', width: 120 }}>Norma CETOP</th>
               <th style={{ ...celda, textAlign: 'left' }}>Función</th>
@@ -35,7 +35,7 @@ export default function TablaNomenclatura() {
           </thead>
           <tbody>
             {FILAS.map((f, i) => (
-              <tr key={f.iso} style={{ background: i % 2 ? '#f3f5f7' : '#fff' }}>
+              <tr key={f.iso} style={{ background: i % 2 ? 'var(--fondo-claro)' : '#fff' }}>
                 <td style={{ ...celda, fontWeight: 600 }}>{f.iso}</td>
                 <td style={{ ...celda, fontWeight: 600 }}>{f.cetop}</td>
                 <td style={celda}>{f.funcion}</td>
@@ -45,7 +45,7 @@ export default function TablaNomenclatura() {
         </table>
       </div>
 
-      <p style={{ fontSize: '0.82rem', color: '#5a6b7d', margin: '10px 0 0', lineHeight: 1.5 }}>
+      <p style={{ fontSize: '0.82rem', color: 'var(--tinta-tenue)', margin: '10px 0 0', lineHeight: 1.5 }}>
         NeumaLab usa la numeración CETOP (1, 2, 3, 4, 5, 12, 14), que es la que verás grabada en los
         componentes del banco.
       </p>

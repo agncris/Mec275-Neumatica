@@ -255,7 +255,7 @@ export function Menu({ etiqueta, items, ancho = 280, datos }: { etiqueta: string
                   borderRadius: 6,
                   padding: '0.45rem 0.6rem',
                   cursor: it.deshabilitado ? 'not-allowed' : 'pointer',
-                  color: it.deshabilitado ? '#8b96a1' : it.peligro ? '#b3261e' : COLOR.tinta,
+                  color: it.deshabilitado ? '#8b96a1' : it.peligro ? 'var(--rojo-error)' : COLOR.tinta,
                   fontSize: '0.9rem',
                   fontWeight: 600,
                 }}

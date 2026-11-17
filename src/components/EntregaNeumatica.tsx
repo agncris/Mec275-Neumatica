@@ -119,13 +119,13 @@ export default function EntregaNeumatica({ onCerrar, capturarCircuito, capturarF
               <div style={{ width: 44, height: 44, margin: '0 auto' }}>
                 <SimboloVDI n={paso.n} />
               </div>
-              <div style={{ fontSize: '0.66rem', color: '#51606f', minHeight: '2.2em', lineHeight: 1.25 }}>{f?.nombre}</div>
+              <div style={{ fontSize: '0.66rem', color: 'var(--tinta-suave)', minHeight: '2.2em', lineHeight: 1.25 }}>{f?.nombre}</div>
               <input
                 value={paso.nota}
                 onChange={(e) => setVdi(vdi.map((q, k) => (k === i ? { ...q, nota: e.target.value } : q)))}
                 placeholder="¿qué hace?"
                 aria-label={`Nota de la función ${i + 1}`}
-                style={{ width: '100%', fontSize: '0.72rem', padding: '0.2rem 0.3rem', border: '1px solid #c6ced6', borderRadius: 5 }}
+                style={{ width: '100%', fontSize: '0.72rem', padding: '0.2rem 0.3rem', border: '1px solid var(--borde)', borderRadius: 5 }}
               />
               <div style={{ display: 'flex', gap: 2, justifyContent: 'center', marginTop: 3 }}>
                 <button onClick={() => i > 0 && setVdi(vdi.map((q, k) => (k === i - 1 ? vdi[i] : k === i ? vdi[i - 1] : q)))} style={mini} aria-label="Mover antes">
@@ -134,20 +134,20 @@ export default function EntregaNeumatica({ onCerrar, capturarCircuito, capturarF
                 <button onClick={() => i < vdi.length - 1 && setVdi(vdi.map((q, k) => (k === i + 1 ? vdi[i] : k === i ? vdi[i + 1] : q)))} style={mini} aria-label="Mover después">
                   →
                 </button>
-                <button onClick={() => setVdi(vdi.filter((_, k) => k !== i))} style={{ ...mini, color: '#b3261e' }} aria-label="Quitar">
+                <button onClick={() => setVdi(vdi.filter((_, k) => k !== i))} style={{ ...mini, color: 'var(--rojo-error)' }} aria-label="Quitar">
                   ✕
                 </button>
               </div>
             </div>
           )
         })}
-        <button onClick={() => setEligiendo((v) => !v)} style={{ ...ficha, cursor: 'pointer', color: '#33475c' }} aria-expanded={eligiendo} data-agregar-vdi="si">
+        <button onClick={() => setEligiendo((v) => !v)} style={{ ...ficha, cursor: 'pointer', color: 'var(--tinta)' }} aria-expanded={eligiendo} data-agregar-vdi="si">
           <div style={{ fontSize: '1.5rem', lineHeight: 1.5 }}>＋</div>
           <div style={{ fontSize: '0.72rem' }}>Añadir función</div>
         </button>
       </div>
       {eligiendo && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 5, padding: 8, border: '1px solid #dbe1e8', borderRadius: 8, marginTop: 8, maxHeight: 260, overflowY: 'auto' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 5, padding: 8, border: '1px solid var(--borde-tenue)', borderRadius: 8, marginTop: 8, maxHeight: 260, overflowY: 'auto' }}>
           {FUNCIONES_VDI.map((f) => (
             <button
               key={f.n}
@@ -161,7 +161,7 @@ export default function EntregaNeumatica({ onCerrar, capturarCircuito, capturarF
               <div style={{ width: 36, height: 36, margin: '0 auto' }}>
                 <SimboloVDI n={f.n} />
               </div>
-              <div style={{ fontSize: '0.64rem', color: '#33475c', lineHeight: 1.25 }}>{f.nombre}</div>
+              <div style={{ fontSize: '0.64rem', color: 'var(--tinta)', lineHeight: 1.25 }}>{f.nombre}</div>
             </button>
           ))}
         </div>
