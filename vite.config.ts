@@ -23,7 +23,8 @@ function mecbotEnDev(): Plugin {
         if (ruta !== '/api/mecbot' || req.method !== 'POST') return next()
         try {
           const cuerpo = JSON.parse((await cuerpoDe(req)) || '{}') as { mensajes?: unknown }
-          const texto = await responder(cuerpo.mensajes)
+          const ip = (req.socket?.remoteAddress || 'local').replace(/^::ffff:/, '')
+          const texto = await responder(cuerpo.mensajes, ip)
           res.statusCode = 200
           res.setHeader('Content-Type', 'application/json')
           res.end(JSON.stringify({ texto }))

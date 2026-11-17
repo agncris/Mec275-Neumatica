@@ -1,12 +1,26 @@
 /**
  * MecBot responde en el servidor. La clave del modelo no sale al navegador.
  * Guía el estudio del curso y no entrega la resolución de las tareas.
+ *
+ * Primero contesta con los apuntes de api/materia.js (no gasta Groq).
+ * El modelo solo entra si esos apuntes no alcanzan, con un recorte corto,
+ * una caché de la misma pregunta y un tope por alumno.
  */
+
+import { contextoDe, normalizar, respuestaDeApuntes } from './materia.js'
 
 const URL_DEFECTO = 'https://api.groq.com/openai/v1/chat/completions'
 const MODELO_DEFECTO = 'llama-3.3-70b-versatile'
 const MAX_MENSAJES = 10
 const MAX_TEXTO = 700
+const TOPE_HORA = 12
+const TOPE_DIA = 40
+const CACHE_MAX = 200
+
+/** Pregunta de un solo turno → respuesta ya pedida al modelo. */
+const cache = new Map()
+/** Consultas al modelo por IP, para que un curso no vacíe la cuota. */
+const cupos = new Map()
 
 const SISTEMA = `Eres MecBot, el ayudante de estudio de NeumaLab (curso MEC275: neumática, PLC, CNC y robótica). Hablas en español, claro y breve, como un profesor de taller con alumnos de ingeniería.
 
@@ -46,12 +60,49 @@ export function sanear(entrada) {
   return ultimos
 }
 
-export async function responder(entrada) {
+function claveCache(mensajes) {
+  const alumnos = mensajes.filter((m) => m.rol === 'alumno')
+  if (alumnos.length !== 1) return null
+  return normalizar(alumnos[0].texto)
+}
+
+function permiteModelo(ip) {
+  const ahora = Date.now()
+  let c = cupos.get(ip)
+  if (!c || ahora - c.dia0 > 86_400_000) c = { hora0: ahora, hora: 0, dia0: ahora, dia: 0 }
+  if (ahora - c.hora0 > 3_600_000) {
+    c.hora0 = ahora
+    c.hora = 0
+  }
+  if (c.hora >= TOPE_HORA || c.dia >= TOPE_DIA) {
+    cupos.set(ip, c)
+    return false
+  }
+  c.hora += 1
+  c.dia += 1
+  cupos.set(ip, c)
+  return true
+}
+
+export async function responder(entrada, ip = 'local') {
+  const mensajes = sanear(entrada)
+  const pregunta = mensajes[mensajes.length - 1].texto
+  const deApuntes = respuestaDeApuntes(pregunta)
+  if (deApuntes) return deApuntes.texto
+
+  const recordada = claveCache(mensajes)
+  const guardada = recordada ? cache.get(recordada) : null
+  if (guardada && Date.now() - guardada.t < 6 * 3_600_000) return guardada.texto
+
   const clave = process.env.MEC_BOT_API_KEY
   if (!clave) throw new ErrorBot('sin-clave', 503)
-  const mensajes = sanear(entrada)
+  if (!permiteModelo(ip || 'local')) throw new ErrorBot('cupo', 429)
   const url = process.env.MEC_BOT_URL || URL_DEFECTO
   const modelo = process.env.MEC_BOT_MODELO || MODELO_DEFECTO
+  const contexto = contextoDe(pregunta)
+  const sistema = contexto
+    ? `${SISTEMA}\n\nApuntes del curso. Si alcanzan, responde solo con ellos y nombra la sección. No inventes números:\n\n${contexto}`
+    : SISTEMA
   const ctrl = new AbortController()
   const reloj = setTimeout(() => ctrl.abort(), 25000)
   let res
@@ -63,9 +114,9 @@ export async function responder(entrada) {
       body: JSON.stringify({
         model: modelo,
         temperature: 0.4,
-        max_tokens: 420,
+        max_tokens: 320,
         messages: [
-          { role: 'system', content: SISTEMA },
+          { role: 'system', content: sistema },
           ...mensajes.map((m) => ({ role: m.rol === 'mecbot' ? 'assistant' : 'user', content: m.texto })),
         ],
       }),
@@ -81,5 +132,10 @@ export async function responder(entrada) {
   const datos = await res.json().catch(() => null)
   const texto = datos?.choices?.[0]?.message?.content
   if (typeof texto !== 'string' || !texto.trim()) throw new ErrorBot('red', 502)
-  return texto.trim()
+  const listo = texto.trim()
+  if (recordada) {
+    cache.set(recordada, { texto: listo, t: Date.now() })
+    if (cache.size > CACHE_MAX) cache.delete(cache.keys().next().value)
+  }
+  return listo
 }

@@ -14,7 +14,9 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "types": ["vitest/globals"]
+    "types": ["vitest/globals"],
+    "allowJs": true,
+    "checkJs": false
   },
-  "include": ["src"]
+  "include": ["src", "api/materia.js"]
 }

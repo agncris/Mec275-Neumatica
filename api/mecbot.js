@@ -3,7 +3,8 @@ import { ErrorBot, responder } from './responder.js'
 export async function POST(request) {
   try {
     const cuerpo = await request.json().catch(() => null)
-    const texto = await responder(cuerpo?.mensajes)
+    const ip = (request.headers.get('x-forwarded-for') || 'local').split(',')[0].trim()
+    const texto = await responder(cuerpo?.mensajes, ip)
     return Response.json({ texto })
   } catch (e) {
     const codigo = e instanceof ErrorBot ? e.codigo : 'red'

@@ -26,7 +26,8 @@ app.get('/salud', (_req, res) => res.json({ ok: true }))
 app.post('/api/mecbot', express.json({ limit: '32kb' }), async (req, res) => {
   try {
     const { responder } = await import('./api/responder.js')
-    const texto = await responder(req.body?.mensajes)
+    const ip = String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'local').split(',')[0].trim()
+    const texto = await responder(req.body?.mensajes, ip)
     res.json({ texto })
   } catch (e) {
     const codigo = e?.codigo || 'red'
