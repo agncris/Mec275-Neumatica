@@ -20,13 +20,7 @@ import { crearEscena as crearEscenaBase } from '../vista3d/escena'
 import { SonidoBanco } from '../vista3d/sonido'
 import { ponerNotacionEscena, type SimPLC } from './plantas3d/comun'
 import { type Notacion } from './notacion'
-import { escenaTablero } from './plantas3d/tablero'
-import { escenaEstanque } from './plantas3d/estanque'
-import { escenaElevador } from './plantas3d/elevador'
-import { type Escena } from './plantas3d/comun'
-import { escenaSilo } from './plantas3d/silo'
-import { escenaSemaforo } from './plantas3d/semaforo'
-import { escenaPorton } from './plantas3d/porton'
+import { crearEscena } from './plantas3d'
 
 export type { SimPLC }
 
@@ -44,15 +38,6 @@ interface Props {
 }
 
 const CLAVE_SONIDO = 'neumalab.plc.sonido'
-
-function crearEscena(id: string): Escena {
-  if (id === 'estanque') return escenaEstanque()
-  if (id === 'elevador') return escenaElevador()
-  if (id === 'silo') return escenaSilo()
-  if (id === 'semaforo') return escenaSemaforo()
-  if (id === 'porton') return escenaPorton()
-  return escenaTablero()
-}
 
 // ---------------------------------------------------------------------------
 // Componente
