@@ -41,6 +41,7 @@ import PlanoTarea, { EJEMPLO_GUIADO_TORNO } from './PlanoTarea'
 import ResumenRevision from './ResumenRevision'
 import PanelEntrega from './PanelEntrega'
 import BarraCNC, { SelectorVelocidad } from './BarraCNC'
+import { useBucleSimulacion, useGrabacionCNC } from './useSimulacionCNC'
 import { botonSuave } from './estilos'
 import { SimuladorCNC, volumenPieza } from './simulador'
 import type { VistaCNC } from './Maquina3D'
@@ -62,8 +63,6 @@ export default function UnidadCNC() {
   const [entregaAbierta, setEntregaAbierta] = useState(false)
   const [misTrabajos, setMisTrabajos] = useState(false)
   const guia = useGuia('cnc')
-  /** Nombre del próximo video (desde «Entregar» se nombra como pide el enunciado). */
-  const nombreVideo = useRef<string | null>(null)
   const inicial = useMemo(() => (seccionDeLaUrl() === 'tarea' && VER_TAREA_CNC ? leerTarea() : leerGuardado()), [])
   const [config, setConfig] = useState<ConfigCNC>(inicial.config)
   const [codigos, setCodigos] = useState(inicial.codigos)
@@ -98,11 +97,9 @@ export default function UnidadCNC() {
   const [revisionAlAbrir, setRevisionAlAbrir] = useState<{ archivo: string; alumno: string } | null>(null)
   const [resumen, setResumen] = useState<{ archivo: string; alumno: string; resumen: ResumenTrabajo } | null>(null)
   const [, setTick] = useState(0)
-  const [grabando, setGrabando] = useState(false)
+  const { grabando, canvasRef, nombreVideo, puedeGrabar, alternarGrabacion } = useGrabacionCNC({ nombre: nombres[maquina], avisar: setAviso })
   const editor = useRef<EditorGcodeRef>(null)
   const inputArchivo = useRef<HTMLInputElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement | null>(null)
-  const grabadora = useRef<MediaRecorder | null>(null)
 
   const casa = useMemo(() => posicionCasa(config), [config])
   const cero = useMemo(() => origenPrograma(config, codigo), [config, codigo])
@@ -214,35 +211,7 @@ export default function UnidadCNC() {
   }, [aviso])
 
   // Bucle de la simulación.
-  const velRef = useRef(velocidad)
-  velRef.current = velocidad
-  useEffect(() => {
-    if (estado !== 'corriendo' && estado !== 'bloque') return
-    let vivo = true
-    let antes = performance.now()
-    let ultimoPintado = 0
-    const bucle = () => {
-      if (!vivo) return
-      const ahora = performance.now()
-      const dt = Math.min(0.1, (ahora - antes) / 1000)
-      antes = ahora
-      const r = vista.current.sim.avanzar(dt * velRef.current, estado === 'bloque')
-      if (r === 'sigue') {
-        if (ahora - ultimoPintado > 90) {
-          ultimoPintado = ahora
-          setTick((t) => t + 1)
-        }
-        requestAnimationFrame(bucle)
-        return
-      }
-      setEstado(r === 'fin-bloque' ? 'pausa' : r === 'parada' ? 'parada' : r === 'alarma' ? 'alarma' : 'fin')
-      setTick((t) => t + 1)
-    }
-    requestAnimationFrame(bucle)
-    return () => {
-      vivo = false
-    }
-  }, [estado])
+  useBucleSimulacion({ estado, setEstado, velocidad, vista, setTick })
 
   const sim = vista.current.sim
   const hayErrores = resultado.primerError !== null
@@ -379,41 +348,6 @@ export default function UnidadCNC() {
     } catch (e) {
       setAviso(e instanceof Error ? e.message : 'No se pudo exportar la imagen.')
     }
-  }
-
-  const puedeGrabar = typeof window !== 'undefined' && 'MediaRecorder' in window
-  const alternarGrabacion = () => {
-    if (grabando) {
-      grabadora.current?.stop()
-      return
-    }
-    const c = canvasRef.current
-    if (!c || !puedeGrabar) {
-      setAviso('Este navegador no permite grabar video de la vista 3D.')
-      return
-    }
-    const flujo = c.captureStream(30)
-    const tipo = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'].find((t) => MediaRecorder.isTypeSupported(t))
-    const rec = new MediaRecorder(flujo, tipo ? { mimeType: tipo, videoBitsPerSecond: 6_000_000 } : undefined)
-    const partes: Blob[] = []
-    rec.ondataavailable = (e) => e.data.size && partes.push(e.data)
-    rec.onstop = () => {
-      setGrabando(false)
-      const ext = (rec.mimeType || '').includes('mp4') ? 'mp4' : 'webm'
-      const blob = new Blob(partes, { type: rec.mimeType || 'video/webm' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = nombreVideo.current ? `${nombreVideo.current}.${ext}` : nombreSeguro(`${nombres[maquina] || 'simulacion'}_simulacion`, ext)
-      nombreVideo.current = null
-      a.click()
-      setTimeout(() => URL.revokeObjectURL(url), 2000)
-      setAviso(`Video descargado: ${a.download}`)
-    }
-    rec.start(500)
-    grabadora.current = rec
-    setGrabando(true)
-    setAviso('Grabando la vista 3D. Pulsa ▶ Ciclo para mecanizar y «■ Detener grabación» al terminar.')
   }
 
   const irA = (n: number) => editor.current?.irALinea(n)
