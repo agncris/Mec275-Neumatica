@@ -39,6 +39,8 @@ export interface Muestra {
   cmd: number
   /** La herramienta está en la pieza (a la altura de la plancha o bajo ella). */
   enPieza: boolean
+  /** La muestra pertenece a un LIN o CIR. Sólo esos tramos desbastan la plancha. */
+  corta: boolean
 }
 
 export interface Problema {
@@ -69,12 +71,12 @@ export interface Simulacion {
 const PASO_MM = 4
 const PASO_ANG = 0.04 // rad
 
-function muestraDe(prog: Programa, q: number[], t: number, cmd: number, estado: EstadoMuestra): Muestra {
+function muestraDe(prog: Programa, q: number[], t: number, cmd: number, estado: EstadoMuestra, corta = false): Muestra {
   const { modelo, pedestal } = prog.robot
   const p = directa(modelo, q, prog.herramienta.largo, v(0, 0, pedestal))
   // Altura del TCP sobre la base (cara superior de la plancha).
   const rel = aplicar(trasp(matrizPlano(prog.base)), resta(p.tcp, prog.base.o))
-  return { t, q: [...q], tcp: p.tcp, estado, cmd, enPieza: rel.z < 0.5 }
+  return { t, q: [...q], tcp: p.tcp, estado, cmd, enPieza: rel.z < 0.5, corta }
 }
 
 /** Circunferencia por tres puntos: centro, radio y normal. */
@@ -243,7 +245,7 @@ export function simular(prog: Programa, placa: Placa | null = null, opciones: Op
       q = r.q
       if (r.estado === 'error') peor = 'error'
       else if (r.estado === 'aviso' && peor === 'ok') peor = 'aviso'
-      muestras.push(muestraDe(prog, q, t + dur * f, cmd, r.estado))
+      muestras.push(muestraDe(prog, q, t + dur * f, cmd, r.estado, true))
     }
     t += dur
     return peor
@@ -438,6 +440,7 @@ function armarKRL(prog: Programa, sim: Simulacion, nombre = 'neumalab'): { texto
     }
   })
   lineas.push('END')
+  for (let i = 0; i < lineas.length; i++) lineas[i] = anotarLineaKRL(lineas[i])
   return { texto: lineas.join('\r\n') + '\r\n', lineas: deComando }
 }
 
@@ -446,14 +449,81 @@ export interface PalabraKRL {
   texto: string
 }
 
+/**
+ * Frase corta de qué hace la línea, para el alumno. Va como comentario `;`
+ * en el KRL, igual que el paréntesis de cada bloque de código G.
+ */
+function glosaCortaKRL(codigo: string, nota = ''): string {
+  const c = codigo.trim()
+  const rel = c.match(/^&REL\s+(\d+)/i)
+  const def = c.match(/^DEF\s+([A-Za-z_]\w*)\s*\(/i)
+  const bas = c.match(/^BAS\s*\(\s*(#\w+)\s*,\s*(-?[\d.]+)\s*\)/i)
+  const apo = c.match(/^\$APO\.CDIS\s*=\s*(-?[\d.]+)/i)
+  const vel = c.match(/^\$VEL\.CP\s*=\s*(-?[\d.]+)/i)
+  const salida = c.match(/^\$OUT\[(\d+)\]\s*=\s*(TRUE|FALSE)/i)
+  const espera = c.match(/^WAIT\s+SEC\s+(-?[\d.]+)/i)
+  const aprox = /\bC_DIS\b/i.test(c)
+  if (/^&ACCESS\b/i.test(c)) return 'Este archivo se puede leer y ejecutar.'
+  if (rel) return `Versión ${rel[1]} del archivo.`
+  if (def) return `Empieza el programa ${def[1]}.`
+  if (/^END$/i.test(c)) return 'Aquí termina el programa.'
+  if (bas) {
+    const modo = bas[1].toUpperCase()
+    if (modo === '#INITMOV') return 'Prepara el robot para el primer movimiento.'
+    if (modo === '#VEL_PTP') return `Los PTP que siguen van al ${bas[2]} % de la velocidad de cada eje.`
+    return `Ajusta el movimiento con ${modo}.`
+  }
+  if (/^\$BASE\s*=/i.test(c)) return 'Fija dónde está la pieza. Las rectas y los arcos se miden desde aquí.'
+  if (/^\$TOOL\s*=/i.test(c)) return 'Fija la punta de la herramienta respecto de la brida del robot.'
+  if (apo) return `Empalma el movimiento siguiente cuando faltan ${apo[1]} mm para el punto.`
+  if (vel) return `Las rectas y los arcos que siguen van a ${vel[1]} m/s.`
+  if (/^PTP\s+\{/i.test(c)) {
+    const donde = /^hacia\b/i.test(nota) ? ` ${nota}` : ''
+    return `Punto a punto${donde}: cada eje va a su ángulo por su cuenta.`
+  }
+  if (/^LIN\s+\{/i.test(c)) return aprox ? 'La punta va en línea recta hasta este punto y empalma con el tramo que sigue.' : 'La punta va en línea recta hasta este punto.'
+  if (/^CIR\s+\{/i.test(c)) return aprox ? 'La punta recorre un arco hasta el segundo punto y empalma con el tramo que sigue.' : 'La punta recorre un arco. El primer punto va sobre el arco y el segundo es el final.'
+  if (salida) return salida[2].toUpperCase() === 'TRUE' ? `Enciende la salida ${salida[1]}.` : `Apaga la salida ${salida[1]}.`
+  if (espera) return `El robot espera ${espera[1]} s en el lugar.`
+  return 'El controlador ejecuta esta línea.'
+}
+
+/** Pone la glosa al final de la línea, salvo que ya traiga un comentario escrito a mano. */
+export function anotarLineaKRL(linea: string): string {
+  const cruda = linea.trim()
+  if (!cruda || cruda.startsWith(';')) return linea
+  const corte = indiceComentarioKRL(linea)
+  const codigo = (corte >= 0 ? linea.slice(0, corte) : linea).trim()
+  const nota = corte >= 0 ? linea.slice(corte + 1).trim() : ''
+  if (nota && !/^hacia\b/i.test(nota)) return linea
+  const glosa = glosaCortaKRL(codigo, nota)
+  if (!glosa) return linea
+  const indent = linea.match(/^\s*/)?.[0] ?? ''
+  return `${indent}${codigo} ; ${glosa}`
+}
+
+/** Separa el código de la frase que lo explica, para mostrarla bajo cada línea. */
+export function presentarLineaKRL(linea: string): { codigo: string; glosa: string } {
+  const cruda = linea.trim()
+  if (!cruda) return { codigo: linea, glosa: '' }
+  if (cruda.startsWith(';')) return { codigo: linea.trimEnd(), glosa: explicarLineaKRL(linea)[0]?.texto ?? '' }
+  const anotada = anotarLineaKRL(linea)
+  const corte = indiceComentarioKRL(anotada)
+  if (corte < 0) return { codigo: anotada.trimEnd(), glosa: glosaCortaKRL(anotada) }
+  return { codigo: anotada.slice(0, corte).trimEnd(), glosa: anotada.slice(corte + 1).trim() }
+}
+
 /** Qué hace cada palabra de una línea KRL, en el mismo espíritu que la explicación del código G. */
 export function explicarLineaKRL(texto: string): PalabraKRL[] {
   const cruda = texto.trim()
   if (!cruda) return []
   if (cruda.startsWith(';')) {
-    if (/^;FOLD\b/i.test(cruda)) return [{ palabra: cruda, texto: 'Abre un pliegue del editor de KUKA: agrupa líneas para poder ocultarlas. No mueve el robot.' }]
+    if (/^;FOLD\b/i.test(cruda)) return [{ palabra: cruda, texto: 'Abre un pliegue del editor de KUKA: agrupa las líneas de abajo para poder ocultarlas.' }]
     if (/^;ENDFOLD\b/i.test(cruda)) return [{ palabra: cruda, texto: 'Cierra el pliegue abierto con ;FOLD.' }]
-    return [{ palabra: cruda, texto: 'Comentario: el controlador no lo ejecuta. Sirve para explicar el programa.' }]
+    const cuerpo = cruda.replace(/^;\s*/, '')
+    if (/Generado por NeumaLab/i.test(cuerpo)) return [{ palabra: cruda, texto: 'Comentario: de qué robot y de qué herramienta sale este programa.' }]
+    if (/Programa de estudio/i.test(cuerpo)) return [{ palabra: cruda, texto: 'Comentario: conviene revisar el programa y probarlo despacio antes de un robot real.' }]
+    return [{ palabra: cruda, texto: `Comentario, no se ejecuta: ${cuerpo}` }]
   }
   const corte = indiceComentarioKRL(cruda)
   const codigo = (corte >= 0 ? cruda.slice(0, corte) : cruda).trim()
@@ -510,10 +580,10 @@ export function explicarLineaKRL(texto: string): PalabraKRL[] {
     out.push({ palabra: 'punto final', texto: 'Dónde termina el arco.' })
     out.push(...filasMarco(cir[2], 'punto'))
     if (cir[3]) out.push(aproximacion(cir[3]))
-  } else if (salida) out.push({ palabra: codigo, texto: salida[2].toUpperCase() === 'TRUE' ? `Enciende la salida digital ${salida[1]}. En esta tarea, así parte el husillo.` : `Apaga la salida digital ${salida[1]}.` })
-  else if (espera) out.push({ palabra: codigo, texto: `El robot espera ${espera[1]} s sin moverse. Sirve para que la fresa termine de cortar o para soltar la pieza.` })
-  else if (codigo) out.push({ palabra: codigo, texto: 'Línea KRL: el controlador la ejecuta tal cual.' })
-  if (comentario) out.push({ palabra: `; ${comentario}`, texto: 'Comentario: no se ejecuta. Aquí anota a qué punto del espacio va el movimiento.' })
+  }   else if (salida) out.push({ palabra: codigo, texto: salida[2].toUpperCase() === 'TRUE' ? `Enciende la salida digital ${salida[1]}. Así parte un husillo, una pinza o una ventosa.` : `Apaga la salida digital ${salida[1]}.` })
+  else if (espera) out.push({ palabra: codigo, texto: `El robot espera ${espera[1]} s en el lugar, para que el husillo tome velocidad o para soltar la pieza.` })
+  else if (codigo) out.push({ palabra: codigo, texto: 'El controlador ejecuta esta línea.' })
+  if (comentario) out.push({ palabra: `; ${comentario}`, texto: `Comentario: ${comentario}` })
   return out
 }
 

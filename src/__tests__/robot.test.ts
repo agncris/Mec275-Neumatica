@@ -4,7 +4,8 @@ import { dxfDeEjemplo, largoCurva, leerDXF, rectangulo, dividirLargo, discontinu
 import { componente, evaluar, paramsIniciales, type Definicion } from '../robot/nodos'
 import { planoXY, v } from '../robot/matematica'
 import { robotPorId } from '../robot/robots'
-import { explicarLineaKRL, simular } from '../robot/movimiento'
+import { explicarLineaKRL, presentarLineaKRL, simular } from '../robot/movimiento'
+import { ejemploGuiadoTarea } from '../robot/tarea4'
 
 describe('ejemplos de robótica', () => {
   for (const ej of EJEMPLOS_ROBOT) {
@@ -146,6 +147,30 @@ describe('explicación del KRL', () => {
     expect(explicarLineaKRL('BAS (#VEL_PTP, 30)')[0].texto).toMatch(/30 %/)
     expect(explicarLineaKRL('; Programa de estudio')[0].texto).toMatch(/Comentario/)
     expect(explicarLineaKRL('$OUT[1] = TRUE')[0].texto).toMatch(/salida digital 1/)
+  })
+
+  it('anota cada línea de cada ejemplo con una frase', () => {
+    const defs = [
+      ...EJEMPLOS_ROBOT.filter((e) => e.id !== 'vacio').map((e) => e.definicion()),
+      ejemploGuiadoTarea(),
+    ]
+    for (const d of defs) {
+      const dxf = d.dxf ? leerDXF(d.dxf.texto) : null
+      const sim = simular(evaluar(d, dxf).programas[0])
+      const lineas = sim.krl.replace(/\r/g, '').replace(/\n$/, '').split('\n').filter((l) => l.trim())
+      const sin = lineas.filter((l) => presentarLineaKRL(l).glosa.trim().length < 8)
+      expect(sin, d.nombre).toEqual([])
+    }
+    const fresado = evaluar(EJEMPLOS_ROBOT.find((e) => e.id === 'fresado')!.definicion(), leerDXF(dxfDeEjemplo()))
+    const texto = simular(fresado.programas[0]).krl
+    expect(texto).toMatch(/DEF \w+\( \) ; Empieza el programa/)
+    expect(texto).toMatch(/PTP \{A1 .+\} ; Punto a punto/)
+    expect(texto).toMatch(/LIN \{X .+\} C_DIS ; La punta va en línea recta/)
+    expect(texto).toMatch(/\$OUT\[1\] = TRUE ; Enciende la salida 1\./)
+    expect(texto).toMatch(/WAIT SEC [\d.]+ ; El robot espera/)
+    expect(texto).toMatch(/\$BASE = \{X .+\} ; Fija dónde está la pieza/)
+    expect(texto).toMatch(/\$VEL\.CP = [\d.]+ ; Las rectas y los arcos/)
+    expect(texto).toMatch(/\nEND ; Aquí termina el programa/)
   })
 })
 
