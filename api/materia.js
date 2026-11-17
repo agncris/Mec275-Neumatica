@@ -109,15 +109,6 @@ export const FICHAS = [
       'Arrastra un bloque al lienzo y conecta la salida (derecha) con la entrada (izquierda). «Abrir DXF» trae líneas, arcos, círculos y polilíneas; Curve las entrega, filtradas por capa. En el Core defines dónde está la pieza respecto del robot. La herramienta apunta en contra de la Z de cada plano: con planos XY baja vertical. ▶ recorre el programa. La trayectoria se pinta verde si va bien, naranjo con avisos (cerca de un límite o de una singularidad) y roja con errores (fuera de alcance, fuera del rango de un eje, saltos o choques con el mesón o la plancha). «Exportar KRL» descarga el .src. El mando manual mueve el robot eje por eje o en X/Y/Z, graba puntos PTP o LIN y los reproduce (teach-in/playback).',
   },
   {
-    id: 'robot-instalar',
-    unidad: 'Robótica',
-    ancla: 'instalar',
-    titulo: 'Instalar el software del curso',
-    claves: ['instalar rhino', 'evaluacion de rhino', 'crack', 'kuka|prc gratis'],
-    texto:
-      'La unidad funciona en el navegador. Si quieres el software del curso, sin crackear: Rhino 8 tiene evaluación gratuita de 90 días (Windows y Mac); al terminar deja de guardar y de cargar complementos, así que instálalo cuando empiece la unidad. Grasshopper viene en Rhino 8. KUKA|prc es gratuito para docencia e investigación en instituciones de la Association for Robots in Architecture (cubre a profesores y estudiantes, también en sus computadores) y existe una versión Community. Los componentes de esta app tienen los mismos nombres y el KRL es el mismo lenguaje. No se abren archivos .gh: la definición se arma aquí. El KRL es de estudio: revísalo antes de usarlo en un robot real.',
-  },
-  {
     id: 'cnc-que-es',
     unidad: 'CNC',
     ancla: 'que-es',

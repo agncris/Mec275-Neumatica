@@ -44,7 +44,7 @@ import {
 } from './nodos'
 import { HOME, robotPorId } from './robots'
 import type { Previa, VistaRobot } from './Robot3D'
-import { Componentes, FichaTecnica, GradosLibertad, InstalarSoftware, PracticaRobot, ProgramacionParametrica, QueEsRobot, SerieVsRobotica, SaltarAPractica, TiposGenerales } from './TeoriaRobotica'
+import { Componentes, FichaTecnica, GradosLibertad, PracticaRobot, ProgramacionParametrica, QueEsRobot, SerieVsRobotica, SaltarAPractica, TiposGenerales } from './TeoriaRobotica'
 
 const Robot3D = lazy(() => import('./Robot3D'))
 const TiposRobot = lazy(() => import('./TiposRobot'))
@@ -1345,7 +1345,6 @@ const SECCIONES_ROBOT: SeccionEstudio[] = [
   { id: 'grados', indice: 'Grados de libertad', titulo: 'Grados de libertad y singularidades', contenido: <GradosLibertad /> },
   { id: 'ficha-tecnica', indice: 'Ficha técnica', titulo: 'Ficha técnica: cómo elegir el robot', contenido: <FichaTecnica /> },
   { id: 'parametrica', indice: 'Programación paramétrica', titulo: 'Programación paramétrica: Rhino, Grasshopper y KUKA|prc', contenido: <ProgramacionParametrica /> },
-  { id: 'instalar', indice: 'Instalar el software', titulo: 'Instalar el software del curso (sin crackear)', contenido: <InstalarSoftware /> },
   { id: 'como-usar', indice: 'Cómo usar esta unidad', titulo: 'Cómo usar esta unidad', contenido: <ComoUsar /> },
 ]
 

@@ -443,9 +443,8 @@ cada uno con sus articulaciones R/P movibles, grados de libertad y usos.
 fresado de una placa desde un DXF de práctica (contorno compensado, taladrado de
 agujeros con Command Weaver intercalado y husillo). **Teoría**: robot industrial (Devol,
 teach-in/playback), fabricación en serie frente a robótica, tipos, componentes,
-grados de libertad y singularidades, ficha técnica, programación paramétrica
-(Rhino → Grasshopper → KUKA|prc → KRL) y cómo instalar el software del curso de forma
-legal (evaluación de Rhino 8, KUKA|prc educativo).
+grados de libertad y singularidades, ficha técnica y programación paramétrica
+(Rhino → Grasshopper → KUKA|prc → KRL).
 
 La unidad no incluye enunciados, planos ni soluciones de evaluaciones.
 

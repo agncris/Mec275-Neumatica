@@ -6,6 +6,7 @@
  */
 import { createContext, useContext, type ReactNode } from 'react'
 import { VER_TAREA_ROBOTICA } from '../unidades'
+import { FiguraAlcance, FiguraGrados, FiguraMovimientos, FiguraSvg } from './animaciones'
 import { ROBOTS } from './robots'
 
 /** El botón «probarlo» de Estudiar llama a esto para abrir el Laboratorio o la Tarea. */
@@ -120,7 +121,7 @@ export function TiposGenerales() {
 export function Componentes() {
   return (
     <div>
-      <svg viewBox="0 0 620 248" width="100%" style={{ maxWidth: 680, display: 'block', margin: '0 auto 10px' }} role="img" aria-label="Componentes de un robot de base fija: el brazo sale de la base y termina en el efector">
+      <FiguraSvg viewBox="0 0 620 248" ariaLabel="Componentes de un robot de base fija: el brazo sale de la base y termina en el efector" etiqueta="La pinza abre y cierra. Es el efector final: lo que va en la punta. El controlador y el smartPAD quedan al lado, unidos por el cable.">
         {/* Base y columna, unidas al hombro */}
         <rect x={58} y={200} width={100} height={18} rx={4} fill="#2b3036" />
         <rect x={93} y={132} width={30} height={72} rx={6} fill="#f06a14" />
@@ -133,8 +134,12 @@ export function Componentes() {
             <circle cx={0} cy={0} r={12} fill="#d85a0e" />
             <g transform="translate(96 0)">
               <rect x={0} y={-7} width={14} height={14} rx={2} fill="#5c656e" />
-              <rect x={10} y={-18} width={7} height={16} rx={2} fill="#2b3036" />
-              <rect x={10} y={2} width={7} height={16} rx={2} fill="#2b3036" />
+              <rect x={10} y={-18} width={7} height={16} rx={2} fill="#2b3036">
+                <animate attributeName="y" values="-18;-26;-18" dur="2.4s" repeatCount="indefinite" />
+              </rect>
+              <rect x={10} y={2} width={7} height={16} rx={2} fill="#2b3036">
+                <animate attributeName="y" values="2;10;2" dur="2.4s" repeatCount="indefinite" />
+              </rect>
             </g>
           </g>
         </g>
@@ -158,7 +163,7 @@ export function Componentes() {
         <text x={318} y={128} textAnchor="middle" fontSize={13} fontWeight={700} fill={TINTA}>
           Efector final
         </text>
-      </svg>
+      </FiguraSvg>
       <p style={p}>
         Un robot de base fija tiene <strong>seis partes básicas</strong>:
       </p>
@@ -189,6 +194,7 @@ export function GradosLibertad() {
         cualquier <strong>orientación</strong>, otros 3. Por eso el robot industrial típico, el antropomórfico, tiene{' '}
         <strong>6 GDL</strong>; un SCARA tiene 4 (X, Y, Z y giro de la herramienta) y un cartesiano, 3.
       </p>
+      <FiguraGrados />
       <p style={p}>
         En un KUKA de 6 ejes, A1, A2 y A3 llevan la muñeca a su lugar y A4, A5 y A6 orientan la herramienta. Cuando A5
         queda en 0°, A4 y A6 quedan alineados y el robot pierde un grado de libertad: es una{' '}
@@ -221,6 +227,9 @@ export function FichaTecnica() {
       <p style={{ ...p, marginTop: 10 }}>
         El <strong>campo de trabajo</strong> muestra, en vista lateral y superior, hasta dónde llega la muñeca; el{' '}
         <strong>diagrama de cargas</strong>, cuánto peso soporta según lo lejos del flange que esté el centro de gravedad.
+      </p>
+      <FiguraAlcance />
+      <p style={p}>
         Robots disponibles en este simulador (valores orientativos: confirma en la ficha oficial):
       </p>
       <Tabla
@@ -270,8 +279,9 @@ export function ProgramacionParametrica() {
         como curvas donde se piden puntos); verde = seleccionado. Ojo: en Grasshopper el componente que funciona bien se
         ve blanco, y el gris es un componente oculto.
       </p>
+      <FiguraMovimientos />
       <p style={p}>
-        <strong>Movimientos:</strong> <strong>PTP</strong> mueve todos los ejes a la vez y llega lo más rápido posible,
+        <strong>PTP</strong> mueve todos los ejes a la vez y llega lo más rápido posible,
         pero la herramienta no va en línea recta (para acercarse y alejarse). <strong>LIN</strong> lleva la herramienta en
         línea recta (para trabajar); es más lento. <strong>CIR</strong> hace un arco pasando por un punto auxiliar.{' '}
         <strong>AXIS</strong> da el ángulo de cada eje. <strong>Command Weaver</strong> combina listas de comandos;{' '}
@@ -287,35 +297,6 @@ export function ProgramacionParametrica() {
       </p>
       <SaltarAPractica>Armar un recorrido en el Laboratorio</SaltarAPractica>
       <SaltarAPractica destino="tarea">Aplicarlo en la Tarea</SaltarAPractica>
-    </div>
-  )
-}
-
-export function InstalarSoftware() {
-  return (
-    <div>
-      <p style={p}>
-        Esta unidad funciona en cualquier navegador (Windows, Mac, Linux o tablet). Si quieres usar el software del curso,
-        se puede hacer <strong>sin crackear nada</strong>:
-      </p>
-      <ul style={{ margin: '0 0 8px', paddingLeft: 20, lineHeight: 1.6 }}>
-        <li>
-          <strong>Rhino 8</strong> tiene una evaluación gratuita y completa de 90 días, para Windows y Mac (rhino3d.com).
-          Al terminar deja de guardar y de cargar complementos: instálalo cuando empiece la unidad.
-        </li>
-        <li>
-          <strong>Grasshopper</strong> viene incluido en Rhino 8.
-        </li>
-        <li>
-          <strong>KUKA|prc</strong> es gratuito para docencia e investigación en instituciones que son miembros de la
-          Association for Robots in Architecture (la membresía cubre a profesores y estudiantes, también en sus
-          computadores personales); también existe una versión Community. En Mac, conviene probarlo antes.
-        </li>
-      </ul>
-      <p style={p}>
-        Lo que armes aquí se traslada directo: los componentes tienen los mismos nombres (Divide Length, XY Plane, LIN,
-        PTP, Core…) y el código KRL es el mismo lenguaje.
-      </p>
     </div>
   )
 }
