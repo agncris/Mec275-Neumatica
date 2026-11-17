@@ -1990,12 +1990,14 @@ body:has(.banco:not(.banco--apilado):not(.banco--neumatica-apilado)) {
   border: none;
   background: #1668c7;
   color: #fff;
-  font-weight: 700;
+  font-weight: 750;
+  font-size: 0.98rem;
+  letter-spacing: 0.01em;
   border-radius: 999px;
-  min-height: 42px;
-  padding: 0 16px;
+  min-height: 48px;
+  padding: 0 20px;
   cursor: pointer;
-  box-shadow: 0 6px 18px rgba(22, 104, 199, 0.28);
+  box-shadow: 0 8px 22px rgba(22, 104, 199, 0.42), 0 0 0 3px rgba(255, 255, 255, 0.9);
 }
 .mecbot__panel {
   width: min(380px, calc(100vw - 28px));

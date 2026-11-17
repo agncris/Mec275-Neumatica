@@ -270,6 +270,42 @@ export function pideSolucion(pregunta) {
 const AVISO_TAREA =
   'No te armo la solución de la tarea. Revisa el concepto en Estudiar y dime qué paso ya tienes y qué aviso te aparece: con eso te hago una pregunta para que lo descubras.'
 
+/** Palabras de relleno en «explícame robótica» o «de qué trata el CNC». */
+const RELLENO = new Set('explica explicame explicar cuentame hablame habla resume resumen trata sobre tema unidad curso materia todo toda intro introduccion'.split(' '))
+
+const NOMBRE_UNIDAD = [
+  { unidad: 'Robótica', palabras: ['robot', 'robots', 'robotica', 'robotico', 'kuka'] },
+  { unidad: 'CNC', palabras: ['cnc'] },
+  { unidad: 'PLC', palabras: ['plc'] },
+  { unidad: 'Neumática', palabras: ['neumatica', 'neumatico'] },
+]
+
+/** «Explícame robótica»: la pregunta nombra una unidad y nada más. */
+function unidadPedida(pregunta) {
+  const q = tokens(pregunta).filter((t) => !RELLENO.has(t))
+  if (!q.length || q.length > 2) return null
+  const hits = new Set()
+  for (const t of q) {
+    const u = NOMBRE_UNIDAD.find((n) => n.palabras.includes(t))
+    if (!u) return null
+    hits.add(u.unidad)
+  }
+  return hits.size === 1 ? [...hits][0] : null
+}
+
+function panoramaDe(pregunta) {
+  const unidad = unidadPedida(pregunta)
+  if (!unidad) return null
+  const fichas = FICHAS.filter((f) => f.unidad === unidad)
+  if (!fichas.length) return null
+  const [primera, ...resto] = fichas
+  const menu = resto.map((f) => `• ${f.titulo}`).join('\n')
+  return {
+    origen: 'apuntes',
+    texto: `${primera.texto}\n\nSi quieres seguir, pregunta por:\n${menu}`,
+  }
+}
+
 /**
  * @param {string} pregunta
  * @param {number} [n]
@@ -302,6 +338,8 @@ export function buscar(pregunta, n = 3) {
 /** Respuesta de los apuntes, o null si no alcanza y hay que usar el modelo. */
 export function respuestaDeApuntes(pregunta) {
   if (pideSolucion(pregunta)) return { texto: AVISO_TAREA, origen: 'reglas' }
+  const panorama = panoramaDe(pregunta)
+  if (panorama) return panorama
   const ranked = buscar(pregunta, 2)
   const mejor = ranked[0]
   if (!mejor || mejor.puntos < 6) return null

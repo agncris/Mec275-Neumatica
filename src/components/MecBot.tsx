@@ -140,7 +140,7 @@ export default function MecBot() {
           </header>
           <div className="mecbot__lista" ref={listaRef}>
             {mensajes.length === 0 && (
-              <p className="mecbot__vacio">Pregunta por la materia, sobre todo robótica. Si está en Estudiar, te respondo sin usar la cuota del modelo.</p>
+              <p className="mecbot__vacio">Pregunta por neumática, PLC, CNC o robótica: un concepto, un símbolo o cómo usar el simulador.</p>
             )}
             {mensajes.map((m, i) => (
               <p key={i} className={`mecbot__globo mecbot__globo--${m.rol}`}>

@@ -24,6 +24,17 @@ describe('apuntes de MecBot', () => {
     expect(r?.texto).toMatch(/avance rápido/)
   })
 
+  it('explica una unidad entera sin llamar al modelo', async () => {
+    const r = respuestaDeApuntes('explicame robotica')
+    expect(r?.texto).toMatch(/teach-in/)
+    expect(r?.texto).toMatch(/PTP, LIN, CIR y AXIS/)
+    expect(r?.texto).not.toMatch(/G00/)
+    const cnc = respuestaDeApuntes('explícame el CNC')
+    expect(cnc?.texto).toMatch(/código G/)
+    const texto = await responder([{ rol: 'alumno', texto: 'explicame robotica' }])
+    expect(texto).toMatch(/Si quieres seguir/)
+  })
+
   it('no inventa una respuesta si la pregunta no está en los apuntes', () => {
     expect(respuestaDeApuntes('xyzzy foobar cuántico')).toBeNull()
     expect(buscar('xyzzy foobar cuántico')).toHaveLength(0)
