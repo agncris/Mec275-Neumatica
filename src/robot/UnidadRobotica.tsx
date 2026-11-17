@@ -695,6 +695,8 @@ export default function UnidadRobotica() {
     setAviso(previa ? 'Volviste a tu tarea, sin el ejemplo.' : 'Ejemplo quitado. La tarea queda como al empezar: robot, fresa y el plano.')
   }
   const ejemploEnTarea = enTarea && esEjemploGuiado(def)
+  // El desplegable muestra el ejemplo abierto, también después de recargar.
+  const ejemploAbierto = useMemo(() => [...EJEMPLOS_ROBOT, ...PRACTICA_ROBOT].find((e) => e.definicion().nombre === def.nombre) ?? null, [def.nombre])
   const errores = simActiva?.problemas.filter((p) => p.nivel === 'error') ?? []
   const avisosSim = simActiva?.problemas.filter((p) => p.nivel === 'aviso') ?? []
   const modeloVista = modo === 'visual' ? robotVista.modelo : modeloM
@@ -771,15 +773,14 @@ export default function UnidadRobotica() {
           </span>
           {!enTarea && (
           <select
-            value=""
+            value={ejemploAbierto?.id ?? ''}
             onChange={(e) => {
-              const x = e.target.value
-              e.target.value = ''
-              cargarEjemplo(x)
+              if (e.target.value) cargarEjemplo(e.target.value)
             }}
-            style={{ padding: '0.35rem 0.4rem', minHeight: 36, width: estrecha ? '25vw' : 220 }}
+            style={{ padding: '0.35rem 0.4rem', minHeight: 36, width: estrecha ? '42vw' : 340, maxWidth: '46vw' }}
             data-ejemplos-robot="si"
             aria-label="Ejemplos"
+            title={ejemploAbierto ? ejemploAbierto.titulo : 'Ejemplos'}
           >
             <option value="">Ejemplos…</option>
             {EJEMPLOS_ROBOT.map((e) => (
