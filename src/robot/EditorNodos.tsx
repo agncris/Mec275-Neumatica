@@ -129,7 +129,7 @@ interface Props {
   /** En píxeles, o '100%' para llenar el área. */
   alto?: number | string
   /** En la tarea: el siguiente paso, y el bloque que conviene arrastrar. */
-  guia?: { id: string; numero: number; total: number; titulo: string; accion: string; listo?: string; por?: string; pasos?: string[]; pestana?: Pestana; destacar?: string }
+  guia?: { id: string; numero: number; total: number; titulo: string; accion: string; listo?: string; por?: string; pasos?: string[]; pista?: string; pestana?: Pestana; destacar?: string }
   /** El ejemplo está abierto: no invita a seguir armando sobre ese lienzo. */
   mirandoEjemplo?: boolean
   onDeshacer?: () => void
@@ -467,6 +467,7 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
             ) : (
               <p style={{ margin: '4px 0 0' }}>{guia.accion}</p>
             )}
+            {guia.pista && <p style={{ margin: '4px 0 0', color: '#6b4200', fontWeight: 600 }}>Te falta: {guia.pista}</p>}
             {guia.listo && <p style={{ margin: '4px 0 0', color: '#33475c' }}>Listo cuando: {guia.listo}</p>}
           </div>
         )}

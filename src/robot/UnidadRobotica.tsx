@@ -18,6 +18,7 @@ import FichaRobot from './FichaRobot'
 import { PREGUNTAS_ROBOT } from './preguntasRobot'
 import { ETIQUETA_GRUPO, PRACTICA_ROBOT, type GrupoPractica } from './practica'
 import { adaptarATarea, analizarTarea4, ejemploGuiadoTarea, esEjemploGuiado, MARCA_TAREA4, revisarTarea4, tareaAlAbrir, tareaVaciaRobot, type PuntoRevisionTarea } from './tarea4'
+import { guiaTarea, type ItemAvance, type PasoTarea } from './guiaTarea'
 import { copiarTabla, descargarTexto, leerAlumno, limpiarEnlace, trabajoDelEnlace } from '../entregar'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { exportarPng, nombreSeguro } from '../exportar'
@@ -655,7 +656,8 @@ export default function UnidadRobotica() {
 
   const tiempo = tRef.current
   const nodoSel = seleccion ? def.nodos.find((n) => n.id === seleccion) ?? null : null
-  const pasoTarea = enTarea ? pasoGuiado(def) : null
+  const guiaT = enTarea ? guiaTarea(def) : null
+  const pasoTarea = guiaT?.paso ?? null
   const [checklistTarea, setChecklistTarea] = useState<PuntoRevisionTarea[]>([])
   useEffect(() => {
     document.querySelector('.panel-acoplado__contenido')?.scrollTo({ top: 0 })
@@ -1077,7 +1079,7 @@ export default function UnidadRobotica() {
   )
 
   const pestanas: Array<PestanaPanel<PestanaRobot>> = [
-    ...(enTarea && pasoTarea ? [{ id: 'plano-tarea' as const, titulo: 'Plano de la tarea', tituloCorto: 'Plano', contenido: <PlanoTarea paso={pasoTarea} checklist={ejemploEnTarea ? [] : checklistTarea} onEstudiar={irAEstudiar} ejemplo={ejemploEnTarea} /> }] : []),
+    ...(enTarea && pasoTarea ? [{ id: 'plano-tarea' as const, titulo: 'Plano de la tarea', tituloCorto: 'Plano', contenido: <PlanoTarea paso={pasoTarea} avance={guiaT?.avance ?? []} checklist={ejemploEnTarea ? [] : checklistTarea} onEstudiar={irAEstudiar} ejemplo={ejemploEnTarea} /> }] : []),
     {
       id: 'analisis',
       titulo: 'Análisis',
@@ -1646,106 +1648,6 @@ const estadoChip: React.CSSProperties = { color: '#fff', borderRadius: 6, paddin
 const avisoOk = estiloAviso
 
 
-const ETAPAS_TAREA = ['Dibujo', 'Compensar', 'Bajar', 'Recorrer', 'Programa', 'Revisar']
-
-interface PasoAhora {
-  id: string
-  numero: number
-  total: number
-  titulo: string
-  donde: string
-  accion: string
-  listo: string
-  /** Por qué se hace este paso. */
-  por?: string
-  /** Micro pasos, en el orden en que se hacen. */
-  pasos?: string[]
-  pestana?: 'Trayectoria' | 'Movimientos'
-  destacar?: string
-  /** Bloque que se selecciona solo, para mostrar su panel. */
-  seleccionar?: string
-  /** Parámetro que hay que cambiar en ese panel. */
-  enfocar?: string
-}
-
-/** Un solo paso, el que sigue, según lo que ya está en el lienzo. */
-function pasoGuiadoBase(def: Definicion): PasoAhora {
-  const total = ETAPAS_TAREA.length
-  const tipoDe = (id: string) => def.nodos.find((n) => n.id === id)?.tipo
-  const curvas = def.nodos.filter((n) => n.tipo === 'curvaDXF')
-  const base = { total }
-  const capaDe = (n: (typeof curvas)[number]) => String(n.params.capa ?? '').trim().toUpperCase()
-  if (!curvas.length) {
-    return { ...base, id: 'curva', numero: 1, titulo: 'Traer el dibujo', pestana: 'Trayectoria', destacar: 'curvaDXF', donde: 'Pestaña Trayectoria, bloque Curve con borde azul.', accion: 'Arrástralo al lienzo. Ese bloque lee el plano que ya está cargado.', listo: 'Aparece un bloque Crv en el lienzo.' }
-  }
-  const sinCapa = curvas.find((n) => !['CONTORNO', 'RANURAS'].includes(capaDe(n)))
-  if (sinCapa) {
-    return { ...base, id: 'capa', numero: 1, titulo: 'Elegir el borde', seleccionar: sinCapa.id, enfocar: 'capa', donde: 'Panel de abajo del programa. La lista Capa está marcada.', accion: 'Abre Capa y elige CONTORNO. Es el borde de afuera, con los chaflanes. Las ranuras van en otra Curve.', listo: 'La lista dice CONTORNO, no «Todas las capas».' }
-  }
-  if (!def.nodos.some((n) => n.tipo === 'desfase')) {
-    return { ...base, id: 'offset', numero: 2, titulo: 'Compensar la fresa', pestana: 'Trayectoria', destacar: 'desfase', donde: 'Pestaña Trayectoria, bloque Offset Curve con borde azul.', accion: 'Conéctalo a la salida C de Curve. En el contorno deja D en 2,5 (hacia afuera). En las ranuras pon D en −2,5 (hacia adentro).', listo: 'Hay un cable de Curve a Offset.' }
-  }
-  if (!def.nodos.some((n) => n.tipo === 'mover' && Number(n.params.z) < 0)) {
-    return { ...base, id: 'bajar', numero: 3, titulo: 'Bajar a la profundidad', pestana: 'Trayectoria', destacar: 'mover', donde: 'Pestaña Trayectoria, bloque Move con borde azul.', accion: 'Conéctalo a la salida de Offset y pon Z en −5. Así la fresa atraviesa la plancha de 5 mm.', listo: 'Move dice Z = −5.' }
-  }
-  const corta = def.nodos.some((n) => n.tipo === 'recorrer' || n.tipo === 'lin' || n.tipo === 'cir')
-  if (!corta) {
-    return { ...base, id: 'path', numero: 4, titulo: 'Recorrer la curva', pestana: 'Movimientos', destacar: 'recorrer', donde: 'Pestaña Movimientos, bloque Toolpath con borde azul.', accion: 'Conéctalo a la salida de Move. Recorre cada curva con un PTP de acercamiento, LIN de corte y PTP de salida, y no une una ranura con la otra. El plano ya trae los arcos partidos en puntos: no hace falta un CIR por cada curva.', listo: 'Hay un cable de Move a Toolpath.' }
-  }
-  const husillo = def.nodos.some((n) => n.tipo === 'salida' && n.params.valor !== false)
-  const alCore = def.cables.some((c) => tipoDe(c.a) === 'core' && c.entrada === 0)
-  if (!husillo || !alCore) {
-    return { ...base, id: 'core', numero: 5, titulo: 'Encender y armar el programa', pestana: 'Movimientos', destacar: 'salida', donde: 'Pestaña Movimientos, bloque Set Digital Out, y la entrada C del Core.', accion: 'Pon un Set Digital Out en TRUE y un Wait de 1 s antes del recorrido. Júntalos con Merge y lleva esa salida a la C del Core. El robot y la fresa ya están conectados.', listo: 'Aparece el botón ▶ bajo la vista 3D y el husillo se enciende antes de cortar.' }
-  }
-  const capas = curvas.map(capaDe)
-  if (!capas.includes('RANURAS')) {
-    return { ...base, id: 'ranuras', numero: 6, titulo: 'Repetir con las ranuras', pestana: 'Trayectoria', destacar: 'curvaDXF', donde: 'Otra Curve, con la capa RANURAS.', accion: 'Arrastra otra Curve, elige RANURAS y repite Offset (D = −2,5), Move (Z = −5) y Toolpath. El Merge solo acepta tres cables: pon otro Merge a la salida del primero y conecta ahí el recorrido de las ranuras. Apaga el husillo (Set Digital Out en FALSE) después de los dos recorridos.', listo: 'El checklist dice que la trayectoria recorre 10 de 10 trazos.' }
-  }
-  return { ...base, id: 'cerrar', numero: 6, titulo: 'Revisar el checklist', donde: 'La lista de esta lámina y la pestaña Análisis.', accion: 'Pulsa ▶. Si un trazo queda en el borde y no compensado, revisa el signo de Offset. Si la fresa no atraviesa, Move tiene que estar en Z = −5. Si hay un LIN en el aire, el acercamiento tiene que ser PTP.', listo: 'El checklist queda en verde.' }
-}
-
-const DETALLE_PASO: Record<string, { por: string; pasos: string[] }> = {
-  curva: {
-    por: 'Sin el dibujo, el robot no sabe dónde cortar. Curve lee las líneas del plano que ya viene cargado.',
-    pasos: ['Abre la pestaña Trayectoria de la paleta (a la izquierda).', 'Busca «Crv» (borde azul) y arrástralo al lienzo gris, o haz clic para dejarlo en el centro.', 'Mira que el bloque tenga salidas a la derecha.'],
-  },
-  capa: {
-    por: 'El plano tiene dos capas. Si no eliges, el robot sigue todas las líneas juntas, también las que no son tu trazo.',
-    pasos: ['Haz clic en el bloque Crv del lienzo.', 'En el panel de abajo, abre la lista «Capa».', 'Elige CONTORNO. Más adelante usarás otra Curve para RANURAS.'],
-  },
-  offset: {
-    por: 'La fresa tiene 5 mm de diámetro. Si sigue la línea tal cual, corta 2,5 mm de más hacia un lado. Offset la corre el radio de la fresa.',
-    pasos: ['En Trayectoria, arrastra «Offset Curve» al lienzo.', 'Arrastra desde el punto de la derecha de Crv (salida C) hasta el punto de la izquierda de Offset.', 'Haz clic en Offset y deja D = 2,5 para el contorno (hacia afuera).'],
-  },
-  bajar: {
-    por: 'La plancha tiene 5 mm de espesor. La fresa debe bajar esos 5 mm para atravesarla. Si no, solo la raya.',
-    pasos: ['En Trayectoria, arrastra «Move» al lienzo.', 'Conecta la salida de Offset a la entrada de Move.', 'Haz clic en Move y escribe Z = -5. X e Y quedan en 0.'],
-  },
-  path: {
-    por: 'Aquí se convierte la curva en movimientos del robot: se acerca en el aire (PTP), corta (LIN) y sale en el aire (PTP).',
-    pasos: ['Abre la pestaña Movimientos y arrastra «Toolpath» al lienzo.', 'Conecta la salida de Move a su entrada.', 'Déjalo con PTP de acercamiento, LIN de corte y PTP de salida.'],
-  },
-  core: {
-    por: 'El husillo es el motor de la fresa. Si no está encendido, la fresa no corta. El Core junta todo el programa y es lo que se simula.',
-    pasos: ['Arrastra «Set Digital Out» y déjalo en TRUE.', 'Arrastra «Wait» y pon 1 s (el husillo tarda en tomar velocidad).', 'Junta Set Digital Out, Wait y el Toolpath con «Merge», en ese orden.', 'Lleva la salida de Merge a la entrada C del Core, y pulsa ▶.'],
-  },
-  ranuras: {
-    por: 'Las nueve aberturas se cortan por dentro: la fresa tiene que quedar dentro de la abertura, por eso el Offset es negativo.',
-    pasos: ['Arrastra otra Curve y elige la capa RANURAS.', 'Repite Offset con D = -2,5, Move con Z = -5 y Toolpath.', 'Pon un segundo Merge para sumar el recorrido de las ranuras al del contorno.', 'Apaga el husillo (Set Digital Out en FALSE) antes de terminar.'],
-  },
-  cerrar: {
-    por: 'Antes de entregar, la app revisa lo mismo que la pauta: recorrido, profundidad, husillo y movimientos.',
-    pasos: ['Pulsa ▶ y mira la simulación completa.', 'Abre Entregar Tarea Robótica y pulsa Revisar.', 'Si algo queda en rojo o con ☐, arregla ese punto y vuelve a revisar.'],
-  },
-}
-
-/** Un solo paso, el que sigue, con su porqué y los micro pasos. */
-function pasoGuiado(def: Definicion): PasoAhora {
-  const p = pasoGuiadoBase(def)
-  const d = DETALLE_PASO[p.id]
-  return d ? { ...p, ...d } : p
-}
-
 /** Barra del ejemplo: va por encima de las pestañas del panel, no dentro de Plano. */
 function BarraEjemplo({ ejemplo, onEjemplo, onVolver, onSeguir }: { ejemplo: boolean; onEjemplo: () => void; onVolver: () => void; onSeguir: () => void }) {
   return (
@@ -1772,44 +1674,46 @@ function BarraEjemplo({ ejemplo, onEjemplo, onVolver, onSeguir }: { ejemplo: boo
 }
 
 /** El plano de la tarea, con el proceso arriba y un solo paso abierto. */
-function PlanoTarea({ paso, checklist, onEstudiar, ejemplo }: { paso: PasoAhora; checklist: PuntoRevisionTarea[]; onEstudiar: (ancla: string) => void; ejemplo: boolean }) {
+function PlanoTarea({ paso, avance, checklist, onEstudiar, ejemplo }: { paso: PasoTarea; avance: ItemAvance[]; checklist: PuntoRevisionTarea[]; onEstudiar: (ancla: string) => void; ejemplo: boolean }) {
   return (
     <div data-plano-tarea="si" style={{ fontSize: '0.84rem', color: '#1c2733', lineHeight: 1.45 }}>
       <section className="proceso" aria-label="Proceso de la tarea" data-paso-ahora={ejemplo ? 'ejemplo' : paso.id}>
-        <p style={{ margin: 0, fontWeight: 700 }}>
-          {ejemplo ? 'Ejemplo del contorno. No es tu entrega.' : `Paso ${paso.numero} de ${paso.total} · ${paso.titulo}`}
-        </p>
         {ejemplo ? (
-          <p style={{ margin: '6px 0 0' }}>Curve (CONTORNO) → Offset +2,5 → Move Z −5 → Toolpath → husillo encendido, espera y apagado → Core. Sirve para mirar cómo se conecta. Las nueve ranuras quedan para tu tarea.</p>
+          <>
+            <p style={{ margin: 0, fontWeight: 700 }}>Ejemplo del contorno. No es tu entrega.</p>
+            <p style={{ margin: '6px 0 0' }}>Curve (CONTORNO) → Offset +2,5 → Move Z −5 → Toolpath → husillo encendido, espera y apagado → Core. Sirve para mirar cómo se conecta. Las nueve ranuras quedan para tu tarea.</p>
+          </>
         ) : (
           <>
-            <ol className="proceso__etapas">
-              {ETAPAS_TAREA.map((nombre, i) => {
-                const n = i + 1
-                const estado = n < paso.numero ? 'hecha' : n === paso.numero ? 'ahora' : ''
-                return (
-                  <li key={nombre} className={estado ? `proceso__etapa proceso__etapa--${estado}` : 'proceso__etapa'} aria-current={estado === 'ahora' ? 'step' : undefined}>
-                    {estado === 'hecha' ? '✓ ' : `${n} `}
-                    {nombre}
-                  </li>
-                )
-              })}
+            <p style={{ margin: '0 0 4px', fontSize: '0.76rem', fontWeight: 700, color: '#51606f', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+              {paso.grupo} · paso {paso.numero} de {paso.total}
+            </p>
+            <div role="progressbar" aria-valuemin={0} aria-valuemax={paso.total} aria-valuenow={avance.filter((a) => a.hecho).length} style={{ height: 6, borderRadius: 3, background: '#e3e8ee', margin: '0 0 10px', overflow: 'hidden' }}>
+              <div style={{ width: `${(avance.filter((a) => a.hecho).length / paso.total) * 100}%`, height: '100%', background: '#0e7a43' }} />
+            </div>
+            <p style={{ margin: '0 0 6px', fontSize: '1rem', fontWeight: 750 }}>{paso.titulo}</p>
+            {paso.pista && (
+              <p data-pista-tarea="si" style={{ margin: '0 0 8px', padding: '6px 8px', borderRadius: 6, background: '#fff4e0', border: '1px solid #f0c987', color: '#6b4200' }}>
+                <strong>Te falta esto:</strong> {paso.pista}
+              </p>
+            )}
+            <ol style={{ margin: '0 0 8px', paddingLeft: 20 }}>
+              {paso.pasos.map((t) => <li key={t} style={{ marginBottom: 2 }}>{t}</li>)}
             </ol>
-            <dl className="proceso__fila">
-              <dt>Dónde</dt>
-              <dd>{paso.donde}</dd>
-              <dt>Haz esto</dt>
-              <dd>
-                {paso.pasos ? (
-                  <ol style={{ margin: 0, paddingLeft: 18 }}>
-                    {paso.pasos.map((t) => <li key={t}>{t}</li>)}
-                  </ol>
-                ) : paso.accion}
-              </dd>
-              <dt>Listo</dt>
-              <dd>{paso.listo}</dd>
-              {paso.por && (<><dt>Por qué</dt><dd>{paso.por}</dd></>)}
-            </dl>
+            <p style={{ margin: '0 0 4px' }}><strong>Dónde:</strong> {paso.donde}</p>
+            <p style={{ margin: '0 0 4px' }}><strong>Listo cuando:</strong> {paso.listo}</p>
+            <p style={{ margin: '0 0 8px', color: '#33475c' }}><strong>Por qué:</strong> {paso.por}</p>
+            <details data-todos-los-pasos="si" style={{ marginTop: 4 }}>
+              <summary style={{ cursor: 'pointer', fontWeight: 650 }}>Ver todos los pasos ({avance.filter((a) => a.hecho).length} de {paso.total} hechos)</summary>
+              <ol style={{ margin: '6px 0 0', padding: 0, listStyle: 'none' }}>
+                {avance.map((a, n) => (
+                  <li key={a.id} aria-current={a.ahora ? 'step' : undefined} style={{ display: 'flex', gap: 6, padding: '2px 0', color: a.hecho ? '#0e7a43' : a.ahora ? '#0b4f9c' : '#51606f', fontWeight: a.ahora ? 700 : 500 }}>
+                    <span aria-hidden="true" style={{ width: 16, flex: 'none' }}>{a.hecho ? '✓' : a.ahora ? '→' : '○'}</span>
+                    <span>{n + 1}. {a.titulo}</span>
+                  </li>
+                ))}
+              </ol>
+            </details>
           </>
         )}
       </section>
