@@ -10,6 +10,7 @@ import { aplicarModoArrastre, cursoresCamara } from '../components/mandoCamara'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { calidadRender, entornoEstudio, fondoTaller, pisoHormigon, solSuave } from '../vista3d/realista'
 import { crearViewCube } from '../vista3d/viewcube'
+import { bucleVisible } from '../vista3d/visible'
 
 type Tipo = 'scara' | 'cilindrico' | 'esferico' | 'cartesiano' | 'angular' | 'delta'
 
@@ -453,18 +454,25 @@ export default function TiposRobot() {
       ctrl.update()
     })
     let actual: { tipo: Tipo; g: THREE.Group; poner: (v: number[]) => void } | null = null
-    let vivo = true
     let t = 0
+    // Con «Mover solo» apagado y la cámara quieta no hay nada nuevo que dibujar.
+    let sucio = true
+    let firma = ''
+    const marcarSucio = () => {
+      sucio = true
+    }
+    ctrl.addEventListener('change', marcarSucio)
+    const eventosPuntero = ['pointermove', 'pointerdown', 'pointerup', 'pointerleave', 'wheel'] as const
+    for (const e of eventosPuntero) cont.addEventListener(e, marcarSucio, { passive: true })
     const obs = new ResizeObserver(() => {
+      sucio = true
       renderer.setSize(cont.clientWidth, cont.clientHeight)
       cam.aspect = cont.clientWidth / Math.max(1, cont.clientHeight)
       cam.updateProjectionMatrix()
       cubo.actualizar()
     })
     obs.observe(cont)
-    const bucle = () => {
-      if (!vivo) return
-      requestAnimationFrame(bucle)
+    const cuadro = () => {
       const e = estado.current
       if (!actual || actual.tipo !== e.tipo) {
         if (actual) escena.remove(actual.g)
@@ -481,14 +489,22 @@ export default function TiposRobot() {
             return mid + amp * Math.sin(t * (0.6 + 0.23 * k) + k)
           })
         : e.valores[e.tipo]
+      const f = `${e.tipo}|${e.animar ? 'anima' : v.join(',')}`
+      if (e.animar || f !== firma) sucio = true
+      firma = f
       actual.poner(v)
-      ctrl.update()
+      if (ctrl.update()) sucio = true
+      if (cubo.animando()) sucio = true
+      if (!sucio) return
+      sucio = false
       renderer.render(escena, cam)
       cubo.render()
     }
-    requestAnimationFrame(bucle)
+    const pararBucle = bucleVisible(cont, cuadro, { alMostrar: marcarSucio })
     return () => {
-      vivo = false
+      pararBucle()
+      ctrl.removeEventListener('change', marcarSucio)
+      for (const e of eventosPuntero) cont.removeEventListener(e, marcarSucio)
       obs.disconnect()
       quitarCursores()
       ctrl.dispose()

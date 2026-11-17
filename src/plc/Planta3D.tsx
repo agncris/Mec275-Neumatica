@@ -17,6 +17,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { fondoTaller } from '../vista3d/realista'
 import { crearViewCube } from '../vista3d/viewcube'
+import { bucleVisible } from '../vista3d/visible'
 import { MAT, caja, cilindro, modeloCilindro, modeloValvula } from '../vista3d/modelos'
 import { SonidoBanco } from '../vista3d/sonido'
 import type { EstadoPLC } from './ladder'
@@ -1643,11 +1644,8 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
 
     const proyectada = new THREE.Vector3()
     const pan = (v: THREE.Vector3) => THREE.MathUtils.clamp(proyectada.copy(v).project(camara).x * 0.85, -1, 1)
-    let vivo = true
     let antes = performance.now()
-    const bucle = () => {
-      if (!vivo) return
-      requestAnimationFrame(bucle)
+    const cuadro = () => {
       const ahora = performance.now()
       const dt = Math.min(0.1, (ahora - antes) / 1000)
       antes = ahora
@@ -1659,11 +1657,12 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
       renderer.render(escena, camara)
       cubo.render()
     }
-    requestAnimationFrame(bucle)
+    // Fuera de pantalla o con la pestaña oculta no se dibuja ni suena.
+    const pararBucle = bucleVisible(cont, cuadro, { alOcultar: () => sonidoRef.current?.callar() })
     cont.dataset.planta = sim.current.planta.id
 
     return () => {
-      vivo = false
+      pararBucle()
       observador.disconnect()
       renderer.domElement.removeEventListener('pointerdown', onDown)
       renderer.domElement.removeEventListener('wheel', alGirarRueda)

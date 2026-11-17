@@ -19,6 +19,7 @@ import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { sombraContacto, solSuave } from '../vista3d/realista'
 import { crearViewCube } from '../vista3d/viewcube'
+import { bucleVisible } from '../vista3d/visible'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import type { Vec3 } from './gcode'
 import {
@@ -961,12 +962,9 @@ export default function Maquina3D({
     })
     observador.observe(cont)
 
-    let vivo = true
     let antes = performance.now()
     const tam = new THREE.Vector2()
-    const bucle = () => {
-      if (!vivo) return
-      requestAnimationFrame(bucle)
+    const cuadro = () => {
       const ahora = performance.now()
       const dt = Math.min(0.1, (ahora - antes) / 1000)
       antes = ahora
@@ -993,10 +991,11 @@ export default function Maquina3D({
       renderer.render(escena, camara)
       cubo.render()
     }
-    requestAnimationFrame(bucle)
+    // Fuera de pantalla o con la pestaña oculta no se dibuja ni suena.
+    const pararBucle = bucleVisible(cont, cuadro, { alOcultar: () => sonido.callar() })
 
     return () => {
-      vivo = false
+      pararBucle()
       observador.disconnect()
       renderer.domElement.removeEventListener('pointerdown', activarSonido)
       sonido.cerrar()

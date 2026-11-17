@@ -28,6 +28,7 @@ import { MAT, crearModelo, type EstadoPieza, type Modelo3D } from './modelos'
 import { Oido } from './oido'
 import { SonidoBanco } from './sonido'
 import { crearViewCube } from './viewcube'
+import { bucleVisible } from './visible'
 
 interface Props {
   motor: Motor | null
@@ -650,7 +651,6 @@ export default function Banco3D({ motor, llenar = false, play }: Props) {
     // Sólo se repinta cuando algo cambia (simulación en marcha, cámara en
     // movimiento o una tecla del panel): así el banco no le roba CPU al motor
     // de la simulación ni gasta batería con la escena quieta.
-    let vivo = true
     let sucio = true
     controles.addEventListener('change', () => (sucio = true))
     let oido: Oido | null = null
@@ -685,9 +685,7 @@ export default function Banco3D({ motor, llenar = false, play }: Props) {
       oir?.continuo(Math.min(1, continuo) * 0.8, panContinuo)
       oir?.motor(escucha.giros.reduce((m, g) => Math.max(m, g.velocidad), 0))
     }
-    const bucle = () => {
-      if (!vivo) return
-      requestAnimationFrame(bucle)
+    const cuadro = () => {
       const ahora = performance.now()
       const dt = Math.min(0.1, (ahora - antes) / 1000)
       antes = ahora
@@ -718,12 +716,18 @@ export default function Banco3D({ motor, llenar = false, play }: Props) {
       cubo.render()
       sucio = false
     }
-    requestAnimationFrame(bucle)
+    // Fuera de pantalla o con la pestaña oculta no se dibuja ni suena.
+    const pararBucle = bucleVisible(cont, cuadro, {
+      alOcultar: () => sonidoRef.current?.callar(),
+      alMostrar: () => {
+        sucio = true
+      },
+    })
     cont.dataset.piezas = String(enEscena.length)
     cont.dataset.mangueras = String(tubos.length)
 
     return () => {
-      vivo = false
+      pararBucle()
       observador.disconnect()
       renderer.domElement.removeEventListener('pointerdown', onDown)
       window.removeEventListener('pointerup', onUp)

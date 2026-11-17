@@ -13,6 +13,7 @@ import { aplicarModoArrastre, cursoresCamara, girarCuadrante, zoomCamara, type L
 import BotonPantallaCompleta, { usePantallaCompleta } from '../components/PantallaCompleta'
 import { useEffect, useRef, useState, type CSSProperties, type MutableRefObject, type ReactNode } from 'react'
 import { crearViewCube, type ViewCube } from '../vista3d/viewcube'
+import { bucleVisible } from '../vista3d/visible'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { entornoEstudio, sombraContacto } from '../vista3d/realista'
@@ -458,12 +459,34 @@ export default function Robot3D({
     accion.current = (v) => {
       setVistaActual(v)
       encuadrar(v)
+      marcarSucio()
     }
     encuadrar('iso')
     const gizmo = crearViewCube(camara, renderer, controles, cont, 'viewcube-robot', () => accion.current?.('iso'))
     gizmoRef.current = gizmo
 
+    // Dibujar solo cuando algo cambia: con todo quieto, la escena no llama a render.
+    // `sucio` se enciende con la cámara, el puntero (el cubo de vistas resalta al pasar
+    // el mouse), el tamaño y cualquier cambio de `vista.current` (ver `cambioVista`).
+    let sucio = true
+    const marcarSucio = () => {
+      sucio = true
+    }
+    controles.addEventListener('change', marcarSucio)
+    const eventosPuntero = ['pointermove', 'pointerdown', 'pointerup', 'pointerleave', 'wheel'] as const
+    for (const e of eventosPuntero) cont.addEventListener(e, marcarSucio, { passive: true })
+    const prev = { q: '', V: null as null | Record<string, unknown> }
+    const claves = ['modelo', 'pedestal', 'herramienta', 'base', 'espesor', 'placa', 'previa', 'seleccion', 'sim', 'indice', 'corriendo', 'husillo', 'alcance', 'marcas'] as const
+    const cambioVista = (V: VistaRobot) => {
+      const q = V.q.join(',')
+      let cambio = q !== prev.q || prev.V === null
+      if (prev.V) for (const k of claves) if (prev.V[k] !== V[k]) cambio = true
+      prev.q = q
+      prev.V = Object.fromEntries(claves.map((k) => [k, V[k]]))
+      return cambio
+    }
     const observador = new ResizeObserver(() => {
+      sucio = true
       renderer.setSize(cont.clientWidth, cont.clientHeight)
       camara.aspect = cont.clientWidth / Math.max(1, cont.clientHeight)
       camara.updateProjectionMatrix()
@@ -471,15 +494,14 @@ export default function Robot3D({
     })
     observador.observe(cont)
 
-    let vivo = true
     let antes = performance.now()
-    const bucle = () => {
-      if (!vivo) return
-      requestAnimationFrame(bucle)
+    const cuadro = () => {
       const ahora = performance.now()
       const dt = Math.min(0.1, (ahora - antes) / 1000)
       antes = ahora
       const V = vista.current
+      if (cambioVista(V)) sucio = true
+      const hayViruta = virutas.malla.count > 0
       // Robot y herramienta.
       const kR = `${V.modelo.id}|${V.pedestal}|${V.herramienta.tipo}|${V.herramienta.largo}|${V.herramienta.diametro}`
       if (kR !== claveRobot) {
@@ -674,14 +696,20 @@ export default function Robot3D({
         const meta = 520
         if (Math.abs(d - meta) > 4) camara.position.copy(controles.target).addScaledVector(dir.normalize(), d + (meta - d) * (1 - Math.pow(0.002, dt)))
       }
-      controles.update()
+      if (controles.update()) sucio = true
+      // Lo que se mueve solo (reproducción, husillo, viruta, cámara de detalle, cubo de vistas) dibuja siempre.
+      if (V.corriendo || V.husillo || detalleRef.current || hayViruta || virutas.malla.count > 0 || gizmo.animando()) sucio = true
+      if (!sucio) return
+      sucio = false
       renderer.render(escena, camara)
       gizmo.render()
     }
-    requestAnimationFrame(bucle)
+    const pararBucle = bucleVisible(cont, cuadro, { alMostrar: marcarSucio })
 
     return () => {
-      vivo = false
+      pararBucle()
+      controles.removeEventListener('change', marcarSucio)
+      for (const e of eventosPuntero) cont.removeEventListener(e, marcarSucio)
       virutas.dispose()
       stock?.dispose()
       observador.disconnect()
