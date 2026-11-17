@@ -248,9 +248,9 @@ function fondoDegradado(): THREE.Texture {
   lienzo.height = 256
   const c = lienzo.getContext('2d')!
   const g = c.createLinearGradient(0, 0, 0, 256)
-  g.addColorStop(0, '#eef1f4')
-  g.addColorStop(0.55, '#d3d8de')
-  g.addColorStop(1, '#9aa1aa')
+  g.addColorStop(0, '#c4d8ec')
+  g.addColorStop(0.55, '#dde6ee')
+  g.addColorStop(1, '#cfc7b9')
   c.fillStyle = g
   c.fillRect(0, 0, 4, 256)
   const t = new THREE.CanvasTexture(lienzo)

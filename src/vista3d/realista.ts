@@ -13,16 +13,16 @@ export function calidadRender(renderer: THREE.WebGLRenderer) {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap
 }
 
-/** Cielo de taller, claro arriba y un poco más frío abajo. */
+/** Cielo de taller: azul suave arriba y crema hacia el piso, para que el equipo gris no se pierda en el fondo. */
 export function fondoTaller(): THREE.CanvasTexture {
   const c = document.createElement('canvas')
   c.width = 2
   c.height = 256
   const g = c.getContext('2d')!
   const grad = g.createLinearGradient(0, 0, 0, 256)
-  grad.addColorStop(0, '#f7f9fc')
-  grad.addColorStop(0.45, '#e7edf3')
-  grad.addColorStop(1, '#cfd6df')
+  grad.addColorStop(0, '#bcd3ea')
+  grad.addColorStop(0.55, '#d9e4ee')
+  grad.addColorStop(1, '#e8e4dc')
   g.fillStyle = grad
   g.fillRect(0, 0, 2, 256)
   const t = new THREE.CanvasTexture(c)
@@ -73,7 +73,7 @@ export function pisoHormigon(radio: number): THREE.Mesh {
   const c = document.createElement('canvas')
   c.width = c.height = 512
   const g = c.getContext('2d')!
-  g.fillStyle = '#d7dee6'
+  g.fillStyle = '#cdc3b3'
   g.fillRect(0, 0, 512, 512)
   for (let i = 0; i < 2200; i++) {
     const x = Math.random() * 512

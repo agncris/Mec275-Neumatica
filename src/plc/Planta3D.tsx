@@ -172,19 +172,19 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
     // Pared de laboratorio y mesa.
     const pared = new THREE.Mesh(
       new THREE.PlaneGeometry(tam.x + 1.2, tam.y + 0.8),
-      new THREE.MeshStandardMaterial({ color: 0xc9ced4, roughness: 0.9 }),
+      new THREE.MeshStandardMaterial({ color: 0xe7e1d6, roughness: 0.92 }),
     )
     pared.position.set(centro.x, centro.y, -0.005)
     pared.receiveShadow = true
     const mesa = new THREE.Mesh(
       new THREE.BoxGeometry(tam.x + 1.0, 0.04, 0.7),
-      new THREE.MeshStandardMaterial({ color: 0x5f6670, roughness: 0.82 }),
+      new THREE.MeshStandardMaterial({ color: 0x2c3a4c, roughness: 0.5, metalness: 0.3 }),
     )
     mesa.position.set(centro.x, caja3.min.y - 0.02, 0.33)
     mesa.receiveShadow = true
     escena.add(pared, mesa)
 
-    const sol = new THREE.DirectionalLight(0xfff4e6, 2.2)
+    const sol = new THREE.DirectionalLight(0xfff1e0, 3)
     sol.position.set(centro.x - 0.5, centro.y + 1.0, 1.3)
     sol.target.position.copy(centro)
     sol.castShadow = true

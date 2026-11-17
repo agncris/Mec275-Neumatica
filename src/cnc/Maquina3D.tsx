@@ -66,9 +66,9 @@ function fondoMaquina(): THREE.CanvasTexture {
   c.height = 256
   const g = c.getContext('2d')!
   const grad = g.createLinearGradient(0, 0, 0, 256)
-  grad.addColorStop(0, '#fbfcfd')
-  grad.addColorStop(0.5, '#f2f4f6')
-  grad.addColorStop(1, '#e6eaee')
+  grad.addColorStop(0, '#c4d8ec')
+  grad.addColorStop(0.5, '#e1e9f0')
+  grad.addColorStop(1, '#e9e3d9')
   g.fillStyle = grad
   g.fillRect(0, 0, 2, 256)
   const t = new THREE.CanvasTexture(c)
@@ -908,7 +908,7 @@ export default function Maquina3D({
     escena.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
     escena.environmentIntensity = 1.2
     escena.background = fondoMaquina()
-    const sol = solSuave(0xfff6ec, 2.15)
+    const sol = solSuave(0xfff3e4, 2.8)
     sol.shadow.normalBias = 2.2
     sol.shadow.bias = -0.0006
     sol.shadow.radius = 2.5
