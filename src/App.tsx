@@ -14,7 +14,6 @@ import { DT_POR_DEFECTO, Motor, validarCircuito } from './engine'
 import Paleta from './components/Paleta'
 import Pizarra, { type ControlesPizarra, type Vista } from './components/Pizarra'
 import Inspector, { type PestanaInspector } from './components/banco/Inspector'
-import PaginaEstudiar from './components/banco/PaginaEstudiar'
 import PanelInferior, { type PestanaInferior } from './components/banco/PanelInferior'
 import BordeAncho from './components/banco/BordeAncho'
 import AyudaAtajos from './components/banco/AyudaAtajos'
@@ -22,16 +21,11 @@ import AyudaAtajos from './components/banco/AyudaAtajos'
 // El banco 3D arrastra three.js: se carga sólo cuando alguien lo abre.
 const Banco3D = lazy(() => import('./vista3d/Banco3D'))
 type VistaApp = Vista | 'banco3d' | 'ambos'
-import TablaNomenclatura from './components/TablaNomenclatura'
-import MetodoCascada from './components/MetodoCascada'
-import SimbologiaVDI from './components/SimbologiaVDI'
-import SimbologiaISO from './components/SimbologiaISO'
-import EntregaNeumatica from './components/EntregaNeumatica'
+// La teoría de Estudiar y el cajón de entrega se cargan solo cuando se abren.
+const PaginaNeumaticaEstudiar = lazy(() => import('./components/estudio/EstudiarNeumatica'))
+const EntregaNeumatica = lazy(() => import('./components/EntregaNeumatica'))
 import MisTrabajos from './components/banco/MisTrabajos'
 import GuiaInicio, { GUIA_NEUMATICA, useGuia } from './components/banco/GuiaInicio'
-import FichaNeumatica from './components/estudio/FichaNeumatica'
-import Autoevaluacion from './components/Autoevaluacion'
-import { PREGUNTAS_NEUMATICA } from './components/estudio/preguntasNeumatica'
 import { circuitoDesdeStore, useStore, type NumeroEjemplo } from './store'
 import { NOMBRES_EJEMPLO } from './circuitos/ejemplos'
 import {
@@ -812,24 +806,28 @@ export default function App() {
 
         </>
       ) : (
-        <PaginaNeumaticaEstudiar alCargarCircuito={() => setSeccion('laboratorio')} />
+        <Suspense fallback={<p style={{ padding: 24, color: '#51606f', textAlign: 'center' }}>Abriendo Estudiar…</p>}>
+          <PaginaNeumaticaEstudiar alCargarCircuito={() => setSeccion('laboratorio')} />
+        </Suspense>
       )}
 
       {entregaAbierta && (
-        <EntregaNeumatica
-          onCerrar={() => setEntregaAbierta(false)}
-          capturarCircuito={capturarCircuito}
-          capturarFase={capturarFase}
-          onEstudiar={(ancla) => {
-            try {
-              window.history.replaceState(null, '', `#${ancla}`)
-            } catch {
-              /* sin historial */
-            }
-            setEntregaAbierta(false)
-            setSeccion('estudiar')
-          }}
-        />
+        <Suspense fallback={null}>
+          <EntregaNeumatica
+            onCerrar={() => setEntregaAbierta(false)}
+            capturarCircuito={capturarCircuito}
+            capturarFase={capturarFase}
+            onEstudiar={(ancla) => {
+              try {
+                window.history.replaceState(null, '', `#${ancla}`)
+              } catch {
+                /* sin historial */
+              }
+              setEntregaAbierta(false)
+              setSeccion('estudiar')
+            }}
+          />
+        </Suspense>
       )}
 
       {/* Diagrama de fase fuera de la vista: de aquí salen el PNG y la imagen de la entrega. */}
@@ -837,26 +835,6 @@ export default function App() {
         <DiagramaEspacioFase motor={motor} idSvg="diagrama-fase-exportar" />
       </div>
     </>
-  )
-}
-
-/** «Estudiar»: la teoría y las autoevaluaciones de la unidad, con índice. */
-function PaginaNeumaticaEstudiar({ alCargarCircuito }: { alCargarCircuito: () => void }) {
-  return (
-    <PaginaEstudiar
-      etiqueta="Estudiar neumática"
-      titulo="Estudiar · Neumática"
-      descripcion="Teoría y autoevaluaciones de la unidad. Los circuitos de ejemplo se abren en el Laboratorio."
-      pie="NeumaLab · MEC275 — Neumática industrial · Simbología ISO 1219-1"
-      secciones={[
-        { id: 'practica', indice: 'Autoevaluación', titulo: 'Autoevaluación · practica con preguntas al azar', contenido: <Autoevaluacion generadores={PREGUNTAS_NEUMATICA} /> },
-        { id: 'ficha', indice: 'Ficha de repaso', titulo: 'Ficha de repaso · para imprimir', contenido: <FichaNeumatica /> },
-        { id: 'cascada', indice: 'Método cascada', titulo: 'Método cascada · secuencias con señales bloqueantes', contenido: <MetodoCascada alCargar={alCargarCircuito} /> },
-        { id: 'vdi', indice: 'Simbología VDI 2860', titulo: 'Simbología VDI 2860 · funciones de manipulación', contenido: <SimbologiaVDI /> },
-        { id: 'iso', indice: 'Simbología ISO 1219-1', titulo: 'Simbología ISO 1219-1 · componentes neumáticos', contenido: <SimbologiaISO /> },
-        { id: 'vias', indice: 'Nº de vías y posiciones', titulo: 'Nº de vías y posiciones · nomenclatura de los orificios', contenido: <TablaNomenclatura /> },
-      ]}
-    />
   )
 }
 
