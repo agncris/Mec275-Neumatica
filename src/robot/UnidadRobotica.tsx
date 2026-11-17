@@ -1613,9 +1613,10 @@ function ComoUsar() {
         problema para ir a ese momento.
       </li>
       <li style={li}>
-        <strong>Entregar:</strong> «Exportar KRL» descarga el programa .src; «Guardar definición» guarda tu definición (con el
-        plano); «● Grabar video» graba la simulación; «Croquis…» descarga la pieza acotada y el posicionamiento del robot
-        (planta y elevación) para el informe; la ficha técnica del robot está en el panel de la derecha.
+        <strong>Entregar:</strong> a Aula van el PDF de la plantilla, el json y el video. «Guardar definición» baja el json
+        (con el plano); «● Grabar video» graba la simulación. «Exportar KRL» descarga el .src para el controlador: no se
+        sube. «Croquis…» baja la pieza acotada y el posicionamiento (planta y elevación) para pegarlos en la plantilla; la
+        ficha técnica del robot está en el panel de la derecha.
       </li>
       <li style={li}>
         <SaltarAPractica>Abrir el Laboratorio</SaltarAPractica>
@@ -1630,8 +1631,8 @@ function ComoUsar() {
         a1, a2, a3, d4, d6) sacadas de su ficha; los rangos y velocidades se toman del modelo parecido que elijas.
       </li>
       <li style={li}>
-        <strong>Diferencias con KUKA|prc:</strong> los robots tienen los rangos y velocidades de sus fichas y una geometría muy parecida a la real;
-        no se abren archivos .gh de Grasshopper (se arma la definición aquí, con los mismos componentes) y el código KRL es
+        <strong>El trabajo se hace en NeumaLab.</strong> Los bloques se llaman como en Grasshopper (Curve, LIN, PTP, Core).
+        Los robots tienen los rangos y velocidades de sus fichas y una geometría muy parecida a la real. El código KRL es
         de estudio: revísalo antes de usarlo en un robot real.
       </li>
     </ol>

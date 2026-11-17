@@ -109,7 +109,7 @@ export const GUIA_ROBOT: PasoGuia[] = [
   {
     titulo: '4 · Documenta y entrega',
     texto:
-      'El informe lleva el croquis, dónde quedó el robot, la ficha, el KRL y el video: así se ve que el código coincide con lo simulado.' +
-      (VER_TAREA_ROBOTICA ? ' «Entregar» junta esos archivos.' : ''),
+      'En la plantilla van el croquis, dónde quedó el robot y la ficha. A Aula subes el PDF, el json y el video. El KRL se exporta (una frase por línea) y no se sube.' +
+      (VER_TAREA_ROBOTICA ? ' «Entregar» junta el json y el video.' : ''),
   },
 ]
