@@ -20,7 +20,7 @@ Esta es la única fuente de reglas. `.cursor/rules/` apunta aquí.
 ## Cómo correr la app
 
 - `npm run dev` levanta Vite en el puerto 5173 (también hay `.claude/launch.json`). En dev se ven todas las unidades.
-- `npm run build` hace `tsc` y `vite build`. `npm test` corre Vitest. `npm run verificar` corre `tsc --noEmit` y los tests.
+- `npm run build` hace `tsc` y `vite build`. `npm test` corre Vitest. `npm run verificar` corre `tsc --noEmit` y los tests. `npm run lint` corre ESLint (error: `catch` vacío; aviso: reglas de hooks) y también corre en el CI.
 - Los tests corren en entorno `node` (ver `vite.config.ts`). Para un test de componente usa el comentario `// @vitest-environment jsdom` al inicio del archivo; no cambies el entorno global.
 - Si cambias `package.json`, sube también `package-lock.json`.
 
