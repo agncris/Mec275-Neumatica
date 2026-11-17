@@ -29,6 +29,10 @@ export interface OpcionesEscena {
    * `marcarSucio`. Con `false` (por defecto) dibuja en cada cuadro.
    */
   soloSiCambia?: boolean
+  /** Se llama con el lienzo recién creado, antes de crear los controles (para engancharle eventos que deben ir primero). */
+  alCrearLienzo?: (lienzo: HTMLCanvasElement) => void
+  /** Los controles se actualizan antes de lo que hace la escena en el cuadro, no después. */
+  controlesPrimero?: boolean
   /** La escena dejó de verse (por ejemplo, para callar sonidos). */
   alOcultar?: () => void
   /** Se agrega a lo que ya hace la base al cambiar el tamaño del contenedor. */
@@ -47,10 +51,14 @@ export interface EscenaBase {
    * Registra lo que se hace en cada cuadro y arranca el bucle. Se llama después de
    * armar la escena. La base actualiza los controles y dibuja (escena y cubo) al final.
    * `dt` va en segundos (máximo 0,1) y `ahora` es `performance.now()`.
+   * Si `fn` devuelve `false`, ese cuadro no se dibuja.
    */
-  alCuadro: (fn: (dt: number, ahora: number) => void) => void
-  /** Detiene el bucle y suelta lo que creó la base. La escena suelta lo suyo aparte. */
-  destruir: () => void
+  alCuadro: (fn: (dt: number, ahora: number) => void | false) => void
+  /**
+   * Detiene el bucle y suelta lo que creó la base. La escena suelta lo suyo aparte.
+   * `antesDelRenderer` corre justo antes de liberar el renderer (para liberar lo que depende de él).
+   */
+  destruir: (antesDelRenderer?: () => void) => void
 }
 
 /** Devuelve `null` si el navegador no puede crear un contexto WebGL. */
@@ -64,6 +72,7 @@ export function crearEscena(cont: HTMLElement, opc: OpcionesEscena): EscenaBase 
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   renderer.setSize(cont.clientWidth, cont.clientHeight)
   cont.appendChild(renderer.domElement)
+  opc.alCrearLienzo?.(renderer.domElement)
 
   const escena = new THREE.Scene()
   const camara = new THREE.PerspectiveCamera(opc.camara.fov, cont.clientWidth / Math.max(1, cont.clientHeight), opc.camara.near, opc.camara.far)
@@ -94,15 +103,16 @@ export function crearEscena(cont: HTMLElement, opc: OpcionesEscena): EscenaBase 
   observador.observe(cont)
 
   let pararBucle: (() => void) | null = null
-  const alCuadro = (fn: (dt: number, ahora: number) => void) => {
+  const alCuadro = (fn: (dt: number, ahora: number) => void | false) => {
     pararBucle?.()
     let antes = performance.now()
     const cuadro = () => {
       const ahora = performance.now()
       const dt = Math.min(0.1, (ahora - antes) / 1000)
       antes = ahora
-      fn(dt, ahora)
-      if (controles.update() && opc.soloSiCambia) sucio = true
+      if (opc.controlesPrimero && controles.update() && opc.soloSiCambia) sucio = true
+      if (fn(dt, ahora) === false) return
+      if (!opc.controlesPrimero && controles.update() && opc.soloSiCambia) sucio = true
       if (opc.soloSiCambia) {
         if (cubo.animando()) sucio = true
         if (!sucio) return
@@ -122,7 +132,7 @@ export function crearEscena(cont: HTMLElement, opc: OpcionesEscena): EscenaBase 
     cubo,
     marcarSucio,
     alCuadro,
-    destruir: () => {
+    destruir: (antesDelRenderer) => {
       pararBucle?.()
       pararBucle = null
       if (opc.soloSiCambia) {
@@ -133,6 +143,7 @@ export function crearEscena(cont: HTMLElement, opc: OpcionesEscena): EscenaBase 
       quitarCursores()
       controles.dispose()
       cubo.dispose()
+      antesDelRenderer?.()
       renderer.dispose()
       if (renderer.domElement.parentNode === cont) cont.removeChild(renderer.domElement)
     },

@@ -9,15 +9,14 @@
  * el ratón o el dedo, igual que en el banco.
  */
 import HudEscena, { type PlayEscena } from '../components/HudEscena'
-import { aplicarModoArrastre, cursoresCamara, saltarVista, zoomCamara, type ModoArrastre, type VistaCamara } from '../components/mandoCamara'
+import { aplicarModoArrastre, saltarVista, zoomCamara, type ModoArrastre, type VistaCamara } from '../components/mandoCamara'
 import { acercar, useCelular, useTactil } from '../components/ui'
 import { useEffect, useRef, useState, type MutableRefObject } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { fondoTaller } from '../vista3d/realista'
-import { crearViewCube } from '../vista3d/viewcube'
-import { bucleVisible } from '../vista3d/visible'
+import { crearEscena as crearEscenaBase } from '../vista3d/escena'
 import { MAT, caja, cilindro, modeloCilindro, modeloValvula } from '../vista3d/modelos'
 import { SonidoBanco } from '../vista3d/sonido'
 import type { EstadoPLC } from './ladder'
@@ -1465,15 +1464,35 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
   useEffect(() => {
     const cont = contRef.current
     if (!cont) return
-    let renderer: THREE.WebGLRenderer
-    try {
-      renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true })
-    } catch {
+    // Con las zonas apiladas (ventana mediana) la rueda baja por la página; para
+    // acercar se usa Ctrl + rueda (o el gesto de pellizcar del trackpad). Va antes
+    // que los controles para poder quitarles la rueda.
+    const alGirarRueda = (e: WheelEvent) => {
+      // En pantalla completa la rueda acerca; en la página apilada, baja el contenido.
+      if (!e.ctrlKey && document.fullscreenElement !== cont && cont.closest('.banco--apilado')) e.stopImmediatePropagation()
+    }
+    const base = crearEscenaBase(cont, {
+      preserveDrawingBuffer: true,
+      camara: { fov: 32, near: 0.01, far: 20 },
+      controles: { enableDamping: true, dampingFactor: 0.08, minDistance: 0.12, maxDistance: 4, maxPolarAngle: Math.PI * 0.62, zoomToCursor: true },
+      modoArrastre,
+      viewCube: {
+        id: 'viewcube-plc',
+        alInicio: () => {
+          setVistaCamara('iso')
+          encuadrar()
+        },
+      },
+      alCrearLienzo: (lienzo) => lienzo.addEventListener('wheel', alGirarRueda),
+      controlesPrimero: true,
+      // Fuera de pantalla o con la pestaña oculta no se dibuja ni suena.
+      alOcultar: () => sonidoRef.current?.callar(),
+    })
+    if (!base) {
       setSinWebGL(true)
       return
     }
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-    renderer.setSize(cont.clientWidth, cont.clientHeight)
+    const { renderer, escena, camara, controles } = base
     renderer.outputColorSpace = THREE.SRGBColorSpace
     renderer.toneMapping = THREE.ACESFilmicToneMapping
     renderer.toneMappingExposure = 1.05
@@ -1482,9 +1501,7 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
     renderer.localClippingEnabled = true
     renderer.domElement.style.display = 'block'
     renderer.domElement.dataset.planta3d = 'si'
-    cont.appendChild(renderer.domElement)
 
-    const escena = new THREE.Scene()
     const pmrem = new THREE.PMREMGenerator(renderer)
     const entorno = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
     escena.environment = entorno
@@ -1542,26 +1559,7 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
     relleno.position.set(centro.x + 1.2, centro.y + 0.3, 0.9)
     escena.add(relleno)
 
-    const camara = new THREE.PerspectiveCamera(32, cont.clientWidth / Math.max(1, cont.clientHeight), 0.01, 20)
-    // Con las zonas apiladas (ventana mediana) la rueda baja por la página; para
-    // acercar se usa Ctrl + rueda (o el gesto de pellizcar del trackpad). Va antes
-    // que los controles para poder quitarles la rueda.
-    const alGirarRueda = (e: WheelEvent) => {
-      // En pantalla completa la rueda acerca; en la página apilada, baja el contenido.
-      if (!e.ctrlKey && document.fullscreenElement !== cont && cont.closest('.banco--apilado')) e.stopImmediatePropagation()
-    }
-    renderer.domElement.addEventListener('wheel', alGirarRueda)
-    const controles = new OrbitControls(camara, renderer.domElement)
-    // El botón del medio desplaza la vista. Lo engancha cursoresCamara.
-    controles.enableDamping = true
-    controles.dampingFactor = 0.08
-    controles.minDistance = 0.12
-    controles.maxDistance = 4
-    controles.maxPolarAngle = Math.PI * 0.62
-    controles.zoomToCursor = true
     controlesRef.current = controles
-    aplicarModoArrastre(controles, modoArrastre)
-    const quitarCursores = cursoresCamara(controles, renderer.domElement)
     const encuadrar = () => {
       const aspecto = cont.clientWidth / Math.max(1, cont.clientHeight)
       const vfov = THREE.MathUtils.degToRad(camara.fov)
@@ -1581,10 +1579,6 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
     }
     encuadrar()
     encuadrarRef.current = encuadrar
-    const cubo = crearViewCube(camara, renderer, controles, cont, 'viewcube-plc', () => {
-      setVistaCamara('iso')
-      encuadrar()
-    })
     vistaRef.current = (v) => {
       setVistaCamara(v)
       if (v === 'iso') encuadrar()
@@ -1632,53 +1626,29 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
     renderer.domElement.addEventListener('pointerdown', onDown)
     window.addEventListener('pointerup', onUp)
 
-    const observador = new ResizeObserver(() => {
-      const w = cont.clientWidth
-      const h = cont.clientHeight
-      renderer.setSize(w, h)
-      camara.aspect = w / Math.max(1, h)
-      camara.updateProjectionMatrix()
-      cubo.actualizar()
-    })
-    observador.observe(cont)
-
     const proyectada = new THREE.Vector3()
     const pan = (v: THREE.Vector3) => THREE.MathUtils.clamp(proyectada.copy(v).project(camara).x * 0.85, -1, 1)
-    let antes = performance.now()
-    const cuadro = () => {
-      const ahora = performance.now()
-      const dt = Math.min(0.1, (ahora - antes) / 1000)
-      antes = ahora
-      controles.update()
+    base.alCuadro((dt) => {
       // Al cambiar de planta, la simulación cambia antes de que se monte la
       // escena nueva: mientras tanto, esta escena no debe leer la otra planta.
-      if (sim.current.planta.id !== idPlanta) return
+      if (sim.current.planta.id !== idPlanta) return false
       planta.actualizar(sim.current, dt, conSonidoRef.current ? sonidoRef.current : null, pan)
-      renderer.render(escena, camara)
-      cubo.render()
-    }
-    // Fuera de pantalla o con la pestaña oculta no se dibuja ni suena.
-    const pararBucle = bucleVisible(cont, cuadro, { alOcultar: () => sonidoRef.current?.callar() })
+    })
     cont.dataset.planta = sim.current.planta.id
 
     return () => {
-      pararBucle()
-      observador.disconnect()
       renderer.domElement.removeEventListener('pointerdown', onDown)
       renderer.domElement.removeEventListener('wheel', alGirarRueda)
       window.removeEventListener('pointerup', onUp)
       controlesRef.current = null
-      quitarCursores()
-      controles.dispose()
-      cubo.dispose()
-      escena.traverse((o) => {
-        const m = o as THREE.Mesh
-        if (m.geometry) m.geometry.dispose()
+      base.destruir(() => {
+        escena.traverse((o) => {
+          const m = o as THREE.Mesh
+          if (m.geometry) m.geometry.dispose()
+        })
+        entorno.dispose()
+        pmrem.dispose()
       })
-      entorno.dispose()
-      pmrem.dispose()
-      renderer.dispose()
-      renderer.domElement.remove()
       sonidoRef.current?.callar()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
