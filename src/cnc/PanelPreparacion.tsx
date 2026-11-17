@@ -30,7 +30,7 @@ export default function Preparacion({
           const v = Number(e.target.value)
           if (Number.isFinite(v)) cambiar(Math.min(max, Math.max(min, v)))
         }}
-        style={{ width: 80, padding: '3px 6px', border: '1px solid #c6ced6', borderRadius: 6 }}
+        style={{ width: 80, padding: '3px 6px', border: '1px solid var(--borde)', borderRadius: 6 }}
       />
     </label>
   )
@@ -76,7 +76,7 @@ export default function Preparacion({
             {num(config.fresa.alto, (v) => setConfig((c) => ({ ...c, fresa: { ...c.fresa, alto: v } })), 3, 100, 'Alto Z (mm)')}
           </>
         )}
-        <p style={{ margin: 0, fontSize: '0.8rem', color: '#51606f', flex: '1 1 260px' }}>
+        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--tinta-suave)', flex: '1 1 260px' }}>
           {torno
             ? modoCero === 'cara'
               ? `Cero del programa: en la cara frontal, sobre el eje. El bruto va de Z${config.torno.sobremetal} a Z${config.torno.sobremetal - config.torno.largo}; las garras llegan hasta Z${config.torno.sobremetal - config.torno.largo + config.torno.agarre}. X se programa en diámetro.`
@@ -87,7 +87,7 @@ export default function Preparacion({
         </p>
       </div>
       <details style={{ marginTop: 8 }}>
-        <summary style={{ cursor: 'pointer', color: '#33475c', fontWeight: 600, fontSize: '0.9rem' }}>
+        <summary style={{ cursor: 'pointer', color: 'var(--tinta)', fontWeight: 600, fontSize: '0.9rem' }}>
           Herramientas {torno ? 'de la torreta' : 'del almacén'} ({herramientas.length}){(torno ? config.herramientasTorno : config.herramientasFresa) ? ' · propias' : ''}
         </summary>
         <EditorHerramientas config={config} setConfig={setConfig} bloqueado={bloqueado} />
@@ -115,7 +115,7 @@ function EditorHerramientas({ config, setConfig, bloqueado }: { config: ConfigCN
   const entrada: React.CSSProperties = { padding: '2px 4px', border: '1px solid #c6ced6', borderRadius: 4, fontSize: '0.82rem' }
   return (
     <div style={{ marginTop: 6 }} data-herramientas="si">
-      <p style={{ margin: '0 0 6px', fontSize: '0.8rem', color: '#5a6b7d' }}>
+      <p style={{ margin: '0 0 6px', fontSize: '0.8rem', color: 'var(--tinta-tenue)' }}>
         Puedes cambiar las herramientas como en la máquina: el número T, el nombre, el tipo y sus medidas.
         {torno ? ' En el torno la medida es el ancho de la hoja (ranurado) o el diámetro (broca); el ángulo es el del filo secundario (el de roscado, el de la punta).' : ' El diámetro es el que usa la compensación de radio G41/G42 (radio = diámetro ÷ 2).'}
       </p>
@@ -124,7 +124,7 @@ function EditorHerramientas({ config, setConfig, bloqueado }: { config: ConfigCN
           <thead>
             <tr>
               {['T', 'Herramienta', 'Tipo', torno ? 'Medida / ángulo' : 'Diámetro', 'Para qué sirve', torno ? 'Cómo llamarla' : 'Cómo montarla', ''].map((h, i) => (
-                <th key={i} style={{ textAlign: 'left', background: '#33475c', color: '#fff', padding: '4px 8px' }}>
+                <th key={i} style={{ textAlign: 'left', background: 'var(--tinta)', color: '#fff', padding: '4px 8px' }}>
                   {h}
                 </th>
               ))}
@@ -145,7 +145,7 @@ function EditorHerramientas({ config, setConfig, bloqueado }: { config: ConfigCN
                       value={h.t}
                       disabled={bloqueado}
                       onChange={(e) => cambiar(i, { t: Math.max(1, Math.min(99, Math.round(Number(e.target.value) || 1))) })}
-                      style={{ ...entrada, width: 46, borderColor: repetidas.has(h.t) ? '#d93025' : '#c6ced6' }}
+                      style={{ ...entrada, width: 46, borderColor: repetidas.has(h.t) ? '#d93025' : 'var(--borde)' }}
                       aria-label="Número T"
                     />
                   </td>

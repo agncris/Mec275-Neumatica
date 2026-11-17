@@ -86,7 +86,7 @@ export default function BarraCNC({
       data-boton-maquina="si"
       style={{ maxWidth: 360, padding: estrecha ? '0 0.5rem' : undefined }}
     >
-      {!estrecha && <span style={{ color: '#51606f' }}>Máquina:</span>}
+      {!estrecha && <span style={{ color: 'var(--tinta-suave)' }}>Máquina:</span>}
       <span style={{ fontWeight: 600 }}>{estrecha ? MAQUINAS[maquina].corto : MAQUINAS[maquina].nombre}</span>
       <span aria-hidden style={{ fontSize: '0.7rem', flex: 'none' }}>
         ▾
@@ -96,7 +96,7 @@ export default function BarraCNC({
   return (
     <>
       {estado === 'corriendo' ? (
-        <button onClick={() => setEstado('pausa')} style={{ ...botonPrimario(false, '#ffa726'), color: '#1c2733' }} data-control="pausa">
+        <button onClick={() => setEstado('pausa')} style={{ ...botonPrimario(false, '#ffa726'), color: 'var(--texto)' }} data-control="pausa">
           ❚❚ Pausa
         </button>
       ) : (
@@ -135,7 +135,7 @@ export default function BarraCNC({
           </button>
         )}
         {grabando && (
-          <button onClick={alternarGrabacion} style={{ ...botonSecundario, color: '#fff', background: '#c62828', borderColor: '#c62828' }}>
+          <button onClick={alternarGrabacion} style={{ ...botonSecundario, color: '#fff', background: 'var(--rojo)', borderColor: 'var(--rojo)' }}>
             ■ {estrecha ? 'Detener' : 'Detener grabación'}
           </button>
         )}

@@ -63,20 +63,20 @@ export default function PlanoTarea({ codigo, checklist, onEstudiar, onEjemplo }:
           </button>
         </p>
       </ProcesoTarea>
-      <p style={{ margin: '8px 0 6px', fontSize: '0.82rem', color: '#51606f' }}>
+      <p style={{ margin: '8px 0 6px', fontSize: '0.82rem', color: 'var(--tinta-suave)' }}>
         Pieza 1, cotas en mm. En el torno, X se programa en diámetro y el cero del programa va en la cara frontal, sobre el eje.
       </p>
       {checklist.length > 0 && (
         <ul style={{ margin: '0 0 8px', paddingLeft: 0, listStyle: 'none' }} data-checklist-tarea="si">
           {checklist.map((p) => (
-            <li key={p.texto} style={{ margin: '2px 0', fontSize: '0.84rem', color: p.ok ? '#0a6b3c' : '#8a5b00' }}>
+            <li key={p.texto} style={{ margin: '2px 0', fontSize: '0.84rem', color: p.ok ? 'var(--verde-oscuro)' : 'var(--naranjo-aviso)' }}>
               {p.ok ? '✓' : '☐'} {p.texto}
             </li>
           ))}
         </ul>
       )}
       <a href="/plano-tarea3-cnc.png" target="_blank" rel="noreferrer" title="Abrir el plano en grande">
-        <img src="/plano-tarea3-cnc.png" alt="Plano de fabricación de la Tarea 3: pieza 1 con ranuras, tramo cónico, tramo curvo, hombro de Ø80 y punta redondeada de Ø40" style={{ width: '100%', maxWidth: 900, height: 'auto', display: 'block', border: '1px solid #dbe1e8', borderRadius: 6, background: '#fff' }} />
+        <img src="/plano-tarea3-cnc.png" alt="Plano de fabricación de la Tarea 3: pieza 1 con ranuras, tramo cónico, tramo curvo, hombro de Ø80 y punta redondeada de Ø40" style={{ width: '100%', maxWidth: 900, height: 'auto', display: 'block', border: '1px solid var(--borde-tenue)', borderRadius: 6, background: '#fff' }} />
       </a>
     </div>
   )

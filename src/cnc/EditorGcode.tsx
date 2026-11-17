@@ -143,15 +143,15 @@ const EditorGcode = forwardRef<EditorGcodeRef, Props>(function EditorGcode(
 
   return (
     <div
-      style={{ display: 'flex', border: '1px solid #c6ced6', borderRadius: 8, overflow: 'hidden', height: alto, background: '#fff' }}
+      style={{ display: 'flex', border: '1px solid var(--borde)', borderRadius: 8, overflow: 'hidden', height: alto, background: '#fff' }}
       data-editor-gcode="si"
     >
-      <div style={{ width: 44, flex: '0 0 44px', background: '#f1f4f7', borderRight: '1px solid #e0e5eb', overflow: 'hidden', position: 'relative' }}>
-        <div ref={margen} style={{ ...fuente, paddingTop: PAD, textAlign: 'right', color: '#5f6b78', fontSize: 11 }}>
+      <div style={{ width: 44, flex: '0 0 44px', background: '#f1f4f7', borderRight: '1px solid var(--borde-suave)', overflow: 'hidden', position: 'relative' }}>
+        <div ref={margen} style={{ ...fuente, paddingTop: PAD, textAlign: 'right', color: 'var(--tinta-gris)', fontSize: 11 }}>
           {lineas.map((_, i) => {
             const nivel = nivelDe.get(i)
             return (
-              <div key={i} style={{ height: ALTO_LINEA, paddingRight: 6, color: nivel === 'error' ? '#c62828' : nivel === 'aviso' ? '#b26a00' : undefined, fontWeight: nivel && nivel !== 'info' ? 700 : 400 }}>
+              <div key={i} style={{ height: ALTO_LINEA, paddingRight: 6, color: nivel === 'error' ? 'var(--rojo)' : nivel === 'aviso' ? '#b26a00' : undefined, fontWeight: nivel && nivel !== 'info' ? 700 : 400 }}>
                 {nivel === 'error' ? '✕ ' : nivel === 'aviso' ? '! ' : ''}
                 {i + 1}
               </div>
@@ -195,7 +195,7 @@ const EditorGcode = forwardRef<EditorGcodeRef, Props>(function EditorGcode(
             resize: 'none',
             background: 'transparent',
             color: 'transparent',
-            caretColor: '#1c2733',
+            caretColor: 'var(--texto)',
             overflow: 'auto',
           }}
         />

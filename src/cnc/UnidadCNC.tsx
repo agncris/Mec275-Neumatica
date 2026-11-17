@@ -435,7 +435,7 @@ export default function UnidadCNC() {
         </span>
       </TituloArea>
       {!/\bG0?[123]\b/i.test(codigo.replace(/\(.*?\)/g, '').replace(/;.*/g, '')) && (
-        <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: '#33475c' }}>G00 sólo se acerca. Para cortar escribe G01 (recta) o G02/G03 (arco), con avance F. Ctrl+Z deshace.</p>
+        <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: 'var(--tinta)' }}>G00 sólo se acerca. Para cortar escribe G01 (recta) o G02/G03 (arco), con avance F. Ctrl+Z deshace.</p>
       )}
       <div className="relleno" style={{ minHeight: 220 }}>
         <EditorGcode
@@ -471,7 +471,7 @@ export default function UnidadCNC() {
       )}
       {estado === 'parada' && <div style={{ ...alarma, background: '#fff5e0', borderColor: '#f0c36d', color: '#7a4b00' }}>Programa detenido por M00/M01. Pulsa ▶ Continuar.</div>}
       <div className="relleno">
-        <Suspense fallback={<p style={{ padding: 20, color: '#51606f' }}>Preparando la máquina…</p>}>
+        <Suspense fallback={<p style={{ padding: 20, color: 'var(--tinta-suave)' }}>Preparando la máquina…</p>}>
           <Maquina3D
             vista={vista}
             onCanvas={(c) => (canvasRef.current = c)}
@@ -486,7 +486,7 @@ export default function UnidadCNC() {
           />
         </Suspense>
       </div>
-      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 6, fontSize: '0.85rem', color: '#33475c' }}>
+      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 6, fontSize: '0.85rem', color: 'var(--tinta)' }}>
         <label style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
           <input type="checkbox" checked={trayectoria} onChange={(e) => setTrayectoria(e.target.checked)} /> Trayectoria
         </label>
@@ -499,13 +499,13 @@ export default function UnidadCNC() {
           <input type="checkbox" checked={sonido} onChange={(e) => setSonido(e.target.checked)} /> Sonido
         </label>
         {estrecha && selectorVelocidad}
-        <span style={{ color: '#51606f' }}>Arrastra para girar la vista · {acercar(tactil)}.</span>
+        <span style={{ color: 'var(--tinta-suave)' }}>Arrastra para girar la vista · {acercar(tactil)}.</span>
       </div>
       <Tablero sim={sim} torno={torno} paso={paso} ultimo={ultimo} modal={estadoModal} tiempoTotal={resultado.tiempoTotal} volumen={volumen} volumenInicial={volumenInicial} />
       {sim.consejos.length > 0 && (
         <div style={{ marginTop: 8 }}>
           {sim.consejos.map((c, i) => (
-            <p key={i} style={{ color: '#7a4f00', margin: '3px 0', fontSize: '0.85rem' }}>
+            <p key={i} style={{ color: 'var(--naranjo-texto)', margin: '3px 0', fontSize: '0.85rem' }}>
               <button type="button" onClick={() => irA(c.linea)} style={{ border: 'none', background: 'transparent', color: 'inherit', cursor: 'pointer', padding: 0, font: 'inherit', textAlign: 'left' }}>
                 💡 Línea {c.linea + 1}: {c.texto}
               </button>{' '}
@@ -548,21 +548,21 @@ export default function UnidadCNC() {
       tituloCorto: 'Explicar',
       contenido: (
         <>
-          <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: '#51606f' }}>Línea {lineaExplicada + 1}. Pon el cursor en una línea del programa para ver qué hace cada palabra.</p>
+          <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: 'var(--tinta-suave)' }}>Línea {lineaExplicada + 1}. Pon el cursor en una línea del programa para ver qué hace cada palabra.</p>
           <code style={{ display: 'block', background: '#f4f6f9', padding: '6px 8px', borderRadius: 6, marginBottom: 6, whiteSpace: 'pre-wrap' }}>{lineas[lineaExplicada] || ' '}</code>
           {explicacion.length ? (
             <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '0.88rem' }} data-explicacion="si">
               <tbody>
                 {explicacion.map((e, i) => (
                   <tr key={i}>
-                    <td style={{ padding: '4px 8px', borderBottom: '1px solid #eef1f4', fontFamily: 'ui-monospace, Menlo, monospace', fontWeight: 700, whiteSpace: 'nowrap', verticalAlign: 'top' }}>{e.palabra}</td>
-                    <td style={{ padding: '4px 8px', borderBottom: '1px solid #eef1f4' }}>{e.texto}</td>
+                    <td style={{ padding: '4px 8px', borderBottom: '1px solid var(--fondo-gris)', fontFamily: 'ui-monospace, Menlo, monospace', fontWeight: 700, whiteSpace: 'nowrap', verticalAlign: 'top' }}>{e.palabra}</td>
+                    <td style={{ padding: '4px 8px', borderBottom: '1px solid var(--fondo-gris)' }}>{e.texto}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           ) : (
-            <p style={{ color: '#5f6b78', fontSize: '0.86rem' }}>Línea vacía.</p>
+            <p style={{ color: 'var(--tinta-gris)', fontSize: '0.86rem' }}>Línea vacía.</p>
           )}
         </>
       ),
@@ -591,14 +591,14 @@ export default function UnidadCNC() {
           panel.onPestana('preparacion')
           panel.onAbrir(true)
         }}
-        style={{ marginLeft: 'auto', border: 'none', background: 'transparent', color: '#1668c7', fontWeight: 600, cursor: 'pointer', fontSize: '0.82rem' }}
+        style={{ marginLeft: 'auto', border: 'none', background: 'transparent', color: 'var(--azul)', fontWeight: 600, cursor: 'pointer', fontSize: '0.82rem' }}
         title="Ver o cambiar la preparación (bruto y cero)"
       >
         {mat.nombre} ·{' '}
         {torno ? `Ø${config.torno.diametro} × ${config.torno.largo} mm` : `${config.fresa.largo} × ${config.fresa.ancho} × ${config.fresa.alto} mm`}
       </button>
       {(errores.length > 0 || avisosProg.length > 0) && (
-        <span style={{ color: errores.length ? '#b3261e' : '#7a4f00', fontWeight: 700 }}>
+        <span style={{ color: errores.length ? 'var(--rojo-error)' : 'var(--naranjo-texto)', fontWeight: 700 }}>
           ⚠ {errores.length ? `${errores.length} error${errores.length === 1 ? '' : 'es'}` : `${avisosProg.length} aviso${avisosProg.length === 1 ? '' : 's'}`}
         </span>
       )}
@@ -628,7 +628,7 @@ export default function UnidadCNC() {
           conCajon={entregaAbierta && enTarea && !estrecha}
         />
       ) : (
-        <Suspense fallback={<p style={{ padding: 24, color: '#51606f', textAlign: 'center' }}>Abriendo Estudiar…</p>}>
+        <Suspense fallback={<p style={{ padding: 24, color: 'var(--tinta-suave)', textAlign: 'center' }}>Abriendo Estudiar…</p>}>
           <EstudiarCNC />
         </Suspense>
       )}

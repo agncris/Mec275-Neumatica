@@ -55,21 +55,21 @@ export default function TablaPuntos({
       setTimeout(() => setCopiado(false), 2000)
     })
   }
-  if (!filas.length) return <p style={{ color: '#5f6b78', fontSize: '0.86rem' }}>El programa todavía no mueve la máquina.</p>
+  if (!filas.length) return <p style={{ color: 'var(--tinta-gris)', fontSize: '0.86rem' }}>El programa todavía no mueve la máquina.</p>
   return (
     <div>
-      <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: '#5a6b7d' }}>
+      <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: 'var(--tinta-tenue)' }}>
         Dónde queda la herramienta al final de cada bloque, en absolutas y en incrementales (Δ desde el bloque anterior).{' '}
         <button onClick={copiar} style={{ ...botonSuave, padding: '1px 8px', fontSize: '0.78rem' }}>
           {copiado ? '✓ Copiada' : 'Copiar tabla'}
         </button>
       </p>
-      <div style={{ maxHeight: 260, overflow: 'auto', border: '1px solid #e0e5eb', borderRadius: 6 }}>
+      <div style={{ maxHeight: 260, overflow: 'auto', border: '1px solid var(--borde-suave)', borderRadius: 6 }}>
         <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '0.82rem', fontFamily: 'ui-monospace, Menlo, monospace' }} data-tabla-puntos="si">
           <thead style={{ position: 'sticky', top: 0 }}>
             <tr>
               {cab.map((c) => (
-                <th key={c} style={{ background: '#33475c', color: '#fff', padding: '3px 6px', textAlign: 'right' }}>
+                <th key={c} style={{ background: 'var(--tinta)', color: '#fff', padding: '3px 6px', textAlign: 'right' }}>
                   {c}
                 </th>
               ))}
@@ -83,15 +83,15 @@ export default function TablaPuntos({
                 <td style={celdaNum}>{r(f.pos.x)}</td>
                 {!torno && <td style={celdaNum}>{r(f.pos.y)}</td>}
                 <td style={celdaNum}>{r(f.pos.z)}</td>
-                <td style={{ ...celdaNum, color: '#5a6b7d' }}>{r(f.d.x)}</td>
-                {!torno && <td style={{ ...celdaNum, color: '#5a6b7d' }}>{r(f.d.y)}</td>}
-                <td style={{ ...celdaNum, color: '#5a6b7d' }}>{r(f.d.z)}</td>
+                <td style={{ ...celdaNum, color: 'var(--tinta-tenue)' }}>{r(f.d.x)}</td>
+                {!torno && <td style={{ ...celdaNum, color: 'var(--tinta-tenue)' }}>{r(f.d.y)}</td>}
+                <td style={{ ...celdaNum, color: 'var(--tinta-tenue)' }}>{r(f.d.z)}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <p style={{ margin: '4px 0 0', fontSize: '0.78rem', color: '#5f6b78' }}>Punto de partida: posición de referencia {textoPunto(casaProg, torno)}.</p>
+      <p style={{ margin: '4px 0 0', fontSize: '0.78rem', color: 'var(--tinta-gris)' }}>Punto de partida: posición de referencia {textoPunto(casaProg, torno)}.</p>
     </div>
   )
 }

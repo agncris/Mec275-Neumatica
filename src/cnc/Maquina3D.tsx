@@ -984,11 +984,11 @@ export default function Maquina3D({
   }, [])
 
   if (sinWebGL) {
-    return <p style={{ padding: 20, color: '#8a5b00' }}>Este navegador no tiene WebGL: la vista 3D no está disponible. El editor y la vista 2D siguen funcionando.</p>
+    return <p style={{ padding: 20, color: 'var(--naranjo-aviso)' }}>Este navegador no tiene WebGL: la vista 3D no está disponible. El editor y la vista 2D siguen funcionando.</p>
   }
   return (
-    <div ref={envolturaRef} style={{ position: 'relative', height: pantalla ? '100%' : typeof alto === 'string' ? alto : undefined, background: '#eef1f4' }}>
-      <div ref={contRef} style={{ width: '100%', height: pantalla ? '100%' : alto, borderRadius: 8, overflow: 'hidden', background: '#eef1f4' }} />
+    <div ref={envolturaRef} style={{ position: 'relative', height: pantalla ? '100%' : typeof alto === 'string' ? alto : undefined, background: 'var(--fondo-gris)' }}>
+      <div ref={contRef} style={{ width: '100%', height: pantalla ? '100%' : alto, borderRadius: 8, overflow: 'hidden', background: 'var(--fondo-gris)' }} />
       <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 4 }}>
         {(
           [
@@ -1002,9 +1002,9 @@ export default function Maquina3D({
             onClick={() => accionRef.current?.(v)}
             aria-pressed={vistaActual === v}
             style={{
-              border: '1px solid #c6ced6',
-              background: vistaActual === v ? '#33475c' : 'rgba(255,255,255,0.9)',
-              color: vistaActual === v ? '#fff' : '#33475c',
+              border: '1px solid var(--borde)',
+              background: vistaActual === v ? 'var(--tinta)' : 'rgba(255,255,255,0.9)',
+              color: vistaActual === v ? '#fff' : 'var(--tinta)',
               borderRadius: 6,
               padding: '2px 8px',
               fontSize: '0.78rem',

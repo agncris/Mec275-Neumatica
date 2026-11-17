@@ -152,7 +152,7 @@ export function OrganizarPrograma() {
             <span style={{ border: `1px solid ${TINTA}`, borderRadius: 8, padding: '4px 8px', fontSize: '0.86rem', background: '#f4f6f9' }}>
               <strong>{t}</strong>
               <br />
-              <span style={{ color: '#5a6b7d' }}>{d}</span>
+              <span style={{ color: 'var(--tinta-tenue)' }}>{d}</span>
             </span>
             {i < eleccion.length - 1 && <span style={{ color: TINTA }}>→</span>}
           </span>
@@ -260,7 +260,7 @@ export function PracticaCoordenadas() {
     )
   }
   return (
-    <div style={{ border: '1px dashed #c6ced6', borderRadius: 8, padding: 10, marginTop: 8 }}>
+    <div style={{ border: '1px dashed var(--borde)', borderRadius: 8, padding: 10, marginTop: 8 }}>
       <p style={{ ...p, fontWeight: 700 }}>Práctica: la herramienta parte del origen y recorre A → B → C → D → E.</p>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-start' }}>
         <svg viewBox="0 0 220 220" width={220} style={{ background: '#fbfcfd', border: '1px solid #e0e5eb', borderRadius: 6 }} role="img" aria-label="Puntos de la práctica">
@@ -324,7 +324,7 @@ export function PracticaCoordenadas() {
               Otros puntos
             </button>
             {revisar && (
-              <span style={{ fontWeight: 700, color: correctas === 20 ? '#2a9d38' : '#8a5b00' }}>
+              <span style={{ fontWeight: 700, color: correctas === 20 ? '#2a9d38' : 'var(--naranjo-aviso)' }}>
                 {correctas} de 20 correctas{correctas === 20 ? ' ¡Muy bien!' : ''}
               </span>
             )}
@@ -357,7 +357,7 @@ export function EstructuraBloque() {
         {partes.map(([t, c, d]) => (
           <div key={t} style={{ border: `2px solid ${c}`, borderRadius: 8, padding: '4px 8px', minWidth: 90 }}>
             <div style={{ ...mono, color: c, fontSize: '1.05rem' }}>{t}</div>
-            <div style={{ fontSize: '0.78rem', color: '#26323f' }}>{d}</div>
+            <div style={{ fontSize: '0.78rem', color: 'var(--tinta-oscura)' }}>{d}</div>
           </div>
         ))}
       </div>
@@ -388,7 +388,7 @@ export function EstructuraBloque() {
 export function CodigosGM() {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: 14 }}>
-      <Tabla cabeza={['Código G', 'Función']} filas={Object.entries(CODIGOS_G).map(([c, d]) => [<span style={{ ...mono, color: '#1668c7' }}>{c}</span>, d])} />
+      <Tabla cabeza={['Código G', 'Función']} filas={Object.entries(CODIGOS_G).map(([c, d]) => [<span style={{ ...mono, color: 'var(--azul)' }}>{c}</span>, d])} />
       <Tabla cabeza={['Código M', 'Función']} filas={Object.entries(CODIGOS_M).map(([c, d]) => [<span style={{ ...mono, color: '#8e3fb8' }}>{c}</span>, d])} />
     </div>
   )

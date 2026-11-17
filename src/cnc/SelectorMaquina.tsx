@@ -65,13 +65,13 @@ export default function SelectorMaquina({ actual, nombres, onUsar, onNuevo, onEj
             display: 'flex',
             alignItems: 'center',
             padding: '12px 16px',
-            borderBottom: '1px solid #e0e5eb',
+            borderBottom: '1px solid var(--borde-suave)',
           }}
         >
           <h2 id="titulo-maquinas" style={{ margin: 0, fontSize: '1.08rem' }}>
             Elegir máquina
           </h2>
-          <span style={{ marginLeft: 10, fontSize: '0.84rem', color: '#51606f' }}>Cada una guarda su propio programa</span>
+          <span style={{ marginLeft: 10, fontSize: '0.84rem', color: 'var(--tinta-suave)' }}>Cada una guarda su propio programa</span>
           <button onClick={onCerrar} className="boton-icono" style={{ marginLeft: 'auto' }} aria-label="Cerrar">
             ✕
           </button>
@@ -92,7 +92,7 @@ export default function SelectorMaquina({ actual, nombres, onUsar, onNuevo, onEj
                     }}
                   >
                     <span style={{ fontWeight: 600 }}>{MAQUINAS[id].nombre}</span>
-                    <span style={{ fontSize: '0.76rem', color: '#51606f' }}>
+                    <span style={{ fontSize: '0.76rem', color: 'var(--tinta-suave)' }}>
                       {id === actual ? 'En uso · ' : ''}
                       {n} ejemplos
                     </span>
@@ -114,7 +114,7 @@ export default function SelectorMaquina({ actual, nombres, onUsar, onNuevo, onEj
                     fontSize: '0.74rem',
                     fontWeight: 700,
                     color: '#fff',
-                    background: '#0e7a43',
+                    background: 'var(--verde)',
                     borderRadius: 6,
                     padding: '1px 7px',
                     verticalAlign: 'middle',
@@ -128,7 +128,7 @@ export default function SelectorMaquina({ actual, nombres, onUsar, onNuevo, onEj
               style={{
                 margin: '0 0 6px',
                 fontSize: '0.88rem',
-                color: '#33475c',
+                color: 'var(--tinta)',
                 lineHeight: 1.5,
               }}
             >
@@ -138,10 +138,10 @@ export default function SelectorMaquina({ actual, nombres, onUsar, onNuevo, onEj
               style={{
                 margin: '0 0 8px',
                 fontSize: '0.84rem',
-                color: '#51606f',
+                color: 'var(--tinta-suave)',
               }}
             >
-              Tu programa en esta máquina: <strong style={{ color: '#26323f' }}>{nombres[vista]}</strong>
+              Tu programa en esta máquina: <strong style={{ color: 'var(--tinta-oscura)' }}>{nombres[vista]}</strong>
             </p>
             <div style={rotulo}>Ejemplos resueltos</div>
             <ul
@@ -161,7 +161,7 @@ export default function SelectorMaquina({ actual, nombres, onUsar, onNuevo, onEj
                     alignItems: 'center',
                     gap: 8,
                     padding: '6px 8px',
-                    border: '1px solid #e0e5eb',
+                    border: '1px solid var(--borde-suave)',
                     borderRadius: 8,
                     fontSize: '0.88rem',
                   }}
@@ -172,7 +172,7 @@ export default function SelectorMaquina({ actual, nombres, onUsar, onNuevo, onEj
                       style={{
                         display: 'block',
                         fontSize: '0.8rem',
-                        color: '#51606f',
+                        color: 'var(--tinta-suave)',
                       }}
                     >
                       {e.resumen}
@@ -189,7 +189,7 @@ export default function SelectorMaquina({ actual, nombres, onUsar, onNuevo, onEj
                 display: 'flex',
                 gap: 8,
                 flexWrap: 'wrap',
-                borderTop: '1px solid #e0e5eb',
+                borderTop: '1px solid var(--borde-suave)',
                 paddingTop: 10,
                 marginTop: 10,
               }}
@@ -199,8 +199,8 @@ export default function SelectorMaquina({ actual, nombres, onUsar, onNuevo, onEj
                   onClick={() => onUsar(vista)}
                   style={{
                     ...boton,
-                    background: '#1668c7',
-                    borderColor: '#1668c7',
+                    background: 'var(--azul)',
+                    borderColor: 'var(--azul)',
                     color: '#fff',
                   }}
                   data-usar-maquina="si"

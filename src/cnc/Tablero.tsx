@@ -49,7 +49,7 @@ export default function Tablero({
           </div>
         ))}
       </div>
-      <div style={{ fontSize: '0.84rem', color: '#33475c', lineHeight: 1.6, flex: '1 1 200px' }}>
+      <div style={{ fontSize: '0.84rem', color: 'var(--tinta)', lineHeight: 1.6, flex: '1 1 200px' }}>
         <div>
           <strong>{act?.codigo ?? '—'}</strong> · {modal?.absoluto === false ? 'G91 incrementales' : 'G90 absolutas'} · {modal?.pulgadas ? 'pulgadas' : 'mm'}
         </div>
