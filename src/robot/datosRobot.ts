@@ -1,6 +1,7 @@
 import { planoXY, v, type Plano, type V3 } from './matematica'
+import { HOME } from './robots'
 import { poseDe, type PuntoEnsenado } from './Mando'
-import { esDefinicion, type Dato, type Definicion, type Herramienta } from './nodos'
+import { esDefinicion, type Comando, type Dato, type Definicion, type Herramienta, type Programa, type RobotVirtual } from './nodos'
 import { EJEMPLOS_ROBOT } from './ejemplos'
 import { esEjemploGuiado, tareaAlAbrir } from './tarea4'
 import type { Curva } from './geometria'
@@ -84,4 +85,28 @@ export function marcasDe(puntos: PuntoEnsenado[], modelo: ReturnType<typeof robo
   const m = puntos.map((p) => poseDe(modelo, p.q, h.largo, 0).tcp)
   cacheMarcas.set(puntos, m)
   return m
+}
+
+/** Programa del mando (teach-in): PTP por ejes, LIN en línea recta. */
+export function programaDelMando(puntos: PuntoEnsenado[], modeloM: ReturnType<typeof robotPorId>, herrMando: Herramienta): Programa | null {
+  if (!puntos.length) return null
+  const comandos: Comando[] = [{ tipo: 'AXIS', q: [...HOME], vel: 40, nodo: 'mando' }]
+  let salida = false
+  for (const p of puntos) {
+    if (p.tipo === 'PTP') comandos.push({ tipo: 'AXIS', q: p.q, vel: 40, nodo: 'mando' })
+    else {
+      const pose = poseDe(modeloM, p.q, herrMando.largo, 0)
+      const xt = { x: pose.R[0][0], y: pose.R[1][0], z: pose.R[2][0] }
+      const zt = { x: pose.R[0][2], y: pose.R[1][2], z: pose.R[2][2] }
+      const zPlano = { x: -xt.x, y: -xt.y, z: -xt.z }
+      const yPlano = { x: zPlano.y * zt.z - zPlano.z * zt.y, y: zPlano.z * zt.x - zPlano.x * zt.z, z: zPlano.x * zt.y - zPlano.y * zt.x }
+      comandos.push({ tipo: 'LIN', plano: { o: pose.tcp, x: zt, y: yPlano, z: zPlano }, vel: 0.15, nodo: 'mando' })
+    }
+    if (p.salida && p.salida.valor !== salida) {
+      salida = p.salida.valor
+      comandos.push({ tipo: 'OUT', salida: 1, valor: salida, nodo: 'mando' }, { tipo: 'WAIT', seg: 0.5, nodo: 'mando' })
+    }
+  }
+  const rv: RobotVirtual = { modelo: modeloM, pedestal: 0 }
+  return { comandos, robot: rv, herramienta: herrMando, base: planoXY(v()), espesor: 0, inicio: [...HOME], nodo: 'mando' }
 }

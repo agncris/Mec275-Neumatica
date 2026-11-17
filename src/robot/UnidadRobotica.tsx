@@ -12,14 +12,15 @@ import { VER_TAREA_ROBOTICA } from '../unidades'
 import MisTrabajos from '../components/banco/MisTrabajos'
 import GuiaInicio, { GUIA_ROBOT, useGuia } from '../components/banco/GuiaInicio'
 import { PRACTICA_ROBOT } from './practica'
-import { adaptarATarea, analizarTarea4, ejemploGuiadoTarea, esEjemploGuiado, MARCA_TAREA4, revisarTarea4, tareaAlAbrir, tareaVaciaRobot, type PuntoRevisionTarea } from './tarea4'
+import { adaptarATarea, ejemploGuiadoTarea, esEjemploGuiado, MARCA_TAREA4, tareaAlAbrir, tareaVaciaRobot } from './tarea4'
 import { guiaTarea } from './guiaTarea'
-import { leerAlumno, limpiarEnlace, trabajoDelEnlace } from '../entregar'
+import { limpiarEnlace, trabajoDelEnlace } from '../entregar'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { exportarPng, nombreSeguro } from '../exportar'
 import { croquisPieza, croquisPosicion } from './croquis'
 import { useBucleReproduccion, useReproduccion } from './useReproduccion'
 import { useEvaluacionRobot } from './useEvaluacionRobot'
+import { useChecklistTarea } from './useChecklistTarea'
 import { Historial } from '../historial'
 import CodigoKRL from './CodigoKRL'
 import Analisis from './Analisis'
@@ -29,22 +30,20 @@ import PanelEntrega from './PanelEntrega'
 import BarraRobot from './BarraRobot'
 import AreaPrograma from './AreaPrograma'
 import AreaSimulacion from './AreaSimulacion'
+import FichaModelo from './FichaModelo'
 import { EJEMPLOS_ROBOT } from './ejemplos'
 import { leerDXF } from './geometria'
-import { planoXY, v } from './matematica'
-import { poseDe, type PuntoEnsenado } from './Mando'
+import type { PuntoEnsenado } from './Mando'
 import { ejesEn, generarKRL, PLACA_DEFECTO, simular, type Simulacion } from './movimiento'
 import {
   esDefinicion,
-  type Comando,
   type Definicion,
   type Programa,
-  type RobotVirtual,
 } from './nodos'
 import { HOME, robotPorId } from './robots'
 import type { VistaRobot } from './Robot3D'
 import { ANCLAS_ESTUDIAR_ROBOT } from './anclasEstudiar'
-import { BASE_DEFECTO, CLAVE, CLAVE_ANTES_EJEMPLO, CLAVE_TAREA, definicionGuardada, HERR_MANDO, leerGuardada, leerTarea, marcasDe, type Modo, NOMBRE_TAREA } from './datosRobot'
+import { BASE_DEFECTO, CLAVE, CLAVE_ANTES_EJEMPLO, CLAVE_TAREA, definicionGuardada, HERR_MANDO, leerGuardada, leerTarea, marcasDe, type Modo, NOMBRE_TAREA, programaDelMando } from './datosRobot'
 
 // La teoría, la ficha y las demos 3D de Estudiar se cargan solo al entrar a Estudiar.
 const EstudiarRobotica = lazy(() => import('./EstudiarRobotica'))
@@ -153,28 +152,7 @@ export default function UnidadRobotica() {
   // Programa del mando (teach-in): PTP por ejes, LIN en línea recta.
   const herrMando = HERR_MANDO
   const modeloM = robotPorId(modeloMando)
-  const programaMando: Programa | null = useMemo(() => {
-    if (!puntos.length) return null
-    const comandos: Comando[] = [{ tipo: 'AXIS', q: [...HOME], vel: 40, nodo: 'mando' }]
-    let salida = false
-    for (const p of puntos) {
-      if (p.tipo === 'PTP') comandos.push({ tipo: 'AXIS', q: p.q, vel: 40, nodo: 'mando' })
-      else {
-        const pose = poseDe(modeloM, p.q, herrMando.largo, 0)
-        const xt = { x: pose.R[0][0], y: pose.R[1][0], z: pose.R[2][0] }
-        const zt = { x: pose.R[0][2], y: pose.R[1][2], z: pose.R[2][2] }
-        const zPlano = { x: -xt.x, y: -xt.y, z: -xt.z }
-        const yPlano = { x: zPlano.y * zt.z - zPlano.z * zt.y, y: zPlano.z * zt.x - zPlano.x * zt.z, z: zPlano.x * zt.y - zPlano.y * zt.x }
-        comandos.push({ tipo: 'LIN', plano: { o: pose.tcp, x: zt, y: yPlano, z: zPlano }, vel: 0.15, nodo: 'mando' })
-      }
-      if (p.salida && p.salida.valor !== salida) {
-        salida = p.salida.valor
-        comandos.push({ tipo: 'OUT', salida: 1, valor: salida, nodo: 'mando' }, { tipo: 'WAIT', seg: 0.5, nodo: 'mando' })
-      }
-    }
-    const rv: RobotVirtual = { modelo: modeloM, pedestal: 0 }
-    return { comandos, robot: rv, herramienta: herrMando, base: planoXY(v()), espesor: 0, inicio: [...HOME], nodo: 'mando' }
-  }, [puntos, modeloM, herrMando])
+  const programaMando: Programa | null = useMemo(() => programaDelMando(puntos, modeloM, herrMando), [puntos, modeloM, herrMando])
   const simMando = useMemo(() => (programaMando ? simular(programaMando) : null), [programaMando])
 
   const simActiva: Simulacion | null = modo === 'visual' ? sim : reproduciendo ? simMando : null
@@ -399,22 +377,11 @@ export default function UnidadRobotica() {
   const nodoSel = seleccion ? def.nodos.find((n) => n.id === seleccion) ?? null : null
   const guiaT = enTarea ? guiaTarea(def) : null
   const pasoTarea = guiaT?.paso ?? null
-  const [checklistTarea, setChecklistTarea] = useState<PuntoRevisionTarea[]>([])
+  const checklistTarea = useChecklistTarea(def, enTarea)
   useEffect(() => {
     document.querySelector('.panel-acoplado__contenido')?.scrollTo({ top: 0 })
     if (pasoTarea?.seleccionar) setSeleccion(pasoTarea.seleccionar)
   }, [pasoTarea?.id])
-  useEffect(() => {
-    if (!enTarea) return
-    const id = window.setTimeout(() => {
-      try {
-        setChecklistTarea(revisarTarea4(analizarTarea4(def), leerAlumno().nombre))
-      } catch {
-        setChecklistTarea([])
-      }
-    }, 500)
-    return () => window.clearTimeout(id)
-  }, [enTarea, def])
   const irAEstudiar = (ancla: string) => {
     try {
       window.history.replaceState(null, '', `#${ancla}`)
@@ -632,30 +599,7 @@ export default function UnidadRobotica() {
       titulo: 'Ficha técnica',
       tituloCorto: 'Ficha',
       contenido: (
-        <>
-          <table style={{ fontSize: '0.85rem', borderCollapse: 'collapse' }}>
-            <tbody>
-              {(
-                [
-                  ['Carga', `${modeloVista.carga} kg`],
-                  ['Alcance máximo', `${modeloVista.alcance} mm`],
-                  ['Repetibilidad', `± ${modeloVista.repetibilidad} mm`],
-                  ['Número de ejes', '6'],
-                  ['Peso', `${modeloVista.peso} kg`],
-                  ['Montaje', modeloVista.montaje],
-                  ['Rango de los ejes', modeloVista.limites.map((l, k) => `A${k + 1} ${l[0]}°/${l[1]}°`).join(' · ')],
-                  ['Uso típico', modeloVista.descripcion],
-                ] as Array<[string, string]>
-              ).map(([x, y]) => (
-                <tr key={x}>
-                  <td style={{ padding: '3px 8px', fontWeight: 600, verticalAlign: 'top' }}>{x}</td>
-                  <td style={{ padding: '3px 8px' }}>{y}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <p style={{ fontSize: '0.78rem', color: '#5f6b78' }}>Datos de las fichas técnicas publicadas de cada modelo. Para un trabajo formal, cita la ficha oficial de KUKA.</p>
-        </>
+        <FichaModelo modeloVista={modeloVista} />
       ),
     },
   ]
