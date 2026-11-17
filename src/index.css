@@ -1200,6 +1200,49 @@ body.arrastrando-borde * {
   padding: 8px 10px 10px;
   margin-bottom: 8px;
 }
+.checklist-tarea {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+}
+.checklist-tarea__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #d5dee6;
+  background: #fff;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+.checklist-tarea__marca {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  border: 1px solid currentColor;
+  background: #fff;
+  font-size: 0.8rem;
+  font-weight: 750;
+  line-height: 1;
+}
+.checklist-tarea__item--ok {
+  color: #0a6b3c;
+  background: #f3faf6;
+  border-color: #b7dfc8;
+}
+.checklist-tarea__item--falta {
+  color: #6b4a00;
+  background: #fff8ee;
+  border-color: #e6d3a1;
+}
 .proceso__etapas {
   display: flex;
   gap: 4px;

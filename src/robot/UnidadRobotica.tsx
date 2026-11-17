@@ -1756,10 +1756,11 @@ function PlanoTarea({ paso, checklist, onEstudiar, onEjemplo, ejemplo, onVolver,
         </button>
       </p>
       {checklist.length > 0 && (
-        <ul style={{ margin: '0 0 8px', paddingLeft: 0, listStyle: 'none' }} data-checklist-tarea="si">
+        <ul className="checklist-tarea" data-checklist-tarea="si">
           {checklist.map((p) => (
-            <li key={p.texto} style={{ margin: '2px 0', color: p.ok ? '#0a6b3c' : '#8a5b00' }}>
-              {p.ok ? '✓' : '☐'} {p.texto}
+            <li key={p.texto} className={p.ok ? 'checklist-tarea__item checklist-tarea__item--ok' : 'checklist-tarea__item checklist-tarea__item--falta'}>
+              <span className="checklist-tarea__marca" aria-hidden="true">{p.ok ? '✓' : '☐'}</span>
+              <span>{p.texto}</span>
             </li>
           ))}
         </ul>
