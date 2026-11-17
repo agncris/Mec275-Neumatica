@@ -129,6 +129,8 @@ interface Props {
   /** En píxeles, o '100%' para llenar el área. */
   alto?: number | string
   /** En la tarea: el siguiente paso, y el bloque que conviene arrastrar. */
+  /** Sin paleta ni tarjeta del paso: sólo el lienzo. */
+  soloLienzo?: boolean
   guia?: { id: string; numero: number; total: number; titulo: string; accion: string; listo?: string; por?: string; pasos?: string[]; pista?: string; pestana?: Pestana; destacar?: string }
   /** El ejemplo está abierto: no invita a seguir armando sobre ese lienzo. */
   mirandoEjemplo?: boolean
@@ -141,12 +143,14 @@ type Arrastre =
   | { tipo: 'fondo'; x: number; y: number; tx: number; ty: number }
   | { tipo: 'cable'; de?: { id: string; j: number }; a?: { id: string; i: number }; x: number; y: number; agregar: boolean }
 
-export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onSeleccionar, alto = 460, guia, mirandoEjemplo = false, onDeshacer, puedeDeshacer = false }: Props) {
+export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onSeleccionar, alto = 460, guia, mirandoEjemplo = false, onDeshacer, puedeDeshacer = false, soloLienzo = false }: Props) {
   const tactil = useTactil()
   const svgRef = useRef<SVGSVGElement>(null)
   const [vista, setVista] = useState({ tx: 20, ty: 40, k: 0.8 })
   const [arrastre, setArrastre] = useState<Arrastre | null>(null)
-  const [plegada, setPlegada] = usePersistente('neumalab.robot.paleta.v1', false)
+  const [plegadaGuardada, setPlegada] = usePersistente('neumalab.robot.paleta.v1', false)
+  // Con Entregar abierto queda poco ancho: se esconde la paleta para que el lienzo se vea (y se exporte) entero.
+  const plegada = plegadaGuardada || soloLienzo
   const [ayudaCerrada, setAyudaCerrada] = usePersistente('neumalab.robot.lienzo.ayuda.v1', false)
   const [abiertas, setAbiertas] = useState<Pestana[]>(() => (guia?.pestana ? [guia.pestana] : ['Movimientos', 'Robot']))
   const paletaRef = useRef<HTMLElement>(null)
@@ -459,7 +463,7 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
         )}
       </aside>
       <div className={typeof alto === 'string' ? 'editor-nodos__lienzo' : undefined} style={typeof alto === 'string' ? undefined : { position: 'relative' }}>
-        {guia && !mirandoEjemplo && (
+        {guia && !mirandoEjemplo && !soloLienzo && (
           <div className="lienzo-ayuda lienzo-ayuda--barra lienzo-ayuda--paso" data-guia-paso={guia.id} style={{ display: 'block' }}>
             <p style={{ margin: 0 }}><strong>Paso {guia.numero} de {guia.total} · {guia.titulo}</strong></p>
             {/* Corto a propósito: el lienzo es angosto. Los micro pasos y el porqué están en la pestaña Plano. */}

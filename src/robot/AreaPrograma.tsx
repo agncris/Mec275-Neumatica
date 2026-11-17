@@ -23,6 +23,7 @@ export default function AreaPrograma({
   enunciado,
   setEnunciado,
   ejemploEnTarea,
+  entregando = false,
   volverDelEjemplo,
   seguirConElEjemplo,
   deshacer,
@@ -52,6 +53,8 @@ export default function AreaPrograma({
   enunciado: string | null
   setEnunciado: (t: string | null) => void
   ejemploEnTarea: boolean
+  /** El cajón de Entregar está abierto. */
+  entregando?: boolean
   volverDelEjemplo: () => void
   seguirConElEjemplo: () => void
   deshacer: () => void
@@ -108,7 +111,7 @@ export default function AreaPrograma({
         </div>
       )}
       <div className="relleno">
-        <EditorNodos def={def} evaluacion={evaluacion} onCambiar={setDef} seleccion={seleccion} onSeleccionar={setSeleccion} alto="100%" guia={ejemploEnTarea ? undefined : (pasoTarea ?? undefined)} mirandoEjemplo={ejemploEnTarea} onDeshacer={deshacer} puedeDeshacer={puedeDeshacer} />
+        <EditorNodos def={def} evaluacion={evaluacion} onCambiar={setDef} seleccion={seleccion} onSeleccionar={setSeleccion} alto="100%" guia={ejemploEnTarea ? undefined : (pasoTarea ?? undefined)} mirandoEjemplo={ejemploEnTarea} soloLienzo={entregando} onDeshacer={deshacer} puedeDeshacer={puedeDeshacer} />
       </div>
       {evaluacion.ciclo && <p style={{ color: '#b3261e', fontSize: '0.86rem', margin: '6px 0 0' }}>⚠ Hay un ciclo en los cables.</p>}
       <div style={{ maxHeight: 150, overflow: 'auto', flex: 'none' }}>

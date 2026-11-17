@@ -65,6 +65,8 @@ interface Props<T extends string> {
   divisionInicial?: number
   /** Ancho mínimo de cada área al arrastrar el divisor, en píxeles. */
   anchoMin?: number
+  /** Ancho que el área izquierda no cede aunque se abra el cajón o el panel (px). */
+  anchoFijoIzquierda?: number
   plegado?: 'abierto' | 'riel' | 'oculto'
   onPlegado?: (p: 'abierto' | 'riel' | 'oculto') => void
   /** Contenido de la tira cuando el área izquierda está plegada. */
@@ -76,7 +78,7 @@ const ANCHO_MIN = 320
 /** Una capa del celular: todas ocupan el mismo lugar y sólo la elegida se ve. */
 const capa = (visible: boolean): React.CSSProperties => ({ position: 'absolute', inset: 0, visibility: visible ? 'visible' : 'hidden', zIndex: visible ? 1 : 0 })
 
-export default function BancoDividido<T extends string>({ clave, barra, izquierda, derecha, inferior, estado, encabezado, movil, onMovil, conCajon, clase, divisionInicial = 0.5, anchoMin = ANCHO_MIN, plegado = 'abierto', onPlegado, riel }: Props<T>) {
+export default function BancoDividido<T extends string>({ clave, barra, izquierda, derecha, inferior, estado, encabezado, movil, onMovil, conCajon, clase, divisionInicial = 0.5, anchoMin = ANCHO_MIN, anchoFijoIzquierda, plegado = 'abierto', onPlegado, riel }: Props<T>) {
   const estrecha = useCelular()
   const apilado = useApilado()
   const apaisado = useApaisado()
@@ -195,7 +197,7 @@ export default function BancoDividido<T extends string>({ clave, barra, izquierd
               </button>
             </section>
           ) : (
-            area(izquierda, { flex: `${division} 1 0` })
+            area(izquierda, { flex: `${division} 1 0`, minWidth: anchoFijoIzquierda })
           )}
           {plegado === 'abierto' && (
           <div

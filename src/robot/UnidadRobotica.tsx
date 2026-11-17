@@ -485,6 +485,7 @@ export default function UnidadRobotica() {
 
   const areaPrograma = (
     <AreaPrograma
+      entregando={entregaAbierta && enTarea}
       modo={modo}
       def={def}
       setDef={setDef}
@@ -626,6 +627,9 @@ export default function UnidadRobotica() {
           clase="banco--robot"
           divisionInicial={0.42}
           anchoMin={340}
+          // La paleta ocupa unos 250 px: con menos de 560 el lienzo de nodos no se puede usar.
+          // Con Entregar abierto no se arma el programa: ahí manda la simulación, que es lo que se graba.
+          anchoFijoIzquierda={modo === 'visual' && !entregaAbierta ? 560 : undefined}
           plegado={estrecha ? 'abierto' : plegado}
           onPlegado={setPlegado}
           riel={<span style={{ writingMode: 'vertical-rl', fontSize: '0.75rem', fontWeight: 700, color: '#51606f', letterSpacing: '0.04em' }}>{modo === 'visual' ? 'PROGRAMA' : 'MANDO'}</span>}
