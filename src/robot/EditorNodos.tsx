@@ -462,11 +462,8 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
         {guia && !mirandoEjemplo && (
           <div className="lienzo-ayuda lienzo-ayuda--barra lienzo-ayuda--paso" data-guia-paso={guia.id} style={{ display: 'block' }}>
             <p style={{ margin: 0 }}><strong>Paso {guia.numero} de {guia.total} · {guia.titulo}</strong></p>
-            {guia.pasos ? (
-              <ol style={{ margin: '4px 0 0', paddingLeft: 18 }}>{guia.pasos.map((x) => <li key={x}>{x}</li>)}</ol>
-            ) : (
-              <p style={{ margin: '4px 0 0' }}>{guia.accion}</p>
-            )}
+            {/* Corto a propósito: el lienzo es angosto. Los micro pasos y el porqué están en la pestaña Plano. */}
+            <p style={{ margin: '4px 0 0' }}>{guia.accion}</p>
             {guia.pista && <p style={{ margin: '4px 0 0', color: '#6b4200', fontWeight: 600 }}>Te falta: {guia.pista}</p>}
             {guia.listo && <p style={{ margin: '4px 0 0', color: '#33475c' }}>Listo cuando: {guia.listo}</p>}
           </div>
