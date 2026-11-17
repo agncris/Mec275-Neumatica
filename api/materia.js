@@ -1,6 +1,5 @@
 /**
- * Apuntes del curso para MecBot. Responder desde aquí no llama a Groq:
- * un ajuste del modelo seguiría gastando una consulta por pregunta.
+ * Apuntes del curso que MecBot le pasa al modelo como contexto.
  * Los textos salen de las secciones de Estudiar. Robótica va primero.
  */
 
@@ -352,8 +351,14 @@ export function respuestaDeApuntes(pregunta) {
   }
 }
 
-/** Texto corto para adjuntar al modelo cuando los apuntes no bastan. */
+/** Apuntes que el modelo usa para no inventar. Una unidad entera va completa. */
 export function contextoDe(pregunta) {
+  const unidad = unidadPedida(pregunta)
+  if (unidad) {
+    return FICHAS.filter((f) => f.unidad === unidad)
+      .map((f) => `[${f.unidad} · ${f.titulo}] ${f.texto}`)
+      .join('\n\n')
+  }
   return buscar(pregunta, 3)
     .filter((r) => r.puntos >= 3)
     .map((r) => `[${r.ficha.unidad} · ${r.ficha.titulo}] ${r.ficha.texto}`)

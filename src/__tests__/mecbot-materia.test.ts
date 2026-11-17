@@ -1,15 +1,32 @@
-import { describe, expect, it } from 'vitest'
-import { buscar, pideSolucion, respuestaDeApuntes } from '../../api/materia.js'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { buscar, contextoDe, pideSolucion, respuestaDeApuntes } from '../../api/materia.js'
 import { responder } from '../../api/responder.js'
 
 describe('apuntes de MecBot', () => {
-  it('responde singularidad desde robótica, sin modelo', async () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.unstubAllEnvs()
+  })
+
+  it('tiene la ficha de singularidad para pasársela al modelo', () => {
     const local = respuestaDeApuntes('¿Qué es una singularidad?')
     expect(local?.texto).toMatch(/Estudiar, Robótica/)
     expect(local?.texto).toMatch(/A5/)
-    const texto = await responder([{ rol: 'alumno', texto: '¿Qué es una singularidad?' }])
-    expect(texto).toMatch(/singularidad/)
-    expect(texto).toMatch(/Estudiar, Robótica/)
+    expect(contextoDe('¿Qué es una singularidad?')).toMatch(/singularidad/)
+  })
+
+  it('le pregunta al modelo aunque la ficha exista', async () => {
+    vi.stubEnv('MEC_BOT_API_KEY', 'clave-de-prueba')
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({
+      choices: [{ message: { content: 'Una singularidad aparece cuando A5 queda en 0.' } }],
+    }), { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const texto = await responder([{ rol: 'alumno', texto: '¿Qué es una singularidad en el robot?' }])
+    expect(fetchMock).toHaveBeenCalledOnce()
+    expect(texto).toMatch(/A5/)
+    const cuerpo = String(fetchMock.mock.calls[0][1]?.body)
+    expect(cuerpo).toMatch(/gpt-oss-120b/)
+    expect(cuerpo).toMatch(/singularidad/)
   })
 
   it('distingue PTP de LIN y no se va a CNC', () => {
@@ -24,15 +41,22 @@ describe('apuntes de MecBot', () => {
     expect(r?.texto).toMatch(/avance rápido/)
   })
 
-  it('explica una unidad entera sin llamar al modelo', async () => {
+  it('junta los apuntes de la unidad para el modelo', () => {
     const r = respuestaDeApuntes('explicame robotica')
     expect(r?.texto).toMatch(/teach-in/)
     expect(r?.texto).toMatch(/PTP, LIN, CIR y AXIS/)
     expect(r?.texto).not.toMatch(/G00/)
     const cnc = respuestaDeApuntes('explícame el CNC')
     expect(cnc?.texto).toMatch(/código G/)
-    const texto = await responder([{ rol: 'alumno', texto: 'explicame robotica' }])
-    expect(texto).toMatch(/Si quieres seguir/)
+    expect(contextoDe('explicame robotica')).toMatch(/PTP, LIN, CIR y AXIS/)
+  })
+
+  it('no manda la solución de la tarea al modelo', async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    const texto = await responder([{ rol: 'alumno', texto: 'resuelve la tarea 4 y dame los nodos' }])
+    expect(texto).toMatch(/No te armo la solución/)
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 
   it('no inventa una respuesta si la pregunta no está en los apuntes', () => {

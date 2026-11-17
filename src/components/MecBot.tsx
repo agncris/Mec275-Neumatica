@@ -3,7 +3,6 @@
  * estudio. La respuesta la arma el servidor; aquí no hay clave ni soluciones.
  */
 import { useEffect, useRef, useState } from 'react'
-import { respuestaDeApuntes } from '../../api/materia.js'
 
 interface Mensaje {
   rol: 'alumno' | 'mecbot'
@@ -14,7 +13,7 @@ const AVISOS: Record<string, string> = {
   'sin-clave': 'Todavía no estoy conectado. El profesor tiene que poner la clave del modelo en el servidor.',
   'clave-invalida': 'La clave del servidor no está sirviendo. Hay que renovarla.',
   ocupado: 'Hay mucha gente preguntando. Espera un momento y vuelve a intentar.',
-  cupo: 'Ya hiciste varias preguntas que no están en los apuntes. Sigue con lo de Estudiar, sobre todo Robótica, y vuelve a intentar más tarde.',
+  cupo: 'Llegaste al tope de preguntas por ahora. Vuelve a intentar más tarde.',
   mensaje: 'Escribe una pregunta para poder ayudarte.',
   red: 'No pude responder ahora. Inténtalo de nuevo en un momento.',
 }
@@ -74,12 +73,6 @@ export default function MecBot() {
     const historia = [...mensajes, { rol: 'alumno' as const, texto: limpio }]
     setMensajes(historia)
     setBorrador('')
-    const deApuntes = respuestaDeApuntes(limpio)
-    if (deApuntes) {
-      setMensajes([...historia, { rol: 'mecbot', texto: deApuntes.texto }])
-      if (enVoz) decir(deApuntes.texto)
-      return
-    }
     setPensando(true)
     if (!navigator.onLine) {
       setMensajes([...historia, { rol: 'mecbot', texto: 'Sin conexión no puedo responder. El resto de la app sigue funcionando.' }])
@@ -179,6 +172,7 @@ export default function MecBot() {
               Leer la respuesta en voz alta
             </label>
           )}
+          <p className="mecbot__aviso">Chat MecBot es una IA y puede cometer errores.</p>
         </section>
       )}
       <button type="button" className="mecbot__abrir" aria-expanded={abierto} onClick={() => setAbierto((a) => !a)}>

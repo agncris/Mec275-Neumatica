@@ -1,16 +1,16 @@
 /**
  * MecBot responde en el servidor. La clave del modelo no sale al navegador.
- * Guía el estudio del curso y no entrega la resolución de las tareas.
- *
- * Primero contesta con los apuntes de api/materia.js (no gasta Groq).
- * El modelo solo entra si esos apuntes no alcanzan, con un recorte corto,
- * una caché de la misma pregunta y un tope por alumno.
+ * Cada pregunta la contesta el modelo, con los apuntes del curso como contexto.
+ * Guía el estudio y no entrega la resolución de las tareas.
+ * Hay una caché de la misma pregunta y un tope por alumno.
  */
 
 import { contextoDe, normalizar, respuestaDeApuntes } from './materia.js'
 
 const URL_DEFECTO = 'https://api.groq.com/openai/v1/chat/completions'
-const MODELO_DEFECTO = 'llama-3.3-70b-versatile'
+/** Groq retiró llama-3.3-70b-versatile. Este es el reemplazo que recomiendan. */
+const MODELO_DEFECTO = 'openai/gpt-oss-120b'
+const MODELOS_RETIRADOS = new Set(['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'])
 const MAX_MENSAJES = 10
 const MAX_TEXTO = 700
 const TOPE_HORA = 12
@@ -87,8 +87,8 @@ function permiteModelo(ip) {
 export async function responder(entrada, ip = 'local') {
   const mensajes = sanear(entrada)
   const pregunta = mensajes[mensajes.length - 1].texto
-  const deApuntes = respuestaDeApuntes(pregunta)
-  if (deApuntes) return deApuntes.texto
+  const deReglas = respuestaDeApuntes(pregunta)
+  if (deReglas?.origen === 'reglas') return deReglas.texto
 
   const recordada = claveCache(mensajes)
   const guardada = recordada ? cache.get(recordada) : null
@@ -98,7 +98,8 @@ export async function responder(entrada, ip = 'local') {
   if (!clave) throw new ErrorBot('sin-clave', 503)
   if (!permiteModelo(ip || 'local')) throw new ErrorBot('cupo', 429)
   const url = process.env.MEC_BOT_URL || URL_DEFECTO
-  const modelo = process.env.MEC_BOT_MODELO || MODELO_DEFECTO
+  const pedido = process.env.MEC_BOT_MODELO || MODELO_DEFECTO
+  const modelo = MODELOS_RETIRADOS.has(pedido) ? MODELO_DEFECTO : pedido
   const contexto = contextoDe(pregunta)
   const sistema = contexto
     ? `${SISTEMA}\n\nApuntes del curso. Si alcanzan, responde solo con ellos y nombra la sección. No inventes números:\n\n${contexto}`
@@ -114,7 +115,8 @@ export async function responder(entrada, ip = 'local') {
       body: JSON.stringify({
         model: modelo,
         temperature: 0.4,
-        max_tokens: 320,
+        max_tokens: 600,
+        ...(modelo.includes('gpt-oss') ? { reasoning_effort: 'low' } : {}),
         messages: [
           { role: 'system', content: sistema },
           ...mensajes.map((m) => ({ role: m.rol === 'mecbot' ? 'assistant' : 'user', content: m.texto })),
