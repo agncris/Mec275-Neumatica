@@ -626,8 +626,8 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
         )}
         <div style={{ position: 'absolute', right: 8, bottom: 8, display: 'flex', gap: 4 }}>
           {onDeshacer && (
-            <button type="button" onClick={onDeshacer} disabled={!puedeDeshacer} style={{ ...botonMini, opacity: puedeDeshacer ? 1 : 0.45 }} title="Deshacer (Ctrl+Z)">
-              Deshacer
+            <button type="button" onClick={onDeshacer} disabled={!puedeDeshacer} aria-label="Deshacer" style={{ ...botonMini, minWidth: 34, fontSize: '1.05rem', opacity: puedeDeshacer ? 1 : 0.45 }} title="Deshacer (Ctrl+Z)">
+              ↶
             </button>
           )}
           <button onClick={() => zoomCentro(1 / 1.25)} style={{ ...botonMini, minWidth: 34 }} aria-label="Alejar" title="Alejar">
