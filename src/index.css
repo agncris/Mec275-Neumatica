@@ -1055,6 +1055,30 @@ body.arrastrando-borde * {
   margin: 0;
   flex: 1;
 }
+.tarea-ejemplo {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 8px;
+  padding: 10px 12px;
+  background: #fff6e8;
+  border: 1px solid #e2c48a;
+  border-radius: 8px;
+  color: #1c2733;
+}
+.tarea-ejemplo p {
+  margin: 0;
+  flex: 1 1 220px;
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+.tarea-ejemplo span {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 .lienzo-ayuda h3 {
   margin: 0 0 6px;
   font-size: 0.95rem;

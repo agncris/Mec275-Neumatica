@@ -130,6 +130,8 @@ interface Props {
   alto?: number | string
   /** En la tarea: el siguiente paso, y el bloque que conviene arrastrar. */
   guia?: { id: string; numero: number; total: number; titulo: string; accion: string; pestana?: Pestana; destacar?: string }
+  /** El ejemplo está abierto: no invita a seguir armando sobre ese lienzo. */
+  mirandoEjemplo?: boolean
   onDeshacer?: () => void
   puedeDeshacer?: boolean
 }
@@ -139,7 +141,7 @@ type Arrastre =
   | { tipo: 'fondo'; x: number; y: number; tx: number; ty: number }
   | { tipo: 'cable'; de?: { id: string; j: number }; a?: { id: string; i: number }; x: number; y: number; agregar: boolean }
 
-export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onSeleccionar, alto = 460, guia, onDeshacer, puedeDeshacer = false }: Props) {
+export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onSeleccionar, alto = 460, guia, mirandoEjemplo = false, onDeshacer, puedeDeshacer = false }: Props) {
   const tactil = useTactil()
   const svgRef = useRef<SVGSVGElement>(null)
   const [vista, setVista] = useState({ tx: 20, ty: 40, k: 0.8 })
@@ -378,7 +380,9 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
         {!plegada && (
           <div className="paleta-nodos__cuerpo">
             <p className="paleta-nodos__ayuda">
-              {guia
+              {mirandoEjemplo
+                ? 'Esto es el ejemplo. Para armar la tuya, pulsa «Volver a mi tarea».'
+                : guia
                 ? `Paso ${guia.numero} de ${guia.total}. El bloque con borde azul es el siguiente.`
                 : def.nodos.length === 0
                   ? 'Empieza arrastrando un Robot y un Core.'
@@ -455,11 +459,11 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
         )}
       </aside>
       <div className={typeof alto === 'string' ? 'editor-nodos__lienzo' : undefined} style={typeof alto === 'string' ? undefined : { position: 'relative' }}>
-        {def.nodos.length > 0 && !ayudaCerrada && (
+        {def.nodos.length > 0 && !ayudaCerrada && !mirandoEjemplo && (
           <div className="lienzo-ayuda lienzo-ayuda--barra">
             <p>
               {guia
-                ? 'Arrastra el bloque azul al lienzo. Robot, Tool y Core ya están.'
+                ? guia.accion
                 : 'Arrastra un bloque desde Componentes, o haz clic para dejarlo en el centro.'}{' '}
               La salida (derecha) se conecta con la entrada (izquierda).
             </p>

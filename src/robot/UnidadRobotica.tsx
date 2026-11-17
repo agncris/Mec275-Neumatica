@@ -4,7 +4,7 @@
  * de alcance, límites y singularidades, y exportar el código KRL. Funciona en
  * el navegador: no hace falta Windows ni licencias.
  */
-import { BotonNuevo, botonSecundario, estiloAviso, Menu, useEsEstrecha, usePersistente } from '../components/ui'
+import { BotonNuevo, botonPrimario, botonSecundario, estiloAviso, Menu, useEsEstrecha, usePersistente } from '../components/ui'
 import BancoDividido, { TituloArea } from '../components/banco/BancoDividido'
 import { usePanelAcoplado, type PestanaPanel } from '../components/banco/PanelAcoplado'
 import PaginaEstudiar, { type SeccionEstudio } from '../components/banco/PaginaEstudiar'
@@ -17,7 +17,7 @@ import Autoevaluacion from '../components/Autoevaluacion'
 import FichaRobot from './FichaRobot'
 import { PREGUNTAS_ROBOT } from './preguntasRobot'
 import { ETIQUETA_GRUPO, PRACTICA_ROBOT, type GrupoPractica } from './practica'
-import { adaptarATarea, analizarTarea4, ejemploGuiadoTarea, esEjemploGuiado, MARCA_TAREA4, revisarTarea4, tareaVaciaRobot, type PuntoRevisionTarea } from './tarea4'
+import { adaptarATarea, analizarTarea4, ejemploGuiadoTarea, esEjemploGuiado, MARCA_TAREA4, revisarTarea4, tareaAlAbrir, tareaVaciaRobot, type PuntoRevisionTarea } from './tarea4'
 import { copiarTabla, descargarTexto, leerAlumno, limpiarEnlace, trabajoDelEnlace } from '../entregar'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { exportarPng, nombreSeguro } from '../exportar'
@@ -76,17 +76,28 @@ function leerGuardada(): Definicion {
   return EJEMPLOS_ROBOT[0].definicion()
 }
 
-function leerTarea(): Definicion {
+function definicionGuardada(clave: string): Definicion | null {
   try {
-    const crudo = localStorage.getItem(CLAVE_TAREA)
-    if (crudo) {
-      const d = JSON.parse(crudo)
-      if (esDefinicion(d)) return d
-    }
+    const crudo = localStorage.getItem(clave)
+    if (!crudo) return null
+    const d = JSON.parse(crudo)
+    return esDefinicion(d) ? d : null
   } catch {
-    /* sin almacenamiento */
+    return null
   }
-  return tareaVaciaRobot()
+}
+
+function leerTarea(): Definicion {
+  const guardada = definicionGuardada(CLAVE_TAREA)
+  const previa = definicionGuardada(CLAVE_ANTES_EJEMPLO)
+  if (guardada && esEjemploGuiado(guardada)) {
+    try {
+      localStorage.removeItem(CLAVE_ANTES_EJEMPLO)
+    } catch {
+      /* sin almacenamiento */
+    }
+  }
+  return tareaAlAbrir(guardada, previa)
 }
 
 const esCurva = (d: Dato): d is Curva => typeof d === 'object' && d !== null && 'pts' in d && 'cerrada' in d
@@ -268,6 +279,8 @@ export default function UnidadRobotica() {
   }, [])
 
   useEffect(() => {
+    // El ejemplo es una visita: no pisa la tarea guardada.
+    if (enTarea && esEjemploGuiado(def)) return
     try {
       localStorage.setItem(enTarea ? CLAVE_TAREA : CLAVE, JSON.stringify(def))
     } catch {
@@ -496,9 +509,7 @@ export default function UnidadRobotica() {
     setEnunciado(null)
     // En la tarea, «Nuevo» vuelve a la definición de la tarea (con el plano cargado).
     if (enTarea && id === 'vacio') {
-      const eraEjemplo = esEjemploGuiado(defRef.current)
-      const pregunta = eraEjemplo ? '¿Quitar el ejemplo y volver a la tarea sin él?' : '¿Empezar de nuevo la tarea? Se reemplaza tu definición.'
-      if (!window.confirm(pregunta)) return
+      if (!window.confirm('¿Empezar de cero? Se borra lo que llevas en la tarea.')) return
       setReproduciendo(false)
       try {
         localStorage.removeItem(CLAVE_ANTES_EJEMPLO)
@@ -508,7 +519,7 @@ export default function UnidadRobotica() {
       setDef(tareaVaciaRobot())
       setSeleccion(null)
       setModo('visual')
-      return setAviso(eraEjemplo ? 'Ejemplo quitado. La tarea queda como al empezar: robot, fresa y el plano.' : 'Definición de la tarea en blanco: robot, herramienta y Core, con el plano cargado.')
+      return setAviso('Tarea en blanco: robot, fresa y el plano.')
     }
     const ej = EJEMPLOS_ROBOT.find((e) => e.id === id)
     if (!ej) return
@@ -663,7 +674,6 @@ export default function UnidadRobotica() {
   }
   const verEjemploGuiado = () => {
     if (esEjemploGuiado(defRef.current)) return
-    if (!window.confirm('Se muestra un ejemplo a medias: el contorno en línea recta, con Robot, Tool y Core. No incluye las ranuras ni los arcos. Después puedes volver a tu tarea. ¿Seguir?')) return
     try {
       localStorage.setItem(CLAVE_ANTES_EJEMPLO, JSON.stringify(defRef.current))
     } catch {
@@ -673,10 +683,9 @@ export default function UnidadRobotica() {
     setDef(ejemploGuiadoTarea())
     setSeleccion(null)
     setModo('visual')
-    setAviso('Ejemplo guiado cargado. «Volver a mi tarea» lo quita y recupera lo que tenías.')
+    setAviso('Ejemplo del contorno. Tu tarea sigue guardada: «Volver a mi tarea» la recupera.')
   }
   const volverDelEjemplo = () => {
-    if (!window.confirm('¿Quitar el ejemplo y volver a tu tarea?')) return
     let previa: Definicion | null = null
     try {
       const crudo = localStorage.getItem(CLAVE_ANTES_EJEMPLO)
@@ -688,11 +697,23 @@ export default function UnidadRobotica() {
     } catch {
       /* sin almacenamiento */
     }
+    const siguiente = previa ?? tareaAlAbrir(definicionGuardada(CLAVE_TAREA), null)
     setReproduciendo(false)
-    setDef(previa ?? tareaVaciaRobot())
+    setDef(siguiente)
     setSeleccion(null)
     setModo('visual')
-    setAviso(previa ? 'Volviste a tu tarea, sin el ejemplo.' : 'Ejemplo quitado. La tarea queda como al empezar: robot, fresa y el plano.')
+    setAviso('Volviste a tu tarea.')
+  }
+  const seguirConElEjemplo = () => {
+    const actual = defRef.current
+    if (!esEjemploGuiado(actual)) return
+    try {
+      localStorage.removeItem(CLAVE_ANTES_EJEMPLO)
+    } catch {
+      /* sin almacenamiento */
+    }
+    setDef({ ...actual, nombre: NOMBRE_TAREA })
+    setAviso('Este contorno quedó como tu tarea. Sigue con las ranuras.')
   }
   const ejemploEnTarea = enTarea && esEjemploGuiado(def)
   // El desplegable muestra el ejemplo abierto, también después de recargar.
@@ -757,9 +778,9 @@ export default function UnidadRobotica() {
       </span>
       {modo === 'visual' && (
         <>
-          <BotonNuevo que={ejemploEnTarea ? 'la tarea, sin el ejemplo' : 'una definición'} compacto={estrecha} onClick={() => cargarEjemplo('vacio')} />
+          <BotonNuevo que="la tarea de cero" compacto={estrecha} onClick={() => cargarEjemplo('vacio')} />
           {ejemploEnTarea && (
-            <button type="button" onClick={volverDelEjemplo} style={botonSecundario} data-volver-tarea="si">
+            <button type="button" onClick={volverDelEjemplo} style={botonPrimario()} data-volver-tarea="si">
               Volver a mi tarea
             </button>
           )}
@@ -860,8 +881,23 @@ export default function UnidadRobotica() {
             </button>
           </p>
         )}
+        {ejemploEnTarea && (
+          <div className="tarea-ejemplo" data-ejemplo-tarea="si">
+            <p>
+              <strong>Esto es un ejemplo del contorno, no tu entrega.</strong> Curve en CONTORNO, Offset +2,5, Move en Z −5 y Toolpath. Las ranuras no están. Tu tarea sigue guardada.
+            </p>
+            <span>
+              <button type="button" onClick={volverDelEjemplo} style={botonPrimario()} data-volver-tarea="si">
+                Volver a mi tarea
+              </button>
+              <button type="button" onClick={seguirConElEjemplo} style={botonSecundario} data-seguir-ejemplo="si" title="Deja este contorno en tu tarea, en lugar de lo que tenías">
+                Seguir con este contorno
+              </button>
+            </span>
+          </div>
+        )}
         <div className="relleno">
-          <EditorNodos def={def} evaluacion={evaluacion} onCambiar={setDef} seleccion={seleccion} onSeleccionar={setSeleccion} alto="100%" guia={pasoTarea ?? undefined} onDeshacer={deshacer} puedeDeshacer={historial.current.puedeDeshacer} />
+          <EditorNodos def={def} evaluacion={evaluacion} onCambiar={setDef} seleccion={seleccion} onSeleccionar={setSeleccion} alto="100%" guia={ejemploEnTarea ? undefined : (pasoTarea ?? undefined)} mirandoEjemplo={ejemploEnTarea} onDeshacer={deshacer} puedeDeshacer={historial.current.puedeDeshacer} />
         </div>
         {evaluacion.ciclo && <p style={{ color: '#b3261e', fontSize: '0.86rem', margin: '6px 0 0' }}>⚠ Hay un ciclo en los cables.</p>}
         <div style={{ maxHeight: 150, overflow: 'auto', flex: 'none' }}>
@@ -1033,7 +1069,7 @@ export default function UnidadRobotica() {
   )
 
   const pestanas: Array<PestanaPanel<PestanaRobot>> = [
-    ...(enTarea && pasoTarea ? [{ id: 'plano-tarea' as const, titulo: 'Plano de la tarea', tituloCorto: 'Plano', contenido: <PlanoTarea paso={pasoTarea} checklist={checklistTarea} onEstudiar={irAEstudiar} onEjemplo={verEjemploGuiado} ejemplo={ejemploEnTarea} onVolver={volverDelEjemplo} /> }] : []),
+    ...(enTarea && pasoTarea ? [{ id: 'plano-tarea' as const, titulo: 'Plano de la tarea', tituloCorto: 'Plano', contenido: <PlanoTarea paso={pasoTarea} checklist={ejemploEnTarea ? [] : checklistTarea} onEstudiar={irAEstudiar} onEjemplo={verEjemploGuiado} ejemplo={ejemploEnTarea} onVolver={volverDelEjemplo} onSeguir={seguirConElEjemplo} /> }] : []),
     {
       id: 'analisis',
       titulo: 'Análisis',
@@ -1664,39 +1700,60 @@ function pasoGuiado(def: Definicion): PasoAhora {
   }
   const capas = curvas.map(capaDe)
   if (!capas.includes('RANURAS')) {
-    return { ...base, id: 'ranuras', numero: 6, titulo: 'Repetir con las ranuras', pestana: 'Trayectoria', destacar: 'curvaDXF', donde: 'Otra Curve, con la capa RANURAS.', accion: 'Arrastra otra Curve, elige RANURAS y repite Offset (D = −2,5), Move (Z = −5) y Toolpath. Junta ese recorrido con el del contorno en el mismo Merge, antes de apagar el husillo.', listo: 'El checklist dice que la trayectoria recorre 10 de 10 trazos.' }
+    return { ...base, id: 'ranuras', numero: 6, titulo: 'Repetir con las ranuras', pestana: 'Trayectoria', destacar: 'curvaDXF', donde: 'Otra Curve, con la capa RANURAS.', accion: 'Arrastra otra Curve, elige RANURAS y repite Offset (D = −2,5), Move (Z = −5) y Toolpath. El Merge solo acepta tres cables: pon otro Merge a la salida del primero y conecta ahí el recorrido de las ranuras. Apaga el husillo (Set Digital Out en FALSE) después de los dos recorridos.', listo: 'El checklist dice que la trayectoria recorre 10 de 10 trazos.' }
   }
   return { ...base, id: 'cerrar', numero: 6, titulo: 'Revisar el checklist', donde: 'La lista de esta lámina y la pestaña Análisis.', accion: 'Pulsa ▶. Si un trazo queda en el borde y no compensado, revisa el signo de Offset. Si la fresa no atraviesa, Move tiene que estar en Z = −5. Si hay un LIN en el aire, el acercamiento tiene que ser PTP.', listo: 'El checklist queda en verde.' }
 }
 
 /** El plano de la tarea, con el proceso arriba y un solo paso abierto. */
-function PlanoTarea({ paso, checklist, onEstudiar, onEjemplo, ejemplo, onVolver }: { paso: PasoAhora; checklist: PuntoRevisionTarea[]; onEstudiar: (ancla: string) => void; onEjemplo: () => void; ejemplo: boolean; onVolver: () => void }) {
+function PlanoTarea({ paso, checklist, onEstudiar, onEjemplo, ejemplo, onVolver, onSeguir }: { paso: PasoAhora; checklist: PuntoRevisionTarea[]; onEstudiar: (ancla: string) => void; onEjemplo: () => void; ejemplo: boolean; onVolver: () => void; onSeguir: () => void }) {
   return (
     <div data-plano-tarea="si" style={{ fontSize: '0.84rem', color: '#1c2733', lineHeight: 1.45 }}>
-      <section className="proceso" aria-label="Proceso de la tarea" data-paso-ahora={paso.id}>
+      {ejemplo && (
+        <div className="tarea-ejemplo" data-ejemplo-tarea="si">
+          <p>
+            <strong>Estás mirando el ejemplo.</strong> No reemplaza tu tarea. «Volver a mi tarea» recupera lo que tenías. «Seguir con este contorno» lo deja como punto de partida y las ranuras las haces tú.
+          </p>
+          <span>
+            <button type="button" onClick={onVolver} style={botonPrimario()} data-volver-tarea="si">
+              Volver a mi tarea
+            </button>
+            <button type="button" onClick={onSeguir} style={botonSecundario} data-seguir-ejemplo="si" title="Deja este contorno en tu tarea, en lugar de lo que tenías">
+              Seguir con este contorno
+            </button>
+          </span>
+        </div>
+      )}
+      <section className="proceso" aria-label="Proceso de la tarea" data-paso-ahora={ejemplo ? 'ejemplo' : paso.id}>
         <p style={{ margin: 0, fontWeight: 700 }}>
-          Paso {paso.numero} de {paso.total} · {paso.titulo}
+          {ejemplo ? 'Ejemplo del contorno' : `Paso ${paso.numero} de ${paso.total} · ${paso.titulo}`}
         </p>
-        <ol className="proceso__etapas">
-          {ETAPAS_TAREA.map((nombre, i) => {
-            const n = i + 1
-            const estado = n < paso.numero ? 'hecha' : n === paso.numero ? 'ahora' : ''
-            return (
-              <li key={nombre} className={estado ? `proceso__etapa proceso__etapa--${estado}` : 'proceso__etapa'} aria-current={estado === 'ahora' ? 'step' : undefined}>
-                {estado === 'hecha' ? '✓ ' : `${n} `}
-                {nombre}
-              </li>
-            )
-          })}
-        </ol>
-        <dl className="proceso__fila">
-          <dt>Dónde</dt>
-          <dd>{paso.donde}</dd>
-          <dt>Haz esto</dt>
-          <dd>{paso.accion}</dd>
-          <dt>Listo</dt>
-          <dd>{paso.listo}</dd>
-        </dl>
+        {ejemplo ? (
+          <p style={{ margin: '6px 0 0' }}>Curve (CONTORNO) → Offset +2,5 → Move Z −5 → Toolpath → husillo encendido, espera y apagado → Core. Sirve para mirar cómo se conecta. Las nueve ranuras quedan para tu tarea.</p>
+        ) : (
+          <>
+            <ol className="proceso__etapas">
+              {ETAPAS_TAREA.map((nombre, i) => {
+                const n = i + 1
+                const estado = n < paso.numero ? 'hecha' : n === paso.numero ? 'ahora' : ''
+                return (
+                  <li key={nombre} className={estado ? `proceso__etapa proceso__etapa--${estado}` : 'proceso__etapa'} aria-current={estado === 'ahora' ? 'step' : undefined}>
+                    {estado === 'hecha' ? '✓ ' : `${n} `}
+                    {nombre}
+                  </li>
+                )
+              })}
+            </ol>
+            <dl className="proceso__fila">
+              <dt>Dónde</dt>
+              <dd>{paso.donde}</dd>
+              <dt>Haz esto</dt>
+              <dd>{paso.accion}</dd>
+              <dt>Listo</dt>
+              <dd>{paso.listo}</dd>
+            </dl>
+          </>
+        )}
       </section>
       <p style={{ margin: '0 0 8px', color: '#33475c' }}>La fresa de 5 mm recorre el contorno (Offset +2,5) y las nueve ranuras (Offset −2,5), baja 5 mm y se acerca con PTP. Plancha de 250 × 250 mm. Los chaflanes y los arcos ya vienen en el DXF.</p>
       <p style={{ margin: '0 0 2px', fontWeight: 700 }}>Criterios de éxito</p>
@@ -1706,13 +1763,9 @@ function PlanoTarea({ paso, checklist, onEstudiar, onEjemplo, ejemplo, onVolver 
         <li>El programa KRL se puede leer.</li>
       </ul>
       <p style={{ margin: '0 0 6px' }}>
-        {ejemplo ? (
-          <button type="button" onClick={onVolver} style={botonSuave} data-volver-tarea="si">
-            Volver a mi tarea
-          </button>
-        ) : (
-          <button type="button" onClick={onEjemplo} style={botonSuave}>
-            Ver ejemplo guiado
+        {ejemplo ? null : (
+          <button type="button" onClick={onEjemplo} style={botonSuave} data-ver-ejemplo="si">
+            Ver el ejemplo del contorno
           </button>
         )}{' '}
         <button type="button" onClick={() => onEstudiar('parametrica')} style={enlaceEstudiar}>

@@ -90,6 +90,16 @@ export function esEjemploGuiado(def: Definicion): boolean {
   return def.nombre === 'Ejemplo guiado'
 }
 
+/**
+ * Al abrir la tarea, el ejemplo no cuenta como trabajo del alumno: si quedó
+ * guardado, se recupera lo que había antes, o la tarea en blanco.
+ */
+export function tareaAlAbrir(guardada: Definicion | null, previa: Definicion | null): Definicion {
+  if (guardada && !esEjemploGuiado(guardada)) return guardada
+  if (previa && !esEjemploGuiado(previa)) return previa
+  return tareaVaciaRobot()
+}
+
 /** ¿El plano abierto es el de la tarea, sin tocar? */
 export function esPlanoDeLaTarea(def: Definicion): boolean {
   return !!def.dxf && sinEspacios(def.dxf.texto) === sinEspacios(PLANO_TAREA4_DXF)

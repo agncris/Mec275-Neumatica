@@ -3,7 +3,7 @@ import publico from '../../public/plano-tarea4-robotica.dxf?raw'
 import { cajaCurvas, leerDXF } from '../robot/geometria'
 import { componente, paramsIniciales, type Definicion, type NodoDef, type ValorParam } from '../robot/nodos'
 import { PLANO_TAREA4_DXF } from '../robot/planoTarea4'
-import { adaptarATarea, analizarTarea4, ejemploGuiadoTarea, esEjemploGuiado, esPlanoDeLaTarea, revisarTarea4, tareaVaciaRobot } from '../robot/tarea4'
+import { adaptarATarea, analizarTarea4, ejemploGuiadoTarea, esEjemploGuiado, esPlanoDeLaTarea, revisarTarea4, tareaAlAbrir, tareaVaciaRobot } from '../robot/tarea4'
 
 describe('plano de la Tarea 4', () => {
   const dxf = leerDXF(PLANO_TAREA4_DXF)
@@ -59,6 +59,14 @@ describe('definición de la tarea', () => {
   it('el ejemplo guiado se reconoce y la tarea en blanco no', () => {
     expect(esEjemploGuiado(ejemploGuiadoTarea())).toBe(true)
     expect(esEjemploGuiado(tareaVaciaRobot())).toBe(false)
+  })
+
+  it('si el ejemplo quedó guardado, al abrir se recupera la tarea del alumno', () => {
+    const mia = tareaVaciaRobot()
+    mia.nombre = 'Mi soporte'
+    expect(tareaAlAbrir(ejemploGuiadoTarea(), mia).nombre).toBe('Mi soporte')
+    expect(tareaAlAbrir(ejemploGuiadoTarea(), null).nombre).toBe('Tarea Robótica')
+    expect(tareaAlAbrir(mia, ejemploGuiadoTarea()).nombre).toBe('Mi soporte')
   })
 
   it('un plano modificado deja de ser el de la tarea', () => {
