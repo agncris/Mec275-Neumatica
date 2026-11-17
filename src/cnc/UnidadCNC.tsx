@@ -11,11 +11,10 @@ import BancoDividido, { TituloArea } from '../components/banco/BancoDividido'
 import { enlaceEstudiar } from '../components/banco/ProcesoTarea'
 import { usePanelAcoplado, type PestanaPanel } from '../components/banco/PanelAcoplado'
 import SubnavUnidad, { seccionDeLaUrl, useSeccionUnidad, type SeccionUnidad } from '../components/banco/SubnavUnidad'
-import CajonEntregar from '../components/banco/CajonEntregar'
 import MisTrabajos from '../components/banco/MisTrabajos'
 import GuiaInicio, { GUIA_CNC, useGuia } from '../components/banco/GuiaInicio'
-import { baseArchivo, copiarTabla, descargarTexto, leerAlumno, limpiarEnlace, trabajoDelEnlace } from '../entregar'
-import { crearTrabajo, herramientasLlamadas, leerTrabajo, revisarTrabajo, TAREA_3, type PuntoRevision, type ResumenTrabajo } from './trabajo'
+import { baseArchivo, descargarTexto, leerAlumno, limpiarEnlace, trabajoDelEnlace } from '../entregar'
+import { crearTrabajo, leerTrabajo, revisarTrabajo, TAREA_3, type PuntoRevision, type ResumenTrabajo } from './trabajo'
 import { ANCLAS_ESTUDIAR_CNC } from './anclasEstudiar'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { exportarPng, nombreSeguro } from '../exportar'
@@ -27,7 +26,6 @@ import {
   almacenDe,
   CONFIG_INICIAL,
   fijarHerramientas,
-  torretaDe,
   material as materialDe,
   origenPrograma,
   posicionCasa,
@@ -39,9 +37,10 @@ import SelectorMaquina, { MAQUINAS } from './SelectorMaquina'
 import Preparacion from './PanelPreparacion'
 import Revision from './Revision'
 import Tablero from './Tablero'
-import TablaPuntos, { filasCoordenadas } from './TablaPuntos'
+import TablaPuntos from './TablaPuntos'
 import PlanoTarea, { EJEMPLO_GUIADO_TORNO } from './PlanoTarea'
 import ResumenRevision from './ResumenRevision'
+import PanelEntrega from './PanelEntrega'
 import { botonSuave, rotulo, selector } from './estilos'
 import { SimuladorCNC, volumenPieza } from './simulador'
 import type { VistaCNC } from './Maquina3D'
@@ -879,97 +878,23 @@ export default function UnidadCNC() {
         />
       )}
       {entregaAbierta && enTarea && (
-        <CajonEntregar
-          unidad="CNC"
-          clave="neumalab.cnc.entrega"
-          trabajoSugerido="Tarea-3"
+        <PanelEntrega
+          config={config}
+          codigo={codigo}
+          resultado={resultado}
+          torno={torno}
+          lineas={lineas}
+          casa={casa}
+          mat={mat}
+          trabajoJson={trabajoJson}
+          exportarPlano={exportarPlano}
+          grabando={grabando}
+          puedeGrabar={puedeGrabar}
+          nombreVideo={nombreVideo}
+          reiniciar={reiniciar}
+          alternarGrabacion={alternarGrabacion}
+          correr={correr}
           onCerrar={() => setEntregaAbierta(false)}
-          revisar={() => revisarTrabajo(config, codigo).puntos}
-          presentacion={[
-            {
-              id: 'trayectoria',
-              tipo: 'imagen',
-              titulo: 'Trayectoria con sus puntos',
-              detalle: 'La silueta que recorre la herramienta, con los puntos numerados.',
-              hacer: async (base) => {
-                await exportarPlano(`${base}_trayectoria.png`)
-                return `Descargada: ${base}_trayectoria.png`
-              },
-            },
-            {
-              id: 'coordenadas',
-              tipo: 'tabla',
-              titulo: 'Tabla de coordenadas',
-              detalle: 'Dónde queda la herramienta en cada bloque, en absolutas e incrementales.',
-              hacer: async () => {
-                const filas = filasCoordenadas(resultado, torno, lineas, casa)
-                if (filas.length < 2) throw new Error('El programa todavía no mueve la máquina.')
-                return (await copiarTabla(filas)) ? 'Tabla copiada: pégala en tu presentación (Ctrl+V).' : 'Tu navegador no dejó copiar.'
-              },
-            },
-            {
-              id: 'herramientas',
-              tipo: 'tabla',
-              titulo: 'Herramientas que usa tu programa',
-              detalle: 'Cada herramienta con su nombre y en qué líneas se llama.',
-              hacer: async () => {
-                const lista = torno ? torretaDe(config) : almacenDe(config)
-                const uso = herramientasLlamadas(codigo, torno)
-                if (!uso.size) throw new Error('Tu programa no llama a ninguna herramienta (T).')
-                const filas = [...uso.entries()].sort((a, b) => a[0] - b[0]).map(([t, ls]) => [`T${t}`, lista.find((h) => h.t === t)?.nombre ?? '(no está en la torreta)', lista.find((h) => h.t === t)?.uso ?? '', ls.join(', ')])
-                return (await copiarTabla([['Herramienta', 'Nombre', 'Para qué sirve', 'Líneas'], ...filas])) ? 'Tabla copiada: pégala en tu presentación (Ctrl+V).' : 'Tu navegador no dejó copiar.'
-              },
-            },
-            {
-              id: 'bruto',
-              tipo: 'tabla',
-              titulo: 'Material y dimensiones del bruto',
-              detalle: 'Lo que pusiste en Preparación.',
-              hacer: async () => {
-                const filas = torno
-                  ? [['Material', 'Diámetro (mm)', 'Largo (mm)', 'Toman las garras (mm)', 'Sobremetal en la cara (mm)'], [mat.nombre, String(config.torno.diametro), String(config.torno.largo), String(config.torno.agarre), String(config.torno.sobremetal)]]
-                  : [['Material', 'Largo X (mm)', 'Ancho Y (mm)', 'Alto Z (mm)'], [mat.nombre, String(config.fresa.largo), String(config.fresa.ancho), String(config.fresa.alto)]]
-                return (await copiarTabla(filas)) ? 'Tabla copiada: pégala en tu presentación (Ctrl+V).' : 'Tu navegador no dejó copiar.'
-              },
-            },
-          ]}
-          archivos={[
-            {
-              id: 'trabajo',
-              tipo: 'archivo',
-              titulo: 'Tu programa (.json)',
-              detalle: 'Programa y preparación en un archivo. Adjúntalo en Aula junto con tu PDF; se abre en la app con Archivo › Abrir.',
-              hacer: (base) => {
-                descargarTexto(trabajoJson(), `${base}.json`, 'application/json')
-                return `Descargado: ${base}.json`
-              },
-            },
-            {
-              id: 'cnc',
-              tipo: 'archivo',
-              titulo: 'Programa .cnc',
-              detalle: 'Opcional: solo el código G, en texto. También se abre en CNC Simulator Pro.',
-              hacer: (base) => {
-                descargarTexto(codigo.replace(/\n/g, '\r\n'), `${base}.cnc`)
-                return `Descargado: ${base}.cnc`
-              },
-            },
-            {
-              id: 'video',
-              tipo: 'video',
-              titulo: 'Video de la simulación',
-              detalle: grabando ? 'Grabando… pulsa «■ Detener grabación» arriba al terminar.' : 'Graba la máquina 3D mientras mecaniza; se descarga al detener.',
-              deshabilitado: !puedeGrabar || grabando,
-              porque: grabando ? 'Grabando… pulsa «■ Detener grabación» arriba al terminar.' : 'Tu navegador no permite grabar video.',
-              hacer: (base) => {
-                nombreVideo.current = `${base}_simulacion`
-                reiniciar()
-                alternarGrabacion()
-                setTimeout(() => correr('corriendo'), 300)
-                return 'Grabando desde el inicio. Al terminar el mecanizado pulsa «■ Detener grabación» (arriba a la derecha).'
-              },
-            },
-          ]}
         />
       )}
       {resumen && <ResumenRevision {...resumen} onCerrar={() => setResumen(null)} />}
