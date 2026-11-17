@@ -13,6 +13,9 @@ import BotonPantallaCompleta, { usePantallaCompleta } from '../components/Pantal
 import { useEffect, useRef, useState, type MutableRefObject } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import { Line2 } from 'three/examples/jsm/lines/Line2.js'
+import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js'
+import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { fondoTaller } from '../vista3d/realista'
 import { crearViewCube } from '../vista3d/viewcube'
@@ -36,6 +39,8 @@ export interface VistaCNC {
   sonido: boolean
   /** Torno: pieza cortada por la mitad para ver su interior. */
   corte?: boolean
+  /** Línea del programa (desde 0) cuya trayectoria se marca en la máquina. */
+  linea?: number | null
 }
 
 /** Plano de la vista en corte: deja la mitad trasera de la pieza (z ≤ 0). */
@@ -248,11 +253,17 @@ interface EscenaMaquina {
   raiz: THREE.Group
   caja: THREE.Box3
   punta: () => THREE.Vector3
-  actualizar: (sim: SimuladorCNC, dt: number, trayectoria: boolean, corte?: boolean) => void
+  trazo: Trazo
+  actualizar: (sim: SimuladorCNC, dt: number, trayectoria: boolean, corte?: boolean, linea?: number | null, ancho?: number, alto?: number) => void
+}
+
+interface Trazo extends THREE.Group {
+  /** Marca en grueso el recorrido de una línea y deja el resto más suave. */
+  marcar: (linea: number | null, trayectoria: boolean, ancho: number, alto: number) => void
 }
 
 /** Líneas de la trayectoria: rápidos en naranja discontinuo, cortes en azul. */
-function lineasTrayectoria(sim: SimuladorCNC, aEscena: (p: Vec3) => THREE.Vector3): THREE.Group {
+function lineasTrayectoria(sim: SimuladorCNC, aEscena: (p: Vec3) => THREE.Vector3): Trazo {
   const rap: number[] = []
   const cor: number[] = []
   for (const p of sim.programa.pasos) {
@@ -264,7 +275,10 @@ function lineasTrayectoria(sim: SimuladorCNC, aEscena: (p: Vec3) => THREE.Vector
       arr.push(a.x, a.y, a.z, b.x, b.y, b.z)
     }
   }
-  const g = new THREE.Group()
+  const g = new THREE.Group() as Trazo
+  const base = new THREE.Group()
+  const matRap = new THREE.LineDashedMaterial({ color: 0xff7a00, dashSize: 2.5, gapSize: 2, depthTest: false, transparent: true, opacity: 0.9 })
+  const matCor = new THREE.LineBasicMaterial({ color: 0x1668c7, depthTest: false, transparent: true, opacity: 0.95 })
   const hacer = (arr: number[], mat: THREE.LineBasicMaterial | THREE.LineDashedMaterial) => {
     if (!arr.length) return
     const geo = new THREE.BufferGeometry()
@@ -272,10 +286,67 @@ function lineasTrayectoria(sim: SimuladorCNC, aEscena: (p: Vec3) => THREE.Vector
     const l = new THREE.LineSegments(geo, mat)
     l.computeLineDistances()
     l.renderOrder = 10
-    g.add(l)
+    base.add(l)
   }
-  hacer(rap, new THREE.LineDashedMaterial({ color: 0xff7a00, dashSize: 2.5, gapSize: 2, depthTest: false, transparent: true, opacity: 0.9 }))
-  hacer(cor, new THREE.LineBasicMaterial({ color: 0x1668c7, depthTest: false, transparent: true, opacity: 0.95 }))
+  hacer(rap, matRap)
+  hacer(cor, matCor)
+  const destaque = new THREE.Group()
+  g.add(base, destaque)
+  let puesta: number | null | undefined
+  const materiales: LineMaterial[] = []
+  g.marcar = (linea, trayectoria, ancho, alto) => {
+    base.visible = trayectoria
+    const tenue = trayectoria && linea != null
+    matRap.opacity = tenue ? 0.22 : 0.9
+    matCor.opacity = tenue ? 0.22 : 0.95
+    if (linea === puesta) {
+      for (const m of materiales) m.resolution.set(ancho, alto)
+      destaque.visible = linea != null
+      return
+    }
+    puesta = linea
+    for (const m of materiales) m.dispose()
+    materiales.length = 0
+    for (const child of [...destaque.children]) {
+      const linea2 = child as Line2
+      linea2.geometry.dispose()
+      destaque.remove(linea2)
+    }
+    if (linea == null) {
+      destaque.visible = false
+      g.userData.tramos = 0
+      return
+    }
+    destaque.visible = true
+    let tramos = 0
+    for (const p of sim.programa.pasos) {
+      if (p.linea !== linea || p.puntos.length < 2) continue
+      const flat: number[] = []
+      for (const q of p.puntos) {
+        const v = aEscena(q)
+        flat.push(v.x, v.y, v.z)
+      }
+      const geo = new LineGeometry()
+      geo.setPositions(flat)
+      const mat = new LineMaterial({
+        color: p.tipo === 'rapido' ? 0xff7a00 : 0xff2d55,
+        linewidth: 5,
+        depthTest: false,
+        transparent: true,
+        dashed: p.tipo === 'rapido',
+        dashSize: 4,
+        gapSize: 2,
+        resolution: new THREE.Vector2(ancho, alto),
+      })
+      materiales.push(mat)
+      const trazo = new Line2(geo, mat)
+      trazo.computeLineDistances()
+      trazo.renderOrder = 12
+      destaque.add(trazo)
+      tramos++
+    }
+    g.userData.tramos = tramos
+  }
   return g
 }
 
@@ -446,10 +517,11 @@ function escenaTorno(sim: SimuladorCNC): EscenaMaquina {
   return {
     raiz,
     caja: caja3,
+    trazo: tray,
     punta: () => new THREE.Vector3(sim.pos.z, sim.pos.x / 2, 0),
-    actualizar(s, dt, trayectoria, enCorte) {
-      tray.visible = trayectoria
-      marca.visible = trayectoria
+    actualizar(s, dt, trayectoria, enCorte, linea = null, ancho = 800, alto = 600) {
+      tray.marcar(linea, trayectoria, ancho, alto)
+      marca.visible = trayectoria || linea != null
       const planos = enCorte ? [PLANO_CORTE] : []
       if (matPieza.clippingPlanes?.length !== planos.length) {
         matPieza.clippingPlanes = planos
@@ -659,9 +731,10 @@ function escenaFresa(sim: SimuladorCNC): EscenaMaquina {
   return {
     raiz,
     caja: caja3,
+    trazo: tray,
     punta: () => aEscena(sim.pos),
-    actualizar(s, dt, trayectoria) {
-      tray.visible = trayectoria
+    actualizar(s, dt, trayectoria, _corte, linea = null, ancho = 800, alto = 600) {
+      tray.marcar(linea, trayectoria, ancho, alto)
       ejes.visible = trayectoria
       if (pz.version !== versionPieza) {
         versionPieza = pz.version
@@ -810,6 +883,7 @@ export default function Maquina3D({
 
     let vivo = true
     let antes = performance.now()
+    const tam = new THREE.Vector2()
     const bucle = () => {
       if (!vivo) return
       requestAnimationFrame(bucle)
@@ -827,7 +901,9 @@ export default function Maquina3D({
         cont.dataset.maquina = maquina
         if (reencuadrar) encuadrar('iso')
       }
-      actual.esc.actualizar(v.sim, dt, v.trayectoria, v.corte)
+      renderer.getSize(tam)
+      actual.esc.actualizar(v.sim, dt, v.trayectoria, v.corte, v.linea ?? null, tam.x, tam.y)
+      cont.dataset.trazo = String(actual.esc.trazo.userData.tramos ?? 0)
       const s = v.sim
       const paso = s.terminado ? undefined : s.programa.pasos[s.indice]
       if (v.sonido) sonido.actualizar(paso && paso.husillo !== 'off' && !s.alarma ? paso.rpm : 0, Math.min(1, s.cortando / 3), paso?.tipo === 'rapido' && !s.parado && s.t > 0)

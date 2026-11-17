@@ -91,9 +91,23 @@ export default function Plano2D({
         .join('')
       ;(p.tipo === 'rapido' ? rap : cor).push(d)
     }
-    return { rap: rap.join(''), cor: cor.join('') }
+    const sel: string[] = []
+    if (seleccionada != null) {
+      for (const p of programa.pasos) {
+        if (p.linea !== seleccionada || p.puntos.length < 2) continue
+        sel.push(
+          p.puntos
+            .map((q, i) => {
+              const [a, b] = aPlano(q)
+              return `${i ? 'L' : 'M'}${tx(a).toFixed(2)},${ty(b).toFixed(2)}`
+            })
+            .join(''),
+        )
+      }
+    }
+    return { rap: rap.join(''), cor: cor.join(''), sel: sel.join('') }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [programa, caja])
+  }, [programa, caja, seleccionada])
 
   // Silueta de la pieza tal como va (torno) o mapa de profundidad (fresa).
   const pz = sim.pieza
@@ -167,8 +181,9 @@ export default function Plano2D({
       >
         <Grilla caja={caja} tx={tx} ty={ty} esc={escalaTexto} torno={torno} desfase={torno ? origen.z : origen.x} />
         {silueta}
-        <path d={trazos.rap} fill="none" stroke="#e06a00" strokeWidth={escalaTexto * 0.18} strokeDasharray={`${escalaTexto * 0.8} ${escalaTexto * 0.6}`} />
-        <path d={trazos.cor} fill="none" stroke="#1668c7" strokeWidth={escalaTexto * 0.22} />
+        <path d={trazos.rap} fill="none" stroke="#e06a00" strokeWidth={escalaTexto * 0.18} strokeDasharray={`${escalaTexto * 0.8} ${escalaTexto * 0.6}`} opacity={trazos.sel ? 0.35 : 1} />
+        <path d={trazos.cor} fill="none" stroke="#1668c7" strokeWidth={escalaTexto * 0.22} opacity={trazos.sel ? 0.35 : 1} />
+        {trazos.sel && <path d={trazos.sel} fill="none" stroke="#ff2d55" strokeWidth={escalaTexto * 0.55} strokeLinejoin="round" strokeLinecap="round" />}
         {puntos.map((p, k) => (
           <Punto
             key={k}

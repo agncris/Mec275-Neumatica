@@ -198,6 +198,7 @@ export default function UnidadCNC() {
   vista.current.corte = corte
   vista.current.trayectoria = trayectoria
   vista.current.sonido = sonido
+  vista.current.linea = estado === 'corriendo' ? vista.current.sim.linea : cursor
   // Programa o preparación nuevos: la máquina vuelve al inicio con el bruto entero.
   const reiniciar = useCallback(() => {
     vista.current.sim = new SimuladorCNC(resultado, config, casa)
@@ -659,6 +660,7 @@ export default function UnidadCNC() {
           codigo={codigo}
           onCambiar={setCodigo}
           lineaActiva={lineaActiva}
+          seleccion={cursor}
           diagnosticos={resultado.diagnosticos}
           onCursor={setCursor}
           soloLectura={bloqueado}

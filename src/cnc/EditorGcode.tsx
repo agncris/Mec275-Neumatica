@@ -64,6 +64,8 @@ interface Props {
   codigo: string
   onCambiar: (c: string) => void
   lineaActiva: number | null
+  /** Línea que el alumno eligió: se marca aunque la máquina no la esté ejecutando. */
+  seleccion?: number | null
   diagnosticos: Diagnostico[]
   onCursor: (n: number) => void
   soloLectura?: boolean
@@ -72,7 +74,7 @@ interface Props {
 }
 
 const EditorGcode = forwardRef<EditorGcodeRef, Props>(function EditorGcode(
-  { codigo, onCambiar, lineaActiva, diagnosticos, onCursor, soloLectura, alto = 420 },
+  { codigo, onCambiar, lineaActiva, seleccion = null, diagnosticos, onCursor, soloLectura, alto = 420 },
   ref,
 ) {
   const area = useRef<HTMLTextAreaElement>(null)
@@ -161,7 +163,7 @@ const EditorGcode = forwardRef<EditorGcodeRef, Props>(function EditorGcode(
         <div ref={fondo} aria-hidden style={{ ...fuente, position: 'absolute', top: 0, left: 0, padding: PAD, minWidth: '100%', pointerEvents: 'none' }}>
           {lineas.map((l, i) => {
             const nivel = nivelDe.get(i)
-            const bg = i === lineaActiva ? '#fff2a8' : nivel === 'error' ? '#fde7e7' : nivel === 'aviso' ? '#fff5e0' : undefined
+            const bg = i === lineaActiva ? '#fff2a8' : i === seleccion ? '#fde8ee' : nivel === 'error' ? '#fde7e7' : nivel === 'aviso' ? '#fff5e0' : undefined
             return (
               <div key={i} style={{ height: ALTO_LINEA, background: bg, margin: `0 -${PAD}px`, padding: `0 ${PAD}px` }}>
                 {l ? colorear(l) : ' '}
