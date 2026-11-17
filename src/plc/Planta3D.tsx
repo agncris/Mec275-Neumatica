@@ -15,6 +15,7 @@ import { useEffect, useRef, useState, type MutableRefObject } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
+import { fondoTaller } from '../vista3d/realista'
 import { MAT, caja, cilindro, modeloCilindro, modeloValvula } from '../vista3d/modelos'
 import { SonidoBanco } from '../vista3d/sonido'
 import type { EstadoPLC } from './ladder'
@@ -1485,8 +1486,8 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
     const pmrem = new THREE.PMREMGenerator(renderer)
     const entorno = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
     escena.environment = entorno
-    escena.environmentIntensity = 1.1
-    escena.background = new THREE.Color(0xdde2e7)
+    escena.environmentIntensity = 1.2
+    escena.background = fondoTaller()
 
     notacionEscena = notacion
     const idPlanta = sim.current.planta.id

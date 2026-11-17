@@ -6,7 +6,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
+import { calidadRender, entornoEstudio, fondoTaller, pisoHormigon, solSuave } from '../vista3d/realista'
 
 type Tipo = 'scara' | 'cilindrico' | 'esferico' | 'cartesiano' | 'angular' | 'delta'
 
@@ -105,18 +106,21 @@ const INFO: Record<Tipo, Info> = {
 
 const TIPOS: Tipo[] = ['scara', 'cilindrico', 'esferico', 'cartesiano', 'angular', 'delta']
 
-const NAR = new THREE.MeshStandardMaterial({ color: 0xf06a14, metalness: 0.25, roughness: 0.45 })
-const OSC = new THREE.MeshStandardMaterial({ color: 0x2b3036, metalness: 0.3, roughness: 0.55 })
-const MET = new THREE.MeshStandardMaterial({ color: 0xb8bec6, metalness: 0.8, roughness: 0.3 })
+const NAR = new THREE.MeshPhysicalMaterial({ color: 0xf15a12, metalness: 0.16, roughness: 0.32, clearcoat: 0.62, clearcoatRoughness: 0.28 })
+const OSC = new THREE.MeshPhysicalMaterial({ color: 0x1c2127, metalness: 0.28, roughness: 0.48, clearcoat: 0.25, clearcoatRoughness: 0.4 })
+const MET = new THREE.MeshPhysicalMaterial({ color: 0xd5dbe2, metalness: 0.92, roughness: 0.22, clearcoat: 0.2 })
+const MADERA = new THREE.MeshStandardMaterial({ color: 0x8d6a45, roughness: 0.72, metalness: 0.04 })
 
 const box = (w: number, h: number, d: number, m: THREE.Material) => {
-  const x = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m)
+  const x = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 3, Math.min(6, w / 3, h / 3, d / 3)), m)
   x.castShadow = true
+  x.receiveShadow = true
   return x
 }
 const cyl = (r: number, h: number, m: THREE.Material, r2 = r) => {
-  const x = new THREE.Mesh(new THREE.CylinderGeometry(r2, r, h, 32), m)
+  const x = new THREE.Mesh(new THREE.CylinderGeometry(r2, r, h, 40), m)
   x.castShadow = true
+  x.receiveShadow = true
   return x
 }
 
@@ -256,7 +260,7 @@ function armar(tipo: Tipo): { g: THREE.Group; poner: (v: number[]) => void } {
     carro.add(vara)
     const mano = box(60, 20, 60, OSC)
     carro.add(mano)
-    const mesa = box(L - 60, 20, W - 60, new THREE.MeshStandardMaterial({ color: 0x8b7355, roughness: 0.8 }))
+    const mesa = box(L - 60, 20, W - 60, MADERA)
     mesa.position.y = 10
     g.add(mesa)
     return {
@@ -353,7 +357,7 @@ function armar(tipo: Tipo): { g: THREE.Group; poner: (v: number[]) => void } {
     g.add(motor)
     brazos.push({ a, b, phi })
   }
-  const mesa = box(500, 20, 500, new THREE.MeshStandardMaterial({ color: 0x8b7355, roughness: 0.8 }))
+  const mesa = box(500, 20, 500, MADERA)
   mesa.position.y = 10
   g.add(mesa)
   const colocarBarra = (m: THREE.Mesh, p: THREE.Vector3, q: THREE.Vector3) => {
@@ -418,23 +422,19 @@ export default function TiposRobot() {
     }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     renderer.setSize(cont.clientWidth, cont.clientHeight)
-    renderer.outputColorSpace = THREE.SRGBColorSpace
-    renderer.shadowMap.enabled = true
+    calidadRender(renderer)
     cont.appendChild(renderer.domElement)
     renderer.domElement.dataset.tiposRobot = 'si'
     const escena = new THREE.Scene()
-    const pm = new THREE.PMREMGenerator(renderer)
-    escena.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture
-    escena.background = new THREE.Color(0xe7ebef)
-    const piso = new THREE.Mesh(new THREE.CircleGeometry(900, 48), new THREE.MeshStandardMaterial({ color: 0xcfd4da, roughness: 0.95 }))
-    piso.rotation.x = -Math.PI / 2
-    piso.receiveShadow = true
-    escena.add(piso)
-    const sol = new THREE.DirectionalLight(0xffffff, 2)
-    sol.position.set(-600, 1400, 900)
-    sol.castShadow = true
-    Object.assign(sol.shadow.camera, { left: -900, right: 900, top: 900, bottom: -900, near: 10, far: 4000 })
-    escena.add(sol, new THREE.HemisphereLight(0xffffff, 0x666666, 0.5))
+    const pm = entornoEstudio(renderer, escena, 0.9)
+    escena.background = fondoTaller()
+    escena.add(pisoHormigon(1100))
+    const sol = solSuave()
+    sol.position.set(-700, 1600, 900)
+    Object.assign(sol.shadow.camera, { left: -1100, right: 1100, top: 1100, bottom: -1100, near: 10, far: 4200 })
+    const relleno = new THREE.DirectionalLight(0xd5e2f4, 0.55)
+    relleno.position.set(900, 600, -700)
+    escena.add(sol, relleno, new THREE.HemisphereLight(0xf4f7fb, 0xc5ced8, 0.55))
     const cam = new THREE.PerspectiveCamera(38, cont.clientWidth / cont.clientHeight, 10, 10000)
     cam.position.set(1100, 900, 1300)
     const ctrl = new OrbitControls(cam, renderer.domElement)

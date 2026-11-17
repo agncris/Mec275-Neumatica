@@ -554,7 +554,7 @@ export default function Banco3D({ motor, llenar = false, play }: Props) {
     const relleno = new THREE.DirectionalLight(0xdfe8ff, 0.55)
     relleno.position.set(centro.x + 1.2, centro.y + 0.3, 0.9)
     escena.add(relleno)
-    escena.environmentIntensity = 1.15
+    escena.environmentIntensity = 1.25
 
     // --- cámara -----------------------------------------------------------------
     const camara = new THREE.PerspectiveCamera(32, cont.clientWidth / Math.max(1, cont.clientHeight), 0.01, 20)

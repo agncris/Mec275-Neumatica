@@ -15,7 +15,7 @@ import { useEffect, useRef, useState, type CSSProperties, type MutableRefObject,
 import { ViewportGizmo } from 'three-viewport-gizmo'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
+import { entornoEstudio, fondoTaller, sombraContacto } from '../vista3d/realista'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { aMundo, aplicar, matrizPlano, rad, type Plano, type V3 } from './matematica'
 import type { Simulacion } from './movimiento'
@@ -50,29 +50,13 @@ export interface VistaRobot {
   marcas: V3[]
 }
 
-const NARANJA = new THREE.MeshPhysicalMaterial({ color: 0xf15a12, metalness: 0.12, roughness: 0.34, clearcoat: 0.55, clearcoatRoughness: 0.28 })
-const NEGRO = new THREE.MeshStandardMaterial({ color: 0x1a1d22, metalness: 0.2, roughness: 0.62 })
-const GRIS = new THREE.MeshStandardMaterial({ color: 0xc5ccd4, metalness: 0.92, roughness: 0.22 })
-const MESON = new THREE.MeshStandardMaterial({ color: 0x8b939c, metalness: 0.35, roughness: 0.48 })
-const ACERO = new THREE.MeshStandardMaterial({ color: 0xd5dae0, metalness: 0.95, roughness: 0.18 })
-const PLANCHA = new THREE.MeshStandardMaterial({ color: 0x9aa3ad, metalness: 0.72, roughness: 0.38 })
-const HUSILLO = new THREE.MeshStandardMaterial({ color: 0xd8dde3, metalness: 0.82, roughness: 0.28 })
-
-/** Fondo claro, el mismo tono que el resto de la app. */
-function fondoClaro(): THREE.CanvasTexture {
-  const c = document.createElement('canvas')
-  c.width = 2
-  c.height = 256
-  const g = c.getContext('2d')!
-  const grad = g.createLinearGradient(0, 0, 0, 256)
-  grad.addColorStop(0, '#f7f8fa')
-  grad.addColorStop(1, '#e4e8ee')
-  g.fillStyle = grad
-  g.fillRect(0, 0, 2, 256)
-  const t = new THREE.CanvasTexture(c)
-  t.colorSpace = THREE.SRGBColorSpace
-  return t
-}
+const NARANJA = new THREE.MeshPhysicalMaterial({ color: 0xf15a12, metalness: 0.18, roughness: 0.28, clearcoat: 0.72, clearcoatRoughness: 0.22 })
+const NEGRO = new THREE.MeshPhysicalMaterial({ color: 0x1a1d22, metalness: 0.35, roughness: 0.46, clearcoat: 0.3, clearcoatRoughness: 0.4 })
+const GRIS = new THREE.MeshPhysicalMaterial({ color: 0xd7dde4, metalness: 0.96, roughness: 0.16, clearcoat: 0.25 })
+const MESON = new THREE.MeshStandardMaterial({ color: 0x8b939c, metalness: 0.42, roughness: 0.4 })
+const ACERO = new THREE.MeshPhysicalMaterial({ color: 0xe4e8ed, metalness: 1, roughness: 0.14, clearcoat: 0.15 })
+const PLANCHA = new THREE.MeshPhysicalMaterial({ color: 0xb7c0c8, metalness: 0.78, roughness: 0.32, clearcoat: 0.12 })
+const HUSILLO = new THREE.MeshPhysicalMaterial({ color: 0xe8ecef, metalness: 0.9, roughness: 0.2, clearcoat: 0.35 })
 
 function caja(w: number, h: number, d: number, mat: THREE.Material, r = 6): THREE.Mesh {
   const m = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 2, Math.min(r, w / 3, h / 3, d / 3)), mat)
@@ -125,6 +109,9 @@ interface ModeloArmado {
 function armarRobot(m: ModeloRobot, pedestal: number, h: Herramienta): ModeloArmado {
   const s = m.a2 / 455 // escala de los volúmenes respecto del KR 6
   const raiz = new THREE.Group()
+  const contacto = sombraContacto(220 * s + 80)
+  contacto.position.z = 1.5
+  raiz.add(contacto)
   if (pedestal > 0) {
     const ped = caja(260 * s + 60, pedestal, 260 * s + 60, NEGRO, 8)
     ped.position.set(0, 0, pedestal / 2)
@@ -352,10 +339,8 @@ export default function Robot3D({
     onCanvas?.(renderer.domElement)
 
     const escena = new THREE.Scene()
-    const pmrem = new THREE.PMREMGenerator(renderer)
-    const fondo = fondoClaro()
-    escena.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
-    escena.environmentIntensity = 0.55
+    const pmrem = entornoEstudio(renderer, escena, 0.85)
+    const fondo = fondoTaller()
     escena.background = fondo
     // Mundo con Z hacia arriba.
     const mundo = new THREE.Group()

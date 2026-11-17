@@ -14,6 +14,7 @@ import { useEffect, useRef, useState, type MutableRefObject } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
+import { fondoTaller } from '../vista3d/realista'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import type { Vec3 } from './gcode'
 import {
@@ -42,14 +43,14 @@ const PLANO_CORTE = new THREE.Plane(new THREE.Vector3(0, 0, -1), 0)
 type Vista = 'iso' | 'frente' | 'arriba' | 'lado'
 
 const M = {
-  pintura: new THREE.MeshStandardMaterial({ color: 0xd9dde2, metalness: 0.15, roughness: 0.55 }),
-  pinturaOscura: new THREE.MeshStandardMaterial({ color: 0x4a525c, metalness: 0.25, roughness: 0.5 }),
-  acero: new THREE.MeshStandardMaterial({ color: 0x9aa2ab, metalness: 0.9, roughness: 0.32 }),
-  aceroOscuro: new THREE.MeshStandardMaterial({ color: 0x5b636c, metalness: 0.85, roughness: 0.38 }),
-  fundicion: new THREE.MeshStandardMaterial({ color: 0x6f7780, metalness: 0.5, roughness: 0.6 }),
-  inserto: new THREE.MeshStandardMaterial({ color: 0xd8b64a, metalness: 0.8, roughness: 0.3 }),
-  negro: new THREE.MeshStandardMaterial({ color: 0x22272d, metalness: 0.2, roughness: 0.6 }),
-  naranja: new THREE.MeshStandardMaterial({ color: 0xe8792b, metalness: 0.2, roughness: 0.5 }),
+  pintura: new THREE.MeshPhysicalMaterial({ color: 0xdfe4ea, metalness: 0.12, roughness: 0.42, clearcoat: 0.45, clearcoatRoughness: 0.35 }),
+  pinturaOscura: new THREE.MeshPhysicalMaterial({ color: 0x3e4650, metalness: 0.3, roughness: 0.42, clearcoat: 0.2 }),
+  acero: new THREE.MeshPhysicalMaterial({ color: 0xc5ccd4, metalness: 0.96, roughness: 0.2, clearcoat: 0.18 }),
+  aceroOscuro: new THREE.MeshPhysicalMaterial({ color: 0x5c656e, metalness: 0.9, roughness: 0.32 }),
+  fundicion: new THREE.MeshStandardMaterial({ color: 0x6a727b, metalness: 0.45, roughness: 0.62 }),
+  inserto: new THREE.MeshPhysicalMaterial({ color: 0xe2c15a, metalness: 0.85, roughness: 0.22, clearcoat: 0.3 }),
+  negro: new THREE.MeshStandardMaterial({ color: 0x1c2126, metalness: 0.25, roughness: 0.5 }),
+  naranja: new THREE.MeshPhysicalMaterial({ color: 0xe8792b, metalness: 0.15, roughness: 0.38, clearcoat: 0.4 }),
 }
 
 function caja(w: number, h: number, d: number, mat: THREE.Material, r = 2): THREE.Mesh {
@@ -360,7 +361,7 @@ function escenaTorno(sim: SimuladorCNC): EscenaMaquina {
   const R = pz.bruto.diametro / 2
   const mat = materialDe(sim.config.material)
   const tex = texturaRayada()
-  const matPieza = new THREE.MeshStandardMaterial({ color: mat.color, metalness: mat.metal, roughness: 0.32, map: tex, side: THREE.DoubleSide })
+  const matPieza = new THREE.MeshPhysicalMaterial({ color: mat.color, metalness: mat.metal, roughness: 0.26, clearcoat: 0.2, map: tex, side: THREE.DoubleSide })
 
   // Bancada inclinada, cabezal y bandeja de viruta.
   const largoBanco = pz.bruto.largo + 260
@@ -591,7 +592,7 @@ function escenaFresa(sim: SimuladorCNC): EscenaMaquina {
   const raiz = new THREE.Group()
   const { largo: L, ancho: W, alto: H } = pz.bruto
   const mat = materialDe(sim.config.material)
-  const matPieza = new THREE.MeshStandardMaterial({ color: mat.color, metalness: mat.metal * 0.8, roughness: 0.4, vertexColors: true, side: THREE.DoubleSide })
+  const matPieza = new THREE.MeshPhysicalMaterial({ color: mat.color, metalness: mat.metal * 0.85, roughness: 0.32, clearcoat: 0.12, vertexColors: true, side: THREE.DoubleSide })
   const { malla, actualizar: actualizarMalla } = mallaFresa(pz, matPieza)
   raiz.add(malla)
   let versionPieza = pz.version
@@ -746,8 +747,8 @@ export default function Maquina3D({
     const escena = new THREE.Scene()
     const pmrem = new THREE.PMREMGenerator(renderer)
     escena.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
-    escena.environmentIntensity = 0.9
-    escena.background = new THREE.Color(0xdde2e7)
+    escena.environmentIntensity = 1.05
+    escena.background = fondoTaller()
     const sol = new THREE.DirectionalLight(0xfff4e6, 2.0)
     sol.castShadow = true
     sol.shadow.mapSize.set(2048, 2048)

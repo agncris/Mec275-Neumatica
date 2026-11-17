@@ -51,13 +51,13 @@ export interface Modelo3D {
 // Materiales
 // ---------------------------------------------------------------------------
 export const MAT = {
-  aluminio: new THREE.MeshStandardMaterial({ color: 0xc4cad2, metalness: 0.85, roughness: 0.36 }),
-  aluminioOscuro: new THREE.MeshStandardMaterial({ color: 0x8d949c, metalness: 0.8, roughness: 0.45 }),
-  cromo: new THREE.MeshStandardMaterial({ color: 0xf1f4f7, metalness: 1, roughness: 0.07 }),
-  laton: new THREE.MeshStandardMaterial({ color: 0xc9a54c, metalness: 1, roughness: 0.28 }),
-  negro: new THREE.MeshStandardMaterial({ color: 0x1b1f24, metalness: 0.1, roughness: 0.55 }),
-  grafito: new THREE.MeshStandardMaterial({ color: 0x3a4048, metalness: 0.3, roughness: 0.5 }),
-  azul: new THREE.MeshStandardMaterial({ color: 0x1d5ea8, metalness: 0.2, roughness: 0.42 }),
+  aluminio: new THREE.MeshPhysicalMaterial({ color: 0xd5dbe3, metalness: 0.92, roughness: 0.28, clearcoat: 0.18 }),
+  aluminioOscuro: new THREE.MeshPhysicalMaterial({ color: 0x8d949c, metalness: 0.86, roughness: 0.38, clearcoat: 0.1 }),
+  cromo: new THREE.MeshPhysicalMaterial({ color: 0xf4f7fa, metalness: 1, roughness: 0.05, clearcoat: 0.4 }),
+  laton: new THREE.MeshPhysicalMaterial({ color: 0xd4b15a, metalness: 1, roughness: 0.22, clearcoat: 0.25 }),
+  negro: new THREE.MeshPhysicalMaterial({ color: 0x1b1f24, metalness: 0.22, roughness: 0.46, clearcoat: 0.2 }),
+  grafito: new THREE.MeshStandardMaterial({ color: 0x3a4048, metalness: 0.35, roughness: 0.48 }),
+  azul: new THREE.MeshPhysicalMaterial({ color: 0x1d5ea8, metalness: 0.18, roughness: 0.36, clearcoat: 0.45 }),
   verde: new THREE.MeshPhysicalMaterial({ color: 0x19a34e, roughness: 0.3, clearcoat: 0.8 }),
   rojo: new THREE.MeshPhysicalMaterial({ color: 0xc62828, roughness: 0.3, clearcoat: 0.8 }),
   vidrio: new THREE.MeshPhysicalMaterial({
