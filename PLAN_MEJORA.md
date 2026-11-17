@@ -57,11 +57,11 @@ Cada tarea dice qué hacer, cómo comprobarlo y cuánto cuesta (S: menos de 1 ho
 
 ### Fase 1. Red de seguridad (hacer ya, sin riesgo para los alumnos)
 
-- [x] **1.1 CI en GitHub Actions (S).** Crea `.github/workflows/ci.yml` que en cada push y PR a `main` corra `npm ci`, `npm run build` y `npm test` con Node 22. Comprobación: el flujo aparece en verde en GitHub para el commit que lo agrega.
-- [ ] **1.2 `CLAUDE.md` en la raíz (S).** Copia ahí las reglas de este archivo (sección «Reglas»), más: cómo levantar la app (`npm run dev`, `.claude/launch.json`), qué es `salida/`, las banderas de `src/unidades.ts`, y la estructura de carpetas en diez líneas. Mantén también `.cursor/rules/` apuntando a `CLAUDE.md` para que haya una sola fuente.
-- [ ] **1.3 `ErrorBoundary` por unidad (S).** En `src/Raiz.tsx`, envuelve cada unidad en un límite de error que muestre «Algo falló en esta unidad» con un botón «Recargar» y otro «Volver a Neumática», sin borrar el trabajo guardado. Comprobación: un test que monte el límite con un hijo que lanza y vea el mensaje (ver 1.5 para el entorno).
-- [ ] **1.4 Hook de pre-push (S).** Agrega un script `npm run verificar` (`tsc --noEmit && vitest run`) y documenta en `CLAUDE.md` que se corre antes de cada push. No instales husky: basta el script y la regla.
-- [ ] **1.5 Entorno para tests de componentes (S).** Agrega `jsdom` y `@testing-library/react` como dependencias de desarrollo. Deja los tests actuales en entorno `node` y usa `// @vitest-environment jsdom` solo en los nuevos. Comprobación: un test de humo que monte `Raiz` y vea las cuatro pestañas de unidad.
+- [x] **1.1 CI en GitHub Actions (S).** (commit `d555f98`) Crea `.github/workflows/ci.yml` que en cada push y PR a `main` corra `npm ci`, `npm run build` y `npm test` con Node 22. Comprobación: el flujo aparece en verde en GitHub para el commit que lo agrega.
+- [x] **1.2 `CLAUDE.md` en la raíz (S).** (commit `b8035e6`) Copia ahí las reglas de este archivo (sección «Reglas»), más: cómo levantar la app (`npm run dev`, `.claude/launch.json`), qué es `salida/`, las banderas de `src/unidades.ts`, y la estructura de carpetas en diez líneas. Mantén también `.cursor/rules/` apuntando a `CLAUDE.md` para que haya una sola fuente.
+- [x] **1.3 `ErrorBoundary` por unidad (S).** (commit `a2baf26`) En `src/Raiz.tsx`, envuelve cada unidad en un límite de error que muestre «Algo falló en esta unidad» con un botón «Recargar» y otro «Volver a Neumática», sin borrar el trabajo guardado. Comprobación: un test que monte el límite con un hijo que lanza y vea el mensaje (ver 1.5 para el entorno).
+- [x] **1.4 Hook de pre-push (S).** (commit `da44162`) Agrega un script `npm run verificar` (`tsc --noEmit && vitest run`) y documenta en `CLAUDE.md` que se corre antes de cada push. No instales husky: basta el script y la regla.
+- [x] **1.5 Entorno para tests de componentes (S).** (commit `9e1dde3`; jsdom 25 y testing-library entraron junto con 1.3, a2baf26; jsdom 25 y no 31 porque el 31 exige Node 22.22) Agrega `jsdom` y `@testing-library/react` como dependencias de desarrollo. Deja los tests actuales en entorno `node` y usa `// @vitest-environment jsdom` solo en los nuevos. Comprobación: un test de humo que monte `Raiz` y vea las cuatro pestañas de unidad.
 
 ### Fase 2. Rendimiento (seguro, se nota en celulares)
 
