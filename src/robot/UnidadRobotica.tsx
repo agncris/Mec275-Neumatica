@@ -19,6 +19,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { exportarPng, nombreSeguro } from '../exportar'
 import { croquisPieza, croquisPosicion } from './croquis'
 import { useBucleReproduccion, useReproduccion } from './useReproduccion'
+import { useEvaluacionRobot } from './useEvaluacionRobot'
 import { Historial } from '../historial'
 import CodigoKRL from './CodigoKRL'
 import Analisis from './Analisis'
@@ -29,26 +30,21 @@ import BarraRobot from './BarraRobot'
 import AreaPrograma from './AreaPrograma'
 import AreaSimulacion from './AreaSimulacion'
 import { EJEMPLOS_ROBOT } from './ejemplos'
-import { cajaCurvas, leerDXF } from './geometria'
-import { planoXY, v, type Plano } from './matematica'
+import { leerDXF } from './geometria'
+import { planoXY, v } from './matematica'
 import { poseDe, type PuntoEnsenado } from './Mando'
 import { ejesEn, generarKRL, PLACA_DEFECTO, simular, type Simulacion } from './movimiento'
 import {
-  componente,
   esDefinicion,
-  evaluar,
-  paramsIniciales,
   type Comando,
-  type Dato,
   type Definicion,
-  type Herramienta,
   type Programa,
   type RobotVirtual,
 } from './nodos'
 import { HOME, robotPorId } from './robots'
 import type { VistaRobot } from './Robot3D'
 import { ANCLAS_ESTUDIAR_ROBOT } from './anclasEstudiar'
-import { BASE_DEFECTO, CLAVE, CLAVE_ANTES_EJEMPLO, CLAVE_TAREA, definicionGuardada, HERR_DEFECTO, HERR_MANDO, leerGuardada, leerTarea, marcasDe, type Modo, NOMBRE_TAREA, previaDe } from './datosRobot'
+import { BASE_DEFECTO, CLAVE, CLAVE_ANTES_EJEMPLO, CLAVE_TAREA, definicionGuardada, HERR_MANDO, leerGuardada, leerTarea, marcasDe, type Modo, NOMBRE_TAREA } from './datosRobot'
 
 // La teoría, la ficha y las demos 3D de Estudiar se cargan solo al entrar a Estudiar.
 const EstudiarRobotica = lazy(() => import('./EstudiarRobotica'))
@@ -152,31 +148,7 @@ export default function UnidadRobotica() {
     return () => clearTimeout(id)
   }, [aviso])
 
-  const dxf = useMemo(() => (def.dxf ? leerDXF(def.dxf.texto) : null), [def.dxf])
-  const evaluacion = useMemo(() => evaluar(def, dxf), [def, dxf])
-  const programa: Programa | null = evaluacion.programas[0] ?? null
-  const previa = useMemo(() => {
-    const todos: Dato[] = []
-    for (const n of def.nodos) {
-      const r = evaluacion.nodos[n.id]
-      if (!r || r.estado === 'error' || n.tipo === 'core') continue
-      for (const s of r.salidas) todos.push(...s)
-    }
-    return previaDe(todos)
-  }, [def, evaluacion])
-  const seleccionPrevia = useMemo(
-    () => (seleccion ? previaDe((evaluacion.nodos[seleccion]?.salidas ?? []).flat()) : { curvas: [], puntos: [], planos: [] }),
-    [evaluacion, seleccion],
-  )
-  // Plancha: el contorno de la geometría con 20 mm de margen.
-  const placa = useMemo(() => {
-    const curvas = previa.curvas.map((pts) => ({ pts, cerrada: true, esquinas: [] }))
-    if (!curvas.length) return null
-    const { min, max } = cajaCurvas(curvas)
-    return Number.isFinite(min.x) ? { x0: min.x - 20, y0: min.y - 20, x1: max.x + 20, y1: max.y + 20 } : null
-  }, [previa])
-  // En la tarea, la simulación también avisa del husillo (en los ejercicios y fallas no: ahí se encuentra leyendo el KRL).
-  const sim = useMemo(() => (programa ? simular(programa, placa, { avisoHusillo: enTarea }) : null), [programa, placa, enTarea])
+  const { dxf, evaluacion, programa, previa, seleccionPrevia, placa, sim, robotVista, herrVista, baseVista } = useEvaluacionRobot(def, seleccion, enTarea)
 
   // Programa del mando (teach-in): PTP por ejes, LIN en línea recta.
   const herrMando = HERR_MANDO
@@ -212,32 +184,6 @@ export default function UnidadRobotica() {
     tRef.current = 0
     setTick((n) => n + 1)
   }, [sim, modo])
-
-  // Robot, herramienta y base que se ven (aunque todavía no haya Core completo).
-  const robotVista: RobotVirtual = useMemo(() => {
-    if (programa) return programa.robot
-    for (const n of def.nodos) if (n.tipo === 'robot') {
-      const r = evaluacion.nodos[n.id]?.salidas[0]?.[0] as RobotVirtual | undefined
-      if (r) return r
-    }
-    return { modelo: robotPorId('kr6r900'), pedestal: 0 }
-  }, [programa, def, evaluacion])
-  const herrVista: Herramienta = useMemo(() => {
-    if (programa) return programa.herramienta
-    for (const n of def.nodos) if (n.tipo === 'herramienta') {
-      const h = evaluacion.nodos[n.id]?.salidas[0]?.[0] as Herramienta | undefined
-      if (h) return h
-    }
-    return HERR_DEFECTO
-  }, [programa, def, evaluacion])
-  const baseVista: Plano = useMemo(() => {
-    if (programa) return programa.base
-    const core = def.nodos.find((n) => n.tipo === 'core')
-    if (!core) return BASE_DEFECTO
-    const p = { ...paramsIniciales(componente('core')!), ...core.params }
-    return planoXY(v(Number(p.bx), Number(p.by), Number(p.bz)))
-  }, [programa, def])
-
 
   const vista = useRef<VistaRobot>({
     modelo: robotVista.modelo,
