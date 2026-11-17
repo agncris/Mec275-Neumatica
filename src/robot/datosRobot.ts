@@ -7,6 +7,9 @@ import type { Curva } from './geometria'
 import type { Previa } from './Robot3D'
 import type { robotPorId } from './robots'
 
+/** Cómo se programa: con nodos o con el mando manual. */
+export type Modo = 'visual' | 'mando'
+
 export const CLAVE = 'neumalab.robot.definicion'
 /**
  * La tarea de Robótica se trabaja en su propia sección, con su definición guardada
