@@ -62,6 +62,8 @@ export interface Simulacion {
   /** Ejes calculados al final de cada comando (para el KRL). */
   finales: number[][]
   krl: string
+  /** Línea del KRL (desde 0) que corresponde a cada comando. */
+  krlLineas: number[]
 }
 
 const PASO_MM = 4
@@ -318,9 +320,21 @@ export function simular(prog: Programa, placa: Placa | null = null, opciones: Op
   problemas.sort((a, b) => a.t - b.t)
 
   const uso: Array<[number, number]> = [0, 1, 2, 3, 4, 5].map((k) => [Math.min(...muestras.map((m) => m.q[k])), Math.max(...muestras.map((m) => m.q[k]))])
-  const sim: Simulacion = { muestras, problemas, tiempo: t, largoCorte, uso, salidas, finales, krl: '' }
-  sim.krl = generarKRL(prog, sim)
+  const sim: Simulacion = { muestras, problemas, tiempo: t, largoCorte, uso, salidas, finales, krl: '', krlLineas: [] }
+  const armado = armarKRL(prog, sim)
+  sim.krl = armado.texto
+  sim.krlLineas = armado.lineas
   return sim
+}
+
+/** Comando que se está ejecutando en el instante t. */
+export function comandoEn(sim: Simulacion, t: number): number {
+  const m = sim.muestras
+  if (!m.length) return 0
+  const { i } = ejesEn(sim, t)
+  const sig = m[i + 1]
+  if (sig && sig.cmd !== m[i].cmd && t >= m[i].t) return sig.cmd
+  return m[i].cmd
 }
 
 /** Ejes en el instante t (interpolando entre muestras). */
@@ -363,10 +377,15 @@ function nombreKRL(nombre: string): string {
 }
 
 export function generarKRL(prog: Programa, sim: Simulacion, nombre = 'neumalab'): string {
+  return armarKRL(prog, sim, nombre).texto
+}
+
+function armarKRL(prog: Programa, sim: Simulacion, nombre = 'neumalab'): { texto: string; lineas: number[] } {
   const { modelo, pedestal } = prog.robot
   const h = prog.herramienta
   const Rb = matrizPlano(prog.base)
   const baseRel = resta(prog.base.o, v(0, 0, pedestal))
+  const deComando: number[] = []
   const lineas: string[] = [
     '&ACCESS RVP',
     '&REL 1',
@@ -391,6 +410,7 @@ export function generarKRL(prog: Programa, sim: Simulacion, nombre = 'neumalab')
       }
       const eje = `{A1 ${f2(q[0])}, A2 ${f2(q[1])}, A3 ${f2(q[2])}, A4 ${f2(q[3])}, A5 ${f2(q[4])}, A6 ${f2(q[5])}}`
       lineas.push(`PTP ${eje}${c.tipo === 'PTP' ? ` ; hacia (${f2(c.plano.o.x)}, ${f2(c.plano.o.y)}, ${f2(c.plano.o.z)})` : ''}`)
+      deComando[i] = lineas.length - 1
     } else if (c.tipo === 'LIN' || c.tipo === 'CIR') {
       if (c.vel !== velCP) {
         velCP = c.vel
@@ -403,12 +423,22 @@ export function generarKRL(prog: Programa, sim: Simulacion, nombre = 'neumalab')
         const Ra = mul(trasp(Rb), orientacionDePlano(aMundo(prog.base, c.aux)))
         lineas.push(`CIR ${frameKRL(c.aux.o, Ra)}, ${frameKRL(c.plano.o, Rt)} C_DIS`)
       }
-    } else if (c.tipo === 'OUT') lineas.push(`$OUT[${c.salida}] = ${c.valor ? 'TRUE' : 'FALSE'}`)
-    else if (c.tipo === 'WAIT') lineas.push(`WAIT SEC ${f2(c.seg)}`)
-    else if (c.tipo === 'KRL') lineas.push(c.texto)
+      deComando[i] = lineas.length - 1
+    } else if (c.tipo === 'OUT') {
+      lineas.push(`$OUT[${c.salida}] = ${c.valor ? 'TRUE' : 'FALSE'}`)
+      deComando[i] = lineas.length - 1
+    } else if (c.tipo === 'WAIT') {
+      lineas.push(`WAIT SEC ${f2(c.seg)}`)
+      deComando[i] = lineas.length - 1
+    } else if (c.tipo === 'KRL') {
+      const partes = c.texto.split(/\r?\n/)
+      const inicio = lineas.length
+      lineas.push(...(partes.length ? partes : ['']))
+      deComando[i] = inicio
+    }
   })
   lineas.push('END')
-  return lineas.join('\r\n') + '\r\n'
+  return { texto: lineas.join('\r\n') + '\r\n', lineas: deComando }
 }
 
 /** Largo total de los movimientos de un conjunto de comandos (informativo). */

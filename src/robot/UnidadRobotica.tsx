@@ -28,7 +28,7 @@ import { EJEMPLOS_ROBOT } from './ejemplos'
 import { cajaCurvas, leerDXF, type Curva } from './geometria'
 import { planoXY, v, type Plano, type V3 } from './matematica'
 import Mando, { poseDe, type PuntoEnsenado } from './Mando'
-import { ejesEn, generarKRL, PLACA_DEFECTO, simular, type Simulacion } from './movimiento'
+import { comandoEn, ejesEn, generarKRL, PLACA_DEFECTO, simular, type Simulacion } from './movimiento'
 import {
   componente,
   describirDato,
@@ -102,6 +102,39 @@ function previaDe(datos: Dato[]): Previa {
 }
 
 type Modo = 'visual' | 'mando'
+
+/** El KRL generado, con la línea que corresponde al instante de la simulación. */
+function CodigoKRL({ sim, t }: { sim: Simulacion; t: number }) {
+  const filas = sim.krl.replace(/\r/g, '').replace(/\n$/, '').split('\n')
+  const cmd = comandoEn(sim, t)
+  const activa = sim.krlLineas[cmd] ?? -1
+  const marca = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = marca.current
+    const caja = el?.closest('.panel-acoplado__contenido') as HTMLElement | null
+    if (!el || !caja) return
+    const er = el.getBoundingClientRect()
+    const cr = caja.getBoundingClientRect()
+    if (er.top < cr.top) caja.scrollTop -= cr.top - er.top
+    else if (er.bottom > cr.bottom) caja.scrollTop += er.bottom - cr.bottom
+  }, [activa])
+  return (
+    <>
+      <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: '#51606f' }}>
+        El programa que se genera para el controlador KUKA ({filas.length} líneas).
+        {activa >= 0 ? ` Ahora va por la línea ${activa + 1}.` : ''} Descárgalo desde Exportar.
+      </p>
+      <pre style={{ margin: 0, overflow: 'auto', background: '#1f2328', color: '#e8eaed', padding: '6px 0', borderRadius: 8, fontSize: '0.78rem', lineHeight: '1.45' }} data-krl="si" data-krl-linea={activa >= 0 ? activa : undefined}>
+        {filas.map((l, i) => (
+          <div key={i} ref={i === activa ? marca : undefined} data-krl-fila={i} style={{ padding: '0 10px', background: i === activa ? '#1d4e89' : undefined, color: i === activa ? '#fff' : undefined }}>
+            <span style={{ display: 'inline-block', width: '2.2em', color: i === activa ? '#c5d8ef' : '#6b7785', userSelect: 'none' }}>{i + 1}</span>
+            {l || ' '}
+          </div>
+        ))}
+      </pre>
+    </>
+  )
+}
 
 export default function UnidadRobotica() {
   const [def, setDefCruda] = useState<Definicion>(() => (seccionDeLaUrl() === 'tarea' && VER_TAREA_ROBOTICA ? leerTarea() : leerGuardada()))
@@ -948,12 +981,7 @@ export default function UnidadRobotica() {
       tituloCorto: 'KRL',
       contenido:
         modo === 'visual' && sim ? (
-          <>
-            <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: '#51606f' }}>El programa que se genera para el controlador KUKA ({sim.krl.split('\n').length} líneas). Descárgalo desde Exportar.</p>
-            <pre style={{ margin: 0, overflow: 'auto', background: '#1f2328', color: '#e8eaed', padding: 10, borderRadius: 8, fontSize: '0.78rem' }} data-krl="si">
-              {sim.krl}
-            </pre>
-          </>
+          <CodigoKRL sim={sim} t={tRef.current} />
         ) : (
           <p style={{ margin: 0, fontSize: '0.86rem', color: '#51606f' }}>
             {modo === 'visual' ? 'Todavía no hay programa: conecta comandos, robot y herramienta al Core.' : 'En el mando manual, el programa KRL de tus puntos se descarga desde Exportar.'}
