@@ -229,7 +229,7 @@ export const COMPONENTES: Componente[] = [
     salidas: [{ nombre: 'Curve', corto: 'C', tipo: 'curva', descripcion: 'Curvas del dibujo' }],
     params: [
       { clave: 'capa', etiqueta: 'Capa', tipo: 'texto', defecto: '' },
-      { clave: 'alOrigen', etiqueta: 'Llevar la esquina inferior izquierda al origen', tipo: 'bool', defecto: true },
+      { clave: 'alOrigen', etiqueta: 'Llevar la esquina del plano al origen', tipo: 'bool', defecto: true },
     ],
     evaluar(_e, p, ctx) {
       if (!ctx.dxf) return { salidas: [[]], error: 'No hay plano: abre un DXF con el botón «Abrir DXF».' }
@@ -238,7 +238,9 @@ export const COMPONENTES: Componente[] = [
       if (capa) cs = cs.filter((c) => (c.capa ?? '0') === capa)
       if (!cs.length) return { salidas: [[]], error: capa ? `La capa «${capa}» no tiene curvas.` : 'El DXF no tiene curvas.' }
       if (p.alOrigen) {
-        const { min } = cajaCurvas(cs)
+        // La esquina es la del plano entero, no la de esta capa: si no, el
+        // contorno y las ranuras quedan corridos uno respecto del otro.
+        const { min } = cajaCurvas(ctx.dxf.curvas)
         cs = cs.map((c) => mover(c, v(-min.x, -min.y, 0)))
       }
       return { salidas: [cs] }
@@ -608,6 +610,47 @@ export const COMPONENTES: Componente[] = [
     evaluar: (e) => ({ salidas: [[...(e[0] ?? [])].reverse()] }),
   },
   // ------------------------------------------------------------------ KUKA|prc
+  {
+    tipo: 'recorrer',
+    nombre: 'Toolpath',
+    corto: 'Path',
+    pestana: 'Movimientos',
+    grupo: 'Cómo se mueve',
+    descripcion:
+      'Recorre cada curva por separado: PTP a la altura de seguridad sobre el inicio, LIN a lo largo (y cierra la curva si está cerrada) y PTP de salida. No une una curva con la siguiente, así las ranuras no se cortan entre sí. La curva ya tiene que estar compensada y a la profundidad de corte.',
+    entradas: [
+      { nombre: 'Curve', corto: 'C', tipo: 'curva', descripcion: 'Curvas a recorrer' },
+      { nombre: 'Length', corto: 'L', tipo: 'numero', descripcion: 'Paso entre puntos (mm)', param: 'l' },
+      { nombre: 'Safe', corto: 'H', tipo: 'numero', descripcion: 'Altura de seguridad sobre la curva (mm)', param: 'h' },
+    ],
+    salidas: [{ nombre: 'Command', corto: 'C', tipo: 'comando', descripcion: 'PTP de acercamiento, LIN de corte y PTP de salida' }],
+    params: [
+      { clave: 'l', etiqueta: 'Paso L (mm)', tipo: 'numero', defecto: 5 },
+      { clave: 'h', etiqueta: 'Altura de seguridad (mm)', tipo: 'numero', defecto: 25 },
+      { clave: 'v', etiqueta: 'Velocidad de corte (m/s)', tipo: 'numero', defecto: 0.02 },
+      { clave: 'vp', etiqueta: 'Velocidad PTP (%)', tipo: 'numero', defecto: 40 },
+    ],
+    evaluar(e, p, ctx) {
+      const out: Comando[] = []
+      for (const [c, largo, alto] of emparejar([e[0] ?? [], entradaO(e, 1, p, 'l'), entradaO(e, 2, p, 'h')])) {
+        if (!esCurva(c)) return { salidas: [[]], error: 'C debe ser una curva.' }
+        const paso = n(largo, 5)
+        if (paso <= 0) return { salidas: [[]], error: 'El paso L debe ser mayor que 0.' }
+        const pts = dividirLargo(c, paso).map((d) => d.p)
+        if (c.cerrada && pts.length) pts.push(pts[0])
+        if (!pts.length) continue
+        const h = Math.max(1, n(alto, 25))
+        const arriba = (pt: V3) => planoXY(suma(pt, v(0, 0, h)))
+        const vp = Math.min(100, Math.max(1, n(p.vp as number, 40)))
+        const vel = Math.max(0.001, n(p.v as number, 0.02))
+        out.push({ tipo: 'PTP', plano: arriba(pts[0]), vel: vp, nodo: ctx.id })
+        for (const pt of pts) out.push({ tipo: 'LIN', plano: planoXY(pt), vel, nodo: ctx.id })
+        out.push({ tipo: 'PTP', plano: arriba(pts[pts.length - 1]), vel: vp, nodo: ctx.id })
+      }
+      if (!out.length) return { salidas: [[]], error: 'No hay curvas para recorrer.' }
+      return { salidas: [out] }
+    },
+  },
   {
     tipo: 'lin',
     nombre: 'LIN Movement',

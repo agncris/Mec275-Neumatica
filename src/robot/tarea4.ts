@@ -41,8 +41,8 @@ export function tareaVaciaRobot(): Definicion {
 }
 
 /**
- * Andamiaje de la tarea: la cadena de un tramo recto del contorno, sin las
- * ranuras, los arcos ni el acercamiento. No es la solución.
+ * Andamiaje de la tarea: el contorno ya compensado, a profundidad y con el
+ * husillo, sin las ranuras. No es la solución.
  */
 export function ejemploGuiadoTarea(): Definicion {
   const nodo = (id: string, tipo: string, x: number, y: number, params: NodoDef['params'] = {}): NodoDef => {
@@ -56,18 +56,28 @@ export function ejemploGuiadoTarea(): Definicion {
     nombre: 'Ejemplo guiado',
     nodos: [
       nodo('crv', 'curvaDXF', 40, 80, { capa: 'CONTORNO' }),
-      nodo('div', 'dividirLargo', 240, 80, { l: 15 }),
-      nodo('xy', 'planoXY', 440, 80),
-      nodo('lin', 'lin', 640, 40),
-      nodo('rob', 'robot', 640, 200),
-      nodo('her', 'herramienta', 640, 330, { tipo: 'fresa', largo: 200, diametro: 5 }),
-      nodo('core', 'core', 860, 140, { espesor: 5 }),
+      nodo('off', 'desfase', 220, 80, { d: 2.5 }),
+      nodo('baj', 'mover', 400, 80, { z: -5 }),
+      nodo('path', 'recorrer', 580, 80, { l: 5, h: 25, v: 0.02 }),
+      nodo('on', 'salida', 580, 220, { salida: 1, valor: true }),
+      nodo('esp', 'esperar', 760, 220, { t: 1 }),
+      nodo('offh', 'salida', 580, 340, { salida: 1, valor: false }),
+      nodo('m', 'unir', 760, 40),
+      nodo('m2', 'unir', 940, 80),
+      nodo('rob', 'robot', 760, 360),
+      nodo('her', 'herramienta', 940, 360, { tipo: 'fresa', largo: 200, diametro: 5 }),
+      nodo('core', 'core', 980, 140, { espesor: 5 }),
     ],
     cables: [
-      { de: 'crv', salida: 0, a: 'div', entrada: 0 },
-      { de: 'div', salida: 0, a: 'xy', entrada: 0 },
-      { de: 'xy', salida: 0, a: 'lin', entrada: 0 },
-      { de: 'lin', salida: 0, a: 'core', entrada: 0 },
+      { de: 'crv', salida: 0, a: 'off', entrada: 0 },
+      { de: 'off', salida: 0, a: 'baj', entrada: 0 },
+      { de: 'baj', salida: 0, a: 'path', entrada: 0 },
+      { de: 'on', salida: 0, a: 'm', entrada: 0 },
+      { de: 'esp', salida: 0, a: 'm', entrada: 1 },
+      { de: 'path', salida: 0, a: 'm', entrada: 2 },
+      { de: 'm', salida: 0, a: 'm2', entrada: 0 },
+      { de: 'offh', salida: 0, a: 'm2', entrada: 1 },
+      { de: 'm2', salida: 0, a: 'core', entrada: 0 },
       { de: 'rob', salida: 0, a: 'core', entrada: 1 },
       { de: 'her', salida: 0, a: 'core', entrada: 2 },
     ],

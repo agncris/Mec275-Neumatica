@@ -1615,7 +1615,7 @@ const estadoChip: React.CSSProperties = { color: '#fff', borderRadius: 6, paddin
 const avisoOk = estiloAviso
 
 
-const ETAPAS_TAREA = ['Dibujo', 'Puntos', 'Fresa', 'Corte', 'Programa', 'Revisar']
+const ETAPAS_TAREA = ['Dibujo', 'Compensar', 'Bajar', 'Recorrer', 'Programa', 'Revisar']
 
 interface PasoAhora {
   id: string
@@ -1633,37 +1633,40 @@ interface PasoAhora {
   enfocar?: string
 }
 
-/** Un solo paso, el que sigue, según lo que ya está conectado en el lienzo. */
+/** Un solo paso, el que sigue, según lo que ya está en el lienzo. */
 function pasoGuiado(def: Definicion): PasoAhora {
   const total = ETAPAS_TAREA.length
   const tipoDe = (id: string) => def.nodos.find((n) => n.id === id)?.tipo
-  const une = (desde: string[], hacia: string[]) => def.cables.some((c) => desde.includes(tipoDe(c.de) ?? '') && hacia.includes(tipoDe(c.a) ?? ''))
   const curvas = def.nodos.filter((n) => n.tipo === 'curvaDXF')
   const base = { total }
+  const capaDe = (n: (typeof curvas)[number]) => String(n.params.capa ?? '').trim().toUpperCase()
   if (!curvas.length) {
     return { ...base, id: 'curva', numero: 1, titulo: 'Traer el dibujo', pestana: 'Trayectoria', destacar: 'curvaDXF', donde: 'Pestaña Trayectoria, bloque Curve con borde azul.', accion: 'Arrástralo al lienzo. Ese bloque lee el plano que ya está cargado.', listo: 'Aparece un bloque Crv en el lienzo.' }
   }
-  const sinCapa = curvas.find((n) => !['CONTORNO', 'RANURAS'].includes(String(n.params.capa ?? '').trim().toUpperCase()))
+  const sinCapa = curvas.find((n) => !['CONTORNO', 'RANURAS'].includes(capaDe(n)))
   if (sinCapa) {
-    return { ...base, id: 'capa', numero: 1, titulo: 'Elegir el borde', seleccionar: sinCapa.id, enfocar: 'capa', donde: 'Panel de abajo del programa. La lista Capa está marcada.', accion: 'Abre Capa y elige CONTORNO. Es el borde de afuera. Las ranuras se hacen después, con otra Curve.', listo: 'La lista dice CONTORNO, no «Todas las capas».' }
+    return { ...base, id: 'capa', numero: 1, titulo: 'Elegir el borde', seleccionar: sinCapa.id, enfocar: 'capa', donde: 'Panel de abajo del programa. La lista Capa está marcada.', accion: 'Abre Capa y elige CONTORNO. Es el borde de afuera, con los chaflanes. Las ranuras van en otra Curve.', listo: 'La lista dice CONTORNO, no «Todas las capas».' }
   }
-  if (!une(['curvaDXF'], ['dividirLargo', 'dividirCurva', 'kukaDividir'])) {
-    return { ...base, id: 'dividir', numero: 2, titulo: 'Partir en puntos', pestana: 'Trayectoria', destacar: 'dividirLargo', donde: 'Pestaña Trayectoria, bloque Divide Length con borde azul.', accion: 'Arrástralo y conecta la salida C de Curve (a la derecha del bloque) con su entrada (a la izquierda).', listo: 'Ves un cable entre Curve y Divide Length.' }
+  if (!def.nodos.some((n) => n.tipo === 'desfase')) {
+    return { ...base, id: 'offset', numero: 2, titulo: 'Compensar la fresa', pestana: 'Trayectoria', destacar: 'desfase', donde: 'Pestaña Trayectoria, bloque Offset Curve con borde azul.', accion: 'Conéctalo a la salida C de Curve. En el contorno deja D en 2,5 (hacia afuera). En las ranuras pon D en −2,5 (hacia adentro).', listo: 'Hay un cable de Curve a Offset.' }
   }
-  if (!une(['dividirLargo', 'dividirCurva', 'kukaDividir'], ['planoXY', 'girarPlano'])) {
-    return { ...base, id: 'plano', numero: 3, titulo: 'Apoyar la fresa', pestana: 'Trayectoria', destacar: 'planoXY', donde: 'Pestaña Trayectoria, bloque XY Plane con borde azul.', accion: 'Arrástralo y conecta la salida P de Divide Length a su entrada.', listo: 'Ves un cable entre Divide Length y XY Plane.' }
+  if (!def.nodos.some((n) => n.tipo === 'mover' && Number(n.params.z) < 0)) {
+    return { ...base, id: 'bajar', numero: 3, titulo: 'Bajar a la profundidad', pestana: 'Trayectoria', destacar: 'mover', donde: 'Pestaña Trayectoria, bloque Move con borde azul.', accion: 'Conéctalo a la salida de Offset y pon Z en −5. Así la fresa atraviesa la plancha de 5 mm.', listo: 'Move dice Z = −5.' }
   }
-  if (!une(['planoXY', 'girarPlano'], ['lin', 'cir'])) {
-    return { ...base, id: 'lin', numero: 4, titulo: 'Cortar en recta', pestana: 'Movimientos', destacar: 'lin', donde: 'Pestaña Movimientos, bloque LIN con borde azul.', accion: 'Arrástralo y conecta la salida de XY Plane a la entrada P de LIN. LIN corta en línea recta.', listo: 'Ves un cable entre XY Plane y LIN.' }
+  const corta = def.nodos.some((n) => n.tipo === 'recorrer' || n.tipo === 'lin' || n.tipo === 'cir')
+  if (!corta) {
+    return { ...base, id: 'path', numero: 4, titulo: 'Recorrer la curva', pestana: 'Movimientos', destacar: 'recorrer', donde: 'Pestaña Movimientos, bloque Toolpath con borde azul.', accion: 'Conéctalo a la salida de Move. Recorre cada curva con un PTP de acercamiento, LIN de corte y PTP de salida, y no une una ranura con la otra. El plano ya trae los arcos partidos en puntos: no hace falta un CIR por cada curva.', listo: 'Hay un cable de Move a Toolpath.' }
   }
-  if (!une(['lin', 'cir', 'ptp'], ['core'])) {
-    return { ...base, id: 'core', numero: 5, titulo: 'Armar el programa', donde: 'En el lienzo: la salida C de LIN y la entrada C del Core.', accion: 'Arrastra un cable desde la C de LIN hasta la C del Core. El Core junta el movimiento, el robot y la herramienta.', listo: 'Aparece el botón ▶ bajo la vista 3D.' }
+  const husillo = def.nodos.some((n) => n.tipo === 'salida' && n.params.valor !== false)
+  const alCore = def.cables.some((c) => tipoDe(c.a) === 'core' && c.entrada === 0)
+  if (!husillo || !alCore) {
+    return { ...base, id: 'core', numero: 5, titulo: 'Encender y armar el programa', pestana: 'Movimientos', destacar: 'salida', donde: 'Pestaña Movimientos, bloque Set Digital Out, y la entrada C del Core.', accion: 'Pon un Set Digital Out en TRUE y un Wait de 1 s antes del recorrido. Júntalos con Merge y lleva esa salida a la C del Core. El robot y la fresa ya están conectados.', listo: 'Aparece el botón ▶ bajo la vista 3D y el husillo se enciende antes de cortar.' }
   }
-  const capas = curvas.map((n) => String(n.params.capa ?? '').trim().toUpperCase())
+  const capas = curvas.map(capaDe)
   if (!capas.includes('RANURAS')) {
-    return { ...base, id: 'simula', numero: 6, titulo: 'Revisar y seguir con las ranuras', donde: 'El botón ▶ bajo la vista 3D y la pestaña Análisis.', accion: 'Pulsa ▶. Si el borde se recorre, repite desde Dibujo con otra Curve y elige la capa RANURAS. Donde el dibujo dobla, usa CIR en vez de LIN.', listo: 'El recorrido pinta el borde y después las aberturas.' }
+    return { ...base, id: 'ranuras', numero: 6, titulo: 'Repetir con las ranuras', pestana: 'Trayectoria', destacar: 'curvaDXF', donde: 'Otra Curve, con la capa RANURAS.', accion: 'Arrastra otra Curve, elige RANURAS y repite Offset (D = −2,5), Move (Z = −5) y Toolpath. Junta ese recorrido con el del contorno en el mismo Merge, antes de apagar el husillo.', listo: 'El checklist dice que la trayectoria recorre 10 de 10 trazos.' }
   }
-  return { ...base, id: 'cerrar', numero: 6, titulo: 'Corregir lo que avisa Análisis', pestana: 'Movimientos', destacar: 'ptp', donde: 'La pestaña Análisis, en el panel de la derecha.', accion: 'Pulsa ▶ y lee el aviso. Para acercarte y alejarte usa PTP. Para cortar, solo LIN o CIR.', listo: 'El checklist del panel derecho queda en verde.' }
+  return { ...base, id: 'cerrar', numero: 6, titulo: 'Revisar el checklist', donde: 'La lista de esta lámina y la pestaña Análisis.', accion: 'Pulsa ▶. Si un trazo queda en el borde y no compensado, revisa el signo de Offset. Si la fresa no atraviesa, Move tiene que estar en Z = −5. Si hay un LIN en el aire, el acercamiento tiene que ser PTP.', listo: 'El checklist queda en verde.' }
 }
 
 /** El plano de la tarea, con el proceso arriba y un solo paso abierto. */
@@ -1695,7 +1698,7 @@ function PlanoTarea({ paso, checklist, onEstudiar, onEjemplo, ejemplo, onVolver 
           <dd>{paso.listo}</dd>
         </dl>
       </section>
-      <p style={{ margin: '0 0 8px', color: '#33475c' }}>La fresa tiene que recorrer el contorno y las ranuras. Plancha de 250 × 250 mm, espesor 5 mm, fresa de 5 mm. Los chaflanes se miden en el DXF.</p>
+      <p style={{ margin: '0 0 8px', color: '#33475c' }}>La fresa de 5 mm recorre el contorno (Offset +2,5) y las nueve ranuras (Offset −2,5), baja 5 mm y se acerca con PTP. Plancha de 250 × 250 mm. Los chaflanes y los arcos ya vienen en el DXF.</p>
       <p style={{ margin: '0 0 2px', fontWeight: 700 }}>Criterios de éxito</p>
       <ul style={{ margin: '0 0 8px', paddingLeft: 18 }}>
         <li>El recorrido sigue el contorno y las ranuras sin chocar.</li>

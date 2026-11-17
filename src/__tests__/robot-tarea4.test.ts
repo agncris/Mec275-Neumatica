@@ -140,6 +140,61 @@ describe('análisis de un trabajo', () => {
 })
 
 
+/** Contorno y las nueve ranuras, como pide el instructivo. No se publica en la app. */
+function tareaCompleta(): Definicion {
+  const base = tareaVaciaRobot()
+  const nodos: NodoDef[] = base.nodos.filter((n) => n.tipo !== 'core')
+  const cables = base.cables.filter((c) => c.a !== 'core')
+  const add = (id: string, tipo: string, params: Record<string, ValorParam> = {}) => {
+    const comp = componente(tipo)!
+    nodos.push({ id, tipo, x: 0, y: 0, params: { ...paramsIniciales(comp), ...params } })
+  }
+  const cable = (de: string, a: string, entrada: number, salida = 0) => cables.push({ de, salida, a, entrada })
+  add('crv', 'curvaDXF', { capa: 'CONTORNO' })
+  add('off', 'desfase', { d: 2.5 })
+  add('baj', 'mover', { z: -5 })
+  add('path', 'recorrer', { l: 4, h: 25, v: 0.02 })
+  add('crv2', 'curvaDXF', { capa: 'RANURAS' })
+  add('off2', 'desfase', { d: -2.5 })
+  add('baj2', 'mover', { z: -5 })
+  add('path2', 'recorrer', { l: 4, h: 25, v: 0.02 })
+  add('on', 'salida', { salida: 1, valor: true })
+  add('esp', 'esperar', { t: 1 })
+  add('offh', 'salida', { salida: 1, valor: false })
+  add('m1', 'unir')
+  add('m2', 'unir')
+  add('core', 'core', { espesor: 5 })
+  cable('crv', 'off', 0)
+  cable('off', 'baj', 0)
+  cable('baj', 'path', 0)
+  cable('crv2', 'off2', 0)
+  cable('off2', 'baj2', 0)
+  cable('baj2', 'path2', 0)
+  cable('on', 'm1', 0)
+  cable('esp', 'm1', 1)
+  cable('path', 'm1', 2)
+  cable('m1', 'm2', 0)
+  cable('path2', 'm2', 1)
+  cable('offh', 'm2', 2)
+  cable('m2', 'core', 0)
+  cable('rob', 'core', 1)
+  cable('her', 'core', 2)
+  return { ...base, nodos, cables }
+}
+
+describe('la tarea completa se puede hacer', () => {
+  it('recorre los 10 trazos compensados y el checklist queda en verde', () => {
+    const a = analizarTarea4(tareaCompleta())
+    const detalle = a.trazos.map((t) => `${t.nombre} ${t.cobertura.toFixed(2)}/${t.coberturaSinCompensar.toFixed(2)}`).join(', ')
+    expect(a.errores, detalle).toEqual([])
+    expect(a.trazosRecorridos, detalle).toBe(10)
+    expect(a.husilloAntesDelCorte).toBe(true)
+    expect(a.acercaConPtp).toBe(true)
+    expect(a.profundidadCorte).toBeGreaterThanOrEqual(4.5)
+    expect(revisarTarea4(a, 'Ana Pérez').every((p) => p.ok)).toBe(true)
+  }, 60000)
+})
+
 describe('caminos propios: la tarea no tiene una sola solución', () => {
   it('si corre el plano con Move (otra posición en la pieza), igual reconoce el contorno', () => {
     const a = analizarTarea4(soloContorno(2.5, { mover: [60, 35] }))
@@ -165,6 +220,17 @@ describe('caminos propios: la tarea no tiene una sola solución', () => {
       expect(a.robot).toBe(robot)
       expect(a.trazosRecorridos).toBe(1)
     }
+  })
+
+  it('el ejemplo guiado deja el contorno listo y no resuelve las ranuras', () => {
+    const a = analizarTarea4(ejemploGuiadoTarea())
+    expect(a.hayPrograma).toBe(true)
+    expect(a.husilloAntesDelCorte).toBe(true)
+    expect(a.acercaConPtp).toBe(true)
+    expect(a.profundidadCorte).toBeGreaterThanOrEqual(4.5)
+    expect(a.trazosRecorridos).toBe(1)
+    expect(a.trazos.find((t) => t.nombre === 'contorno')!.cobertura).toBeGreaterThan(0.9)
+    expect(a.avisos.join(' ')).not.toMatch(/husillo queda encendido/)
   })
 
   it('una definición del Laboratorio se trae a la tarea con el plano de la tarea y se avisa', () => {
