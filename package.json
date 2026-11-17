@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "start": "node server.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "verificar": "tsc --noEmit && vitest run"
   },
   "dependencies": {
     "express": "^4.22.2",
