@@ -85,7 +85,7 @@ derecha) abre un cajón con cuatro pasos:
 | Neumática | Diagrama VDI 2860 (se arma en el mismo cajón), diagrama espacio-fase, elementos del circuito, imagen del circuito | Circuito `.json` |
 | PLC (Tarea 2) | Diagrama Ladder, tabla de entradas y salidas | Programa `.json` |
 | CNC (Tarea 3) | Trayectoria con los puntos, tabla de coordenadas, herramientas usadas, bruto | Trabajo `.json` (programa, preparación y torreta), video; el programa `.cnc` es opcional (se abre también en CNC Simulator Pro) |
-| Robótica | Croquis de la pieza, posicionamiento, definición de nodos, ficha técnica | Definición `.json`, programa KRL `.src`, video |
+| Robótica (Tarea 4) | Croquis de la pieza, posicionamiento, definición de nodos, ficha técnica (se pegan en la plantilla PPT) | Definición `.json` y video. El PDF es la plantilla completada. El KRL queda en Exportar y no se sube |
 
 Las entregas `.json` de semestres anteriores (con respuestas escritas) se siguen
 abriendo.

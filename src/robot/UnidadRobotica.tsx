@@ -1233,7 +1233,7 @@ export default function UnidadRobotica() {
               id: 'croquis-pieza',
               tipo: 'imagen',
               titulo: 'Croquis de la pieza',
-              detalle: 'La pieza acotada, con el cero de la pieza.',
+              detalle: 'Pégala en la diapositiva Pieza de la plantilla. No la subas aparte.',
               hacer: async (base) => {
                 await croquisPng('pieza', `${base}_croquis-pieza.png`)
                 return `Descargada: ${base}_croquis-pieza.png`
@@ -1243,7 +1243,7 @@ export default function UnidadRobotica() {
               id: 'posicionamiento',
               tipo: 'imagen',
               titulo: 'Posicionamiento del robot',
-              detalle: 'Planta y elevación: robot, mesón y alcance.',
+              detalle: 'Pégala en la diapositiva Pieza, junto al croquis. No la subas aparte.',
               hacer: async (base) => {
                 await croquisPng('posicion', `${base}_posicionamiento.png`)
                 return `Descargada: ${base}_posicionamiento.png`
@@ -1253,7 +1253,7 @@ export default function UnidadRobotica() {
               id: 'definicion-png',
               tipo: 'imagen',
               titulo: 'Tu definición (los nodos)',
-              detalle: 'El lienzo de nodos tal como se ve: encuádralo antes (⤢ Encuadrar).',
+              detalle: 'Encuadra el lienzo (⤢) y pégala en la diapositiva Programa. No la subas aparte.',
               deshabilitado: modo !== 'visual',
               porque: 'Cambia a «Programación visual».',
               hacer: async (base) => {
@@ -1267,7 +1267,7 @@ export default function UnidadRobotica() {
               id: 'ficha',
               tipo: 'tabla',
               titulo: `Ficha técnica · ${modeloVista.nombre}`,
-              detalle: 'Las características del robot que elegiste.',
+              detalle: 'Pégala en la diapositiva Robot y cita la ficha oficial de KUKA. No la subas aparte.',
               hacer: async () => {
                 const filas = [
                   ['Característica', 'Valor'],
@@ -1280,7 +1280,7 @@ export default function UnidadRobotica() {
                   ['Montaje', modeloVista.montaje],
                   ['Rango de los ejes', modeloVista.limites.map((l, k) => `A${k + 1} ${l[0]}°/${l[1]}°`).join(' · ')],
                 ]
-                return (await copiarTabla(filas)) ? 'Tabla copiada: pégala en tu presentación (Ctrl+V). Cita la ficha oficial de KUKA.' : 'Tu navegador no dejó copiar.'
+                return (await copiarTabla(filas)) ? 'Tabla copiada: pégala en la diapositiva Robot (Ctrl+V) y cita la ficha oficial de KUKA.' : 'Tu navegador no dejó copiar.'
               },
             },
           ]}
@@ -1289,7 +1289,7 @@ export default function UnidadRobotica() {
               id: 'definicion',
               tipo: 'archivo',
               titulo: 'Tu definición (NeumaLab)',
-              detalle: 'Se abre en la app con Archivo › Abrir definición; incluye el plano DXF.',
+              detalle: 'Súbelo a Aula junto con el PDF de la plantilla y el video. Trae el plano y tu nombre.',
               hacer: (base) => {
                 const alumno = leerAlumno()
                 descargarTexto(JSON.stringify(enTarea ? { ...def, tarea: MARCA_TAREA4, ...(alumno.nombre.trim() ? { alumno } : {}) } : def, null, 2), `${base}.json`, 'application/json')
@@ -1297,23 +1297,10 @@ export default function UnidadRobotica() {
               },
             },
             {
-              id: 'krl',
-              tipo: 'archivo',
-              titulo: 'Programa KRL (.src)',
-              detalle: 'El programa para el controlador KUKA.',
-              deshabilitado: !sim,
-              porque: 'El Core todavía no arma un programa.',
-              hacer: (base) => {
-                if (!programa || !sim) throw new Error('No hay programa.')
-                descargarTexto(generarKRL(programa, sim, def.nombre), `${base}.src`)
-                return `Descargado: ${base}.src`
-              },
-            },
-            {
               id: 'video',
               tipo: 'video',
               titulo: 'Video de la simulación',
-              detalle: grabando ? 'Grabando… pulsa «■ Detener grabación» arriba al terminar.' : 'Graba la celda 3D mientras el robot recorre la pieza; se descarga al detener.',
+              detalle: grabando ? 'Grabando… pulsa «■ Detener grabación» arriba al terminar.' : 'La simulación completa, de principio a fin. Es un archivo aparte: no lo insertes en el PPT.',
               deshabilitado: !puedeGrabar || grabando || !simActiva,
               porque: grabando ? 'Grabando… pulsa «■ Detener grabación» arriba al terminar.' : !simActiva ? 'Todavía no hay recorrido que grabar.' : 'Tu navegador no permite grabar video.',
               hacer: (base) => {
