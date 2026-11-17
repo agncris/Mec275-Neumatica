@@ -1552,7 +1552,7 @@ function pasoCnc(codigo: string): PasoProceso {
   if (!/\bM(30|0?2)\b/i.test(u)) {
     return { ...base, id: 'cerrar', numero: 5, titulo: 'Terminar el programa', donde: 'La última línea útil.', accion: 'Para el husillo con M05 y cierra con M30.', listo: 'El programa termina en M30 o M02.' }
   }
-  return { ...base, id: 'revisar', numero: 6, titulo: 'Probar el ciclo y leer el checklist', donde: 'El botón ▶ Ciclo, junto a la máquina, y el checklist de abajo.', accion: 'Corre el ciclo. Si salta una alarma o una pasada queda muy profunda, vuelve a esa línea. El checklist no califica: avisa lo que falta.', listo: 'El checklist de abajo queda en verde y la simulación llega al final.' }
+  return { ...base, id: 'revisar', numero: 6, titulo: 'Probar el ciclo y leer el checklist', donde: 'El botón ▶ Ciclo, junto a la máquina, y el checklist del panel derecho.', accion: 'Corre el ciclo. Si salta una alarma o una pasada queda muy profunda, vuelve a esa línea. El checklist no califica: avisa lo que falta.', listo: 'El checklist del panel derecho queda en verde y la simulación llega al final.' }
 }
 
 /** El plano de la tarea, con el proceso arriba y un solo paso abierto. */

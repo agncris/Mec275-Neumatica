@@ -1478,7 +1478,7 @@ function ComoUsar() {
       <li style={li}>
         <strong>Entregar:</strong> «Exportar KRL» descarga el programa .src; «Guardar definición» guarda tu definición (con el
         plano); «● Grabar video» graba la simulación; «Croquis…» descarga la pieza acotada y el posicionamiento del robot
-        (planta y elevación) para el informe; la ficha técnica del robot está bajo la vista 3D.
+        (planta y elevación) para el informe; la ficha técnica del robot está en el panel de la derecha.
       </li>
       <li style={li}>
         <SaltarAPractica>Abrir el Laboratorio</SaltarAPractica>
@@ -1556,7 +1556,7 @@ function pasoGuiado(def: Definicion): PasoAhora {
   if (!capas.includes('RANURAS')) {
     return { ...base, id: 'simula', numero: 6, titulo: 'Revisar y seguir con las ranuras', donde: 'El botón ▶ bajo la vista 3D y la pestaña Análisis.', accion: 'Pulsa ▶. Si el borde se recorre, repite desde Dibujo con otra Curve y elige la capa RANURAS. Donde el dibujo dobla, usa CIR en vez de LIN.', listo: 'El recorrido pinta el borde y después las aberturas.' }
   }
-  return { ...base, id: 'cerrar', numero: 6, titulo: 'Corregir lo que avisa Análisis', pestana: 'Movimientos', destacar: 'ptp', donde: 'La pestaña Análisis, bajo la vista 3D.', accion: 'Pulsa ▶ y lee el aviso. Para acercarte y alejarte usa PTP. Para cortar, solo LIN o CIR.', listo: 'El checklist de abajo queda en verde.' }
+  return { ...base, id: 'cerrar', numero: 6, titulo: 'Corregir lo que avisa Análisis', pestana: 'Movimientos', destacar: 'ptp', donde: 'La pestaña Análisis, en el panel de la derecha.', accion: 'Pulsa ▶ y lee el aviso. Para acercarte y alejarte usa PTP. Para cortar, solo LIN o CIR.', listo: 'El checklist del panel derecho queda en verde.' }
 }
 
 /** El plano de la tarea, con el proceso arriba y un solo paso abierto. */

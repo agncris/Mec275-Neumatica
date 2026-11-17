@@ -2,8 +2,9 @@
  * Banco de trabajo de las unidades PLC, CNC y Robótica: ocupa el alto de la
  * ventana (sin desplazar la página), con la barra de herramientas arriba, dos
  * áreas lado a lado (lo que se programa y lo que se simula) separadas por un
- * divisor que se arrastra, un panel acoplado abajo con pestañas y una barra
- * de estado. En una ventana mediana las áreas se apilan (lo que se programa
+ * divisor que se arrastra, un panel acoplado a la derecha (abajo si la
+ * ventana se apila) con pestañas y una barra de estado. En una ventana mediana
+ * las áreas se apilan (lo que se programa
  * arriba, lo que se simula abajo) y se baja con la barra de desplazamiento.
  * En el celular las áreas y las pestañas del panel pasan a ser pestañas que
  * ocupan toda la pantalla, una a la vez.
@@ -30,6 +31,8 @@ interface EstadoPanel<T extends string> {
   onAlto: (h: number) => void
   ampliado: boolean
   onAmpliar: (a: boolean) => void
+  ancho: number
+  onAncho: (w: number) => void
   pestana: T
   onPestana: (p: T) => void
 }
@@ -180,7 +183,7 @@ export default function BancoDividido<T extends string>({ clave, barra, izquierd
         {barra}
       </div>
       {encabezado}
-      <div className="banco__centro" style={{ flex: 1 }}>
+      <div className="banco__centro banco__centro--con-lateral" style={{ flex: 1 }}>
         <div ref={cuerpo} className="banco__lienzo banco__dividido">
           {plegado === 'oculto' ? null : plegado === 'riel' ? (
             <section aria-label={izquierda.titulo} className="banco-panel banco__area banco__area--riel" data-area={izquierda.id} data-plegado="riel">
@@ -213,7 +216,7 @@ export default function BancoDividido<T extends string>({ clave, barra, izquierd
           )}
           {area(derecha, { flex: plegado === 'abierto' ? `${1 - division} 1 0` : '1 1 0' })}
         </div>
-        {inferior && <PanelAcoplado<T> etiqueta={inferior.etiqueta} pestanas={inferior.pestanas} {...inferior.estado} />}
+        {inferior && <PanelAcoplado<T> lado="derecha" etiqueta={inferior.etiqueta} pestanas={inferior.pestanas} {...inferior.estado} />}
       </div>
       {estado && <div className="banco__estado">{estado}</div>}
     </main>

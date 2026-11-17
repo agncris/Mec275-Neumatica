@@ -1,8 +1,8 @@
 /**
- * Panel acoplado bajo el área de trabajo, con pestañas (registro, tablas,
- * diagramas…). Se pliega, se le cambia el alto arrastrando su borde superior
- * (o con ↑ ↓ desde el teclado) y se puede ampliar para leer con calma lo que
- * muestra; si no cabe, su contenido se desplaza.
+ * Panel acoplado del banco. Abajo (neumática y la ventana apilada) se pliega
+ * en horizontal y se le cambia el alto. A la derecha (PLC, CNC y Robótica en
+ * el computador) se comporta como una paleta: pestañas en vertical al
+ * colapsarse, y el ancho se cambia arrastrando el borde.
  */
 import { useEffect, useRef, type ReactNode, type UIEvent } from 'react'
 import { usePersistente } from '../ui'
@@ -29,6 +29,11 @@ interface Props<T extends string> {
   onPestana: (p: T) => void
   ampliado?: boolean
   onAmpliar?: (a: boolean) => void
+  /** Ancho cuando el panel va a la derecha. */
+  ancho?: number
+  onAncho?: (w: number) => void
+  /** A la derecha del banco, como una paleta que se colapsa a una tira. */
+  lado?: 'abajo' | 'derecha'
   /** Nombre del panel para lectores de pantalla. */
   etiqueta: string
   /** En la bandeja del celular: sin tirador ni plegar. */
@@ -36,6 +41,8 @@ interface Props<T extends string> {
 }
 
 export const ALTO_MIN_PANEL = 110
+export const ANCHO_MIN_PANEL = 260
+const ANCHO_PANEL = 320
 /** Lo que se deja siempre a la vista de lo que está sobre el panel. */
 const RESERVA_ARRIBA = 140
 
@@ -55,6 +62,9 @@ export default function PanelAcoplado<T extends string>({
   onPestana,
   ampliado = false,
   onAmpliar,
+  ancho = ANCHO_PANEL,
+  onAncho,
+  lado = 'abajo',
   etiqueta,
   fijo = false,
 }: Props<T>) {
@@ -77,6 +87,107 @@ export default function PanelAcoplado<T extends string>({
     document.body.classList.add('arrastrando-alto')
     window.addEventListener('pointermove', mover)
     window.addEventListener('pointerup', soltar)
+  }
+
+  const arrastrarAncho = (e: React.PointerEvent) => {
+    e.preventDefault()
+    const x0 = e.clientX
+    const w0 = raiz.current?.getBoundingClientRect().width ?? ancho
+    const padre = raiz.current?.parentElement?.clientWidth ?? 1200
+    const max = Math.max(ANCHO_MIN_PANEL + 80, Math.min(560, Math.round(padre * 0.48)))
+    const mover = (ev: PointerEvent) => onAncho?.(Math.round(Math.max(ANCHO_MIN_PANEL, Math.min(max, w0 + (x0 - ev.clientX)))))
+    const soltar = () => {
+      window.removeEventListener('pointermove', mover)
+      window.removeEventListener('pointerup', soltar)
+      document.body.classList.remove('arrastrando-ancho')
+    }
+    document.body.classList.add('arrastrando-ancho')
+    window.addEventListener('pointermove', mover)
+    window.addEventListener('pointerup', soltar)
+  }
+
+  if (lado === 'derecha' && !fijo) {
+    const nombre = (p: PestanaPanel<T>) => p.tituloCorto ?? p.titulo
+    if (!abierto) {
+      return (
+        <section ref={raiz} aria-label={etiqueta} className="banco-panel panel-acoplado panel-acoplado--riel" data-panel-lado="derecha">
+          <button type="button" className="boton-icono panel-riel__abrir" title="Mostrar el panel" aria-label="Mostrar el panel" onClick={() => onAbrir(true)}>
+            «
+          </button>
+          <div role="tablist" aria-label={etiqueta} className="panel-riel">
+            {pestanas.map((p) => (
+              <button
+                key={p.id}
+                role="tab"
+                aria-selected={false}
+                title={p.titulo}
+                className="panel-riel__pestana"
+                data-ultima={pestana === p.id ? 'si' : undefined}
+                data-pestana-inferior={p.id}
+                onClick={() => {
+                  onPestana(p.id)
+                  onAbrir(true)
+                }}
+              >
+                {nombre(p)}
+                {!!p.contador && <span className="panel-riel__contador">{p.contador}</span>}
+              </button>
+            ))}
+          </div>
+        </section>
+      )
+    }
+    return (
+      <section ref={raiz} aria-label={etiqueta} className="banco-panel panel-acoplado panel-acoplado--derecha" style={{ width: ancho }} data-panel-lado="derecha">
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Cambiar el ancho del panel"
+          aria-valuenow={Math.round(ancho)}
+          aria-valuemin={ANCHO_MIN_PANEL}
+          tabIndex={0}
+          onPointerDown={arrastrarAncho}
+          onDoubleClick={() => onAncho?.(ANCHO_PANEL)}
+          onKeyDown={(e) => {
+            const padre = raiz.current?.parentElement?.clientWidth ?? 1200
+            const max = Math.max(ANCHO_MIN_PANEL + 80, Math.min(560, Math.round(padre * 0.48)))
+            if (e.key === 'ArrowLeft') {
+              e.preventDefault()
+              onAncho?.(Math.min(max, ancho + 24))
+            }
+            if (e.key === 'ArrowRight') {
+              e.preventDefault()
+              onAncho?.(Math.max(ANCHO_MIN_PANEL, ancho - 24))
+            }
+          }}
+          className="tirador-panel tirador-panel--lado"
+          title="Arrastra para cambiar el ancho · doble clic: ancho inicial"
+        />
+        <div className="panel-derecha__cabeza">
+          <div role="tablist" aria-label={etiqueta} className="panel-derecha__pestanas">
+            {pestanas.map((p) => (
+              <button
+                key={p.id}
+                role="tab"
+                aria-selected={pestana === p.id}
+                onClick={() => onPestana(p.id)}
+                className="pestana-panel"
+                data-pestana-inferior={p.id}
+              >
+                {nombre(p)}
+                {!!p.contador && <span style={{ marginLeft: 6, fontWeight: 500, color: '#51606f' }}>({p.contador})</span>}
+              </button>
+            ))}
+          </div>
+          <button type="button" className="boton-icono" aria-expanded title="Colapsar el panel" aria-label="Colapsar el panel" onClick={() => onAbrir(false)}>
+            »
+          </button>
+        </div>
+        <div ref={actual?.seguirFinal ? seguir.ref : undefined} onScroll={actual?.seguirFinal ? seguir.onDesplazar : undefined} className="panel-acoplado__contenido">
+          {actual?.contenido}
+        </div>
+      </section>
+    )
   }
 
   const estilo: React.CSSProperties = fijo
@@ -175,8 +286,9 @@ export function usePanelAcoplado<T extends string>(clave: string, pestanaInicial
     altoInicial ?? (typeof window === 'undefined' ? 168 : Math.round(Math.min(200, Math.max(140, window.innerHeight * 0.2)))),
   )
   const [ampliado, setAmpliado] = usePersistente(`${clave}.ampliado`, false)
+  const [ancho, setAncho] = usePersistente(`${clave}.ancho`, ANCHO_PANEL)
   const [pestana, setPestana] = usePersistente<T>(`${clave}.pestana`, pestanaInicial)
-  return { abierto, onAbrir: setAbierto, alto, onAlto: setAlto, ampliado, onAmpliar: setAmpliado, pestana, onPestana: setPestana }
+  return { abierto, onAbrir: setAbierto, alto, onAlto: setAlto, ampliado, onAmpliar: setAmpliado, ancho, onAncho: setAncho, pestana, onPestana: setPestana }
 }
 
 /** Sigue lo último de una lista (registro) mientras el alumno esté mirando el final. */

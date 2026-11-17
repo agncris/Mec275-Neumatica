@@ -84,7 +84,7 @@ function pasoSilo(p: ProgramaPLC): PasoProceso {
   const base = { total }
   const nombrados = new Set(p.simbolos.filter((s) => s.nombre.trim()).map((s) => s.dir))
   if (!['I0.0', 'I0.1', 'I0.3', 'I0.4'].every((d) => nombrados.has(d))) {
-    return { ...base, id: 'nombrar', numero: 1, titulo: 'Ponerle nombre a las entradas', donde: 'La pestaña E/S, abajo.', accion: 'Escribe el nombre de START, STOP, PROX y LEVEL. El cableado de la planta ya dice qué es cada una.', listo: 'Esas cuatro entradas tienen nombre.' }
+    return { ...base, id: 'nombrar', numero: 1, titulo: 'Ponerle nombre a las entradas', donde: 'La pestaña E/S, en el panel de la derecha.', accion: 'Escribe el nombre de START, STOP, PROX y LEVEL. El cableado de la planta ya dice qué es cada una.', listo: 'Esas cuatro entradas tienen nombre.' }
   }
   if (![...bobinas].some((d) => d.startsWith('M'))) {
     return { ...base, id: 'marcha', numero: 2, titulo: 'Dejar el sistema en marcha', donde: 'El primer escalón del diagrama.', accion: 'Un contacto de START y uno de STOP, y una bobina de marca (M). La marca recuerda que se pulsó marcha.', listo: 'Hay una bobina M.' }

@@ -196,6 +196,16 @@ button:disabled:hover {
   gap: 6px;
   min-height: 0;
 }
+/* Lienzo a la izquierda y paleta a la derecha, en la misma fila. */
+.banco__centro--con-lateral {
+  flex-direction: row;
+  align-items: stretch;
+}
+.banco__centro--con-lateral > .banco__lienzo {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
 .banco__lienzo {
   flex: 1;
   min-height: 160px;
@@ -321,6 +331,117 @@ button:disabled:hover {
    (sus pestañas y su contenido se desplazan solos). */
 .panel-acoplado {
   overflow: visible;
+}
+.panel-acoplado--derecha,
+.panel-acoplado--riel {
+  flex: none;
+  align-self: stretch;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.panel-acoplado--riel {
+  width: 44px;
+  overflow: hidden;
+}
+.panel-riel__abrir {
+  flex: none;
+  align-self: center;
+}
+.panel-riel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: auto;
+}
+.panel-riel__pestana {
+  border: none;
+  border-left: 3px solid transparent;
+  background: transparent;
+  color: #51606f;
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  padding: 12px 0;
+  cursor: pointer;
+  writing-mode: vertical-rl;
+}
+.panel-riel__pestana[data-ultima='si'] {
+  color: #0b3f73;
+  background: #e8f2fb;
+  border-left-color: #1668c7;
+}
+.panel-riel__pestana:hover,
+.panel-riel__pestana:focus-visible {
+  background: #f4f7fb;
+  outline: none;
+}
+.panel-riel__contador {
+  margin-top: 6px;
+  font-weight: 650;
+}
+.panel-derecha__cabeza {
+  display: flex;
+  align-items: stretch;
+  flex: none;
+  border-bottom: 1px solid #e0e5eb;
+  background: #f6f8fa;
+}
+.panel-derecha__pestanas {
+  display: flex;
+  align-items: stretch;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+}
+.panel-acoplado--derecha .panel-acoplado__contenido {
+  overflow: auto;
+  min-height: 0;
+  flex: 1;
+  padding: 8px 12px 10px;
+}
+.panel-acoplado--derecha .proceso {
+  position: static;
+}
+.panel-acoplado--derecha .proceso__etapas {
+  flex-direction: column;
+}
+.panel-acoplado--derecha .proceso__etapa {
+  text-align: left;
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+.tirador-panel--lado {
+  top: 0;
+  bottom: 0;
+  left: -7px;
+  right: auto;
+  width: 14px;
+  height: auto;
+  cursor: ew-resize;
+}
+.tirador-panel--lado::after {
+  left: 5px;
+  top: 50%;
+  width: 4px;
+  height: 44px;
+  margin-left: 0;
+  margin-top: -22px;
+}
+.tirador-panel--lado:hover::after,
+.tirador-panel--lado:focus-visible::after {
+  left: 5px;
+  top: 0;
+  width: 4px;
+  height: 100%;
+  margin-left: 0;
+  margin-top: 0;
+  background: #1668c7;
+}
+body.arrastrando-ancho,
+body.arrastrando-ancho * {
+  cursor: ew-resize !important;
+  user-select: none;
 }
 body.arrastrando-alto,
 body.arrastrando-alto * {
