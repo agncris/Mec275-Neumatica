@@ -321,6 +321,7 @@ export default function Robot3D({
   play,
   encabezado,
   sinDetalle = false,
+  grabando = false,
 }: {
   vista: MutableRefObject<VistaRobot>
   alto?: number | string
@@ -331,6 +332,8 @@ export default function Robot3D({
   encabezado?: ReactNode
   /** Sin el botón «Seguir el corte» (en Estudiar no hay corte). */
   sinDetalle?: boolean
+  /** Mientras se graba video del lienzo (`captureStream`) se dibuja en cada cuadro, aunque nada cambie. */
+  grabando?: boolean
 }) {
   const contRef = useRef<HTMLDivElement>(null)
   const envolturaRef = useRef<HTMLDivElement>(null)
@@ -341,6 +344,8 @@ export default function Robot3D({
   const [detalle, setDetalle] = useState(false)
   const detalleRef = useRef(false)
   detalleRef.current = detalle
+  const grabandoRef = useRef(false)
+  grabandoRef.current = grabando
   const [modoArrastre, setModoArrastre] = useState<ModoArrastre>('girar')
   const controlesRef = useRef<OrbitControls | null>(null)
   const gizmoRef = useRef<ViewCube | null>(null)
@@ -700,7 +705,8 @@ export default function Robot3D({
       }
       if (controles.update()) sucio = true
       // Lo que se mueve solo (reproducción, husillo, viruta, cámara de detalle, cubo de vistas) dibuja siempre.
-      if (V.corriendo || V.husillo || detalleRef.current || hayViruta || virutas.malla.count > 0 || gizmo.animando()) sucio = true
+      // Grabando video también: captureStream solo toma cuadros cuando el lienzo se vuelve a dibujar.
+      if (V.corriendo || V.husillo || detalleRef.current || grabandoRef.current || hayViruta || virutas.malla.count > 0 || gizmo.animando()) sucio = true
       if (!sucio) return
       sucio = false
       renderer.render(escena, camara)

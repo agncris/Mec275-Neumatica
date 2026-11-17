@@ -988,6 +988,7 @@ export default function UnidadRobotica() {
           <Robot3D
             vista={vista}
             onCanvas={(c) => (canvasRef.current = c)}
+            grabando={grabando}
             alto="100%"
             encabezado={
               <>
