@@ -7,6 +7,7 @@ import { MARCA_TAREA4, analizarTarea4, revisarTarea4 } from './tarea4'
 import type { Definicion, evaluar } from './nodos'
 import type { robotPorId } from './robots'
 import { CLAVES } from '../persistencia'
+import { entregable, nombreArchivo } from '../tareas/entregables'
 
 /** Lo que se entrega en la tarea de Robótica: la revisión, las imágenes, el archivo y el video. */
 export default function PanelEntrega({
@@ -64,46 +65,38 @@ export default function PanelEntrega({
     }}
     presentacion={[
       {
-        id: 'croquis-pieza',
-        tipo: 'imagen',
-        titulo: 'Croquis de la pieza',
-        detalle: 'Pégala en la diapositiva Pieza de la plantilla. No la subas aparte.',
+        ...entregable('robotica', 'croquis-pieza'),
         hacer: async (base) => {
-          await croquisPng('pieza', `${base}_croquis-pieza.png`)
-          return `Descargada: ${base}_croquis-pieza.png`
+          const nombre = nombreArchivo('robotica', 'croquis-pieza', base)
+          await croquisPng('pieza', nombre)
+          return `Descargada: ${nombre}`
         },
       },
       {
-        id: 'posicionamiento',
-        tipo: 'imagen',
-        titulo: 'Posicionamiento del robot',
-        detalle: 'Pégala en la diapositiva Pieza, junto al croquis. No la subas aparte.',
+        ...entregable('robotica', 'posicionamiento'),
         hacer: async (base) => {
-          await croquisPng('posicion', `${base}_posicionamiento.png`)
-          return `Descargada: ${base}_posicionamiento.png`
+          const nombre = nombreArchivo('robotica', 'posicionamiento', base)
+          await croquisPng('posicion', nombre)
+          return `Descargada: ${nombre}`
         },
       },
       {
-        id: 'definicion-png',
-        tipo: 'imagen',
-        titulo: 'Tu definición (los nodos)',
-        detalle: 'Sale la definición completa, aunque no la veas entera en pantalla. Pégala en la diapositiva Programa. No la subas aparte.',
+        ...entregable('robotica', 'definicion-png'),
         deshabilitado: modo !== 'visual',
         porque: 'Cambia a «Programación visual».',
         hacer: async (base) => {
           const svg = document.querySelector('svg[data-lienzo-nodos]') as SVGSVGElement | null
           if (!svg) throw new Error('No se encontró el lienzo de nodos.')
           const contenido = svg.querySelector(':scope > g[transform]') as SVGGElement | null
-          if (contenido) await exportarPngEncuadrado(svg, contenido, `${base}_definicion.png`)
-          else await exportarPng(svg, `${base}_definicion.png`)
-          return `Descargada: ${base}_definicion.png`
+          const nombre = nombreArchivo('robotica', 'definicion-png', base)
+          if (contenido) await exportarPngEncuadrado(svg, contenido, nombre)
+          else await exportarPng(svg, nombre)
+          return `Descargada: ${nombre}`
         },
       },
       {
-        id: 'ficha',
-        tipo: 'tabla',
-        titulo: `Ficha técnica · ${modeloVista.nombre}`,
-        detalle: 'Pégala en la diapositiva Robot y cita la ficha oficial de KUKA. No la subas aparte.',
+        ...entregable('robotica', 'ficha'),
+        titulo: entregable('robotica', 'ficha').titulo.replace('{modelo}', modeloVista.nombre),
         hacer: async () => {
           const filas = [
             ['Característica', 'Valor'],
@@ -122,25 +115,20 @@ export default function PanelEntrega({
     ]}
     archivos={[
       {
-        id: 'definicion',
-        tipo: 'archivo',
-        titulo: 'Tu definición (NeumaLab)',
-        detalle: 'Súbelo a Aula junto con el PDF de la plantilla y el video. Trae el plano y tu nombre.',
+        ...entregable('robotica', 'definicion'),
         hacer: (base) => {
           const alumno = leerAlumno()
-          descargarTexto(JSON.stringify(enTarea ? { ...def, tarea: MARCA_TAREA4, ...(alumno.nombre.trim() ? { alumno } : {}) } : def, null, 2), `${base}.json`, 'application/json')
-          return `Descargado: ${base}.json`
+          const nombre = nombreArchivo('robotica', 'definicion', base)
+          descargarTexto(JSON.stringify(enTarea ? { ...def, tarea: MARCA_TAREA4, ...(alumno.nombre.trim() ? { alumno } : {}) } : def, null, 2), nombre, 'application/json')
+          return `Descargado: ${nombre}`
         },
       },
       {
-        id: 'video',
-        tipo: 'video',
-        titulo: 'Video de la simulación',
-        detalle: grabando ? 'Grabando… se detiene sola al terminar el recorrido. Si quieres cortar antes, pulsa «■ Detener grabación» arriba.' : 'La simulación completa, de principio a fin. Es un archivo aparte: no lo insertes en el PPT.',
+        ...entregable('robotica', 'video', grabando),
         deshabilitado: !puedeGrabar || grabando || !simActiva,
         porque: grabando ? 'Grabando… pulsa «■ Detener grabación» arriba al terminar.' : !simActiva ? 'Todavía no hay recorrido que grabar.' : 'Tu navegador no permite grabar video.',
         hacer: (base) => {
-          nombreVideo.current = `${base}_simulacion`
+          nombreVideo.current = nombreArchivo('robotica', 'video', base)
           tRef.current = 0
           alternarGrabacion()
           setReproduciendo(true)

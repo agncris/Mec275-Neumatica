@@ -7,6 +7,7 @@ import { type ResultadoGcode } from './gcode'
 import { herramientasLlamadas, revisarTrabajo } from './trabajo'
 import { copiarTabla, descargarTexto } from '../entregar'
 import { CLAVES } from '../persistencia'
+import { entregable, nombreArchivo } from '../tareas/entregables'
 
 /** Lo que se entrega en la Tarea 3: la revisión, las tablas, los archivos y el video. */
 export default function PanelEntrega({
@@ -53,20 +54,15 @@ export default function PanelEntrega({
     revisar={() => revisarTrabajo(config, codigo).puntos}
     presentacion={[
       {
-        id: 'trayectoria',
-        tipo: 'imagen',
-        titulo: 'Trayectoria con sus puntos',
-        detalle: 'La silueta que recorre la herramienta, con los puntos numerados.',
+        ...entregable('cnc', 'trayectoria'),
         hacer: async (base) => {
-          await exportarPlano(`${base}_trayectoria.png`)
-          return `Descargada: ${base}_trayectoria.png`
+          const nombre = nombreArchivo('cnc', 'trayectoria', base)
+          await exportarPlano(nombre)
+          return `Descargada: ${nombre}`
         },
       },
       {
-        id: 'coordenadas',
-        tipo: 'tabla',
-        titulo: 'Tabla de coordenadas',
-        detalle: 'Dónde queda la herramienta en cada bloque, en absolutas e incrementales.',
+        ...entregable('cnc', 'coordenadas'),
         hacer: async () => {
           const filas = filasCoordenadas(resultado, torno, lineas, casa)
           if (filas.length < 2) throw new Error('El programa todavía no mueve la máquina.')
@@ -74,10 +70,7 @@ export default function PanelEntrega({
         },
       },
       {
-        id: 'herramientas',
-        tipo: 'tabla',
-        titulo: 'Herramientas que usa tu programa',
-        detalle: 'Cada herramienta con su nombre y en qué líneas se llama.',
+        ...entregable('cnc', 'herramientas'),
         hacer: async () => {
           const lista = torno ? torretaDe(config) : almacenDe(config)
           const uso = herramientasLlamadas(codigo, torno)
@@ -87,10 +80,7 @@ export default function PanelEntrega({
         },
       },
       {
-        id: 'bruto',
-        tipo: 'tabla',
-        titulo: 'Material y dimensiones del bruto',
-        detalle: 'Lo que pusiste en Preparación.',
+        ...entregable('cnc', 'bruto'),
         hacer: async () => {
           const filas = torno
             ? [['Material', 'Diámetro (mm)', 'Largo (mm)', 'Toman las garras (mm)', 'Sobremetal en la cara (mm)'], [mat.nombre, String(config.torno.diametro), String(config.torno.largo), String(config.torno.agarre), String(config.torno.sobremetal)]]
@@ -101,34 +91,27 @@ export default function PanelEntrega({
     ]}
     archivos={[
       {
-        id: 'trabajo',
-        tipo: 'archivo',
-        titulo: 'Tu programa (.json)',
-        detalle: 'Programa y preparación en un archivo. Adjúntalo en Aula junto con tu PDF; se abre en la app con Archivo › Abrir.',
+        ...entregable('cnc', 'trabajo'),
         hacer: (base) => {
-          descargarTexto(trabajoJson(), `${base}.json`, 'application/json')
-          return `Descargado: ${base}.json`
+          const nombre = nombreArchivo('cnc', 'trabajo', base)
+          descargarTexto(trabajoJson(), nombre, 'application/json')
+          return `Descargado: ${nombre}`
         },
       },
       {
-        id: 'cnc',
-        tipo: 'archivo',
-        titulo: 'Programa .cnc',
-        detalle: 'Opcional: solo el código G, en texto. También se abre en CNC Simulator Pro.',
+        ...entregable('cnc', 'cnc'),
         hacer: (base) => {
-          descargarTexto(codigo.replace(/\n/g, '\r\n'), `${base}.cnc`)
-          return `Descargado: ${base}.cnc`
+          const nombre = nombreArchivo('cnc', 'cnc', base)
+          descargarTexto(codigo.replace(/\n/g, '\r\n'), nombre)
+          return `Descargado: ${nombre}`
         },
       },
       {
-        id: 'video',
-        tipo: 'video',
-        titulo: 'Video de la simulación',
-        detalle: grabando ? 'Grabando… pulsa «■ Detener grabación» arriba al terminar.' : 'Graba la máquina 3D mientras mecaniza; se descarga al detener.',
+        ...entregable('cnc', 'video', grabando),
         deshabilitado: !puedeGrabar || grabando,
         porque: grabando ? 'Grabando… pulsa «■ Detener grabación» arriba al terminar.' : 'Tu navegador no permite grabar video.',
         hacer: (base) => {
-          nombreVideo.current = `${base}_simulacion`
+          nombreVideo.current = nombreArchivo('cnc', 'video', base)
           reiniciar()
           alternarGrabacion()
           setTimeout(() => correr('corriendo'), 300)

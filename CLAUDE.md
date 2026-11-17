@@ -20,7 +20,7 @@ Esta es la única fuente de reglas. `.cursor/rules/` apunta aquí.
 ## Cómo correr la app
 
 - `npm run dev` levanta Vite en el puerto 5173 (también hay `.claude/launch.json`). En dev se ven todas las unidades.
-- `npm run build` hace `tsc` y `vite build`. `npm test` corre Vitest. `npm run verificar` corre `tsc --noEmit` y los tests. `npm run lint` corre ESLint (error: `catch` vacío; aviso: reglas de hooks) y también corre en el CI.
+- `npm run build` hace `tsc` y `vite build`. `npm test` corre Vitest. `npm run verificar` corre `tsc --noEmit` y los tests. `npm run lint` corre ESLint (error: `catch` vacío; aviso: reglas de hooks) y también corre en el CI. `npm run e2e` recorre cada unidad en un Chrome real contra el sitio compilado (corre `npm run build` antes; también está en el CI). `npm run entregables` imprime en Markdown lo que se entrega en cada tarea.
 - Los tests corren en entorno `node` (ver `vite.config.ts`). Para un test de componente usa el comentario `// @vitest-environment jsdom` al inicio del archivo; no cambies el entorno global.
 - Si cambias `package.json`, sube también `package-lock.json`.
 
@@ -32,7 +32,8 @@ Esta es la única fuente de reglas. `.cursor/rules/` apunta aquí.
 - `src/robot/`: unidad Robótica (nodos, cinemática, KRL, escena 3D, guía de la tarea).
 - `src/vista3d/`: banco 3D de neumática, sonido, ViewCube. `src/components/`: piezas compartidas.
 - `src/unidades.ts`: banderas de publicación. `src/persistencia.ts`: guardado en el navegador. Es el único archivo que toca `localStorage` y el único con claves `neumalab.*` (un test lo comprueba): para guardar algo usa `leerTexto`, `leerJson`, `guardarTexto`, `guardarJson`, `borrarClave` y agrega la clave a `CLAVES`.
-- `src/__tests__/`, `src/engine/__tests__/`: tests de lógica.
+- `src/tareas/entregables.ts`: qué se entrega en cada tarea (títulos, explicaciones y nombres de archivo). Los cajones «Entregar» de las cuatro unidades leen de aquí; si cambia lo que se entrega, se cambia aquí y se vuelve a imprimir con `npm run entregables` para el enunciado.
+- `src/__tests__/`, `src/engine/__tests__/`: tests de lógica. `src/__tests__/ui-flujos.test.tsx`: flujos de la interfaz en jsdom. `e2e/`: prueba de punta a punta.
 - `api/`: función serverless de MecBot (la clave del modelo queda en el servidor). `public/`: imágenes y service worker.
 
 ## Cuidados con las escenas 3D

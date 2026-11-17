@@ -140,6 +140,15 @@ describe('Revisar en Entregar', () => {
     expect(lista.querySelectorAll('li').length).toBeGreaterThan(0)
   }, 30000)
 
+  it('en Robótica el cajón de entrega lista lo que se entrega, desde el módulo de entregables', async () => {
+    abrir('robotica', '&vista=tarea')
+    fireEvent.click(await screen.findByRole('button', { name: /Entregar/ }, ESPERA))
+    await waitFor(() => expect(document.querySelector('[data-cajon-entregar="si"]')).toBeTruthy(), ESPERA)
+    for (const titulo of ['Croquis de la pieza', 'Posicionamiento del robot', 'Tu definición (los nodos)', /Ficha técnica · /, 'Tu definición (NeumaLab)', 'Video de la simulación']) {
+      expect(screen.getAllByText(titulo).length).toBeGreaterThan(0)
+    }
+  }, 30000)
+
   for (const [unidad, boton, vista] of [
     ['plc', /Entregar Tarea PLC/, '&vista=tarea'],
     ['cnc', /Entregar Tarea CNC/, '&vista=tarea'],

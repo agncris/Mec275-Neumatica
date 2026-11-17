@@ -13,7 +13,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "verificar": "tsc --noEmit && vitest run",
-    "e2e": "node e2e/humo.mjs"
+    "e2e": "node e2e/humo.mjs",
+    "entregables": "vite-node scripts/entregables.ts"
   },
   "dependencies": {
     "express": "^4.22.2",

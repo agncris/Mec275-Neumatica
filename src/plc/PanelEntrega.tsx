@@ -6,6 +6,7 @@ import { exportarPng } from '../exportar'
 import { areaDe } from './ladder'
 import { formatear } from './notacion'
 import { CLAVES } from '../persistencia'
+import { entregable, nombreArchivo } from '../tareas/entregables'
 
 /** Lo que se entrega en la Tarea 2: la revisión, el diagrama, la tabla de E/S y el archivo. */
 export default function PanelEntrega({
@@ -55,22 +56,17 @@ export default function PanelEntrega({
     }}
     presentacion={[
       {
-        id: 'ladder',
-        tipo: 'imagen',
-        titulo: 'Diagrama Ladder',
-        detalle: 'Tu programa completo, escalón por escalón.',
+        ...entregable('plc', 'ladder'),
         hacer: async (base) => {
           const svg = document.getElementById('ladder-svg') as SVGSVGElement | null
           if (!svg) throw new Error('No se encontró el diagrama.')
-          await exportarPng(svg, `${base}_ladder.png`)
-          return `Descargada: ${base}_ladder.png`
+          const nombre = nombreArchivo('plc', 'ladder', base)
+          await exportarPng(svg, nombre)
+          return `Descargada: ${nombre}`
         },
       },
       {
-        id: 'es',
-        tipo: 'tabla',
-        titulo: 'Tabla de entradas y salidas',
-        detalle: 'Símbolo, dirección, tipo y descripción, desde la pestaña «Entradas y salidas».',
+        ...entregable('plc', 'es'),
         hacer: async () => {
           const tipo: Record<string, string> = { I: 'Entrada (INPUT)', Q: 'Salida (OUTPUT)', M: 'Marca', T: 'Temporizador', C: 'Contador' }
           const orden = 'IQMTC'
@@ -85,13 +81,11 @@ export default function PanelEntrega({
     ]}
     archivos={[
       {
-        id: 'programa',
-        tipo: 'archivo',
-        titulo: 'Tu programa (.json)',
-        detalle: 'Adjúntalo en Aula junto con tu PDF. Se abre en la app con Archivo › Abrir.',
+        ...entregable('plc', 'programa'),
         hacer: (base) => {
-          descargarTexto(JSON.stringify(programa, null, 2), `${base}.json`, 'application/json')
-          return `Descargado: ${base}.json`
+          const nombre = nombreArchivo('plc', 'programa', base)
+          descargarTexto(JSON.stringify(programa, null, 2), nombre, 'application/json')
+          return `Descargado: ${nombre}`
         },
       },
     ]}

@@ -17,6 +17,7 @@ import { circuitoDesdeStore, useStore } from '../store'
 import { FUNCIONES_VDI, SimboloVDI } from '../symbols/SimbolosVDI'
 import CajonEntregar, { type PuntoRevision } from './banco/CajonEntregar'
 import ProcesoTarea, { enlaceEstudiar, type PasoProceso } from './banco/ProcesoTarea'
+import { entregable, nombreArchivo } from '../tareas/entregables'
 import { CLAVES, leerJson } from '../persistencia'
 
 interface Props {
@@ -200,30 +201,22 @@ export default function EntregaNeumatica({ onCerrar, capturarCircuito, capturarF
       extra={{ titulo: 'Diagrama de funcionamiento VDI 2860', contenido: armadorVdi }}
       presentacion={[
         {
-          id: 'vdi',
-          tipo: 'imagen',
-          titulo: 'Diagrama VDI 2860',
-          detalle: 'Las funciones que armaste arriba, en orden y con tus notas.',
+          ...entregable('neumatica', 'vdi'),
           deshabilitado: vdi.length === 0,
           porque: 'Primero arma el diagrama VDI (arriba).',
           hacer: async (base) => {
             if (!vdiRef.current) throw new Error('No se pudo dibujar el diagrama.')
-            await exportarPng(vdiRef.current, `${base}_diagrama-VDI.png`)
-            return `Descargada: ${base}_diagrama-VDI.png`
+            const nombre = nombreArchivo('neumatica', 'vdi', base)
+            await exportarPng(vdiRef.current, nombre)
+            return `Descargada: ${nombre}`
           },
         },
         {
-          id: 'fase',
-          tipo: 'imagen',
-          titulo: 'Diagrama espacio-fase',
-          detalle: 'Sale de la simulación: pulsa ▶ Simular y deja que el ciclo corra al menos una vez.',
-          hacer: (base) => imagen(capturarFase, `${base}_diagrama-fase.png`),
+          ...entregable('neumatica', 'fase'),
+          hacer: (base) => imagen(capturarFase, nombreArchivo('neumatica', 'fase', base)),
         },
         {
-          id: 'elementos',
-          tipo: 'tabla',
-          titulo: 'Elementos del circuito',
-          detalle: 'Cantidad y tipo de cada elemento de tu circuito.',
+          ...entregable('neumatica', 'elementos'),
           deshabilitado: piezas.length === 0,
           porque: 'Primero arma el circuito.',
           hacer: async () => {
@@ -233,26 +226,21 @@ export default function EntregaNeumatica({ onCerrar, capturarCircuito, capturarF
           },
         },
         {
-          id: 'circuito-png',
-          tipo: 'imagen',
-          titulo: 'Imagen del circuito',
-          detalle: 'El esquema tal como está en el banco.',
-          hacer: (base) => imagen(capturarCircuito, `${base}_circuito.png`),
+          ...entregable('neumatica', 'circuito-png'),
+          hacer: (base) => imagen(capturarCircuito, nombreArchivo('neumatica', 'circuito-png', base)),
         },
       ]}
       archivos={[
         {
-          id: 'circuito',
-          tipo: 'archivo',
-          titulo: 'Tu circuito (NeumaLab)',
-          detalle: 'Se abre en la app con Archivo › Abrir y se puede simular. Incluye tu diagrama VDI.',
+          ...entregable('neumatica', 'circuito'),
           deshabilitado: piezas.length === 0,
           porque: 'Primero arma el circuito.',
           hacer: (base) => {
             const alumno = (leerJson(CLAVES.alumno) ?? {}) as { nombre?: string }
             const entrega = crearEntrega({ nombre: alumno.nombre ?? '', rol: '' }, base, respuestas, { piezas, mangueras })
-            descargarTexto(JSON.stringify(entrega, null, 2), `${base}.json`, 'application/json')
-            return `Descargado: ${base}.json`
+            const nombre = nombreArchivo('neumatica', 'circuito', base)
+            descargarTexto(JSON.stringify(entrega, null, 2), nombre, 'application/json')
+            return `Descargado: ${nombre}`
           },
         },
       ]}
