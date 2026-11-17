@@ -116,6 +116,32 @@ export async function exportarPng(
   descargarBlob(blob, nombreArchivo)
 }
 
+/**
+ * Descarga como PNG todo el contenido de un lienzo con zoom y desplazamiento
+ * (el de nodos): encuadra el grupo `contenido` completo, sin importar qué parte
+ * se esté viendo ni el tamaño del lienzo en pantalla.
+ */
+export async function exportarPngEncuadrado(svg: SVGSVGElement, contenido: SVGGElement, nombreArchivo: string, margen = 24): Promise<void> {
+  const caja = contenido.getBBox()
+  if (!(caja.width > 0 && caja.height > 0)) throw new Error('El lienzo está vacío: no hay nada que exportar.')
+  const antesVista = svg.getAttribute('viewBox')
+  const antesTransf = contenido.getAttribute('transform')
+  // La copia se arma al llamar a exportarPng (antes de su primer await): el lienzo vuelve a su vista enseguida.
+  svg.setAttribute('viewBox', `${caja.x - margen} ${caja.y - margen} ${caja.width + margen * 2} ${caja.height + margen * 2}`)
+  contenido.removeAttribute('transform')
+  let pendiente: Promise<void>
+  try {
+    // Al menos 1600 px de ancho, para que los nombres de los bloques se lean en la presentación.
+    pendiente = exportarPng(svg, nombreArchivo, Math.max(2, 1600 / (caja.width + margen * 2)))
+  } finally {
+    if (antesVista === null) svg.removeAttribute('viewBox')
+    else svg.setAttribute('viewBox', antesVista)
+    if (antesTransf === null) contenido.removeAttribute('transform')
+    else contenido.setAttribute('transform', antesTransf)
+  }
+  await pendiente
+}
+
 /** El SVG como imagen PNG embebida (data URL), para guardarla dentro de la entrega. */
 export async function pngEmbebido(svg: SVGSVGElement, escala = 1.5): Promise<string> {
   const lienzo = await svgALienzo(svg, escala)

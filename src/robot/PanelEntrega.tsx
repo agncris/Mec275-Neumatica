@@ -1,6 +1,6 @@
 import CajonEntregar from '../components/banco/CajonEntregar'
 import { copiarTabla, descargarTexto, leerAlumno } from '../entregar'
-import { exportarPng } from '../exportar'
+import { exportarPng, exportarPngEncuadrado } from '../exportar'
 import type { MutableRefObject } from 'react'
 import type { Simulacion } from './movimiento'
 import { MARCA_TAREA4, analizarTarea4, revisarTarea4 } from './tarea4'
@@ -86,13 +86,15 @@ export default function PanelEntrega({
         id: 'definicion-png',
         tipo: 'imagen',
         titulo: 'Tu definición (los nodos)',
-        detalle: 'Encuadra el lienzo (⤢) y pégala en la diapositiva Programa. No la subas aparte.',
+        detalle: 'Sale la definición completa, aunque no la veas entera en pantalla. Pégala en la diapositiva Programa. No la subas aparte.',
         deshabilitado: modo !== 'visual',
         porque: 'Cambia a «Programación visual».',
         hacer: async (base) => {
           const svg = document.querySelector('svg[data-lienzo-nodos]') as SVGSVGElement | null
           if (!svg) throw new Error('No se encontró el lienzo de nodos.')
-          await exportarPng(svg, `${base}_definicion.png`)
+          const contenido = svg.querySelector(':scope > g[transform]') as SVGGElement | null
+          if (contenido) await exportarPngEncuadrado(svg, contenido, `${base}_definicion.png`)
+          else await exportarPng(svg, `${base}_definicion.png`)
           return `Descargada: ${base}_definicion.png`
         },
       },
