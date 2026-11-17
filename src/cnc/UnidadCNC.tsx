@@ -157,7 +157,6 @@ export default function UnidadCNC() {
       setNombres((x) => ({ ...x, [m]: d.nombre || 'Programa del enlace' }))
       setAviso('Programa del enlace abierto.')
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Al entrar directo a la tarea (enlace ?vista=tarea) se ve primero el plano.

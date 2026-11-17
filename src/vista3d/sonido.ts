@@ -54,7 +54,9 @@ export class SonidoBanco {
       this.chorro = this.crearChorro()
       this.pitido = this.crearPitido()
     }
-    if (this.ctx.state === 'suspended') void this.ctx.resume().catch(() => {})
+    if (this.ctx.state === 'suspended') void this.ctx.resume().catch(() => {
+      // El navegador no dejó reanudar el audio todavía (falta un gesto del usuario): da igual.
+    })
   }
 
   get activo(): boolean {
@@ -81,7 +83,11 @@ export class SonidoBanco {
     this.silbido = null
     this.chorro = null
     this.pitido = null
-    if (ctx) void ctx.close().catch(() => {})
+    if (ctx) {
+      void ctx.close().catch(() => {
+        // El contexto ya estaba cerrado: da igual.
+      })
+    }
   }
 
   golpe(tipo: TipoGolpe, intensidad: number, pan: number): void {
