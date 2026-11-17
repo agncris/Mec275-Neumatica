@@ -35,6 +35,8 @@ export interface OpcionesEscena {
   controlesPrimero?: boolean
   /** La escena dejó de verse (por ejemplo, para callar sonidos). */
   alOcultar?: () => void
+  /** La escena volvió a verse (la base ya marcó el cuadro como sucio). */
+  alMostrar?: () => void
   /** Se agrega a lo que ya hace la base al cambiar el tamaño del contenedor. */
   alRedimensionar?: () => void
 }
@@ -51,9 +53,10 @@ export interface EscenaBase {
    * Registra lo que se hace en cada cuadro y arranca el bucle. Se llama después de
    * armar la escena. La base actualiza los controles y dibuja (escena y cubo) al final.
    * `dt` va en segundos (máximo 0,1) y `ahora` es `performance.now()`.
-   * Si `fn` devuelve `false`, ese cuadro no se dibuja.
+   * Con `controlesPrimero`, `fn` recibe además `seMovio` (la cámara se movió en este cuadro).
+   * Si `fn` devuelve `false`, ese cuadro no se dibuja (ni la escena ni el cubo).
    */
-  alCuadro: (fn: (dt: number, ahora: number) => void | false) => void
+  alCuadro: (fn: (dt: number, ahora: number, seMovio: boolean) => void | false) => void
   /**
    * Detiene el bucle y suelta lo que creó la base. La escena suelta lo suyo aparte.
    * `antesDelRenderer` corre justo antes de liberar el renderer (para liberar lo que depende de él).
@@ -103,15 +106,19 @@ export function crearEscena(cont: HTMLElement, opc: OpcionesEscena): EscenaBase 
   observador.observe(cont)
 
   let pararBucle: (() => void) | null = null
-  const alCuadro = (fn: (dt: number, ahora: number) => void | false) => {
+  const alCuadro = (fn: (dt: number, ahora: number, seMovio: boolean) => void | false) => {
     pararBucle?.()
     let antes = performance.now()
     const cuadro = () => {
       const ahora = performance.now()
       const dt = Math.min(0.1, (ahora - antes) / 1000)
       antes = ahora
-      if (opc.controlesPrimero && controles.update() && opc.soloSiCambia) sucio = true
-      if (fn(dt, ahora) === false) return
+      let seMovio = false
+      if (opc.controlesPrimero) {
+        seMovio = controles.update()
+        if (seMovio && opc.soloSiCambia) sucio = true
+      }
+      if (fn(dt, ahora, seMovio) === false) return
       if (!opc.controlesPrimero && controles.update() && opc.soloSiCambia) sucio = true
       if (opc.soloSiCambia) {
         if (cubo.animando()) sucio = true
@@ -121,7 +128,13 @@ export function crearEscena(cont: HTMLElement, opc: OpcionesEscena): EscenaBase 
       renderer.render(escena, camara)
       cubo.render()
     }
-    pararBucle = bucleVisible(cont, cuadro, { alOcultar: opc.alOcultar, alMostrar: marcarSucio })
+    pararBucle = bucleVisible(cont, cuadro, {
+      alOcultar: opc.alOcultar,
+      alMostrar: () => {
+        marcarSucio()
+        opc.alMostrar?.()
+      },
+    })
   }
 
   return {

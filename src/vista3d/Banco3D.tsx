@@ -14,7 +14,7 @@
  * pisarlos.
  */
 import HudEscena, { type PlayEscena } from '../components/HudEscena'
-import { aplicarModoArrastre, cursoresCamara, saltarVista, zoomCamara, type ModoArrastre, type VistaCamara } from '../components/mandoCamara'
+import { aplicarModoArrastre, saltarVista, zoomCamara, type ModoArrastre, type VistaCamara } from '../components/mandoCamara'
 import { acercar, useTactil } from '../components/ui'
 import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
@@ -27,8 +27,7 @@ import { DESCRIPTORES } from '../components/descriptores'
 import { MAT, crearModelo, type EstadoPieza, type Modelo3D } from './modelos'
 import { Oido } from './oido'
 import { SonidoBanco } from './sonido'
-import { crearViewCube } from './viewcube'
-import { bucleVisible } from './visible'
+import { crearEscena } from './escena'
 
 interface Props {
   motor: Motor | null
@@ -375,15 +374,35 @@ export default function Banco3D({ motor, llenar = false, play }: Props) {
     const cont = contenedorRef.current
     if (!cont) return
 
-    let renderer: THREE.WebGLRenderer
-    try {
-      renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true })
-    } catch {
+    const base = crearEscena(cont, {
+      preserveDrawingBuffer: true,
+      camara: { fov: 32, near: 0.01, far: 20 },
+      controles: { enableDamping: true, dampingFactor: 0.08, minDistance: 0.15, maxDistance: 4, maxPolarAngle: Math.PI * 0.62, zoomToCursor: true },
+      modoArrastre,
+      viewCube: {
+        id: 'viewcube-banco',
+        alInicio: () => {
+          setVistaCamara('iso')
+          encuadrar()
+          resaltarCambio.actual = true
+        },
+      },
+      controlesPrimero: true,
+      // Con el banco quieto el bucle solo repinta el cubo de vistas (ver `alCuadro`).
+      alRedimensionar: () => {
+        sucio = true
+      },
+      alMostrar: () => {
+        sucio = true
+      },
+      // Fuera de pantalla o con la pestaña oculta no se dibuja ni suena.
+      alOcultar: () => sonidoRef.current?.callar(),
+    })
+    if (!base) {
       setSinWebGL(true)
       return
     }
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-    renderer.setSize(cont.clientWidth, cont.clientHeight)
+    const { renderer, escena, camara, controles } = base
     renderer.outputColorSpace = THREE.SRGBColorSpace
     renderer.toneMapping = THREE.ACESFilmicToneMapping
     renderer.toneMappingExposure = 1.05
@@ -391,9 +410,7 @@ export default function Banco3D({ motor, llenar = false, play }: Props) {
     renderer.shadowMap.type = THREE.PCFSoftShadowMap
     renderer.domElement.style.display = 'block'
     renderer.domElement.dataset.banco3d = 'si'
-    cont.appendChild(renderer.domElement)
 
-    const escena = new THREE.Scene()
     const pmrem = new THREE.PMREMGenerator(renderer)
     const entorno = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
     escena.environment = entorno
@@ -559,18 +576,7 @@ export default function Banco3D({ motor, llenar = false, play }: Props) {
     escena.environmentIntensity = 1.25
 
     // --- cámara -----------------------------------------------------------------
-    const camara = new THREE.PerspectiveCamera(32, cont.clientWidth / Math.max(1, cont.clientHeight), 0.01, 20)
-    const controles = new OrbitControls(camara, renderer.domElement)
-    // El botón del medio desplaza la vista. Lo engancha cursoresCamara.
-    controles.enableDamping = true
-    controles.dampingFactor = 0.08
-    controles.minDistance = 0.15
-    controles.maxDistance = 4
-    controles.maxPolarAngle = Math.PI * 0.62
-    controles.zoomToCursor = true
     controlesRef.current = controles
-    aplicarModoArrastre(controles, modoArrastre)
-    const quitarCursores = cursoresCamara(controles, renderer.domElement)
     const encuadrar = () => {
       const aspecto = cont.clientWidth / Math.max(1, cont.clientHeight)
       const vfov = THREE.MathUtils.degToRad(camara.fov)
@@ -583,11 +589,6 @@ export default function Banco3D({ motor, llenar = false, play }: Props) {
     }
     encuadrar()
     encuadrarRef.current = encuadrar
-    const cubo = crearViewCube(camara, renderer, controles, cont, 'viewcube-banco', () => {
-      setVistaCamara('iso')
-      encuadrar()
-      resaltarCambio.actual = true
-    })
     vistaRef.current = (v) => {
       setVistaCamara(v)
       if (v === 'iso') encuadrar()
@@ -634,19 +635,6 @@ export default function Banco3D({ motor, llenar = false, play }: Props) {
     renderer.domElement.addEventListener('pointerdown', onDown)
     window.addEventListener('pointerup', onUp)
 
-    // --- tamaño -----------------------------------------------------------------
-    const alRedimensionar = () => {
-      sucio = true
-      const w = cont.clientWidth
-      const h = cont.clientHeight
-      renderer.setSize(w, h)
-      camara.aspect = w / Math.max(1, h)
-      camara.updateProjectionMatrix()
-      cubo.actualizar()
-    }
-    const observador = new ResizeObserver(alRedimensionar)
-    observador.observe(cont)
-
     // --- bucle ------------------------------------------------------------------
     // Sólo se repinta cuando algo cambia (simulación en marcha, cámara en
     // movimiento o una tecla del panel): así el banco no le roba CPU al motor
@@ -655,7 +643,6 @@ export default function Banco3D({ motor, llenar = false, play }: Props) {
     controles.addEventListener('change', () => (sucio = true))
     let oido: Oido | null = null
     let hayBocanadas = false
-    let antes = performance.now()
     const proyectada = new THREE.Vector3()
     /** Izquierda/derecha de un punto tal como se ve ahora en pantalla. */
     const panoramaDe = (pos: THREE.Vector3) => THREE.MathUtils.clamp(proyectada.copy(pos).project(camara).x * 0.85, -1, 1)
@@ -685,15 +672,11 @@ export default function Banco3D({ motor, llenar = false, play }: Props) {
       oir?.continuo(Math.min(1, continuo) * 0.8, panContinuo)
       oir?.motor(escucha.giros.reduce((m, g) => Math.max(m, g.velocidad), 0))
     }
-    const cuadro = () => {
-      const ahora = performance.now()
-      const dt = Math.min(0.1, (ahora - antes) / 1000)
-      antes = ahora
+    base.alCuadro((dt, _ahora, seMueve) => {
       const mot = motorRef.current
-      const seMueve = controles.update()
-      if (!mot && !seMueve && !sucio && !resaltarCambio.actual && !hayBocanadas && !cubo.animando()) {
-        cubo.render()
-        return
+      if (!mot && !seMueve && !sucio && !resaltarCambio.actual && !hayBocanadas && !base.cubo.animando()) {
+        base.cubo.render()
+        return false
       }
       resaltarCambio.actual = false
       if (mot) escuchar(mot, dt)
@@ -712,39 +695,26 @@ export default function Banco3D({ motor, llenar = false, play }: Props) {
         t.material.color.copy(ver ? COLOR_TUBO_AIRE : COLOR_TUBO)
         t.material.emissive.setHex(ver ? 0x0a4fb0 : 0x000000)
       }
-      renderer.render(escena, camara)
-      cubo.render()
+      // La base dibuja la escena y el cubo al terminar el cuadro.
       sucio = false
-    }
-    // Fuera de pantalla o con la pestaña oculta no se dibuja ni suena.
-    const pararBucle = bucleVisible(cont, cuadro, {
-      alOcultar: () => sonidoRef.current?.callar(),
-      alMostrar: () => {
-        sucio = true
-      },
     })
     cont.dataset.piezas = String(enEscena.length)
     cont.dataset.mangueras = String(tubos.length)
 
     return () => {
-      pararBucle()
-      observador.disconnect()
       renderer.domElement.removeEventListener('pointerdown', onDown)
       window.removeEventListener('pointerup', onUp)
       controlesRef.current = null
-      quitarCursores()
-      controles.dispose()
-      cubo.dispose()
-      escena.traverse((o) => {
-        const malla = o as THREE.Mesh
-        if (malla.geometry) malla.geometry.dispose()
+      base.destruir(() => {
+        escena.traverse((o) => {
+          const malla = o as THREE.Mesh
+          if (malla.geometry) malla.geometry.dispose()
+        })
+        for (const t of tubos) t.material.dispose()
+        soplos.liberar()
+        entorno.dispose()
+        pmrem.dispose()
       })
-      for (const t of tubos) t.material.dispose()
-      soplos.liberar()
-      entorno.dispose()
-      pmrem.dispose()
-      renderer.dispose()
-      renderer.domElement.remove()
     }
   }, [piezas, mangueras])
 
