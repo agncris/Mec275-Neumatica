@@ -133,7 +133,7 @@ export default function PanelEntrega({
         id: 'video',
         tipo: 'video',
         titulo: 'Video de la simulación',
-        detalle: grabando ? 'Grabando… pulsa «■ Detener grabación» arriba al terminar.' : 'La simulación completa, de principio a fin. Es un archivo aparte: no lo insertes en el PPT.',
+        detalle: grabando ? 'Grabando… se detiene sola al terminar el recorrido. Si quieres cortar antes, pulsa «■ Detener grabación» arriba.' : 'La simulación completa, de principio a fin. Es un archivo aparte: no lo insertes en el PPT.',
         deshabilitado: !puedeGrabar || grabando || !simActiva,
         porque: grabando ? 'Grabando… pulsa «■ Detener grabación» arriba al terminar.' : !simActiva ? 'Todavía no hay recorrido que grabar.' : 'Tu navegador no permite grabar video.',
         hacer: (base) => {
@@ -141,7 +141,7 @@ export default function PanelEntrega({
           tRef.current = 0
           alternarGrabacion()
           setReproduciendo(true)
-          return 'Grabando desde el inicio. Al terminar el recorrido pulsa «■ Detener grabación» (arriba a la derecha).'
+          return 'Grabando desde el inicio. Al terminar el recorrido la grabación se detiene sola y baja el video. No cambies de pestaña mientras graba.'
         },
       },
     ]}

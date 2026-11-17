@@ -44,6 +44,26 @@ export function useReproduccion({ nombre, avisar }: { nombre: string | undefined
     avisar('Grabando la vista 3D: pulsa ▶ y «■ Detener grabación» al terminar.')
   }
 
+  // La grabación que parte desde Entregar se detiene sola cuando termina el recorrido:
+  // así el alumno no tiene que acordarse de pulsar «Detener grabación».
+  const corrioGrabando = useRef(false)
+  useEffect(() => {
+    if (!grabando) {
+      corrioGrabando.current = false
+      return
+    }
+    if (reproduciendo) {
+      corrioGrabando.current = true
+      return
+    }
+    if (corrioGrabando.current && nombreVideo.current) {
+      corrioGrabando.current = false
+      // Un segundo más, para que el último cuadro quede en el video.
+      const reloj = setTimeout(() => grabadora.current?.state === 'recording' && grabadora.current.stop(), 1000)
+      return () => clearTimeout(reloj)
+    }
+  }, [grabando, reproduciendo])
+
   return { reproduciendo, setReproduciendo, velocidad, setVelocidad, grabando, setTick, tRef, canvasRef, nombreVideo, puedeGrabar, alternarGrabacion }
 }
 
