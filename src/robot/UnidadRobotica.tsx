@@ -398,6 +398,7 @@ export default function UnidadRobotica() {
     seleccion: seleccionPrevia,
     sim: simActiva,
     indice: 0,
+    corriendo: false,
     husillo: false,
     alcance,
   } as VistaRobot)
@@ -438,6 +439,7 @@ export default function UnidadRobotica() {
     V.marcas = marcasDe(puntos, modeloM, herrMando)
   }
   V.sim = simActiva
+  V.corriendo = reproduciendo && !!simActiva
   V.alcance = alcance
   if (simActiva) aplicarTiempo(tRef.current)
   else {
