@@ -333,7 +333,7 @@ export default function UnidadRobotica() {
   }
 
   /** Croquis (SVG en texto): la pieza acotada o el posicionamiento del robot. */
-  const crearCroquis = (tipo: string): string => crearCroquisRobot(tipo, { nombre: def.nombre, dxf, previa, robotVista, baseVista, programa, placa, herrVista })
+  const crearCroquis = (tipo: string): string => crearCroquisRobot(tipo, { nombre: def.nombre, dxf, previa, robotVista, baseVista, programa, placa, herrVista, alOrigen: def.nodos.some((n) => n.tipo === 'curvaDXF' && n.params.alOrigen !== false) })
   const croquisPng = async (tipo: string, archivo: string) => {
     const el = new DOMParser().parseFromString(crearCroquis(tipo), 'image/svg+xml').documentElement as unknown as SVGSVGElement
     await exportarPng(el, archivo)
