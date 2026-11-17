@@ -25,7 +25,7 @@ export interface PasoTarea {
   pasos: string[]
   /** Qué falta, si el bloque ya está en el lienzo a medias. */
   pista?: string
-  pestana?: 'Trayectoria' | 'Movimientos'
+  pestana?: 'Trayectoria' | 'Movimientos' | 'Utilidades'
   destacar?: string
   seleccionar?: string
   enfocar?: string
@@ -63,7 +63,7 @@ interface Def {
   listo: string
   por: string
   pasos: string[]
-  pestana?: 'Trayectoria' | 'Movimientos'
+  pestana?: 'Trayectoria' | 'Movimientos' | 'Utilidades'
   destacar?: string
   seleccionar?: (c: Ctx) => string | undefined
   enfocar?: string
@@ -102,10 +102,6 @@ function contexto(def: Definicion): Ctx {
   }
 }
 
-const hayTipo = (c: Ctx, tipo: string | string[]) => {
-  const tipos = Array.isArray(tipo) ? tipo : [tipo]
-  return c.def.nodos.some((n) => tipos.includes(n.tipo))
-}
 const MOVS = ['recorrer', 'lin', 'cir']
 
 /** Los pasos de una de las dos curvas (contorno o ranuras). */
@@ -208,7 +204,8 @@ function cadena(grupo: 'Contorno' | 'Ranuras'): Def[] {
         if (!cu) return undefined
         const dentro = c.despues(cu.id, 'mover')
         if (dentro.length) return `Move está conectado pero Z = ${num(dentro[0].params.z)}. Debe ser -5, el espesor de la plancha.`
-        return c.def.nodos.some((n) => n.tipo === 'mover') ? 'Ya hay un Move, pero no sale de este Offset. Conecta la salida de Offset a su entrada.' : undefined
+        const suelto = c.def.nodos.some((n) => n.tipo === 'mover' && !c.def.cables.some((q) => q.a === n.id && q.entrada === 0))
+        return suelto ? 'Hay un Move en el lienzo sin conectar. Lleva la salida de Offset a su entrada.' : undefined
       },
       donde: 'Pestaña Trayectoria, bloque Move (borde azul).',
       accion: 'Arrástralo, conéctalo a la salida de Offset y escribe Z = -5.',
@@ -229,7 +226,8 @@ function cadena(grupo: 'Contorno' | 'Ranuras'): Def[] {
       pista: (c) => {
         const cu = cual(c)
         if (!cu) return undefined
-        return hayTipo(c, MOVS) ? 'Ya hay movimientos en el lienzo, pero ninguno sale de esta cadena. Conecta la salida de Move a la entrada del Toolpath.' : undefined
+        const suelto = c.def.nodos.some((n) => n.tipo === 'recorrer' && !c.def.cables.some((q) => q.a === n.id && q.entrada === 0))
+        return suelto ? 'Hay un Toolpath en el lienzo sin conectar. Lleva la salida de Move a su entrada C.' : undefined
       },
       donde: 'Pestaña Movimientos, bloque Path (Toolpath, borde azul).',
       accion: 'Arrástralo y conecta la salida de Move a su entrada. Déjalo con PTP para acercarse, LIN para cortar y PTP para salir.',
@@ -276,8 +274,9 @@ const PASOS: Def[] = [
     accion: 'Usa Merge para juntar, en este orden: DOut (TRUE), Wait y Toolpath. Lleva su salida a la entrada C del Core.',
     listo: 'Aparece el botón ▶ activo bajo la vista 3D.',
     por: 'El Core arma el programa completo y es lo que se simula. Los comandos van en orden: encender, esperar, recorrer.',
-    pasos: ['Arrastra Merge al lienzo.', 'Conecta a Merge: DOut, Wait y el Toolpath, en ese orden.', 'Lleva la salida de Merge a la entrada C del Core.', 'Pulsa ▶ y mira el contorno.'],
-    pestana: 'Movimientos',
+    pasos: ['Abre Utilidades en la paleta y arrastra Merge (borde azul) al lienzo.', 'Conecta a Merge, en este orden: DOut en D1, Wait en D2 y el Toolpath en D3.', 'Lleva la salida de Merge a la entrada C del Core.', 'Pulsa ▶ y mira el contorno.'],
+    pestana: 'Utilidades',
+    destacar: 'unir',
   },
   ...cadena('Ranuras'),
   {
@@ -289,13 +288,14 @@ const PASOS: Def[] = [
       const cu = c.ranuras ?? c.curvas[c.curvas.length - 1]
       return !!core && !!cu && c.despues(cu.id, MOVS).some((m) => c.desde(m.id).has(core.id))
     },
-    pista: () => 'El Merge acepta tres entradas. Si ya están ocupadas, pon otro Merge a la salida del primero y conecta ahí el Toolpath de las ranuras.',
+    pista: (c) => (c.def.nodos.filter((n) => n.tipo === 'unir').length < 2 ? 'El primer Merge ya tiene sus tres entradas ocupadas. Por eso hace falta un segundo Merge.' : 'Ya hay dos Merge. Falta que el Toolpath de las ranuras entre al segundo y que su salida llegue a la C del Core.'),
     donde: 'Un segundo Merge, y la entrada C del Core.',
     accion: 'Conecta el Toolpath de las ranuras para que llegue al Core, después del contorno.',
     listo: 'El Toolpath de las ranuras llega al Core.',
     por: 'Lo que no llega al Core no se simula ni se exporta.',
-    pasos: ['Arrastra otro Merge.', 'Conecta ahí el Merge del contorno y luego el Toolpath de las ranuras.', 'Lleva la salida al Core (reemplaza el cable anterior).'],
-    pestana: 'Movimientos',
+    pasos: ['Abre Utilidades y arrastra otro Merge (borde azul).', 'Conecta ahí el Merge del contorno en D1 y el Toolpath de las ranuras en D2.', 'Lleva la salida del nuevo Merge a la entrada C del Core (reemplaza el cable anterior).'],
+    pestana: 'Utilidades',
+    destacar: 'unir',
   },
   {
     id: 'husillo-off',
@@ -306,7 +306,7 @@ const PASOS: Def[] = [
     accion: 'Agrega un Set Digital Out en FALSE al final del programa.',
     listo: 'Hay un DOut en FALSE después de las ranuras.',
     por: 'Un husillo encendido al volver a HOME es un riesgo. Se apaga antes de salir.',
-    pasos: ['Arrastra otro DOut y quítale el TRUE (déjalo en FALSE).', 'Conéctalo al final del Merge, después de las ranuras.'],
+    pasos: ['Arrastra otro DOut y desmarca «Activar (TRUE)» para dejarlo en FALSE.', 'Conéctalo a D3 del segundo Merge, después de las ranuras.'],
     pestana: 'Movimientos',
     destacar: 'salida',
   },
