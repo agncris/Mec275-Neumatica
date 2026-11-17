@@ -5,12 +5,9 @@
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import { aplicarModoArrastre, cursoresCamara } from '../components/mandoCamara'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { calidadRender, entornoEstudio, fondoTaller, pisoHormigon, solSuave } from '../vista3d/realista'
-import { crearViewCube } from '../vista3d/viewcube'
-import { bucleVisible } from '../vista3d/visible'
+import { crearEscena } from '../vista3d/escena'
 
 type Tipo = 'scara' | 'cilindrico' | 'esferico' | 'cartesiano' | 'angular' | 'delta'
 
@@ -417,18 +414,24 @@ export default function TiposRobot() {
   useEffect(() => {
     const cont = contRef.current
     if (!cont) return
-    let renderer: THREE.WebGLRenderer
-    try {
-      renderer = new THREE.WebGLRenderer({ antialias: true })
-    } catch {
-      return
-    }
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-    renderer.setSize(cont.clientWidth, cont.clientHeight)
+    const base = crearEscena(cont, {
+      camara: { fov: 38, near: 10, far: 10000 },
+      controles: { enableDamping: true },
+      viewCube: {
+        id: 'viewcube-tipos',
+        alInicio: () => {
+          cam.position.copy(inicio.pos)
+          ctrl.target.copy(inicio.objetivo)
+          ctrl.update()
+        },
+      },
+      // Con «Mover solo» apagado y la cámara quieta no hay nada nuevo que dibujar.
+      soloSiCambia: true,
+    })
+    if (!base) return
+    const { renderer, escena, camara: cam, controles: ctrl } = base
     calidadRender(renderer)
-    cont.appendChild(renderer.domElement)
     renderer.domElement.dataset.tiposRobot = 'si'
-    const escena = new THREE.Scene()
     const pm = entornoEstudio(renderer, escena, 0.9)
     escena.background = fondoTaller()
     escena.add(pisoHormigon(1100))
@@ -438,41 +441,14 @@ export default function TiposRobot() {
     const relleno = new THREE.DirectionalLight(0xd5e2f4, 0.55)
     relleno.position.set(900, 600, -700)
     escena.add(sol, relleno, new THREE.HemisphereLight(0xf4f7fb, 0xc5ced8, 0.55))
-    const cam = new THREE.PerspectiveCamera(38, cont.clientWidth / cont.clientHeight, 10, 10000)
     cam.position.set(1100, 900, 1300)
-    const ctrl = new OrbitControls(cam, renderer.domElement)
-    // El botón del medio desplaza la vista. Lo engancha cursoresCamara.
-    aplicarModoArrastre(ctrl, 'girar')
-    const quitarCursores = cursoresCamara(ctrl, renderer.domElement)
     ctrl.target.set(0, 280, 0)
-    ctrl.enableDamping = true
     ctrl.update()
     const inicio = { pos: cam.position.clone(), objetivo: ctrl.target.clone() }
-    const cubo = crearViewCube(cam, renderer, ctrl, cont, 'viewcube-tipos', () => {
-      cam.position.copy(inicio.pos)
-      ctrl.target.copy(inicio.objetivo)
-      ctrl.update()
-    })
     let actual: { tipo: Tipo; g: THREE.Group; poner: (v: number[]) => void } | null = null
     let t = 0
-    // Con «Mover solo» apagado y la cámara quieta no hay nada nuevo que dibujar.
-    let sucio = true
     let firma = ''
-    const marcarSucio = () => {
-      sucio = true
-    }
-    ctrl.addEventListener('change', marcarSucio)
-    const eventosPuntero = ['pointermove', 'pointerdown', 'pointerup', 'pointerleave', 'wheel'] as const
-    for (const e of eventosPuntero) cont.addEventListener(e, marcarSucio, { passive: true })
-    const obs = new ResizeObserver(() => {
-      sucio = true
-      renderer.setSize(cont.clientWidth, cont.clientHeight)
-      cam.aspect = cont.clientWidth / Math.max(1, cont.clientHeight)
-      cam.updateProjectionMatrix()
-      cubo.actualizar()
-    })
-    obs.observe(cont)
-    const cuadro = () => {
+    base.alCuadro(() => {
       const e = estado.current
       if (!actual || actual.tipo !== e.tipo) {
         if (actual) escena.remove(actual.g)
@@ -490,28 +466,13 @@ export default function TiposRobot() {
           })
         : e.valores[e.tipo]
       const f = `${e.tipo}|${e.animar ? 'anima' : v.join(',')}`
-      if (e.animar || f !== firma) sucio = true
+      if (e.animar || f !== firma) base.marcarSucio()
       firma = f
       actual.poner(v)
-      if (ctrl.update()) sucio = true
-      if (cubo.animando()) sucio = true
-      if (!sucio) return
-      sucio = false
-      renderer.render(escena, cam)
-      cubo.render()
-    }
-    const pararBucle = bucleVisible(cont, cuadro, { alMostrar: marcarSucio })
+    })
     return () => {
-      pararBucle()
-      ctrl.removeEventListener('change', marcarSucio)
-      for (const e of eventosPuntero) cont.removeEventListener(e, marcarSucio)
-      obs.disconnect()
-      quitarCursores()
-      ctrl.dispose()
-      cubo.dispose()
-      renderer.dispose()
+      base.destruir()
       pm.dispose()
-      cont.removeChild(renderer.domElement)
     }
   }, [])
 
