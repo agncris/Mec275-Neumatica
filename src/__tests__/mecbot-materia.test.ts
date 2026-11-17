@@ -17,7 +17,7 @@ describe('apuntes de MecBot', () => {
 
   it('le pregunta al modelo aunque la ficha exista', async () => {
     vi.stubEnv('MEC_BOT_API_KEY', 'clave-de-prueba')
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({
+    const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => new Response(JSON.stringify({
       choices: [{ message: { content: 'Una singularidad aparece cuando A5 queda en 0.' } }],
     }), { status: 200 }))
     vi.stubGlobal('fetch', fetchMock)
@@ -53,7 +53,7 @@ describe('apuntes de MecBot', () => {
 
   it('pide al modelo una guía y no corta con el muro', async () => {
     vi.stubEnv('MEC_BOT_API_KEY', 'clave-de-prueba')
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({
+    const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => new Response(JSON.stringify({
       choices: [{ message: { content: 'El siguiente paso es Offset en el contorno. ¿Qué bloques tienes ya en el lienzo?' } }],
     }), { status: 200 }))
     vi.stubGlobal('fetch', fetchMock)
