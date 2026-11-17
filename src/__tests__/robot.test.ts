@@ -4,7 +4,7 @@ import { dxfDeEjemplo, largoCurva, leerDXF, rectangulo, dividirLargo, discontinu
 import { componente, evaluar, paramsIniciales, type Definicion } from '../robot/nodos'
 import { planoXY, v } from '../robot/matematica'
 import { robotPorId } from '../robot/robots'
-import { simular } from '../robot/movimiento'
+import { explicarLineaKRL, simular } from '../robot/movimiento'
 
 describe('ejemplos de robótica', () => {
   for (const ej of EJEMPLOS_ROBOT) {
@@ -131,6 +131,21 @@ describe('evaluación de la definición', () => {
     expect(alto).toBeCloseTo(50, 0)
     expect(sim.krl).toMatch(/CIR \{X 50, Y 50, Z 0/)
     expect(sim.krl).toMatch(/\$BASE = \{X 900, Y 0, Z 200/)
+  })
+})
+
+describe('explicación del KRL', () => {
+  it('explica un LIN como el G-code: una fila por palabra', () => {
+    const filas = explicarLineaKRL('LIN {X 10, Y 20, Z 5, A 0, B 90, C 0} C_DIS ; hacia el borde')
+    expect(filas.map((f) => f.palabra)).toEqual(['LIN', 'X 10', 'Y 20', 'Z 5', 'A 0', 'B 90', 'C 0', 'C_DIS', '; hacia el borde'])
+    expect(filas[0].texto).toMatch(/línea recta/)
+    expect(filas.find((f) => f.palabra === 'C_DIS')!.texto).toMatch(/\$APO\.CDIS/)
+  })
+
+  it('explica la velocidad PTP y un comentario', () => {
+    expect(explicarLineaKRL('BAS (#VEL_PTP, 30)')[0].texto).toMatch(/30 %/)
+    expect(explicarLineaKRL('; Programa de estudio')[0].texto).toMatch(/Comentario/)
+    expect(explicarLineaKRL('$OUT[1] = TRUE')[0].texto).toMatch(/salida digital 1/)
   })
 })
 

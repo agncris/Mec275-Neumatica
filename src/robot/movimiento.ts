@@ -441,6 +441,129 @@ function armarKRL(prog: Programa, sim: Simulacion, nombre = 'neumalab'): { texto
   return { texto: lineas.join('\r\n') + '\r\n', lineas: deComando }
 }
 
+export interface PalabraKRL {
+  palabra: string
+  texto: string
+}
+
+/** Qué hace cada palabra de una línea KRL, en el mismo espíritu que la explicación del código G. */
+export function explicarLineaKRL(texto: string): PalabraKRL[] {
+  const cruda = texto.trim()
+  if (!cruda) return []
+  if (cruda.startsWith(';')) {
+    if (/^;FOLD\b/i.test(cruda)) return [{ palabra: cruda, texto: 'Abre un pliegue del editor de KUKA: agrupa líneas para poder ocultarlas. No mueve el robot.' }]
+    if (/^;ENDFOLD\b/i.test(cruda)) return [{ palabra: cruda, texto: 'Cierra el pliegue abierto con ;FOLD.' }]
+    return [{ palabra: cruda, texto: 'Comentario: el controlador no lo ejecuta. Sirve para explicar el programa.' }]
+  }
+  const corte = indiceComentarioKRL(cruda)
+  const codigo = (corte >= 0 ? cruda.slice(0, corte) : cruda).trim()
+  const comentario = corte >= 0 ? cruda.slice(corte + 1).trim() : ''
+  const out: PalabraKRL[] = []
+  const acceso = codigo.match(/^&ACCESS\s+(\S+)/i)
+  const rel = codigo.match(/^&REL\s+(\d+)/i)
+  const def = codigo.match(/^DEF\s+([A-Za-z_]\w*)\s*\(/i)
+  const bas = codigo.match(/^BAS\s*\(\s*(#\w+)\s*,\s*(-?[\d.]+)\s*\)/i)
+  const base = codigo.match(/^\$BASE\s*=\s*(\{[^}]+\})/i)
+  const tool = codigo.match(/^\$TOOL\s*=\s*(\{[^}]+\})/i)
+  const apo = codigo.match(/^\$APO\.CDIS\s*=\s*(-?[\d.]+)/i)
+  const vel = codigo.match(/^\$VEL\.CP\s*=\s*(-?[\d.]+)/i)
+  const ptp = codigo.match(/^PTP\s+(\{[^}]+\})/i)
+  const lin = codigo.match(/^LIN\s+(\{[^}]+\})(?:\s+(C_DIS|C_PTP|C_VEL))?/i)
+  const cir = codigo.match(/^CIR\s+(\{[^}]+\}),\s*(\{[^}]+\})(?:\s+(C_DIS|C_PTP|C_VEL))?/i)
+  const salida = codigo.match(/^\$OUT\[(\d+)\]\s*=\s*(TRUE|FALSE)/i)
+  const espera = codigo.match(/^WAIT\s+SEC\s+(-?[\d.]+)/i)
+  if (/^&ACCESS\b/i.test(codigo) && acceso) out.push({ palabra: codigo, texto: `Encabezado del archivo: el programa se puede leer y ejecutar (${acceso[1]}).` })
+  else if (rel) out.push({ palabra: codigo, texto: `Versión ${rel[1]} del archivo KRL.` })
+  else if (def) out.push({ palabra: codigo, texto: `Empieza el programa ${def[1]}. En KUKA cada programa es un DEF y termina con END.` })
+  else if (/^END$/i.test(codigo)) out.push({ palabra: 'END', texto: 'Fin del programa. El robot se detiene aquí.' })
+  else if (bas) {
+    const modo = bas[1].toUpperCase()
+    const n = bas[2]
+    out.push({
+      palabra: codigo,
+      texto:
+        modo === '#INITMOV'
+          ? 'Inicializa el movimiento: deja el robot listo para la primera orden.'
+          : modo === '#VEL_PTP'
+            ? `Velocidad de los PTP que siguen: ${n} % de la máxima de cada eje.`
+            : `Instrucción BAS ${modo} con valor ${n}.`,
+    })
+  } else if (base) {
+    out.push({ palabra: '$BASE', texto: 'Dónde está la pieza respecto del robot. Las posiciones de LIN y CIR se miden desde aquí.' })
+    out.push(...filasMarco(base[1], 'base'))
+  } else if (tool) {
+    out.push({ palabra: '$TOOL', texto: 'Dónde está la punta de la herramienta (TCP) respecto de la brida del robot.' })
+    out.push(...filasMarco(tool[1], 'tool'))
+  } else if (apo) out.push({ palabra: codigo, texto: `Distancia de aproximación: ${apo[1]} mm. Los movimientos con C_DIS empalman cuando falta esa distancia, sin frenar en cada punto.` })
+  else if (vel) out.push({ palabra: codigo, texto: `Velocidad de los LIN y CIR que siguen: ${vel[1]} m/s a lo largo del camino.` })
+  else if (ptp) {
+    out.push({ palabra: 'PTP', texto: 'Movimiento punto a punto: cada eje va por su cuenta hasta el ángulo pedido. El camino de la herramienta no es una recta.' })
+    out.push(...filasEjes(ptp[1]))
+  } else if (lin) {
+    out.push({ palabra: 'LIN', texto: 'La punta de la herramienta va en línea recta hasta este punto, a la velocidad $VEL.CP.' })
+    out.push(...filasMarco(lin[1], 'punto'))
+    if (lin[2]) out.push(aproximacion(lin[2]))
+  } else if (cir) {
+    out.push({ palabra: 'CIR', texto: 'Arco circular. El primer marco es un punto del arco y el segundo es el final. La punta recorre el arco a $VEL.CP.' })
+    out.push({ palabra: 'punto del arco', texto: 'Un punto intermedio, no el centro: con el inicio y el final define el círculo.' })
+    out.push(...filasMarco(cir[1], 'punto'))
+    out.push({ palabra: 'punto final', texto: 'Dónde termina el arco.' })
+    out.push(...filasMarco(cir[2], 'punto'))
+    if (cir[3]) out.push(aproximacion(cir[3]))
+  } else if (salida) out.push({ palabra: codigo, texto: salida[2].toUpperCase() === 'TRUE' ? `Enciende la salida digital ${salida[1]}. En esta tarea, así parte el husillo.` : `Apaga la salida digital ${salida[1]}.` })
+  else if (espera) out.push({ palabra: codigo, texto: `El robot espera ${espera[1]} s sin moverse. Sirve para que la fresa termine de cortar o para soltar la pieza.` })
+  else if (codigo) out.push({ palabra: codigo, texto: 'Línea KRL: el controlador la ejecuta tal cual.' })
+  if (comentario) out.push({ palabra: `; ${comentario}`, texto: 'Comentario: no se ejecuta. Aquí anota a qué punto del espacio va el movimiento.' })
+  return out
+}
+
+function indiceComentarioKRL(s: string): number {
+  let n = 0
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] === '{') n++
+    else if (s[i] === '}') n = Math.max(0, n - 1)
+    else if (s[i] === ';' && n === 0) return i
+  }
+  return -1
+}
+
+function aproximacion(modo: string): PalabraKRL {
+  if (modo.toUpperCase() === 'C_DIS') return { palabra: 'C_DIS', texto: 'No frena en el punto: empalma con el movimiento siguiente al llegar a la distancia de $APO.CDIS.' }
+  return { palabra: modo, texto: 'Aproximación al punto, para no detenerse del todo antes del movimiento que sigue.' }
+}
+
+function filasEjes(bloque: string): PalabraKRL[] {
+  return pares(bloque).map(([letra, num]) => ({ palabra: `${letra} ${num}`, texto: `Ángulo del eje ${letra}: ${num}°.` }))
+}
+
+function filasMarco(bloque: string, uso: 'base' | 'tool' | 'punto'): PalabraKRL[] {
+  return pares(bloque).map(([letra, num]) => ({ palabra: `${letra} ${num}`, texto: textoMarco(letra, num, uso) }))
+}
+
+function pares(bloque: string): Array<[string, string]> {
+  const dentro = bloque.replace(/^\{|\}$/g, '')
+  const out: Array<[string, string]> = []
+  for (const parte of dentro.split(',')) {
+    const m = parte.trim().match(/^([A-Za-z]\d*)\s+(-?[\d.]+)$/)
+    if (m) out.push([m[1], m[2]])
+  }
+  return out
+}
+
+function textoMarco(letra: string, num: string, uso: 'base' | 'tool' | 'punto'): string {
+  if (letra === 'X' || letra === 'Y' || letra === 'Z') {
+    if (uso === 'tool' && letra === 'X') return `Desplazamiento del TCP en X: ${num} mm. El largo de la herramienta va en este eje.`
+    if (uso === 'tool') return `Desplazamiento del TCP en ${letra}: ${num} mm.`
+    if (uso === 'base') return `La pieza está a ${num} mm en ${letra}, medida desde la base del robot.`
+    return `Posición de la punta en ${letra}: ${num} mm, medida en $BASE.`
+  }
+  if (letra === 'A' || letra === 'B' || letra === 'C') {
+    const que = uso === 'tool' ? 'de la herramienta' : uso === 'base' ? 'de la pieza' : 'de la herramienta al llegar'
+    return `Giro ${letra} ${que}: ${num}°. KUKA da la orientación con los ángulos A, B y C.`
+  }
+  return `${letra} = ${num}.`
+}
+
 /** Largo total de los movimientos de un conjunto de comandos (informativo). */
 export function resumenComandos(cs: Comando[]): Record<string, number> {
   const r: Record<string, number> = {}

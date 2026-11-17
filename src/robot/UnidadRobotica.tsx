@@ -28,7 +28,7 @@ import { EJEMPLOS_ROBOT } from './ejemplos'
 import { cajaCurvas, leerDXF, type Curva } from './geometria'
 import { planoXY, v, type Plano, type V3 } from './matematica'
 import Mando, { poseDe, type PuntoEnsenado } from './Mando'
-import { comandoEn, ejesEn, generarKRL, PLACA_DEFECTO, simular, type Simulacion } from './movimiento'
+import { comandoEn, ejesEn, explicarLineaKRL, generarKRL, PLACA_DEFECTO, simular, type Simulacion } from './movimiento'
 import {
   componente,
   describirDato,
@@ -105,12 +105,15 @@ function previaDe(datos: Dato[]): Previa {
 
 type Modo = 'visual' | 'mando'
 
-/** El KRL generado, con la línea que corresponde al instante de la simulación. */
-function CodigoKRL({ sim, t }: { sim: Simulacion; t: number }) {
+/** El KRL generado: la línea en curso se marca, y debajo se explica cada palabra como en el G-code. */
+function CodigoKRL({ sim, t, seguir }: { sim: Simulacion; t: number; seguir: boolean }) {
   const filas = sim.krl.replace(/\r/g, '').replace(/\n$/, '').split('\n')
   const cmd = comandoEn(sim, t)
   const activa = sim.krlLineas[cmd] ?? -1
+  const [elegida, setElegida] = useState<number | null>(null)
+  const explicada = seguir && activa >= 0 ? activa : (elegida ?? (activa >= 0 ? activa : 0))
   const marca = useRef<HTMLDivElement>(null)
+  const explicacion = explicarLineaKRL(filas[explicada] ?? '')
   useEffect(() => {
     const el = marca.current
     const caja = el?.closest('.panel-acoplado__contenido') as HTMLElement | null
@@ -119,21 +122,56 @@ function CodigoKRL({ sim, t }: { sim: Simulacion; t: number }) {
     const cr = caja.getBoundingClientRect()
     if (er.top < cr.top) caja.scrollTop -= cr.top - er.top
     else if (er.bottom > cr.bottom) caja.scrollTop += er.bottom - cr.bottom
-  }, [activa])
+  }, [explicada])
   return (
     <>
       <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: '#51606f' }}>
-        El programa que se genera para el controlador KUKA ({filas.length} líneas).
-        {activa >= 0 ? ` Ahora va por la línea ${activa + 1}.` : ''} Descárgalo desde Exportar.
+        El programa que se genera para el controlador KUKA ({filas.length} líneas). Elige una línea para ver qué hace cada palabra.
+        {seguir && activa >= 0 ? ` Ahora va por la línea ${activa + 1}.` : ''} Descárgalo desde Exportar.
       </p>
       <pre style={{ margin: 0, overflow: 'auto', background: '#1f2328', color: '#e8eaed', padding: '6px 0', borderRadius: 8, fontSize: '0.78rem', lineHeight: '1.45' }} data-krl="si" data-krl-linea={activa >= 0 ? activa : undefined}>
-        {filas.map((l, i) => (
-          <div key={i} ref={i === activa ? marca : undefined} data-krl-fila={i} style={{ padding: '0 10px', background: i === activa ? '#1d4e89' : undefined, color: i === activa ? '#fff' : undefined }}>
-            <span style={{ display: 'inline-block', width: '2.2em', color: i === activa ? '#c5d8ef' : '#6b7785', userSelect: 'none' }}>{i + 1}</span>
-            {l || ' '}
-          </div>
-        ))}
+        {filas.map((l, i) => {
+          const corre = i === activa
+          const mira = i === explicada
+          return (
+            <div
+              key={i}
+              ref={mira ? marca : undefined}
+              data-krl-fila={i}
+              role="button"
+              tabIndex={0}
+              onClick={() => setElegida(i)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  setElegida(i)
+                }
+              }}
+              title="Explicar esta línea"
+              style={{ padding: '0 10px', cursor: 'pointer', background: corre ? '#1d4e89' : mira ? '#3a3424' : undefined, color: corre ? '#fff' : mira ? '#ffe7b3' : undefined }}
+            >
+              <span style={{ display: 'inline-block', width: '2.2em', color: corre ? '#c5d8ef' : mira ? '#e2c98a' : '#6b7785', userSelect: 'none' }}>{i + 1}</span>
+              {l || ' '}
+            </div>
+          )
+        })}
       </pre>
+      <p style={{ margin: '8px 0 6px', fontSize: '0.82rem', color: '#51606f' }}>Línea {explicada + 1}. Cada palabra, como en el código G.</p>
+      <code style={{ display: 'block', background: '#f4f6f9', padding: '6px 8px', borderRadius: 6, marginBottom: 6, whiteSpace: 'pre-wrap' }}>{filas[explicada] || ' '}</code>
+      {explicacion.length ? (
+        <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '0.88rem' }} data-explicacion-krl="si">
+          <tbody>
+            {explicacion.map((e, i) => (
+              <tr key={i}>
+                <td style={{ padding: '4px 8px', borderBottom: '1px solid #eef1f4', fontFamily: 'ui-monospace, Menlo, monospace', fontWeight: 700, whiteSpace: 'nowrap', verticalAlign: 'top' }}>{e.palabra}</td>
+                <td style={{ padding: '4px 8px', borderBottom: '1px solid #eef1f4' }}>{e.texto}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <p style={{ color: '#5f6b78', fontSize: '0.86rem' }}>Línea vacía.</p>
+      )}
     </>
   )
 }
@@ -1021,7 +1059,7 @@ export default function UnidadRobotica() {
       tituloCorto: 'KRL',
       contenido:
         modo === 'visual' && sim ? (
-          <CodigoKRL sim={sim} t={tRef.current} />
+          <CodigoKRL sim={sim} t={tRef.current} seguir={reproduciendo} />
         ) : (
           <p style={{ margin: 0, fontSize: '0.86rem', color: '#51606f' }}>
             {modo === 'visual' ? 'Todavía no hay programa: conecta comandos, robot y herramienta al Core.' : 'En el mando manual, el programa KRL de tus puntos se descarga desde Exportar.'}
