@@ -29,16 +29,18 @@ import {
   fijarHerramientas,
   torretaDe,
   material as materialDe,
-  nombreHerramienta,
   origenPrograma,
   posicionCasa,
   type ConfigCNC,
   type TipoMaquina,
 } from './maquinas'
-import Plano2D, { textoPunto } from './Plano2D'
+import Plano2D from './Plano2D'
 import SelectorMaquina, { MAQUINAS } from './SelectorMaquina'
 import Preparacion from './PanelPreparacion'
-import { botonSuave, celdaNum, rotulo, selector } from './estilos'
+import Revision from './Revision'
+import Tablero from './Tablero'
+import TablaPuntos, { filasCoordenadas } from './TablaPuntos'
+import { botonSuave, rotulo, selector } from './estilos'
 import { SimuladorCNC, volumenPieza } from './simulador'
 import type { VistaCNC } from './Maquina3D'
 
@@ -978,211 +980,7 @@ export default function UnidadCNC() {
   )
 }
 
-/** Filas de la tabla de coordenadas (con encabezado), para copiar al informe. */
-function filasCoordenadas(resultado: ResultadoGcode, torno: boolean, lineas: string[], casa: { x: number; y: number; z: number }): string[][] {
-  let previo = casa
-  const r = (v: number) => String(Math.round(v * 1000) / 1000)
-  const cab = torno ? ['Bloque', 'G', 'X (Ø)', 'Z', 'U (ΔX)', 'W (ΔZ)'] : ['Bloque', 'G', 'X', 'Y', 'Z', 'ΔX', 'ΔY', 'ΔZ']
-  const filas = resultado.puntos.map((p) => {
-    const d = { x: p.pos.x - previo.x, y: p.pos.y - previo.y, z: p.pos.z - previo.z }
-    previo = p.pos
-    const n = /^\s*N(\d+)/i.exec(lineas[p.linea] ?? '')
-    const b = n ? `N${n[1]}` : `L${p.linea + 1}`
-    return torno ? [b, p.codigo, r(p.prog.x), r(p.prog.z), r(d.x), r(d.z)] : [b, p.codigo, r(p.prog.x), r(p.prog.y), r(p.prog.z), r(d.x), r(d.y), r(d.z)]
-  })
-  return [cab, ...filas]
-}
-
 type PestanaCNC = 'preparacion' | 'plano' | 'explicar' | 'coordenadas' | 'plano-tarea'
-
-
-function Revision({ resultado, errores, avisos, irA, onEstudiar }: { resultado: ResultadoGcode; errores: ResultadoGcode['diagnosticos']; avisos: ResultadoGcode['diagnosticos']; irA: (n: number) => void; onEstudiar: (ancla: string) => void }) {
-  const sinC = resultado.sinComentario
-  return (
-    <div style={{ marginTop: 8 }} data-revision-cnc="si">
-      {errores.length === 0 && avisos.length === 0 && (
-        <p style={{ margin: '3px 0', color: '#0a6b3c', fontSize: '0.86rem' }}>✓ El programa no tiene errores de escritura.</p>
-      )}
-      {[...errores, ...avisos].map((d, i) => (
-        <p
-          key={i}
-          onClick={() => irA(d.linea)}
-          style={{ margin: '3px 0', fontSize: '0.86rem', cursor: 'pointer', color: d.nivel === 'error' ? '#c62828' : d.nivel === 'aviso' ? '#8a5b00' : '#5a6b7d' }}
-        >
-          {d.nivel === 'error' ? '✕' : d.nivel === 'aviso' ? '⚠' : 'ℹ'} Línea {d.linea + 1}: {d.texto}
-        </p>
-      ))}
-      {errores.length > 0 && (
-        <p style={{ margin: '3px 0', fontSize: '0.82rem', color: '#5a6b7d' }}>
-          Con errores, la máquina ejecuta el programa sólo hasta la línea anterior al primer error.{' '}
-          <button type="button" onClick={() => onEstudiar('bloque')} style={enlaceEstudiar}>
-            ¿Cómo se escribe un bloque? → Estudiar
-          </button>
-        </p>
-      )}
-      {sinC.length > 0 && (
-        <p style={{ margin: '3px 0', fontSize: '0.82rem', color: '#5a6b7d' }}>
-          ℹ {sinC.length === 1 ? 'Una línea no tiene' : `${sinC.length} líneas no tienen`} comentario:{' '}
-          {sinC.slice(0, 12).map((n, i) => (
-            <span key={n}>
-              {i ? ', ' : ''}
-              <a href="#" onClick={(e) => (e.preventDefault(), irA(n))}>
-                {n + 1}
-              </a>
-            </span>
-          ))}
-          {sinC.length > 12 ? '…' : ''}. Comentar cada línea ( … ) ayuda a entender y revisar el programa.
-        </p>
-      )}
-    </div>
-  )
-}
-
-function Tablero({
-  sim,
-  torno,
-  paso,
-  ultimo,
-  modal,
-  tiempoTotal,
-  volumen,
-  volumenInicial,
-}: {
-  sim: SimuladorCNC
-  torno: boolean
-  paso: SimuladorCNC['programa']['pasos'][number] | undefined
-  ultimo: SimuladorCNC['programa']['pasos'][number] | undefined
-  modal: ResultadoGcode['estados'][number] | undefined
-  tiempoTotal: number
-  volumen: number
-  volumenInicial: number
-}) {
-  const act = paso ?? ultimo
-  // Las cotas se muestran como las ve el programa (respecto de su cero).
-  const o = act?.origen ?? sim.programa.pasos[0]?.origen ?? { x: 0, y: 0, z: 0 }
-  const p = { x: sim.pos.x - o.x, y: sim.pos.y - o.y, z: sim.pos.z - o.z }
-  const rpm = paso && paso.husillo !== 'off' ? Math.round(paso.rpm) : 0
-  const f = (v: number) => v.toFixed(3)
-  const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
-  const ejes: Array<[string, number]> = torno
-    ? [
-        ['X Ø', p.x],
-        ['Z', p.z],
-      ]
-    : [
-        ['X', p.x],
-        ['Y', p.y],
-        ['Z', p.z],
-      ]
-  return (
-    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 8 }} data-dro="si">
-      <div style={{ background: '#1b232c', color: '#7CFC9A', borderRadius: 8, padding: '6px 10px', fontFamily: 'ui-monospace, Menlo, monospace', minWidth: 170 }}>
-        {ejes.map(([n, v]) => (
-          <div key={n} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: '1.05rem' }}>
-            <span style={{ color: '#b9c4cf' }}>{n}</span>
-            <span data-eje={n}>{f(v)}</span>
-          </div>
-        ))}
-      </div>
-      <div style={{ fontSize: '0.84rem', color: '#33475c', lineHeight: 1.6, flex: '1 1 200px' }}>
-        <div>
-          <strong>{act?.codigo ?? '—'}</strong> · {modal?.absoluto === false ? 'G91 incrementales' : 'G90 absolutas'} · {modal?.pulgadas ? 'pulgadas' : 'mm'}
-        </div>
-        <div>
-          Herramienta: <strong>{nombreHerramienta(sim.config.maquina, sim.herramienta)}</strong>
-        </div>
-        <div>
-          Husillo: <strong>{rpm ? `${rpm} rpm ${paso?.husillo === 'ccw' ? '(M04)' : '(M03)'}` : 'detenido'}</strong> · Avance:{' '}
-          <strong>{paso && paso.tipo === 'corte' ? `${Math.round(paso.avance)} mm/min` : paso?.tipo === 'rapido' ? 'rápido' : '—'}</strong>
-          {paso?.refrigerante ? ' · 💧 refrigerante' : ''}
-        </div>
-        <div>
-          Tiempo: <strong>{mmss(sim.tiempo)}</strong> de {mmss(tiempoTotal)} · Material quitado:{' '}
-          <strong>{volumenInicial > 0 ? Math.round(((volumenInicial - volumen) / volumenInicial) * 100) : 0}%</strong>
-          {sim.pieza.tipo === 'torno' && sim.pieza.tronzada ? ' · ✂ pieza tronzada' : ''}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function TablaPuntos({
-  resultado,
-  torno,
-  lineas,
-  irA,
-  seleccionada,
-  casa,
-  origen,
-}: {
-  resultado: ResultadoGcode
-  torno: boolean
-  lineas: string[]
-  irA: (n: number) => void
-  seleccionada: number | null
-  casa: { x: number; y: number; z: number }
-  origen: { x: number; y: number; z: number }
-}) {
-  const [copiado, setCopiado] = useState(false)
-  const casaProg = { x: casa.x - origen.x, y: casa.y - origen.y, z: casa.z - origen.z }
-  const filas = useMemo(() => {
-    let previo = casa
-    return resultado.puntos.map((p) => {
-      const d = { x: p.pos.x - previo.x, y: p.pos.y - previo.y, z: p.pos.z - previo.z }
-      previo = p.pos
-      const n = /^\s*N(\d+)/i.exec(lineas[p.linea] ?? '')
-      return { ...p, pos: p.prog, d, n: n ? `N${n[1]}` : `L${p.linea + 1}` }
-    })
-  }, [resultado, lineas, casa])
-  const r = (v: number) => String(Math.round(v * 1000) / 1000)
-  const cab = torno ? ['Bloque', 'G', 'X (Ø)', 'Z', 'U (ΔX)', 'W (ΔZ)'] : ['Bloque', 'G', 'X', 'Y', 'Z', 'ΔX', 'ΔY', 'ΔZ']
-  const copiar = () => {
-    const texto = [cab.join('\t'), ...filas.map((f) => (torno ? [f.n, f.codigo, r(f.pos.x), r(f.pos.z), r(f.d.x), r(f.d.z)] : [f.n, f.codigo, r(f.pos.x), r(f.pos.y), r(f.pos.z), r(f.d.x), r(f.d.y), r(f.d.z)]).join('\t'))].join('\n')
-    void navigator.clipboard?.writeText(texto).then(() => {
-      setCopiado(true)
-      setTimeout(() => setCopiado(false), 2000)
-    })
-  }
-  if (!filas.length) return <p style={{ color: '#5f6b78', fontSize: '0.86rem' }}>El programa todavía no mueve la máquina.</p>
-  return (
-    <div>
-      <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: '#5a6b7d' }}>
-        Dónde queda la herramienta al final de cada bloque, en absolutas y en incrementales (Δ desde el bloque anterior).{' '}
-        <button onClick={copiar} style={{ ...botonSuave, padding: '1px 8px', fontSize: '0.78rem' }}>
-          {copiado ? '✓ Copiada' : 'Copiar tabla'}
-        </button>
-      </p>
-      <div style={{ maxHeight: 260, overflow: 'auto', border: '1px solid #e0e5eb', borderRadius: 6 }}>
-        <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '0.82rem', fontFamily: 'ui-monospace, Menlo, monospace' }} data-tabla-puntos="si">
-          <thead style={{ position: 'sticky', top: 0 }}>
-            <tr>
-              {cab.map((c) => (
-                <th key={c} style={{ background: '#33475c', color: '#fff', padding: '3px 6px', textAlign: 'right' }}>
-                  {c}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filas.map((f, i) => (
-              <tr key={i} onClick={() => irA(f.linea)} style={{ cursor: 'pointer', background: seleccionada === f.linea ? '#fff2a8' : i % 2 ? '#f8fafc' : '#fff' }}>
-                <td style={celdaNum}>{f.n}</td>
-                <td style={celdaNum}>{f.codigo}</td>
-                <td style={celdaNum}>{r(f.pos.x)}</td>
-                {!torno && <td style={celdaNum}>{r(f.pos.y)}</td>}
-                <td style={celdaNum}>{r(f.pos.z)}</td>
-                <td style={{ ...celdaNum, color: '#5a6b7d' }}>{r(f.d.x)}</td>
-                {!torno && <td style={{ ...celdaNum, color: '#5a6b7d' }}>{r(f.d.y)}</td>}
-                <td style={{ ...celdaNum, color: '#5a6b7d' }}>{r(f.d.z)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <p style={{ margin: '4px 0 0', fontSize: '0.78rem', color: '#5f6b78' }}>Punto de partida: posición de referencia {textoPunto(casaProg, torno)}.</p>
-    </div>
-  )
-}
 
 
 const estadoChip: React.CSSProperties = { color: '#fff', borderRadius: 6, padding: '1px 8px', fontSize: '0.75rem', fontWeight: 700 }
