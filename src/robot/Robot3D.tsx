@@ -50,11 +50,30 @@ export interface VistaRobot {
   marcas: V3[]
 }
 
-const NARANJA = new THREE.MeshStandardMaterial({ color: 0xf06a14, metalness: 0.25, roughness: 0.42 })
-const NEGRO = new THREE.MeshStandardMaterial({ color: 0x25292e, metalness: 0.3, roughness: 0.55 })
-const GRIS = new THREE.MeshStandardMaterial({ color: 0x9aa2ab, metalness: 0.85, roughness: 0.3 })
-const MESON = new THREE.MeshStandardMaterial({ color: 0x6f5a45, metalness: 0.05, roughness: 0.8 })
-const ACERO = new THREE.MeshStandardMaterial({ color: 0xb8bec6, metalness: 0.75, roughness: 0.35 })
+const NARANJA = new THREE.MeshPhysicalMaterial({ color: 0xf15a12, metalness: 0.12, roughness: 0.34, clearcoat: 0.55, clearcoatRoughness: 0.28 })
+const NEGRO = new THREE.MeshStandardMaterial({ color: 0x1a1d22, metalness: 0.2, roughness: 0.62 })
+const GRIS = new THREE.MeshStandardMaterial({ color: 0xc5ccd4, metalness: 0.92, roughness: 0.22 })
+const MESON = new THREE.MeshStandardMaterial({ color: 0x2a3038, metalness: 0.45, roughness: 0.42 })
+const ACERO = new THREE.MeshStandardMaterial({ color: 0xd5dae0, metalness: 0.95, roughness: 0.18 })
+const PLANCHA = new THREE.MeshStandardMaterial({ color: 0x9aa3ad, metalness: 0.72, roughness: 0.38 })
+const HUSILLO = new THREE.MeshStandardMaterial({ color: 0xd8dde3, metalness: 0.82, roughness: 0.28 })
+
+/** Degradado vertical oscuro: el viewport se lee como un estudio, no como una caja gris. */
+function fondoEstudio(): THREE.CanvasTexture {
+  const c = document.createElement('canvas')
+  c.width = 2
+  c.height = 256
+  const g = c.getContext('2d')!
+  const grad = g.createLinearGradient(0, 0, 0, 256)
+  grad.addColorStop(0, '#10141a')
+  grad.addColorStop(0.62, '#1a212a')
+  grad.addColorStop(1, '#2c343e')
+  g.fillStyle = grad
+  g.fillRect(0, 0, 2, 256)
+  const t = new THREE.CanvasTexture(c)
+  t.colorSpace = THREE.SRGBColorSpace
+  return t
+}
 
 function caja(w: number, h: number, d: number, mat: THREE.Material, r = 6): THREE.Mesh {
   const m = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 2, Math.min(r, w / 3, h / 3, d / 3)), mat)
@@ -157,7 +176,7 @@ function armarRobot(m: ModeloRobot, pedestal: number, h: Herramienta): ModeloArm
   let giro: THREE.Object3D | null = null
   const L = h.largo
   if (h.tipo === 'fresa' || h.tipo === 'taladro') {
-    const cuerpo = cil(38, L * 0.55, h.tipo === 'fresa' ? new THREE.MeshStandardMaterial({ color: 0xe8e8e8, metalness: 0.4, roughness: 0.35 }) : NEGRO, 'x')
+    const cuerpo = cil(38, L * 0.55, h.tipo === 'fresa' ? HUSILLO : NEGRO, 'x')
     cuerpo.position.x = L * 0.3
     const nariz = cil(22, L * 0.12, GRIS, 'x', 24, 30)
     nariz.position.x = L * 0.63
@@ -303,6 +322,7 @@ export default function Robot3D({
     renderer.setSize(cont.clientWidth, cont.clientHeight)
     renderer.outputColorSpace = THREE.SRGBColorSpace
     renderer.toneMapping = THREE.ACESFilmicToneMapping
+    renderer.toneMappingExposure = 1.08
     renderer.shadowMap.enabled = true
     renderer.shadowMap.type = THREE.PCFSoftShadowMap
     renderer.domElement.style.display = 'block'
@@ -312,32 +332,43 @@ export default function Robot3D({
 
     const escena = new THREE.Scene()
     const pmrem = new THREE.PMREMGenerator(renderer)
+    const fondo = fondoEstudio()
     escena.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
-    escena.environmentIntensity = 0.8
-    escena.background = new THREE.Color(0xdfe3e8)
+    escena.environmentIntensity = 1.15
+    escena.background = fondo
     // Mundo con Z hacia arriba.
     const mundo = new THREE.Group()
     mundo.rotation.x = -Math.PI / 2
     escena.add(mundo)
-    const piso = new THREE.Mesh(new THREE.PlaneGeometry(8000, 8000), new THREE.MeshStandardMaterial({ color: 0xc9ced4, roughness: 0.95 }))
+    const piso = new THREE.Mesh(new THREE.PlaneGeometry(8000, 8000), new THREE.MeshStandardMaterial({ color: 0x171c22, roughness: 0.92, metalness: 0.08 }))
     piso.receiveShadow = true
     mundo.add(piso)
-    const grilla = new THREE.GridHelper(6000, 60, 0x9aa3ad, 0xb4bbc3)
+    const grilla = new THREE.GridHelper(6000, 40, 0x3a4450, 0x2a323c)
     grilla.rotation.x = Math.PI / 2
-    grilla.position.z = 0.5
+    grilla.position.z = 1
+    for (const m of Array.isArray(grilla.material) ? grilla.material : [grilla.material]) {
+      m.transparent = true
+      m.opacity = 0.45
+    }
     mundo.add(grilla)
     const ejesMundo = new THREE.AxesHelper(250)
     ejesMundo.position.z = 1
     mundo.add(ejesMundo)
-    const sol = new THREE.DirectionalLight(0xfff4e6, 2.1)
+    const sol = new THREE.DirectionalLight(0xfff3e4, 2.6)
     sol.castShadow = true
     sol.shadow.mapSize.set(2048, 2048)
-    sol.shadow.bias = -0.0004
-    Object.assign(sol.shadow.camera, { left: -2500, right: 2500, top: 2500, bottom: -2500, near: 100, far: 9000 })
-    sol.position.set(-1500, 4000, 2500)
-    escena.add(sol, new THREE.HemisphereLight(0xf2f6ff, 0x5d6168, 0.5))
+    sol.shadow.bias = -0.0002
+    sol.shadow.normalBias = 0.04
+    sol.shadow.radius = 3
+    Object.assign(sol.shadow.camera, { left: -1600, right: 1800, top: 1800, bottom: -1400, near: 400, far: 6000 })
+    sol.position.set(1100, 2400, 1600)
+    const relleno = new THREE.DirectionalLight(0xc5d4e8, 0.55)
+    relleno.position.set(-1400, 900, -400)
+    const contra = new THREE.DirectionalLight(0xffd2a8, 0.7)
+    contra.position.set(-500, 1400, -2000)
+    escena.add(sol, relleno, contra, new THREE.HemisphereLight(0xb7c4d4, 0x14181e, 0.4))
 
-    const camara = new THREE.PerspectiveCamera(38, cont.clientWidth / Math.max(1, cont.clientHeight), 5, 30000)
+    const camara = new THREE.PerspectiveCamera(40, cont.clientWidth / Math.max(1, cont.clientHeight), 5, 30000)
     const controles = new OrbitControls(camara, renderer.domElement)
     // El botón del medio (la rueda apretada) también gira la cámara, sin el autodesplazamiento del navegador.
     controles.mouseButtons.MIDDLE = THREE.MOUSE.ROTATE
@@ -348,11 +379,11 @@ export default function Robot3D({
     controlesRef.current = controles
     aplicarModoArrastre(controles, modoArrastre)
 
-    // Más oscuro que el fondo (#dfe3e8), un poco transparente. Al pasar el mouse la cara se pone gris oscuro.
+    // Claro sobre el estudio oscuro, un poco transparente. Al pasar el mouse la cara se oscurece.
     const cara = {
-      color: '#6d737b',
-      labelColor: '#111111',
-      opacity: 0.82,
+      color: '#f3f4f6',
+      labelColor: '#1a1a1a',
+      opacity: 0.88,
       border: { size: 1.5, color: '#3a3a3a' },
       hover: { color: '#4a4e54', labelColor: '#ffffff', opacity: 0.96, border: { size: 1.5, color: '#2a2a2a' } },
     }
@@ -415,12 +446,12 @@ export default function Robot3D({
     const encuadrar = (v: Vista) => {
       const V = vista.current
       const R = V.modelo.alcance + V.pedestal * 0.3
-      const c = new THREE.Vector3(V.base.o.x * 0.45, V.pedestal + V.modelo.d1 * 0.8, -V.base.o.y * 0.45) // en coordenadas three (Y arriba)
-      const d = R * 1.9
-      if (v === 'frente') camara.position.set(c.x, c.y + 50, c.z + d)
-      else if (v === 'arriba') camara.position.set(c.x, c.y + d * 1.1, c.z + 1)
-      else if (v === 'lado') camara.position.set(c.x + d, c.y + 100, c.z)
-      else camara.position.set(c.x + d * 0.75, c.y + d * 0.55, c.z + d * 0.75)
+      const c = new THREE.Vector3(V.base.o.x * 0.38, V.pedestal + V.modelo.d1 + V.modelo.a2 * 0.28, -V.base.o.y * 0.38)
+      const d = R * 2.05
+      if (v === 'frente') camara.position.set(c.x, c.y + d * 0.08, c.z + d)
+      else if (v === 'arriba') camara.position.set(c.x, c.y + d * 0.95, c.z + d * 0.06)
+      else if (v === 'lado') camara.position.set(c.x + d, c.y + d * 0.12, c.z)
+      else camara.position.set(c.x + d * 0.7, c.y + d * 0.46, c.z + d * 0.58)
       controles.target.copy(c)
       controles.update()
     }
@@ -490,7 +521,7 @@ export default function Robot3D({
           }
         }
         if (V.espesor > 0) {
-          const plancha = caja(w, h, V.espesor, new THREE.MeshStandardMaterial({ color: 0x8e979f, metalness: 0.6, roughness: 0.45 }), 1)
+          const plancha = caja(w, h, V.espesor, PLANCHA, 1)
           plancha.position.set(pl.x0 + w / 2, pl.y0 + h / 2, V.base.o.z - V.espesor / 2)
           g.add(plancha)
         }
@@ -596,6 +627,7 @@ export default function Robot3D({
       controles.dispose()
       renderer.dispose()
       pmrem.dispose()
+      fondo.dispose()
       cont.removeChild(renderer.domElement)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -611,7 +643,7 @@ export default function Robot3D({
   if (sinWebGL) return <p style={{ padding: 20, color: '#8a5b00' }}>Este navegador no tiene WebGL: la vista 3D no está disponible.</p>
   const llena = pantalla || alto === '100%'
   return (
-    <div ref={envolturaRef} style={{ position: 'relative', display: 'flex', flexDirection: 'column', height: llena ? '100%' : undefined, minHeight: 0, background: pantalla ? '#dde2e7' : undefined }}>
+    <div ref={envolturaRef} style={{ position: 'relative', display: 'flex', flexDirection: 'column', height: llena ? '100%' : undefined, minHeight: 0, background: pantalla ? '#12161c' : undefined }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginBottom: 8, flex: 'none' }}>
         <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>{encabezado}</div>
         <div style={{ marginLeft: 'auto', display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 8, flex: '1 1 240px' }} role="toolbar" aria-label="Vistas de la simulación">
@@ -646,7 +678,7 @@ export default function Robot3D({
         </div>
       </div>
       <div style={{ position: 'relative', flex: llena ? 1 : undefined, height: llena ? undefined : alto, minHeight: llena ? 0 : undefined, display: 'flex' }}>
-        <div ref={contRef} style={{ position: 'relative', width: '100%', flex: 1, minHeight: 0, borderRadius: 8, overflow: 'hidden', background: '#dfe3e8' }} />
+        <div ref={contRef} style={{ position: 'relative', width: '100%', flex: 1, minHeight: 0, borderRadius: 8, overflow: 'hidden', background: '#12161c' }} />
         <div className="flechas-cubo" role="group" aria-label="Girar la vista 90 grados">
           {(
             [
