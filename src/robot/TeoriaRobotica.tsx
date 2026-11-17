@@ -7,7 +7,7 @@
 import { createContext, useContext, type ReactNode } from 'react'
 import { VER_TAREA_ROBOTICA } from '../unidades'
 import { FiguraAlcance, FiguraGrados, FiguraMovimientos, FiguraSvg } from './animaciones'
-import { DemoAlcance, DemoEjes } from './Demo3D'
+import { DemoAlcance, DemoEjes, DemoMovimientos } from './Demo3D'
 import { ROBOTS } from './robots'
 
 /** El botón «probarlo» de Estudiar llama a esto para abrir el Laboratorio o la Tarea. */
@@ -288,6 +288,8 @@ export function ProgramacionParametrica() {
         como curvas donde se piden puntos; azul cuando está seleccionado.
       </p>
       <FiguraMovimientos />
+      <p style={p}>Pruébalo con el robot: elige el movimiento y mira el recorrido de la herramienta.</p>
+      <DemoMovimientos />
       <p style={p}>
         <strong>PTP</strong> mueve todos los ejes a la vez y llega lo más rápido posible,
         pero la herramienta no va en línea recta (para acercarse y alejarse). <strong>LIN</strong> lleva la herramienta en

@@ -3,8 +3,10 @@
  * deslizadores. Sirven para ver qué hace cada eje, qué es una singularidad y
  * qué pasa cuando la pieza queda más lejos que el alcance.
  */
-import { lazy, Suspense, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { ROBOTS, cercaDelLimite, inversa, orientacionDePlano } from './robots'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { HOME, ROBOTS, cercaDelLimite, inversa, orientacionDePlano } from './robots'
+import { ejesEn, simular } from './movimiento'
+import type { Comando, Programa } from './nodos'
 import { planoXY, v } from './matematica'
 import type { VistaRobot } from './Robot3D'
 
@@ -115,6 +117,92 @@ export function DemoAlcance() {
             : sol.falla === 'limite'
               ? `No llega: el eje A${(sol.eje ?? 0) + 1} se sale de su rango.`
               : `No llega: la muñeca tendría que estar a más de ${MODELO.alcance} mm de la base.`}
+        </p>
+      </div>
+    </figure>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// PTP, LIN y CIR entre los mismos dos puntos
+// ---------------------------------------------------------------------------
+export type Modo = 'PTP' | 'LIN' | 'CIR'
+const COLOR_MODO: Record<Modo, string> = { PTP: '#d85a0e', LIN: '#0e7a43', CIR: '#1668c7' }
+const TEXTO_MODO: Record<Modo, string> = {
+  PTP: 'PTP: cada eje se mueve a su ritmo y llegan juntos. La herramienta dibuja una curva que no controlas. Sirve para acercarse y alejarse en el aire.',
+  LIN: 'LIN: la herramienta sigue una línea recta. Es lo que se usa para cortar en recta.',
+  CIR: 'CIR: la herramienta pasa por un punto auxiliar y dibuja un arco. Se usa para cortar curvas.',
+}
+const P0 = v(480, -220, 220)
+const P1 = v(480, 220, 220)
+const AUX = v(620, 0, 220)
+
+function programaDe(modo: Modo): Programa {
+  const mover: Comando[] = [{ tipo: 'PTP', plano: planoXY(P0), vel: 40, nodo: 'a' }]
+  if (modo === 'PTP') mover.push({ tipo: 'PTP', plano: planoXY(P1), vel: 40, nodo: 'b' })
+  else if (modo === 'LIN') mover.push({ tipo: 'LIN', plano: planoXY(P1), vel: 0.1, nodo: 'b' })
+  else mover.push({ tipo: 'CIR', aux: planoXY(AUX), plano: planoXY(P1), vel: 0.1, nodo: 'b' })
+  return { comandos: mover, robot: { modelo: MODELO, pedestal: 0 }, herramienta: FRESA, base: planoXY(v(0, 0, 0)), espesor: 0, inicio: [0, -90, 90, 0, 0, 0], nodo: 'demo' }
+}
+
+/** El tramo que importa (de P0 a P1) de cada modo: la simulación, el recorrido de la punta y cuándo empieza. */
+export function tramoDemo(modo: Modo) {
+  const sim = simular(programaDe(modo))
+  const ms = sim.muestras.filter((m) => m.cmd >= 1)
+  const t0 = ms.length ? ms[0].t : 0
+  return { sim, t0, dur: Math.max(0.1, sim.tiempo - t0), traza: ms.map((m) => m.tcp) }
+}
+
+export function DemoMovimientos() {
+  const tramos = useMemo(() => ({ PTP: tramoDemo('PTP'), LIN: tramoDemo('LIN'), CIR: tramoDemo('CIR') }), [])
+  const [modo, setModo] = useState<Modo>('LIN')
+  const [p, setP] = useState(0)
+  const [corre, setCorre] = useState(false)
+  const vista = useRef<VistaRobot>(vistaBase([...HOME], false))
+  const T = tramos[modo]
+  const otros = (['PTP', 'LIN', 'CIR'] as Modo[]).filter((m) => m !== modo)
+  vista.current.q = ejesEn(T.sim, T.t0 + p * T.dur).q
+  vista.current.seleccion = { curvas: [T.traza], puntos: [], planos: [] }
+  vista.current.previa = { curvas: otros.map((m) => tramos[m].traza), puntos: [], planos: [] }
+  vista.current.marcas = []
+  useEffect(() => {
+    if (!corre) return
+    let cuadro = 0
+    let antes = performance.now()
+    const tick = (ahora: number) => {
+      const dt = (ahora - antes) / 1000
+      antes = ahora
+      setP((x) => {
+        const y = x + dt / (T.dur * 1.2)
+        if (y >= 1) {
+          setCorre(false)
+          return 1
+        }
+        return y
+      })
+      cuadro = requestAnimationFrame(tick)
+    }
+    cuadro = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(cuadro)
+  }, [corre, T])
+  return (
+    <figure style={caja} data-demo-movimientos="si">
+      <Escena vista={vista} />
+      <div style={{ padding: '4px 12px 12px' }}>
+        <div role="group" aria-label="Tipo de movimiento" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '0 0 8px', alignItems: 'center' }}>
+          {(['PTP', 'LIN', 'CIR'] as Modo[]).map((m) => (
+            <button key={m} type="button" aria-pressed={modo === m} onClick={() => { setModo(m); setP(0); setCorre(false) }} style={{ ...boton, background: modo === m ? COLOR_MODO[m] : '#fff', color: modo === m ? '#fff' : TINTA, borderColor: COLOR_MODO[m] }}>
+              {m}
+            </button>
+          ))}
+          <button type="button" style={boton} onClick={() => { if (p >= 1) setP(0); setCorre((c) => !c) }} data-demo-play="si">
+            {corre ? 'Pausar' : p >= 1 ? 'Repetir' : 'Reproducir'}
+          </button>
+        </div>
+        <input type="range" min={0} max={1} step={0.005} value={p} onChange={(e) => { setCorre(false); setP(Number(e.target.value)) }} aria-label="Avance del movimiento" style={{ width: '100%' }} />
+        <p role="status" style={{ margin: '8px 0 0', fontSize: '0.86rem', lineHeight: 1.45, padding: '6px 8px', borderRadius: 6, background: '#f7f9fb', border: '1px solid #e0e5eb', color: '#26323f' }}>
+          <strong style={{ color: COLOR_MODO[modo] }}>{TEXTO_MODO[modo].split(':')[0]}</strong>
+          {TEXTO_MODO[modo].slice(TEXTO_MODO[modo].indexOf(':'))} La línea verde es el recorrido de este movimiento; las rojas, el de los otros dos.
         </p>
       </div>
     </figure>

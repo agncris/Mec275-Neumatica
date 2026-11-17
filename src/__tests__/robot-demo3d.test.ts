@@ -23,3 +23,27 @@ describe('demos 3D de Estudiar', () => {
     expect(m.limites[4][1]).toBeGreaterThan(0)
   })
 })
+
+import { tramoDemo } from '../robot/Demo3D'
+
+describe('recorridos de PTP, LIN y CIR entre los mismos puntos', () => {
+  const ancho = (m: 'PTP' | 'LIN' | 'CIR') => {
+    const t = tramoDemo(m).traza
+    return { xMax: Math.max(...t.map((p) => p.x)), xMin: Math.min(...t.map((p) => p.x)), fin: t[t.length - 1] }
+  }
+  it('LIN va recto: X casi no cambia', () => {
+    const r = ancho('LIN')
+    expect(r.xMax - r.xMin).toBeLessThan(3)
+  })
+  it('CIR se abulta hacia el punto auxiliar', () => {
+    expect(ancho('CIR').xMax).toBeGreaterThan(560)
+  })
+  it('PTP no es recto, pero llega al mismo punto que los otros', () => {
+    const p = ancho('PTP')
+    expect(p.xMax - p.xMin).toBeGreaterThan(3)
+    for (const m of ['PTP', 'LIN', 'CIR'] as const) {
+      const f = ancho(m).fin
+      expect(Math.hypot(f.x - 480, f.y - 220, f.z - 220)).toBeLessThan(2)
+    }
+  })
+})
