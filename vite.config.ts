@@ -1,5 +1,8 @@
 /// <reference types="vitest" />
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import { createHash } from 'node:crypto'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { ErrorBot, responder } from './api/responder.js'
@@ -40,13 +43,32 @@ function mecbotEnDev(): Plugin {
   }
 }
 
+/**
+ * Pone la versión del build en `dist/sw.js` (reemplaza `__VERSION__`). La versión es
+ * la huella de `dist/index.html`, que cambia cada vez que cambia un archivo de /assets.
+ * Con otro nombre de caché, el service worker nuevo borra la caja vieja al activarse.
+ */
+function versionDelServiceWorker(): Plugin {
+  return {
+    name: 'sw-version',
+    apply: 'build',
+    closeBundle() {
+      const sw = resolve('dist/sw.js')
+      const indice = resolve('dist/index.html')
+      if (!existsSync(sw) || !existsSync(indice)) return
+      const version = createHash('sha1').update(readFileSync(indice)).digest('hex').slice(0, 8)
+      writeFileSync(sw, readFileSync(sw, 'utf8').replaceAll('__VERSION__', version))
+    },
+  }
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   for (const clave of ['MEC_BOT_API_KEY', 'MEC_BOT_URL', 'MEC_BOT_MODELO']) {
     if (env[clave]) process.env[clave] = env[clave]
   }
   return {
-    plugins: [react(), mecbotEnDev()],
+    plugins: [react(), mecbotEnDev(), versionDelServiceWorker()],
     build: {
       rollupOptions: {
         output: {
