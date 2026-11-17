@@ -130,17 +130,24 @@ export async function responder(entrada, ip = 'local') {
         ],
       }),
     })
-  } catch {
+  } catch (e) {
+    console.error('mecbot: no llegó al modelo', modelo, e && e.name, e && e.message)
     throw new ErrorBot('red', 502)
   } finally {
     clearTimeout(reloj)
   }
   if (res.status === 401 || res.status === 403) throw new ErrorBot('clave-invalida', 502)
   if (res.status === 429) throw new ErrorBot('ocupado', 429)
-  if (!res.ok) throw new ErrorBot('red', 502)
+  if (!res.ok) {
+    console.error('mecbot: el modelo respondió', res.status, modelo, (await res.text().catch(() => '')).slice(0, 300))
+    throw new ErrorBot('red', 502)
+  }
   const datos = await res.json().catch(() => null)
   const texto = datos?.choices?.[0]?.message?.content
-  if (typeof texto !== 'string' || !texto.trim()) throw new ErrorBot('red', 502)
+  if (typeof texto !== 'string' || !texto.trim()) {
+    console.error('mecbot: respuesta vacía', modelo, datos?.choices?.[0]?.finish_reason)
+    throw new ErrorBot('red', 502)
+  }
   const listo = texto.trim()
   if (recordada) {
     cache.set(recordada, { texto: listo, t: Date.now() })
