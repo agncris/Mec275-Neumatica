@@ -778,10 +778,16 @@ body.arrastrando-borde * {
   min-height: 0;
 }
 .editor-nodos .paleta-nodos {
-  width: 210px;
+  width: 252px;
   flex: none;
   margin: 0;
-  overflow: auto;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #d5dee6;
+  border-radius: 10px;
+}
+.editor-nodos .paleta-nodos[data-plegada='si'] {
+  width: 44px;
 }
 .editor-nodos__lienzo {
   position: relative;
@@ -798,28 +804,91 @@ body.arrastrando-borde * {
 .paleta-nodos {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0;
   margin-bottom: 8px;
+  min-height: 0;
 }
-.paleta-nodos__pestanas {
+.paleta-nodos__barra {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex: none;
+  padding: 8px 8px 6px;
+  border-bottom: 1px solid #e4eaef;
 }
-.paleta-nodos__pestana {
+.paleta-nodos[data-plegada='si'] .paleta-nodos__barra {
+  border-bottom: 0;
+  padding: 6px 4px;
+  height: 100%;
+}
+.paleta-nodos__titulo {
+  font-size: 0.78rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #3d4c5c;
+}
+.paleta-nodos__plegar {
   border: 1px solid #c6ced6;
-  background: #f1f4f7;
+  background: #f7f9fb;
   color: #33475c;
-  padding: 4px 10px;
-  font-size: 0.8rem;
-  font-weight: 500;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
   cursor: pointer;
-  border-radius: 8px;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0;
 }
-.paleta-nodos__pestana--activa {
-  background: #fff;
-  border-color: #33475c;
-  font-weight: 700;
+.paleta-nodos__plegar--riel {
+  width: 100%;
+  height: 100%;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  background: transparent;
+  border: 0;
+}
+.paleta-nodos__riel {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 0.75rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.paleta-nodos__cuerpo {
+  overflow: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+}
+.paleta-nodos__cat-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 6px 2px 4px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #3d4c5c;
+}
+.paleta-nodos__cat-btn[data-siguiente='si'] {
+  color: #0b3f73;
 }
 .paleta-nodos__ayuda,
 .paleta-nodos__vacio {
@@ -837,29 +906,37 @@ body.arrastrando-borde * {
 }
 .paleta-nodos__grupo {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: stretch;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 4px;
 }
 .paleta-nodos__nombre {
-  flex: 1 0 100%;
   font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: #5f6b78;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  color: #6a7784;
+  padding: 2px 2px 0;
 }
 .bloque-nodo {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 108px;
-  border: 1px solid #c5ced6;
-  background: #fff;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  border: 1px solid #d5dee6;
+  border-left-width: 3px;
+  background: #f8fafb;
   border-radius: 8px;
-  padding: 4px 8px 4px 6px;
+  padding: 7px 8px;
   cursor: grab;
   text-align: left;
-  box-shadow: 0 1px 0 rgba(28, 39, 51, 0.06);
+}
+.bloque-nodo[data-categoria='Movimientos'] { border-left-color: #e85d04; }
+.bloque-nodo[data-categoria='Robot'] { border-left-color: #1668c7; }
+.bloque-nodo[data-categoria='Herramientas'] { border-left-color: #0e7a43; }
+.bloque-nodo[data-categoria='Trayectoria'] { border-left-color: #6b5b95; }
+.bloque-nodo[data-categoria='Utilidades'] { border-left-color: #6d7a88; }
+.bloque-nodo__texto {
+  min-width: 0;
 }
 .bloque-nodo:hover,
 .bloque-nodo:focus-visible {
@@ -941,14 +1018,16 @@ body.arrastrando-borde * {
   line-height: 1.15;
 }
 .bloque-nodo__corto {
-  font-weight: 700;
-  font-size: 0.78rem;
+  font-weight: 750;
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
   color: #1c2733;
 }
 .bloque-nodo__glosa {
-  font-size: 0.66rem;
+  font-size: 0.78rem;
   font-weight: 500;
-  color: #5f6b78;
+  color: #3d4c5c;
+  margin-top: 1px;
 }
 .reproductor-robot {
   display: flex;

@@ -12,7 +12,7 @@
  *  - Colores como en Grasshopper: gris = bien, naranjo = faltan datos o hay
  *    un aviso, rojo = error, verde = seleccionado.
  */
-import { useTactil } from '../components/ui'
+import { usePersistente, useTactil } from '../components/ui'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   COMPONENTES,
@@ -134,10 +134,18 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
   const svgRef = useRef<SVGSVGElement>(null)
   const [vista, setVista] = useState({ tx: 20, ty: 40, k: 0.8 })
   const [arrastre, setArrastre] = useState<Arrastre | null>(null)
-  const [pestana, setPestana] = useState<Pestana>(guia?.pestana ?? 'Movimientos')
+  const [plegada, setPlegada] = usePersistente('neumalab.robot.paleta.v1', false)
+  const [abiertas, setAbiertas] = useState<Pestana[]>(() => (guia?.pestana ? [guia.pestana] : ['Movimientos', 'Robot']))
+  const paletaRef = useRef<HTMLElement>(null)
   useEffect(() => {
-    if (guia?.pestana) setPestana(guia.pestana)
+    if (!guia?.pestana) return
+    setAbiertas((prev) => (prev.includes(guia.pestana!) ? prev : [...prev, guia.pestana!]))
   }, [guia?.id, guia?.pestana])
+  useEffect(() => {
+    if (!guia?.destacar || plegada) return
+    const el = paletaRef.current?.querySelector<HTMLElement>(`[data-agregar="${CSS.escape(guia.destacar)}"]`)
+    el?.scrollIntoView({ block: 'nearest' })
+  }, [guia?.destacar, plegada, abiertas])
   const [buscador, setBuscador] = useState<{ x: number; y: number; wx: number; wy: number; texto: string } | null>(null)
   const defRef = useRef(def)
   defRef.current = def
@@ -340,68 +348,101 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
 
   return (
     <div data-editor-nodos="si" className={typeof alto === 'string' ? 'editor-nodos' : undefined} style={typeof alto === 'string' ? { height: alto } : undefined}>
-      <div className="paleta-nodos" role="toolbar" aria-label="Bloques del programa">
-        <div className="paleta-nodos__pestanas">
-          {PESTANAS.map((p) => (
-            <button key={p} type="button" onClick={() => setPestana(p)} aria-pressed={pestana === p} className={pestana === p ? 'paleta-nodos__pestana paleta-nodos__pestana--activa' : 'paleta-nodos__pestana'}>
-              {p}
+      <aside ref={paletaRef} className="paleta-nodos" data-plegada={plegada ? 'si' : 'no'} role="toolbar" aria-label="Componentes del programa">
+        <div className="paleta-nodos__barra">
+          {plegada ? (
+            <button type="button" className="paleta-nodos__plegar paleta-nodos__plegar--riel" aria-expanded={false} title="Mostrar componentes" aria-label="Mostrar componentes" onClick={() => setPlegada(false)}>
+              <span aria-hidden="true">›</span>
+              <span className="paleta-nodos__riel">Componentes</span>
             </button>
-          ))}
-        </div>
-        <p className="paleta-nodos__ayuda">
-          {guia
-            ? `Paso ${guia.numero} de ${guia.total} · ${guia.titulo}. ${guia.accion}`
-            : def.nodos.length === 0
-              ? 'Empieza arrastrando un Robot y un Core.'
-              : tactil
-                ? 'Toca un bloque para ponerlo en el lienzo. Conecta de la salida (derecha) a la entrada (izquierda).'
-                : 'Arrastra un bloque al lienzo, o haz clic para soltarlo al centro. Conecta de la salida (derecha) a la entrada (izquierda).'}
-        </p>
-        {agrupar(COMPONENTES.filter((c) => c.pestana === pestana)).map(([grupo, cs]) => (
-          <div key={grupo} className="paleta-nodos__grupo">
-            <span className="paleta-nodos__nombre">{grupo}</span>
-            {cs.map((c) => (
-              <button
-                key={c.tipo}
-                type="button"
-                className="bloque-nodo"
-                data-siguiente={guia?.destacar === c.tipo ? 'si' : undefined}
-                title={pista(c)}
-                data-agregar={c.tipo}
-                draggable={!tactil}
-                onDragStart={(e) => {
-                  soltoBloque.current = true
-                  e.dataTransfer.setData('text/neumalab-nodo', c.tipo)
-                  e.dataTransfer.effectAllowed = 'copy'
-                }}
-                onDragEnd={() => {
-                  setTimeout(() => {
-                    soltoBloque.current = false
-                  }, 50)
-                }}
-                onClick={() => {
-                  if (soltoBloque.current) {
-                    soltoBloque.current = false
-                    return
-                  }
-                  const svg = svgRef.current!
-                  const r = svg.getBoundingClientRect()
-                  const p = aMundo(r.left + r.width / 2 - 75, r.top + r.height / 2 - 30)
-                  agregarNodo(c.tipo, p.x, p.y)
-                }}
-              >
-                <span className="bloque-nodo__agarre" aria-hidden="true">
-                  ⋮⋮
-                </span>
-                <span>
-                  <span className="bloque-nodo__corto">{c.corto}</span>
-                  <span className="bloque-nodo__glosa">{GLOSA[c.tipo] ?? c.nombre}</span>
-                </span>
+          ) : (
+            <>
+              <span className="paleta-nodos__titulo">Componentes</span>
+              <button type="button" className="paleta-nodos__plegar" aria-expanded title="Ocultar componentes" aria-label="Ocultar componentes" onClick={() => setPlegada(true)}>
+                ‹
               </button>
-            ))}
+            </>
+          )}
+        </div>
+        {!plegada && (
+          <div className="paleta-nodos__cuerpo">
+            <p className="paleta-nodos__ayuda">
+              {guia
+                ? `Paso ${guia.numero} de ${guia.total}. El bloque con borde azul es el siguiente.`
+                : def.nodos.length === 0
+                  ? 'Empieza arrastrando un Robot y un Core.'
+                  : tactil
+                    ? 'Toca un bloque para ponerlo en el lienzo.'
+                    : 'Arrastra un bloque al lienzo, o haz clic para soltarlo al centro.'}
+            </p>
+            {PESTANAS.map((cat) => {
+              const abierta = abiertas.includes(cat)
+              const bloques = COMPONENTES.filter((c) => c.pestana === cat)
+              const tieneSiguiente = bloques.some((c) => c.tipo === guia?.destacar)
+              return (
+                <section key={cat} className="paleta-nodos__cat">
+                  <button
+                    type="button"
+                    className="paleta-nodos__cat-btn"
+                    aria-expanded={abierta}
+                    data-siguiente={!abierta && tieneSiguiente ? 'si' : undefined}
+                    onClick={() => setAbiertas((prev) => (prev.includes(cat) ? prev.filter((x) => x !== cat) : [...prev, cat]))}
+                  >
+                    <span>{cat}</span>
+                    <span aria-hidden="true">{abierta ? '−' : '+'}</span>
+                  </button>
+                  {abierta &&
+                    agrupar(bloques).map(([grupo, cs]) => (
+                      <div key={grupo} className="paleta-nodos__grupo">
+                        <span className="paleta-nodos__nombre">{grupo}</span>
+                        {cs.map((c) => (
+                          <button
+                            key={c.tipo}
+                            type="button"
+                            className="bloque-nodo"
+                            data-categoria={cat}
+                            data-siguiente={guia?.destacar === c.tipo ? 'si' : undefined}
+                            title={pista(c)}
+                            data-agregar={c.tipo}
+                            draggable={!tactil}
+                            onDragStart={(e) => {
+                              soltoBloque.current = true
+                              e.dataTransfer.setData('text/neumalab-nodo', c.tipo)
+                              e.dataTransfer.effectAllowed = 'copy'
+                            }}
+                            onDragEnd={() => {
+                              setTimeout(() => {
+                                soltoBloque.current = false
+                              }, 50)
+                            }}
+                            onClick={() => {
+                              if (soltoBloque.current) {
+                                soltoBloque.current = false
+                                return
+                              }
+                              const svg = svgRef.current!
+                              const r = svg.getBoundingClientRect()
+                              const p = aMundo(r.left + r.width / 2 - 75, r.top + r.height / 2 - 30)
+                              agregarNodo(c.tipo, p.x, p.y)
+                            }}
+                          >
+                            <span className="bloque-nodo__agarre" aria-hidden="true">
+                              ⋮⋮
+                            </span>
+                            <span className="bloque-nodo__texto">
+                              <span className="bloque-nodo__corto">{c.corto}</span>
+                              <span className="bloque-nodo__glosa">{GLOSA[c.tipo] ?? c.nombre}</span>
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    ))}
+                </section>
+              )
+            })}
           </div>
-        ))}
-      </div>
+        )}
+      </aside>
       <div className={typeof alto === 'string' ? 'editor-nodos__lienzo' : undefined} style={{ position: 'relative', ...(typeof alto === 'string' ? undefined : {}) }}>
         <svg
           ref={svgRef}
