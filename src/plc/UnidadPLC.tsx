@@ -6,7 +6,7 @@
  * ejecuta en ciclos de scan contra la planta, las salidas mueven la máquina
  * y los sensores de la máquina vuelven a las entradas.
  */
-import { BotonNuevo, botonPrimario, estiloAviso, Menu, useApaisado, useEsEstrecha } from '../components/ui'
+import { estiloAviso, useApaisado, useEsEstrecha } from '../components/ui'
 import BancoDividido, { TituloArea } from '../components/banco/BancoDividido'
 import ProcesoTarea, { enlaceEstudiar } from '../components/banco/ProcesoTarea'
 import { usePanelAcoplado, type PestanaPanel } from '../components/banco/PanelAcoplado'
@@ -42,6 +42,7 @@ import type { SimPLC } from './Planta3D'
 import { botonSuave } from './estilosPLC'
 import PanelES, { TablaSimbolos, type TipoLibre } from './PanelES'
 import PanelEntrega from './PanelEntrega'
+import BarraPLC from './BarraPLC'
 import { CLAVE, CLAVE_TAREA, DT, esProgramaPLC, leerGuardado, leerTarea, NOMBRE_TAREA, PLANTA_TAREA, tareaVacia, type Evento } from './datosPLC'
 import { ETAPAS_SILO, pasoSilo, checklistSilo, ejemploGuiadoSilo } from './procesoSilo'
 
@@ -439,100 +440,32 @@ export default function UnidadPLC() {
     />
   )
 
-  const botonPlanta = enTarea ? (
-    <span className="boton-planta" title="El enunciado de la tarea está en Aula" data-planta-tarea="si" style={{ width: acostado ? 'clamp(64px, 17vw - 44px, 170px)' : estrecha ? '28vw' : 'auto', maxWidth: 360, cursor: 'default' }}>
-      {!estrecha && <span style={{ color: '#9a4a00', fontWeight: 700 }}>{NOMBRE_TAREA}:</span>}
-      <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis' }}>{descripcion.nombre.replace(` (${NOMBRE_TAREA})`, '')}</span>
-    </span>
-  ) : (
-    <button onClick={() => setEligiendoPlanta(true)} className="boton-planta" title="Elegir la planta, o empezar un ejercicio o un ejemplo" aria-label={`Planta: ${descripcion.nombre}. Elegir planta, ejercicio o ejemplo`} data-boton-planta="si" style={{ width: acostado ? 'clamp(64px, 17vw - 44px, 170px)' : estrecha ? '28vw' : 'auto', maxWidth: 360 }}>
-      {!estrecha && <span style={{ color: '#51606f' }}>Planta:</span>}
-      <span style={{ fontWeight: 600 }}>{descripcion.nombre}</span>
-      <span aria-hidden style={{ fontSize: '0.7rem', flex: 'none' }}>
-        ▾
-      </span>
-    </button>
-  )
-  /** La notación de LogixPro sólo sirve a quien use ese simulador: queda en el menú, no en la barra. */
-  const itemNotacion = {
-    texto: notacion === 'ab' ? 'Direcciones como en el apunte' : 'Direcciones como en LogixPro',
-    ayuda: notacion === 'ab' ? 'Volver a I0.3, Q0.1' : 'I:1/03, O:2/01 (sólo si usas LogixPro)',
-    onClick: () => setNotacion(notacion === 'ab' ? 'siemens' : 'ab'),
-  }
-  const itemsArchivo = [
-    { texto: 'Nuevo programa', ayuda: 'Empieza con el diagrama vacío', onClick: nuevo },
-    { texto: 'Abrir…', ayuda: 'Un programa guardado (.json)', onClick: () => inputArchivo.current?.click() },
-    { texto: 'Guardar', ayuda: 'Descarga el programa para volver a abrirlo', onClick: guardar },
-    { texto: 'Mis trabajos…', ayuda: 'Guarda varios programas con nombre y cámbiate entre ellos', onClick: () => setMisTrabajos(true), separar: true },
-  ]
-  const itemExportar = { texto: 'Diagrama Ladder (PNG)', ayuda: 'Imagen del programa para tu informe', onClick: () => void exportarLadder() }
-  const itemJson = { texto: 'Programa (JSON)', ayuda: 'El archivo del programa: se vuelve a abrir en la app con «Abrir…»', onClick: guardar }
-
   const barra = (
-    <>
-      {/* RUN / STOP: la acción principal. */}
-      <button onClick={() => setCorriendo((c) => !c)} title="Atajo: barra espaciadora" aria-pressed={corriendo} style={botonPrimario(corriendo)} data-run="si">
-        {corriendo ? '■ STOP' : '▶ RUN'}
-      </button>
-      {corriendo && (
-        <span className="grupo-zoom" role="group" aria-label="Paso a paso">
-          <button onClick={() => setPausado((p) => !p)} aria-pressed={pausado} title={pausado ? 'Seguir corriendo' : 'Pausar el PLC y la planta para ver barrido a barrido'} data-pausar-plc="si" style={{ padding: '0 8px', minWidth: 'auto', fontWeight: 600 }}>
-            {pausado ? '▶ Seguir' : '❚❚ Pausar'}
-          </button>
-          <button onClick={unBarrido} disabled={!pausado} style={{ opacity: pausado ? 1 : 0.4, padding: '0 8px', minWidth: 'auto', fontWeight: 600 }} title="Ejecuta un solo barrido (lee entradas, resuelve los escalones, escribe salidas)" data-un-barrido="si">
-            ⏭ Un barrido
-          </button>
-        </span>
-      )}
-      <BotonNuevo que="un programa" compacto={estrecha} onClick={nuevo} />
-      <span style={{ display: 'inline-flex', gap: 2 }}>
-        <button onClick={deshacer} disabled={corriendo || !historialRef.current.puedeDeshacer} title="Deshacer (Ctrl+Z)" aria-label="Deshacer" className="boton-icono" style={{ opacity: corriendo || !historialRef.current.puedeDeshacer ? 0.4 : 1 }}>
-          ↶
-        </button>
-        {!estrecha && (
-          <button onClick={rehacer} disabled={corriendo || !historialRef.current.puedeRehacer} title="Rehacer (Ctrl+Shift+Z)" aria-label="Rehacer" className="boton-icono" style={{ opacity: corriendo || !historialRef.current.puedeRehacer ? 0.4 : 1 }}>
-            ↷
-          </button>
-        )}
-      </span>
-      {botonPlanta}
-      <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
-        {!estrecha && (
-          <button onClick={guia.abrir} className="boton-icono" title="Guía de inicio" aria-label="Guía de inicio" data-abrir-guia="si">
-            ?
-          </button>
-        )}
-        {estrecha ? (
-          <Menu
-            etiqueta="⋯"
-            datos="mas"
-            items={[
-              { texto: 'Rehacer', onClick: rehacer, deshabilitado: corriendo || !historialRef.current.puedeRehacer, porque: corriendo ? 'Pasa el PLC a STOP para editar' : 'No hay nada que rehacer' },
-              ...itemsArchivo.map((it, i) => ({ ...it, separar: i === 0 })),
-              { ...itemExportar, texto: 'Exportar Ladder (PNG)', separar: true },
-              { ...itemJson, texto: 'Exportar programa (JSON)' },
-              { ...itemNotacion, separar: true },
-              { texto: 'Guía de inicio', ayuda: 'Los cuatro pasos para partir', onClick: guia.abrir },
-            ]}
-          />
-        ) : (
-          <>
-            <Menu etiqueta="Archivo" items={[...itemsArchivo, { ...itemNotacion, separar: true }]} />
-            <Menu etiqueta="Exportar" items={[itemExportar, itemJson]} />
-          </>
-        )}
-      </span>
-      <input
-        ref={inputArchivo}
-        type="file"
-        accept="application/json,.json"
-        style={{ display: 'none' }}
-        onChange={(e) => {
-          void abrir(e.target.files?.[0])
-          e.target.value = ''
-        }}
-      />
-    </>
+    <BarraPLC
+      corriendo={corriendo}
+      setCorriendo={setCorriendo}
+      pausado={pausado}
+      setPausado={setPausado}
+      unBarrido={unBarrido}
+      estrecha={estrecha}
+      acostado={acostado}
+      enTarea={enTarea}
+      descripcion={descripcion}
+      setEligiendoPlanta={setEligiendoPlanta}
+      notacion={notacion}
+      setNotacion={setNotacion}
+      nuevo={nuevo}
+      deshacer={deshacer}
+      rehacer={rehacer}
+      puedeDeshacer={historialRef.current.puedeDeshacer}
+      puedeRehacer={historialRef.current.puedeRehacer}
+      inputArchivo={inputArchivo}
+      abrir={abrir}
+      guardar={guardar}
+      setMisTrabajos={setMisTrabajos}
+      exportarLadder={exportarLadder}
+      guia={guia}
+    />
   )
 
   const areaPrograma = (
