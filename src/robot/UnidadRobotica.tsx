@@ -17,10 +17,10 @@ import { guiaTarea } from './guiaTarea'
 import { limpiarEnlace, trabajoDelEnlace } from '../entregar'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { exportarPng, nombreSeguro } from '../exportar'
-import { croquisPieza, croquisPosicion } from './croquis'
 import { useBucleReproduccion, useReproduccion } from './useReproduccion'
 import { useEvaluacionRobot } from './useEvaluacionRobot'
 import { useChecklistTarea } from './useChecklistTarea'
+import { crearCroquisRobot } from './croquisRobot'
 import { Historial } from '../historial'
 import CodigoKRL from './CodigoKRL'
 import Analisis from './Analisis'
@@ -34,7 +34,7 @@ import FichaModelo from './FichaModelo'
 import { EJEMPLOS_ROBOT } from './ejemplos'
 import { leerDXF } from './geometria'
 import type { PuntoEnsenado } from './Mando'
-import { ejesEn, generarKRL, PLACA_DEFECTO, simular, type Simulacion } from './movimiento'
+import { ejesEn, generarKRL, simular, type Simulacion } from './movimiento'
 import {
   esDefinicion,
   type Definicion,
@@ -333,20 +333,7 @@ export default function UnidadRobotica() {
   }
 
   /** Croquis (SVG en texto): la pieza acotada o el posicionamiento del robot. */
-  const crearCroquis = (tipo: string): string => {
-    const nombre = def.nombre || 'robot'
-    if (tipo === 'pieza') {
-      const curvas = dxf?.curvas.length
-        ? dxf.curvas.map((c) => ({ pts: c.pts, cerrada: c.cerrada }))
-        : previa.curvas.map((pts) => ({ pts, cerrada: pts.length > 2 && Math.hypot(pts[0].x - pts[pts.length - 1].x, pts[0].y - pts[pts.length - 1].y) < 1e-3 }))
-      if (!curvas.length) throw new Error('No hay geometría para el croquis: abre un DXF o arma curvas en la definición.')
-      return croquisPieza(curvas, nombre)
-    }
-    return croquisPosicion(
-      { modelo: robotVista.modelo, pedestal: robotVista.pedestal, base: baseVista, espesor: programa?.espesor ?? 5, placa: placa ?? PLACA_DEFECTO, herramienta: herrVista },
-      nombre,
-    )
-  }
+  const crearCroquis = (tipo: string): string => crearCroquisRobot(tipo, { nombre: def.nombre, dxf, previa, robotVista, baseVista, programa, placa, herrVista })
   const croquisPng = async (tipo: string, archivo: string) => {
     const el = new DOMParser().parseFromString(crearCroquis(tipo), 'image/svg+xml').documentElement as unknown as SVGSVGElement
     await exportarPng(el, archivo)
