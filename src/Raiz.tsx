@@ -5,6 +5,7 @@
  */
 import { lazy, Suspense, useEffect, useState } from 'react'
 import App from './App'
+import ErrorBoundary from './components/ErrorBoundary'
 import MecBot from './components/MecBot'
 import { useDesplazarEnBordes } from './desplazarEnBordes'
 import { unidadVisible, VER_CNC, VER_ROBOTICA, type Unidad } from './unidades'
@@ -132,13 +133,15 @@ export default function Raiz() {
         </p>
       )}
       <MecBot />
-      {unidad === 'neumatica' ? (
-        <App />
-      ) : (
-        <Suspense fallback={<p style={{ padding: 24, color: '#5a6b7d', textAlign: 'center' }}>Abriendo la unidad…</p>}>
-          {unidad === 'plc' ? <UnidadPLC /> : unidad === 'cnc' && UnidadCNC ? <UnidadCNC /> : unidad === 'robotica' && UnidadRobotica ? <UnidadRobotica /> : null}
-        </Suspense>
-      )}
+      <ErrorBoundary key={unidad} alVolver={() => cambiarUnidad('neumatica')}>
+        {unidad === 'neumatica' ? (
+          <App />
+        ) : (
+          <Suspense fallback={<p style={{ padding: 24, color: '#5a6b7d', textAlign: 'center' }}>Abriendo la unidad…</p>}>
+            {unidad === 'plc' ? <UnidadPLC /> : unidad === 'cnc' && UnidadCNC ? <UnidadCNC /> : unidad === 'robotica' && UnidadRobotica ? <UnidadRobotica /> : null}
+          </Suspense>
+        )}
+      </ErrorBoundary>
     </>
   )
 }
