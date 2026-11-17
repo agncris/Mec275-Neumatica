@@ -18,6 +18,7 @@ import { leerAlumno, limpiarEnlace, trabajoDelEnlace } from '../entregar'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { exportarPng, nombreSeguro } from '../exportar'
 import { croquisPieza, croquisPosicion } from './croquis'
+import { useBucleReproduccion, useReproduccion } from './useReproduccion'
 import { Historial } from '../historial'
 import EditorNodos from './EditorNodos'
 import CodigoKRL from './CodigoKRL'
@@ -175,21 +176,14 @@ export default function UnidadRobotica() {
   const [entregaAbierta, setEntregaAbierta] = useState(false)
   const [misTrabajos, setMisTrabajos] = useState(false)
   const guia = useGuia('robotica')
-  const nombreVideo = useRef<string | null>(null)
   const [seleccion, setSeleccion] = useState<string | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
   // Enunciado del ejercicio de práctica abierto (una línea, sin la respuesta).
   const [enunciado, setEnunciado] = useState<string | null>(null)
-  const [reproduciendo, setReproduciendo] = useState(false)
-  const [velocidad, setVelocidad] = useState(1)
+  const { reproduciendo, setReproduciendo, velocidad, setVelocidad, grabando, setTick, tRef, canvasRef, nombreVideo, puedeGrabar, alternarGrabacion } = useReproduccion({ nombre: def.nombre, avisar: setAviso })
   const [alcance, setAlcance] = useState(false)
-  const [grabando, setGrabando] = useState(false)
-  const [, setTick] = useState(0)
-  const tRef = useRef(0)
   const inputDXF = useRef<HTMLInputElement>(null)
   const inputDef = useRef<HTMLInputElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement | null>(null)
-  const grabadora = useRef<MediaRecorder | null>(null)
 
   // Mando manual.
   const [modeloMando, setModeloMando] = useState('kr6r900')
@@ -374,37 +368,7 @@ export default function UnidadRobotica() {
   }
 
   // Bucle de reproducción.
-  const velRef = useRef(velocidad)
-  velRef.current = velocidad
-  useEffect(() => {
-    if (!reproduciendo || !simActiva) return
-    let vivo = true
-    let antes = performance.now()
-    let ultimo = 0
-    const bucle = () => {
-      if (!vivo) return
-      const ahora = performance.now()
-      const dt = Math.min(0.1, (ahora - antes) / 1000)
-      antes = ahora
-      tRef.current = Math.min(simActiva.tiempo, tRef.current + dt * velRef.current)
-      aplicarTiempo(tRef.current)
-      if (ahora - ultimo > 100) {
-        ultimo = ahora
-        setTick((n) => n + 1)
-      }
-      if (tRef.current >= simActiva.tiempo) {
-        setReproduciendo(false)
-        setTick((n) => n + 1)
-        return
-      }
-      requestAnimationFrame(bucle)
-    }
-    requestAnimationFrame(bucle)
-    return () => {
-      vivo = false
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reproduciendo, simActiva])
+  useBucleReproduccion({ reproduciendo, setReproduciendo, simActiva, velocidad, tRef, setTick, aplicarTiempo })
 
   // Atajos.
   useEffect(() => {
@@ -549,33 +513,6 @@ export default function UnidadRobotica() {
     if (!programa || !sim) return setAviso('Todavía no hay programa: el Core necesita comandos, robot y herramienta.')
     descargar(generarKRL(programa, sim, def.nombre), nombreSeguro(def.nombre || 'programa', 'src'))
     setAviso('Código KRL descargado (.src).')
-  }
-
-  const puedeGrabar = typeof window !== 'undefined' && 'MediaRecorder' in window
-  const alternarGrabacion = () => {
-    if (grabando) return grabadora.current?.stop()
-    const c = canvasRef.current
-    if (!c || !puedeGrabar) return setAviso('Este navegador no permite grabar video.')
-    const tipo = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'].find((t) => MediaRecorder.isTypeSupported(t))
-    const rec = new MediaRecorder(c.captureStream(30), tipo ? { mimeType: tipo, videoBitsPerSecond: 6_000_000 } : undefined)
-    const partes: Blob[] = []
-    rec.ondataavailable = (e) => e.data.size && partes.push(e.data)
-    rec.onstop = () => {
-      setGrabando(false)
-      const ext = (rec.mimeType || '').includes('mp4') ? 'mp4' : 'webm'
-      const url = URL.createObjectURL(new Blob(partes, { type: rec.mimeType || 'video/webm' }))
-      const a = document.createElement('a')
-      a.href = url
-      a.download = nombreVideo.current ? `${nombreVideo.current}.${ext}` : nombreSeguro(`${def.nombre || 'robot'}_simulacion`, ext)
-      nombreVideo.current = null
-      a.click()
-      setTimeout(() => URL.revokeObjectURL(url), 2000)
-      setAviso(`Video descargado: ${a.download}`)
-    }
-    rec.start(500)
-    grabadora.current = rec
-    setGrabando(true)
-    setAviso('Grabando la vista 3D: pulsa ▶ y «■ Detener grabación» al terminar.')
   }
 
   const tiempo = tRef.current
