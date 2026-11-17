@@ -1,16 +1,17 @@
 /**
  * Portada de NeumaLab: elige la unidad del curso. La unidad 1 (neumática)
- * es el laboratorio de siempre; las unidades 2 (PLC), 3 (CNC) y 4 (robótica)
- * se cargan sólo cuando alguien las abre.
+ * es el laboratorio de siempre; todas las unidades se cargan sólo cuando alguien
+ * las abre (la de neumática, que es la de siempre, empieza a bajar de inmediato).
  */
 import { lazy, Suspense, useEffect, useState } from 'react'
-import App from './App'
 import ErrorBoundary from './components/ErrorBoundary'
 import MecBot from './components/MecBot'
 import { useDesplazarEnBordes } from './desplazarEnBordes'
 import { unidadVisible, VER_CNC, VER_ROBOTICA, type Unidad } from './unidades'
 import { CLAVES, guardarTexto, leerTexto } from './persistencia'
 
+const cargarNeumatica = () => import('./App')
+const UnidadNeumatica = lazy(cargarNeumatica)
 const UnidadPLC = lazy(() => import('./plc/UnidadPLC'))
 // Las unidades no publicadas quedan fuera de la compilación (ver unidades.ts).
 const UnidadCNC = VER_CNC ? lazy(() => import('./cnc/UnidadCNC')) : null
@@ -32,6 +33,9 @@ function unidadInicial(): Unidad {
   const guardada = leerTexto(CLAVE)
   return UNIDADES.includes(guardada as Unidad) ? (guardada as Unidad) : 'neumatica'
 }
+
+// Si se abre en neumática, el trozo empieza a bajar ya, sin esperar al primer dibujo.
+if (typeof window !== 'undefined' && unidadInicial() === 'neumatica') void cargarNeumatica()
 
 export default function Raiz() {
   useDesplazarEnBordes()
@@ -127,13 +131,9 @@ export default function Raiz() {
       )}
       <MecBot />
       <ErrorBoundary key={unidad} alVolver={() => cambiarUnidad('neumatica')}>
-        {unidad === 'neumatica' ? (
-          <App />
-        ) : (
-          <Suspense fallback={<p style={{ padding: 24, color: '#5a6b7d', textAlign: 'center' }}>Abriendo la unidad…</p>}>
-            {unidad === 'plc' ? <UnidadPLC /> : unidad === 'cnc' && UnidadCNC ? <UnidadCNC /> : unidad === 'robotica' && UnidadRobotica ? <UnidadRobotica /> : null}
-          </Suspense>
-        )}
+        <Suspense fallback={<p role="status" style={{ padding: 24, color: '#5a6b7d', textAlign: 'center' }}>{unidad === 'neumatica' ? 'Abriendo el laboratorio…' : 'Abriendo la unidad…'}</p>}>
+          {unidad === 'neumatica' ? <UnidadNeumatica /> : unidad === 'plc' ? <UnidadPLC /> : unidad === 'cnc' && UnidadCNC ? <UnidadCNC /> : unidad === 'robotica' && UnidadRobotica ? <UnidadRobotica /> : null}
+        </Suspense>
       </ErrorBoundary>
     </>
   )
