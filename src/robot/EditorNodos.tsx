@@ -339,7 +339,7 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
     : []
 
   return (
-    <div data-editor-nodos="si" style={typeof alto === 'string' ? { display: 'flex', flexDirection: 'column', height: alto, minHeight: 'min-content' } : undefined}>
+    <div data-editor-nodos="si" className={typeof alto === 'string' ? 'editor-nodos' : undefined} style={typeof alto === 'string' ? { height: alto } : undefined}>
       <div className="paleta-nodos" role="toolbar" aria-label="Bloques del programa">
         <div className="paleta-nodos__pestanas">
           {PESTANAS.map((p) => (
@@ -402,7 +402,7 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
           </div>
         ))}
       </div>
-      <div style={{ position: 'relative', ...(typeof alto === 'string' ? { flex: 1, minHeight: 200 } : {}) }}>
+      <div className={typeof alto === 'string' ? 'editor-nodos__lienzo' : undefined} style={{ position: 'relative', ...(typeof alto === 'string' ? undefined : {}) }}>
         <svg
           ref={svgRef}
           tabIndex={0}

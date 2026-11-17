@@ -749,11 +749,11 @@ export default function UnidadRobotica() {
             </button>
           </p>
         )}
-        <div className="relleno" style={{ minHeight: 300, flexShrink: 0 }}>
+        <div className="relleno">
           <EditorNodos def={def} evaluacion={evaluacion} onCambiar={setDef} seleccion={seleccion} onSeleccionar={setSeleccion} alto="100%" guia={pasoTarea ?? undefined} />
         </div>
         {evaluacion.ciclo && <p style={{ color: '#b3261e', fontSize: '0.86rem', margin: '6px 0 0' }}>⚠ Hay un ciclo en los cables.</p>}
-        <div style={{ maxHeight: '42%', overflow: 'auto', flexShrink: 0 }}>
+        <div style={{ maxHeight: 150, overflow: 'auto', flex: 'none' }}>
           <Propiedades
             key={nodoSel?.id ?? 'nada'}
             nodo={nodoSel}
@@ -1033,10 +1033,10 @@ export default function UnidadRobotica() {
       {seccion !== 'estudiar' ? (
         <BancoDividido<PestanaRobot>
           key={seccion}
-          clave="neumalab.robot.escena.v3"
+          clave="neumalab.robot.escena.v4"
           clase="banco--robot"
-          divisionInicial={0.2}
-          anchoMin={260}
+          divisionInicial={0.42}
+          anchoMin={340}
           plegado={estrecha ? 'abierto' : plegado}
           onPlegado={setPlegado}
           riel={<span style={{ writingMode: 'vertical-rl', fontSize: '0.75rem', fontWeight: 700, color: '#51606f', letterSpacing: '0.04em' }}>{modo === 'visual' ? 'PROGRAMA' : 'MANDO'}</span>}
