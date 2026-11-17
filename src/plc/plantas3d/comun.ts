@@ -399,3 +399,6 @@ export function clicsDeRele(antes: Record<string, boolean>, bits: Record<string,
   if (cambios) sonido?.golpe('rodillo', Math.min(1, 0.5 + cambios * 0.15), pan)
   return ahora
 }
+
+/** El cartón de las cajas del silo y del obstáculo del portón. */
+export const CARTON = new THREE.MeshStandardMaterial({ color: 0xb98a55, roughness: 0.85 })
