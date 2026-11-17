@@ -7,7 +7,26 @@ import { useEffect, useRef, useState } from 'react'
 interface Mensaje {
   rol: 'alumno' | 'mecbot'
   texto: string
+  /** Si es un fallo de red, el texto de la pregunta para reenviarla. */
+  reenvio?: string
 }
+
+function IconoReenviar() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M20 12a8 8 0 1 1-2.3-5.7"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path d="M20 4v5h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+const FALLO_RED = new Set(['red', 'ocupado'])
 
 const AVISOS: Record<string, string> = {
   'sin-clave': 'Todavía no estoy conectado. El profesor tiene que poner la clave del modelo en el servidor.',
@@ -67,15 +86,18 @@ export default function MecBot() {
     window.speechSynthesis.speak(frase)
   }
 
-  const preguntar = async (texto: string, enVoz: boolean) => {
+  const preguntar = async (texto: string, enVoz: boolean, historiaLista?: Mensaje[], despues: Mensaje[] = []) => {
     const limpio = texto.trim()
     if (!limpio || pensando) return
-    const historia = [...mensajes, { rol: 'alumno' as const, texto: limpio }]
-    setMensajes(historia)
-    setBorrador('')
+    const historia = historiaLista ?? [...mensajes, { rol: 'alumno' as const, texto: limpio }]
+    setMensajes([...historia, ...despues])
+    if (!historiaLista) setBorrador('')
     setPensando(true)
+    const dejarFallo = (aviso: string) => {
+      setMensajes([...historia, { rol: 'mecbot', texto: aviso, reenvio: limpio }, ...despues])
+    }
     if (!navigator.onLine) {
-      setMensajes([...historia, { rol: 'mecbot', texto: 'Sin conexión no puedo responder. El resto de la app sigue funcionando.' }])
+      dejarFallo('Sin conexión no puedo responder. El resto de la app sigue funcionando.')
       setPensando(false)
       return
     }
@@ -83,17 +105,36 @@ export default function MecBot() {
       const res = await fetch('/api/mecbot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mensajes: historia.slice(-10) }),
+        body: JSON.stringify({
+          mensajes: historia
+            .filter((m) => !m.reenvio)
+            .slice(-10)
+            .map(({ rol, texto: t }) => ({ rol, texto: t })),
+        }),
       })
       const datos = (await res.json().catch(() => null)) as { texto?: string; error?: string } | null
-      const respuesta = datos?.texto?.trim() || AVISOS[datos?.error || ''] || AVISOS.red
-      setMensajes([...historia, { rol: 'mecbot', texto: respuesta }])
+      const codigo = datos?.error || ''
+      const respuesta = datos?.texto?.trim() || AVISOS[codigo] || AVISOS.red
+      const fallo = !datos?.texto?.trim() && (FALLO_RED.has(codigo) || !AVISOS[codigo])
+      if (fallo) {
+        dejarFallo(respuesta)
+        return
+      }
+      setMensajes([...historia, { rol: 'mecbot', texto: respuesta }, ...despues])
       if (enVoz) decir(respuesta)
     } catch {
-      setMensajes([...historia, { rol: 'mecbot', texto: AVISOS.red }])
+      dejarFallo(AVISOS.red)
     } finally {
       setPensando(false)
     }
+  }
+
+  const reenviar = (indice: number) => {
+    const m = mensajes[indice]
+    if (!m?.reenvio || pensando) return
+    const previos = mensajes.slice(0, indice).filter((x) => !x.reenvio)
+    const despues = mensajes.slice(indice + 1)
+    void preguntar(m.reenvio, leer, previos, despues)
   }
 
   const escuchar = () => {
@@ -136,9 +177,21 @@ export default function MecBot() {
               <p className="mecbot__vacio">Pregunta por neumática, PLC, CNC o robótica: un concepto, un símbolo o cómo usar el simulador.</p>
             )}
             {mensajes.map((m, i) => (
-              <p key={i} className={`mecbot__globo mecbot__globo--${m.rol}`}>
-                {m.texto}
-              </p>
+              <div key={i} className={`mecbot__turno mecbot__turno--${m.rol}`}>
+                <p className={`mecbot__globo mecbot__globo--${m.rol}`}>{m.texto}</p>
+                {m.reenvio && (
+                  <button
+                    type="button"
+                    className="mecbot__reenviar"
+                    aria-label="Reenviar mensaje"
+                    title="Reenviar"
+                    disabled={pensando}
+                    onClick={() => reenviar(i)}
+                  >
+                    <IconoReenviar />
+                  </button>
+                )}
+              </div>
             ))}
             {pensando && <p className="mecbot__globo mecbot__globo--mecbot">Estoy pensando…</p>}
           </div>

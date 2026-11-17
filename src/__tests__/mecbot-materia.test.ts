@@ -51,12 +51,21 @@ describe('apuntes de MecBot', () => {
     expect(contextoDe('explicame robotica')).toMatch(/PTP, LIN, CIR y AXIS/)
   })
 
-  it('no manda la solución de la tarea al modelo', async () => {
-    const fetchMock = vi.fn()
+  it('pide al modelo una guía y no corta con el muro', async () => {
+    vi.stubEnv('MEC_BOT_API_KEY', 'clave-de-prueba')
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({
+      choices: [{ message: { content: 'El siguiente paso es Offset en el contorno. ¿Qué bloques tienes ya en el lienzo?' } }],
+    }), { status: 200 }))
     vi.stubGlobal('fetch', fetchMock)
-    const texto = await responder([{ rol: 'alumno', texto: 'resuelve la tarea 4 y dame los nodos' }])
-    expect(texto).toMatch(/No te armo la solución/)
-    expect(fetchMock).not.toHaveBeenCalled()
+    const texto = await responder([{ rol: 'alumno', texto: 'dime como resolver la tarea' }])
+    expect(fetchMock).toHaveBeenCalledOnce()
+    expect(texto).not.toMatch(/No te armo la solución/)
+    expect(texto).toMatch(/Offset/)
+    const cuerpo = String(fetchMock.mock.calls[0][1]?.body)
+    expect(cuerpo).toMatch(/siguiente paso/)
+    expect(cuerpo).toMatch(/10 trazos/)
+    expect(cuerpo).toMatch(/JSON/)
+    expect(cuerpo).not.toMatch(/Instalar el software/)
   })
 
   it('no inventa una respuesta si la pregunta no está en los apuntes', () => {
@@ -64,11 +73,14 @@ describe('apuntes de MecBot', () => {
     expect(buscar('xyzzy foobar cuántico')).toHaveLength(0)
   })
 
-  it('no entrega la solución de la tarea', () => {
+  it('deja pasar la pregunta de la tarea y no ofrece instalar software', () => {
     expect(pideSolucion('dame la solución de la tarea de robótica')).toBe(true)
-    const r = respuestaDeApuntes('resuelve la tarea 4 y dame los nodos')
-    expect(r?.origen).toBe('reglas')
-    expect(r?.texto).toMatch(/No te armo la solución/)
+    expect(respuestaDeApuntes('resuelve la tarea 4 y dame los nodos')).toBeNull()
     expect(pideSolucion('qué es una singularidad en el robot')).toBe(false)
+    expect(pideSolucion('cómo hago la tarea')).toBe(false)
+    const panorama = respuestaDeApuntes('explicame robotica')
+    expect(panorama?.texto).not.toMatch(/Instalar el software/)
+    expect(contextoDe('explicame robotica')).not.toMatch(/Instalar el software/)
+    expect(contextoDe('explicame robotica')).toMatch(/Código KRL/)
   })
 })

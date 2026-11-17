@@ -2140,6 +2140,14 @@ body:has(.banco:not(.banco--apilado):not(.banco--neumatica-apilado)) {
   gap: 8px;
 }
 .mecbot__vacio { margin: 0; color: #51606f; font-size: 0.86rem; line-height: 1.45; }
+.mecbot__turno {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  max-width: 100%;
+}
+.mecbot__turno--alumno { align-self: flex-end; max-width: 92%; }
+.mecbot__turno--mecbot { align-self: flex-start; max-width: 100%; }
 .mecbot__globo {
   margin: 0;
   max-width: 92%;
@@ -2149,8 +2157,25 @@ body:has(.banco:not(.banco--apilado):not(.banco--neumatica-apilado)) {
   line-height: 1.45;
   white-space: pre-wrap;
 }
+.mecbot__turno .mecbot__globo { max-width: none; min-width: 0; }
+.mecbot__turno--mecbot .mecbot__globo { max-width: calc(100% - 36px); }
 .mecbot__globo--alumno { align-self: flex-end; background: #1668c7; color: #fff; }
 .mecbot__globo--mecbot { align-self: flex-start; background: #eef2f6; color: #1c2733; }
+.mecbot__reenviar {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #51606f;
+  cursor: pointer;
+  padding: 0;
+}
+.mecbot__reenviar:hover { background: #e7eef6; color: #1668c7; }
+.mecbot__reenviar:disabled { opacity: 0.45; cursor: default; }
 .mecbot__form { display: flex; gap: 6px; padding: 8px 10px 4px; }
 .mecbot__form input {
   flex: 1;

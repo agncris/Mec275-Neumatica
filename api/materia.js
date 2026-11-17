@@ -249,7 +249,7 @@ function tokens(s) {
     .filter((t) => t.length > 2 && !VACIAS.has(t))
 }
 
-/** La pregunta pide la resolución de una tarea, no un concepto. */
+/** La pregunta pide la solución hecha de una tarea, no un concepto. */
 export function pideSolucion(pregunta) {
   const p = normalizar(pregunta)
   const pide = /\b(solucion|resuelve|resolver|resuelveme|completa|completar|completalo|corrigelo|dame|escribeme)\b/.test(p) || /alternativa correcta|cual es la (respuesta|correcta)/.test(p)
@@ -257,8 +257,10 @@ export function pideSolucion(pregunta) {
   return pide && deTarea
 }
 
-const AVISO_TAREA =
-  'No te armo la solución de la tarea. Revisa el concepto en Estudiar y dime qué paso ya tienes y qué aviso te aparece: con eso te hago una pregunta para que lo descubras.'
+/** Esa sección salió de Estudiar. No vuelve a las sugerencias ni al contexto. */
+function sigueEnCurso(ficha) {
+  return !/instalar el software/i.test(ficha.titulo)
+}
 
 /** Palabras de relleno en «explícame robótica» o «de qué trata el CNC». */
 const RELLENO = new Set('explica explicame explicar cuentame hablame habla resume resumen trata sobre tema unidad curso materia todo toda intro introduccion'.split(' '))
@@ -286,7 +288,7 @@ function unidadPedida(pregunta) {
 function panoramaDe(pregunta) {
   const unidad = unidadPedida(pregunta)
   if (!unidad) return null
-  const fichas = FICHAS.filter((f) => f.unidad === unidad)
+  const fichas = FICHAS.filter((f) => f.unidad === unidad && sigueEnCurso(f))
   if (!fichas.length) return null
   const [primera, ...resto] = fichas
   const menu = resto.map((f) => `• ${f.titulo}`).join('\n')
@@ -305,7 +307,7 @@ export function buscar(pregunta, n = 3) {
   const p = normalizar(pregunta)
   const q = tokens(pregunta)
   const deRobot = /robot|kuka|krl|ptp|lin\b|cir\b|grasshopper|scara|singular|efector|flange/.test(p)
-  const ranked = FICHAS.map((ficha) => {
+  const ranked = FICHAS.filter(sigueEnCurso).map((ficha) => {
     let puntos = 0
     const claves = new Set(ficha.claves.flatMap((c) => tokens(c)))
     const cuerpo = new Set(tokens(`${ficha.titulo} ${ficha.texto}`))
@@ -327,7 +329,8 @@ export function buscar(pregunta, n = 3) {
 
 /** Respuesta de los apuntes, o null si no alcanza y hay que usar el modelo. */
 export function respuestaDeApuntes(pregunta) {
-  if (pideSolucion(pregunta)) return { texto: AVISO_TAREA, origen: 'reglas' }
+  // Pedir la solución no corta la charla: la pregunta sigue al modelo, con el límite en el prompt.
+  if (pideSolucion(pregunta)) return null
   const panorama = panoramaDe(pregunta)
   if (panorama) return panorama
   const ranked = buscar(pregunta, 2)
@@ -346,7 +349,7 @@ export function respuestaDeApuntes(pregunta) {
 export function contextoDe(pregunta) {
   const unidad = unidadPedida(pregunta)
   if (unidad) {
-    return FICHAS.filter((f) => f.unidad === unidad)
+    return FICHAS.filter((f) => f.unidad === unidad && sigueEnCurso(f))
       .map((f) => `[${f.unidad} · ${f.titulo}] ${f.texto}`)
       .join('\n\n')
   }
