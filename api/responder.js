@@ -155,3 +155,18 @@ export async function responder(entrada, ip = 'local') {
   }
   return listo
 }
+
+/**
+ * Atiende una petición de MecBot ya leída: `cuerpo` es el JSON que mandó el navegador
+ * (o `null` si no se pudo leer) e `ip` la del alumno. Devuelve el código HTTP y el JSON
+ * de la respuesta. La usan Vercel (`api/mecbot.js`), `server.js` y `npm run dev`.
+ */
+export async function atender(cuerpo, ip) {
+  try {
+    const texto = await responder(cuerpo?.mensajes, ip)
+    return { status: 200, json: { texto } }
+  } catch (e) {
+    if (!(e instanceof ErrorBot)) console.error('mecbot: fallo inesperado', e && e.stack)
+    return e instanceof ErrorBot ? { status: e.status, json: { error: e.codigo } } : { status: 502, json: { error: 'red' } }
+  }
+}

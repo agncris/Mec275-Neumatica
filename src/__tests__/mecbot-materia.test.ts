@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { buscar, contextoDe, pideSolucion, respuestaDeApuntes } from '../../api/materia.js'
-import { responder } from '../../api/responder.js'
+import { atender, responder } from '../../api/responder.js'
 
 describe('apuntes de MecBot', () => {
   afterEach(() => {
@@ -82,5 +82,40 @@ describe('apuntes de MecBot', () => {
     expect(panorama?.texto).not.toMatch(/Instalar el software/)
     expect(contextoDe('explicame robotica')).not.toMatch(/Instalar el software/)
     expect(contextoDe('explicame robotica')).toMatch(/Código KRL/)
+  })
+})
+
+describe('atender: la respuesta HTTP de MecBot', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.unstubAllEnvs()
+  })
+
+  it('una petición sin mensajes da 400', async () => {
+    expect(await atender(null, 'ip-1')).toEqual({ status: 400, json: { error: 'mensaje' } })
+    expect(await atender({ mensajes: [] }, 'ip-1')).toEqual({ status: 400, json: { error: 'mensaje' } })
+  })
+
+  it('sin clave del modelo da 503', async () => {
+    vi.stubEnv('MEC_BOT_API_KEY', '')
+    const r = await atender({ mensajes: [{ rol: 'alumno', texto: 'pregunta que nadie ha hecho antes 8271' }] }, 'ip-2')
+    expect(r).toEqual({ status: 503, json: { error: 'sin-clave' } })
+  })
+
+  it('una respuesta del modelo sale como { texto } con 200', async () => {
+    vi.stubEnv('MEC_BOT_API_KEY', 'clave-de-prueba')
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ choices: [{ message: { content: 'Respuesta de prueba.' } }] }), { status: 200 })))
+    const r = await atender({ mensajes: [{ rol: 'alumno', texto: 'otra pregunta distinta 5530' }] }, 'ip-3')
+    expect(r).toEqual({ status: 200, json: { texto: 'Respuesta de prueba.' } })
+  })
+
+  it('un fallo inesperado da 502 con el código red', async () => {
+    vi.stubEnv('MEC_BOT_API_KEY', 'clave-de-prueba')
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      throw new Error('sin red')
+    }))
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const r = await atender({ mensajes: [{ rol: 'alumno', texto: 'pregunta con la red caída 9904' }] }, 'ip-4')
+    expect(r).toEqual({ status: 502, json: { error: 'red' } })
   })
 })
