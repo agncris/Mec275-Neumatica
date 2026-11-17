@@ -6,7 +6,7 @@
  * sus coordenadas, explicación de cada bloque y exportación del .cnc y del
  * video de la simulación.
  */
-import { acercar, BotonNuevo, botonPrimario, botonSecundario, estiloAviso, Menu, useEsEstrecha, useTactil } from '../components/ui'
+import { acercar, estiloAviso, useEsEstrecha, useTactil } from '../components/ui'
 import BancoDividido, { TituloArea } from '../components/banco/BancoDividido'
 import { enlaceEstudiar } from '../components/banco/ProcesoTarea'
 import { usePanelAcoplado, type PestanaPanel } from '../components/banco/PanelAcoplado'
@@ -24,7 +24,6 @@ import { VER_TAREA_CNC } from '../unidades'
 import { explicarBloque, interpretar, type ResultadoGcode } from './gcode'
 import {
   almacenDe,
-  CONFIG_INICIAL,
   fijarHerramientas,
   material as materialDe,
   origenPrograma,
@@ -33,7 +32,7 @@ import {
   type TipoMaquina,
 } from './maquinas'
 import Plano2D from './Plano2D'
-import SelectorMaquina, { MAQUINAS } from './SelectorMaquina'
+import SelectorMaquina from './SelectorMaquina'
 import Preparacion from './PanelPreparacion'
 import Revision from './Revision'
 import Tablero from './Tablero'
@@ -41,85 +40,16 @@ import TablaPuntos from './TablaPuntos'
 import PlanoTarea, { EJEMPLO_GUIADO_TORNO } from './PlanoTarea'
 import ResumenRevision from './ResumenRevision'
 import PanelEntrega from './PanelEntrega'
-import { botonSuave, rotulo, selector } from './estilos'
+import BarraCNC, { SelectorVelocidad } from './BarraCNC'
+import { botonSuave } from './estilos'
 import { SimuladorCNC, volumenPieza } from './simulador'
 import type { VistaCNC } from './Maquina3D'
+import { CLAVE, CLAVE_TAREA, NOMBRE_TAREA, leerGuardado, leerTarea } from './datosCNC'
+import { type Estado } from './datosCNC'
 
 const Maquina3D = lazy(() => import('./Maquina3D'))
 // La teoría, la ficha y la autoevaluación de Estudiar se cargan solo al entrar a Estudiar.
 const EstudiarCNC = lazy(() => import('./EstudiarCNC'))
-
-const CLAVE = 'neumalab.cnc'
-
-/**
- * La Tarea 3 se trabaja en su propia sección: centro de torneado, latón y un
- * programa en blanco guardado aparte. El enunciado (la pieza) lo entrega el
- * profesor: la app sólo pone la máquina. «Entregar» aparece sólo ahí.
- */
-const CLAVE_TAREA = 'neumalab.cnc.tarea'
-const NOMBRE_TAREA = 'Tarea 3'
-
-type Estado = 'listo' | 'corriendo' | 'bloque' | 'pausa' | 'parada' | 'alarma' | 'fin'
-
-interface Guardado {
-  config: ConfigCNC
-  codigos: Record<TipoMaquina, string>
-  nombres: Record<TipoMaquina, string>
-}
-
-function leerGuardado(): Guardado {
-  const base: Guardado = {
-    config: CONFIG_INICIAL,
-    codigos: { torno: EJEMPLOS_CNC[0].codigo, fresadora: EJEMPLOS_CNC.find((e) => e.maquina === 'fresadora')!.codigo },
-    nombres: { torno: EJEMPLOS_CNC[0].titulo, fresadora: EJEMPLOS_CNC.find((e) => e.maquina === 'fresadora')!.titulo },
-  }
-  try {
-    const crudo = localStorage.getItem(CLAVE)
-    if (crudo) {
-      const g = JSON.parse(crudo) as Partial<Guardado>
-      if (g.config && g.codigos && typeof g.codigos.torno === 'string' && typeof g.codigos.fresadora === 'string') {
-        return {
-          config: { ...CONFIG_INICIAL, ...g.config, torno: { ...CONFIG_INICIAL.torno, ...g.config.torno }, fresa: { ...CONFIG_INICIAL.fresa, ...g.config.fresa } },
-          codigos: g.codigos as Guardado['codigos'],
-          nombres: { ...base.nombres, ...(g.nombres ?? {}) },
-        }
-      }
-    }
-  } catch {
-    /* sin almacenamiento o dato roto */
-  }
-  return base
-}
-
-function tareaVacia(): Guardado {
-  return {
-    config: { ...CONFIG_INICIAL, maquina: 'torno', material: 'laton' },
-    codigos: { torno: programaNuevo('torno'), fresadora: programaNuevo('fresadora') },
-    nombres: { torno: NOMBRE_TAREA, fresadora: NOMBRE_TAREA },
-  }
-}
-
-function leerTarea(): Guardado {
-  try {
-    const crudo = localStorage.getItem(CLAVE_TAREA)
-    if (crudo) {
-      const g = JSON.parse(crudo) as Partial<Guardado>
-      if (g.config && g.codigos && typeof g.codigos.torno === 'string') {
-        const base = tareaVacia()
-        return {
-          config: { ...base.config, ...g.config, maquina: 'torno', torno: { ...base.config.torno, ...g.config.torno } },
-          codigos: { ...base.codigos, torno: g.codigos.torno },
-          nombres: { ...base.nombres, ...(g.nombres ?? {}) },
-        }
-      }
-    }
-  } catch {
-    /* sin almacenamiento o dato roto */
-  }
-  return tareaVacia()
-}
-
-const VELOCIDADES = [0.5, 1, 2, 5, 10, 25, 60]
 
 export default function UnidadCNC() {
   const tactil = useTactil()
@@ -520,39 +450,7 @@ export default function UnidadCNC() {
   const bloqueado = estado === 'corriendo' || estado === 'bloque'
   const nombreMaquina = torno ? 'Centro de torneado' : 'Fresadora de 3 ejes'
 
-  const selectorVelocidad = (
-    <label style={{ ...rotulo }} title="Velocidad de la simulación">
-      Velocidad
-      <select value={velocidad} onChange={(e) => setVelocidad(Number(e.target.value))} style={{ ...selector, minHeight: estrecha ? 32 : 36 }} aria-label="Velocidad" data-velocidad-cnc="si">
-        {VELOCIDADES.map((v) => (
-          <option key={v} value={v}>
-            ×{v}
-          </option>
-        ))}
-      </select>
-    </label>
-  )
-  const botonMaquina = enTarea ? (
-    <span className="boton-planta" title="El enunciado de la tarea está en Aula" data-maquina-tarea="si" style={{ maxWidth: 360, cursor: 'default', padding: estrecha ? '0 0.5rem' : undefined }}>
-      {!estrecha && <span style={{ color: '#9a4a00', fontWeight: 700 }}>{NOMBRE_TAREA}:</span>}
-      <span style={{ fontWeight: 600 }}>{estrecha ? MAQUINAS.torno.corto : MAQUINAS.torno.nombre}</span>
-    </span>
-  ) : (
-    <button
-      onClick={() => setEligiendoMaquina(true)}
-      className="boton-planta"
-      title="Elegir la máquina o abrir un ejemplo"
-      aria-label={`Máquina: ${MAQUINAS[maquina].nombre}. Elegir máquina o ejemplo`}
-      data-boton-maquina="si"
-      style={{ maxWidth: 360, padding: estrecha ? '0 0.5rem' : undefined }}
-    >
-      {!estrecha && <span style={{ color: '#51606f' }}>Máquina:</span>}
-      <span style={{ fontWeight: 600 }}>{estrecha ? MAQUINAS[maquina].corto : MAQUINAS[maquina].nombre}</span>
-      <span aria-hidden style={{ fontSize: '0.7rem', flex: 'none' }}>
-        ▾
-      </span>
-    </button>
-  )
+  const selectorVelocidad = <SelectorVelocidad velocidad={velocidad} setVelocidad={setVelocidad} estrecha={estrecha} />
   const itemsArchivo = [
     { texto: 'Nuevo programa', ayuda: 'Un programa en blanco para esta máquina', onClick: () => void nuevo() },
     { texto: 'Abrir…', ayuda: 'Un trabajo (.json) o un programa .cnc, .nc, .gcode o .txt (también de CNC Simulator Pro)', onClick: () => inputArchivo.current?.click() },
@@ -572,71 +470,30 @@ export default function UnidadCNC() {
   ]
 
   const barra = (
-    <>
-      {estado === 'corriendo' ? (
-        <button onClick={() => setEstado('pausa')} style={{ ...botonPrimario(false, '#ffa726'), color: '#1c2733' }} data-control="pausa">
-          ❚❚ Pausa
-        </button>
-      ) : (
-        <button
-          onClick={() => correr('corriendo')}
-          disabled={!resultado.pasos.length}
-          title={hayErrores ? 'Hay errores: la máquina corre hasta la línea anterior al primer error' : 'Ejecuta el programa completo'}
-          style={{ ...botonPrimario(), opacity: resultado.pasos.length ? 1 : 0.5 }}
-          data-control="ciclo"
-        >
-          {estado === 'parada' ? '▶ Continuar' : '▶ Ciclo'}
-        </button>
-      )}
-      <span className="grupo-zoom" role="group" aria-label="Avance del programa">
-        <button onClick={atras} disabled={estado === 'corriendo' || estado === 'listo'} style={{ opacity: estado === 'corriendo' || estado === 'listo' ? 0.4 : 1 }} title="Bloque anterior: vuelve una línea" aria-label="Bloque anterior" data-control="atras">
-          {'⏮\uFE0E'}
-        </button>
-        <button onClick={() => correr('bloque')} disabled={!resultado.pasos.length || estado === 'corriendo'} style={{ opacity: !resultado.pasos.length || estado === 'corriendo' ? 0.4 : 1 }} title="Bloque a bloque: ejecuta una línea y se detiene" aria-label="Bloque a bloque" data-control="bloque">
-          {'⏭\uFE0E'}
-        </button>
-        <button onClick={alFinal} disabled={!resultado.pasos.length} title="Al final: mecaniza todo de una vez" aria-label="Al final" data-control="final">
-          {'⏩\uFE0E'}
-        </button>
-        <button onClick={reiniciar} title="Reiniciar: vuelve al inicio con el bruto entero" aria-label="Reiniciar" data-control="reiniciar">
-          {'⟲\uFE0E'}
-        </button>
-      </span>
-      {/* Igual que en las otras unidades: acción principal, «Nuevo» y después los selectores. */}
-      <BotonNuevo que="un programa" compacto={estrecha} deshabilitado={bloqueado} onClick={() => void nuevo()} />
-      {!estrecha && selectorVelocidad}
-      {botonMaquina}
-      <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
-        {!estrecha && (
-          <button onClick={guia.abrir} className="boton-icono" title="Guía de inicio" aria-label="Guía de inicio" data-abrir-guia="si">
-            ?
-          </button>
-        )}
-        {grabando && (
-          <button onClick={alternarGrabacion} style={{ ...botonSecundario, color: '#fff', background: '#c62828', borderColor: '#c62828' }}>
-            ■ {estrecha ? 'Detener' : 'Detener grabación'}
-          </button>
-        )}
-        {estrecha ? (
-          <Menu etiqueta="⋯" datos="mas" items={[...itemsArchivo, ...itemsExportar.map((it, i) => (i === 0 ? { ...it, separar: true } : it)), { texto: 'Guía de inicio', ayuda: 'Los cuatro pasos para partir', onClick: guia.abrir, separar: true }]} />
-        ) : (
-          <>
-            <Menu etiqueta="Archivo" items={itemsArchivo} />
-            <Menu etiqueta="Exportar" items={itemsExportar} />
-          </>
-        )}
-      </span>
-      <input
-        ref={inputArchivo}
-        type="file"
-        accept=".json,.cnc,.nc,.gcode,.ngc,.tap,.txt,application/json,text/plain"
-        style={{ display: 'none' }}
-        onChange={(e) => {
-          void abrir(e.target.files?.[0])
-          e.target.value = ''
-        }}
-      />
-    </>
+    <BarraCNC
+      estado={estado}
+      setEstado={setEstado}
+      correr={correr}
+      atras={atras}
+      alFinal={alFinal}
+      reiniciar={reiniciar}
+      hayPasos={resultado.pasos.length > 0}
+      hayErrores={hayErrores}
+      estrecha={estrecha}
+      enTarea={enTarea}
+      bloqueado={bloqueado}
+      nuevo={nuevo}
+      selectorVelocidad={selectorVelocidad}
+      maquina={maquina}
+      setEligiendoMaquina={setEligiendoMaquina}
+      guia={guia}
+      grabando={grabando}
+      alternarGrabacion={alternarGrabacion}
+      itemsArchivo={itemsArchivo}
+      itemsExportar={itemsExportar}
+      inputArchivo={inputArchivo}
+      abrir={abrir}
+    />
   )
 
   const areaPrograma = (
