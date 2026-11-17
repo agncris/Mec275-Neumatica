@@ -24,10 +24,10 @@ import CodigoKRL from './CodigoKRL'
 import Analisis from './Analisis'
 import { enlaceEstudiar } from './estilos'
 import PlanoTarea, { BarraEjemplo } from './PlanoTarea'
-import { Ejes } from './PanelParametros'
 import PanelEntrega from './PanelEntrega'
 import BarraRobot from './BarraRobot'
 import AreaPrograma from './AreaPrograma'
+import AreaSimulacion from './AreaSimulacion'
 import { EJEMPLOS_ROBOT } from './ejemplos'
 import { cajaCurvas, leerDXF } from './geometria'
 import { planoXY, v, type Plano } from './matematica'
@@ -50,7 +50,6 @@ import type { VistaRobot } from './Robot3D'
 import { ANCLAS_ESTUDIAR_ROBOT } from './anclasEstudiar'
 import { BASE_DEFECTO, CLAVE, CLAVE_ANTES_EJEMPLO, CLAVE_TAREA, definicionGuardada, HERR_DEFECTO, HERR_MANDO, leerGuardada, leerTarea, marcasDe, type Modo, NOMBRE_TAREA, previaDe } from './datosRobot'
 
-const Robot3D = lazy(() => import('./Robot3D'))
 // La teoría, la ficha y las demos 3D de Estudiar se cargan solo al entrar a Estudiar.
 const EstudiarRobotica = lazy(() => import('./EstudiarRobotica'))
 
@@ -623,98 +622,28 @@ export default function UnidadRobotica() {
   }
 
   const areaSimulacion = (
-    <>
-      <div className="relleno">
-        <Suspense fallback={<p style={{ padding: 20, color: '#51606f' }}>Montando la celda…</p>}>
-          <Robot3D
-            vista={vista}
-            onCanvas={(c) => (canvasRef.current = c)}
-            grabando={grabando}
-            alto="100%"
-            encabezado={
-              <>
-                <h2 style={{ margin: 0, fontSize: '1rem' }}>Simulación 3D</h2>
-                <span style={{ fontWeight: 400, fontSize: '0.8rem', color: '#51606f' }}>{modeloVista.nombre}</span>
-                {simActiva && (
-                  <button
-                    onClick={abrirAnalisis}
-                    title="Ver el análisis de la simulación"
-                    style={{ ...estadoChip, border: 'none', cursor: 'pointer', background: errores.length ? '#b3261e' : avisosSim.length ? '#a35200' : '#0e7a43' }}
-                    data-analisis={errores.length ? 'error' : avisosSim.length ? 'aviso' : 'ok'}
-                  >
-                    {errores.length ? `${errores.length} error(es)` : avisosSim.length ? `${avisosSim.length} aviso(s)` : 'sin problemas'}
-                  </button>
-                )}
-              </>
-            }
-            play={
-              simActiva
-                ? {
-                    etiqueta: reproduciendo ? '❚❚ Pausa' : '▶ Reproducir',
-                    onClick: () => {
-                      if (!reproduciendo && tRef.current >= simActiva.tiempo - 1e-6) tRef.current = 0
-                      setReproduciendo((r) => !r)
-                    },
-                    titulo: 'Recorre el programa',
-                    corriendo: reproduciendo,
-                  }
-                : { etiqueta: '▶ Reproducir', onClick: () => {}, deshabilitado: true, titulo: 'Arma un programa para simular' }
-            }
-          />
-        </Suspense>
-      </div>
-      {simActiva ? (
-        <div className="reproductor-robot" data-reproductor="si">
-          <input
-            type="range"
-            min={0}
-            max={simActiva.tiempo}
-            step={0.01}
-            value={Math.min(tiempo, simActiva.tiempo)}
-            onChange={(e) => {
-              tRef.current = Number(e.target.value)
-              setTick((n) => n + 1)
-            }}
-            style={{ flex: 1, minWidth: 140 }}
-            aria-label="Tiempo de la simulación"
-          />
-          <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: '0.78rem' }}>
-            {tiempo.toFixed(1)} / {simActiva.tiempo.toFixed(1)} s
-          </span>
-          <select value={velocidad} onChange={(e) => setVelocidad(Number(e.target.value))} style={{ padding: '0.2rem', minHeight: 32 }} aria-label="Velocidad">
-            {[0.5, 1, 2, 5, 10].map((x) => (
-              <option key={x} value={x}>
-                ×{x}
-              </option>
-            ))}
-          </select>
-        </div>
-      ) : (
-        <p style={{ margin: '8px 0 0', fontSize: '0.8rem', color: '#51606f' }}>
-          {modo === 'visual'
-            ? 'Cuando el Core tenga comandos, robot y herramienta, aquí aparece el reproductor.'
-            : 'Mueve los ejes de abajo, graba puntos en el mando y pulsa «Reproducir».'}
-        </p>
-      )}
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 4 }}>
-        <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: '0.8rem', color: '#51606f' }}>
-          <input type="checkbox" checked={alcance} onChange={(e) => setAlcance(e.target.checked)} /> Alcance
-        </label>
-      </div>
-      <Ejes
-        modelo={modeloVista}
-        q={qVista}
-        uso={simActiva?.uso ?? null}
-        onQ={
-          modo === 'mando'
-            ? (q) => {
-                setReproduciendo(false)
-                setQMando(q)
-              }
-            : undefined
-        }
-      />
-    </>
+    <AreaSimulacion
+      modo={modo}
+      vista={vista}
+      canvasRef={canvasRef}
+      grabando={grabando}
+      modeloVista={modeloVista}
+      simActiva={simActiva}
+      errores={errores}
+      avisosSim={avisosSim}
+      abrirAnalisis={abrirAnalisis}
+      reproduciendo={reproduciendo}
+      setReproduciendo={setReproduciendo}
+      tRef={tRef}
+      tiempo={tiempo}
+      setTick={setTick}
+      velocidad={velocidad}
+      setVelocidad={setVelocidad}
+      alcance={alcance}
+      setAlcance={setAlcance}
+      qVista={qVista}
+      setQMando={setQMando}
+    />
   )
 
   const pestanas: Array<PestanaPanel<PestanaRobot>> = [
@@ -882,6 +811,5 @@ export default function UnidadRobotica() {
 type PestanaRobot = 'analisis' | 'krl' | 'ficha' | 'plano-tarea'
 
 
-const estadoChip: React.CSSProperties = { color: '#fff', borderRadius: 6, padding: '1px 8px', fontSize: '0.75rem', fontWeight: 700 }
 /** Aviso flotante: aparece y desaparece sin mover el resto de la página. */
 const avisoOk = estiloAviso
