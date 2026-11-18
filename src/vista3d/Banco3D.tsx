@@ -13,7 +13,8 @@
  * altura del punto de la carrera que vigilan, para que se vea a la leva
  * pisarlos.
  */
-import HudEscena, { type PlayEscena } from '../components/HudEscena'
+import HudEscena from '../components/HudEscena'
+import { BotonPlayEscena, type PlayEscena } from '../components/PlayEscena'
 import { aplicarModoArrastre, saltarVista, zoomCamara, type ModoArrastre, type VistaCamara } from '../components/mandoCamara'
 import { acercar, useTactil } from '../components/ui'
 import { useEffect, useRef, useState } from 'react'
@@ -34,7 +35,7 @@ interface Props {
   motor: Motor | null
   /** Ocupa todo el alto de su contenedor (banco de trabajo). */
   llenar?: boolean
-  /** Play dentro de la escena, cuando está a pantalla completa. */
+  /** El play dentro de la escena (siempre visible). */
   play?: PlayEscena
 }
 
@@ -801,9 +802,9 @@ export default function Banco3D({ motor, llenar = false, play }: Props) {
           </button>
         )}
       </div>
+      {play && <BotonPlayEscena play={play} />}
       {pantallaCompleta && (
         <HudEscena
-          play={play}
           vista={vistaCamara}
           onVista={(v) => vistaRef.current(v)}
           modo={modoArrastre}
@@ -903,8 +904,8 @@ const botonMando: React.CSSProperties = {
 
 const pista: React.CSSProperties = {
   position: 'absolute',
-  left: 10,
-  bottom: 6,
+  left: 66,
+  bottom: 14,
   margin: 0,
   zIndex: 2,
   fontSize: '0.78rem',

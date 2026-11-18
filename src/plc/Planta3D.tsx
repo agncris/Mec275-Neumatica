@@ -8,7 +8,8 @@
  * (`sim.current`) y se pone al día. Los botones de la máquina se pulsan con
  * el ratón o el dedo, igual que en el banco.
  */
-import HudEscena, { type PlayEscena } from '../components/HudEscena'
+import HudEscena from '../components/HudEscena'
+import { BotonPlayEscena, type PlayEscena } from '../components/PlayEscena'
 import { aplicarModoArrastre, saltarVista, zoomCamara, type ModoArrastre, type VistaCamara } from '../components/mandoCamara'
 import { acercar, useCelular, useTactil } from '../components/ui'
 import { useEffect, useRef, useState, type MutableRefObject } from 'react'
@@ -34,7 +35,7 @@ interface Props {
   notacion: Notacion
   /** Alto de la vista (en píxeles, o '100%' para llenar el área). */
   alto?: number | string
-  /** Play dentro de la escena, cuando está a pantalla completa. */
+  /** El play dentro de la escena (siempre visible). */
   play?: PlayEscena
 }
 
@@ -363,9 +364,9 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
           </button>
         )}
       </div>
+      {play && <BotonPlayEscena play={play} />}
       {pantallaCompleta && (
         <HudEscena
-          play={play}
           vista={vistaCamara}
           onVista={(v) => vistaRef.current(v)}
           modo={modoArrastre}
@@ -414,8 +415,8 @@ const boton: React.CSSProperties = {
 
 const pista: React.CSSProperties = {
   position: 'absolute',
-  left: 10,
-  bottom: 6,
+  left: 66,
+  bottom: 14,
   margin: 0,
   zIndex: 1,
   fontSize: '0.76rem',

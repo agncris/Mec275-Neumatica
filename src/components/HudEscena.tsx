@@ -1,19 +1,9 @@
 /**
- * Controles que viven dentro de la simulación al ponerla a pantalla completa:
- * el play (la barra de la unidad queda fuera) y el mando de la cámara.
+ * El mando de la cámara dentro de la simulación a pantalla completa.
+ * El play va aparte (PlayEscena) y está siempre.
  */
 import type { CSSProperties } from 'react'
-import { botonPrimario } from './ui'
 import type { ModoArrastre, VistaCamara } from './mandoCamara'
-
-export interface PlayEscena {
-  etiqueta: string
-  onClick: () => void
-  titulo?: string
-  deshabilitado?: boolean
-  /** La simulación ya está corriendo: el botón pasa a detener o pausar. */
-  corriendo?: boolean
-}
 
 const AYUDA: Record<ModoArrastre, string> = {
   girar: 'Arrastra para girar alrededor',
@@ -32,32 +22,11 @@ const chip: CSSProperties = {
   minHeight: 32,
 }
 
-export function BotonPlayEscena({ play }: { play: PlayEscena }) {
-  return (
-    <button
-      type="button"
-      onClick={play.onClick}
-      disabled={play.deshabilitado}
-      title={play.titulo}
-      data-play-escena="si"
-      style={{
-        ...botonPrimario(!!play.corriendo),
-        boxShadow: '0 2px 8px rgba(28,39,51,0.25)',
-        opacity: play.deshabilitado ? 0.5 : 1,
-      }}
-    >
-      {play.etiqueta}
-    </button>
-  )
-}
-
 export default function HudEscena({
-  play,
   modo,
   onModo,
   onZoom,
 }: {
-  play?: PlayEscena
   /** Ya no se usan: las vistas están en el cubo de vistas. Se aceptan para no romper a quien las pase. */
   vista?: VistaCamara
   onVista?: (v: VistaCamara) => void
@@ -103,11 +72,6 @@ export default function HudEscena({
         </div>
         <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--tinta-suave)', lineHeight: 1.3 }}>{AYUDA[modo]}</p>
       </div>
-      {play && (
-        <div style={{ position: 'absolute', left: '50%', bottom: 16, transform: 'translateX(-50%)', zIndex: 4 }}>
-          <BotonPlayEscena play={play} />
-        </div>
-      )}
     </>
   )
 }

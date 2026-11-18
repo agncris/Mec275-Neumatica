@@ -15,7 +15,7 @@ import { useStore, type Pieza } from '../store'
 import { enrutarManguera, enrutarPorCarril } from '../routing'
 import { planificarCarriles } from '../carriles'
 import { calcularAreaConMargen } from '../layout'
-import { BotonPlayEscena, type PlayEscena } from './HudEscena'
+import { BotonPlayEscena, type PlayEscena } from './PlayEscena'
 import { useEsEstrecha } from './ui'
 
 /** Dimensiones por defecto del viewport en el espacio del circuito. */
@@ -104,7 +104,7 @@ interface Props {
   controles?: React.MutableRefObject<ControlesPizarra | null>
   /** Avisa el zoom (en %) cada vez que cambia. */
   onZoom?: (porcentaje: number) => void
-  /** Play dentro de la pizarra, cuando está a pantalla completa. */
+  /** El play dentro de la pizarra (siempre visible). */
   play?: PlayEscena
 }
 
@@ -822,11 +822,7 @@ export default function Pizarra({ motor, vista = 'esquema', soloLectura = false,
         )}
       </div>
       )}
-      {pantallaCompleta && play && (
-        <div style={{ position: 'absolute', left: '50%', bottom: 16, transform: 'translateX(-50%)', zIndex: 5 }}>
-          <BotonPlayEscena play={play} />
-        </div>
-      )}
+      {play && <BotonPlayEscena play={play} />}
 
       <svg
         ref={svgRef}

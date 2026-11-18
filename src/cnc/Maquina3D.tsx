@@ -7,7 +7,8 @@
  * hacia la derecha y el X (radio) hacia arriba, como en los planos; en la
  * fresadora X va a la derecha, Y hacia el fondo y Z hacia arriba.
  */
-import HudEscena, { type PlayEscena } from '../components/HudEscena'
+import HudEscena from '../components/HudEscena'
+import { BotonPlayEscena, type PlayEscena } from '../components/PlayEscena'
 import { aplicarModoArrastre, zoomCamara, type ModoArrastre } from '../components/mandoCamara'
 import BotonPantallaCompleta, { usePantallaCompleta } from '../components/PantallaCompleta'
 import { useEffect, useRef, useState, type MutableRefObject } from 'react'
@@ -859,7 +860,7 @@ export default function Maquina3D({
   /** En píxeles, o '100%' para llenar el área. */
   alto?: number | string
   onCanvas?: (c: HTMLCanvasElement | null) => void
-  /** Play dentro de la escena, cuando está a pantalla completa. */
+  /** El play dentro de la escena (siempre visible). */
   play?: PlayEscena
 }) {
   const contRef = useRef<HTMLDivElement>(null)
@@ -994,9 +995,9 @@ export default function Maquina3D({
         {/* Las vistas (3D, frente, arriba) están en el cubo de vistas. */}
         <BotonPantallaCompleta activa={pantalla} onAlternar={alternarPantalla} estilo={{ border: '1px solid #c6ced6', background: 'rgba(255,255,255,0.9)', color: '#33475c', borderRadius: 6, padding: '2px 8px', fontSize: '0.78rem', cursor: 'pointer' }} />
       </div>
+      {play && <BotonPlayEscena play={play} />}
       {pantalla && (
         <HudEscena
-          play={play}
           vista={vistaActual}
           onVista={(v) => accionRef.current?.(v)}
           modo={modoArrastre}

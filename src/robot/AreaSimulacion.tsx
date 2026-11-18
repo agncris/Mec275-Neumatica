@@ -1,4 +1,5 @@
 import { lazy, Suspense, type CSSProperties, type MutableRefObject } from 'react'
+import BarraTiempo from '../components/BarraTiempo'
 import { Ejes } from './PanelParametros'
 import type { Modo } from './datosRobot'
 import type { Simulacion } from './movimiento'
@@ -95,31 +96,17 @@ export default function AreaSimulacion({
       </Suspense>
     </div>
     {simActiva ? (
-      <div className="reproductor-robot" data-reproductor="si">
-        <input
-          type="range"
-          min={0}
-          max={simActiva.tiempo}
-          step={0.01}
-          value={Math.min(tiempo, simActiva.tiempo)}
-          onChange={(e) => {
-            tRef.current = Number(e.target.value)
-            setTick((n) => n + 1)
-          }}
-          style={{ flex: 1, minWidth: 140 }}
-          aria-label="Tiempo de la simulación"
-        />
-        <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: '0.78rem' }}>
-          {tiempo.toFixed(1)} / {simActiva.tiempo.toFixed(1)} s
-        </span>
-        <select value={velocidad} onChange={(e) => setVelocidad(Number(e.target.value))} style={{ padding: '0.2rem', minHeight: 32 }} aria-label="Velocidad">
-          {[0.5, 1, 2, 5, 10].map((x) => (
-            <option key={x} value={x}>
-              ×{x}
-            </option>
-          ))}
-        </select>
-      </div>
+      <BarraTiempo
+        tiempo={tiempo}
+        total={simActiva.tiempo}
+        onBuscar={(t) => {
+          tRef.current = t
+          setTick((n) => n + 1)
+        }}
+        velocidad={velocidad}
+        velocidades={[0.5, 1, 2, 5, 10]}
+        onVelocidad={setVelocidad}
+      />
     ) : (
       <p style={{ margin: '8px 0 0', fontSize: '0.8rem', color: 'var(--tinta-suave)' }}>
         {modo === 'visual'
