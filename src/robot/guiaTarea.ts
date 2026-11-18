@@ -360,4 +360,7 @@ export function guiaTarea(def: Definicion): { paso: PasoTarea; avance: ItemAvanc
   }
 }
 
+/** Los bloques con que se arma la tarea, en el orden en que se usan. El resto de la paleta queda a un clic. */
+export const BLOQUES_TAREA = ['curvaDXF', 'desfase', 'mover', 'recorrer', 'salida', 'esperar', 'unir']
+
 export const TOTAL_PASOS_TAREA = PASOS.length

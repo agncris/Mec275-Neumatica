@@ -2314,3 +2314,178 @@ body:has(.banco:not(.banco--apilado):not(.banco--neumatica-apilado)) {
 .u-pad-panel.u-pad-panel { padding: 4px 12px 12px; }
 .u-grid-6.u-grid-6 { display: grid; gap: 6px; }
 .u-fila-4.u-fila-4 { display: flex; gap: 4px; }
+
+/* Guía de la Tarea 4: una sola tarjeta sobre el programa. */
+.guia-tarea {
+  flex: none;
+  margin: 0 0 8px;
+  padding: 10px 12px;
+  max-height: 46%;
+  overflow: auto;
+  background: #f3f8fe;
+  border: 1px solid #c9d9ee;
+  border-left: 4px solid #1668c7;
+  border-radius: 8px;
+  color: #1c2733;
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+.guia-tarea--ejemplo {
+  background: #fff6e8;
+  border-color: #e2c48a;
+  border-left-color: #c77a00;
+}
+.guia-tarea__cabeza {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 6px;
+}
+.guia-tarea__etapa {
+  flex: none;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #4d5b6a;
+}
+.guia-tarea__barra {
+  flex: 1 1 auto;
+  min-width: 30px;
+  height: 6px;
+  border-radius: 3px;
+  background: #dbe4ee;
+  overflow: hidden;
+}
+.guia-tarea__barra div {
+  height: 100%;
+  background: #0e7a43;
+}
+.guia-tarea__enlace {
+  flex: none;
+  min-height: 28px;
+  padding: 2px 10px;
+  border: 1px solid #b9c6d4;
+  border-radius: 6px;
+  background: #fff;
+  color: #0b4f9c;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+.guia-tarea__enlace:hover {
+  background: #eaf2fc;
+}
+.guia-tarea__titulo {
+  margin: 0 0 4px;
+  font-size: 1rem;
+  font-weight: 750;
+}
+.guia-tarea__texto {
+  margin: 0 0 4px;
+}
+.guia-tarea__pista {
+  margin: 4px 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: #fff4e0;
+  border: 1px solid #f0c987;
+  color: #6b4200;
+}
+.guia-tarea__por {
+  margin: 0 0 4px;
+  color: #33414f;
+}
+.guia-tarea__mas {
+  display: inline-block;
+  vertical-align: top;
+  margin: 2px 14px 0 0;
+}
+.guia-tarea__mas[open] {
+  display: block;
+}
+.guia-tarea__mas summary {
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 650;
+  color: #0b4f9c;
+}
+.guia-tarea__mas ol {
+  margin: 6px 0 4px;
+  padding-left: 20px;
+}
+.guia-tarea__mas p {
+  margin: 0 0 4px;
+}
+.guia-tarea__lista.guia-tarea__lista {
+  padding: 0;
+  list-style: none;
+}
+.guia-tarea__lista li {
+  display: flex;
+  gap: 6px;
+  padding: 1px 0;
+  color: #64717f;
+}
+.guia-tarea__lista li[data-estado='hecho'] {
+  color: #0e7a43;
+}
+.guia-tarea__lista li[data-estado='ahora'] {
+  color: #0b4f9c;
+  font-weight: 700;
+}
+.guia-tarea__lista li span:first-child {
+  width: 16px;
+  flex: none;
+}
+.guia-tarea__botones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+.guia-tarea__principal,
+.guia-tarea__secundario {
+  min-height: 36px;
+  padding: 0.35rem 0.9rem;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+.guia-tarea__principal {
+  border: none;
+  background: #0e7a43;
+  color: #fff;
+  font-weight: 750;
+}
+.guia-tarea__principal:hover {
+  background: #0b6b3a;
+}
+.guia-tarea__secundario {
+  border: 1px solid #c6ced6;
+  background: #fff;
+  color: #1c2733;
+  font-weight: 650;
+}
+.paleta-nodos__todos {
+  display: block;
+  width: 100%;
+  margin: 8px 0 0;
+  padding: 6px 8px;
+  border: 1px dashed #b9c6d4;
+  border-radius: 8px;
+  background: #fff;
+  color: #0b4f9c;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+/* En pantallas bajas el lienzo cede alto para que se vean la guía y las propiedades del bloque. */
+@media (max-height: 800px) {
+  .banco--robot .banco__area .relleno {
+    min-height: 190px;
+  }
+}

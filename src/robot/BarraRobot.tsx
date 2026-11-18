@@ -1,4 +1,4 @@
-import { BotonNuevo, botonPrimario, botonSecundario, Menu, type ItemMenu } from '../components/ui'
+import { BotonNuevo, botonSecundario, Menu, type ItemMenu } from '../components/ui'
 import { ETIQUETA_GRUPO, PRACTICA_ROBOT, type GrupoPractica } from './practica'
 import { EJEMPLOS_ROBOT } from './ejemplos'
 import type { RefObject } from 'react'
@@ -11,14 +11,12 @@ export default function BarraRobot({
   setReproduciendo,
   estrecha,
   enTarea,
-  ejemploEnTarea,
   ejemploAbierto,
   puedeDeshacer,
   puedeRehacer,
   deshacer,
   rehacer,
   cargarEjemplo,
-  volverDelEjemplo,
   inputDXF,
   inputDef,
   abrirDXF,
@@ -34,14 +32,12 @@ export default function BarraRobot({
   setReproduciendo: (v: boolean) => void
   estrecha: boolean
   enTarea: boolean
-  ejemploEnTarea: boolean
   ejemploAbierto: { id: string; titulo: string } | null
   puedeDeshacer: boolean
   puedeRehacer: boolean
   deshacer: () => void
   rehacer: () => void
   cargarEjemplo: (id: string) => void
-  volverDelEjemplo: () => void
   inputDXF: RefObject<HTMLInputElement>
   inputDef: RefObject<HTMLInputElement>
   abrirDXF: (f: File | undefined) => Promise<void>
@@ -80,11 +76,6 @@ export default function BarraRobot({
       {modo === 'visual' && (
         <>
           <BotonNuevo que="la tarea de cero" compacto={estrecha} onClick={() => cargarEjemplo('vacio')} />
-          {ejemploEnTarea && (
-            <button type="button" onClick={volverDelEjemplo} style={botonPrimario()} data-volver-tarea="si">
-              Volver a mi tarea
-            </button>
-          )}
           <span style={{ display: 'inline-flex', gap: 2 }}>
             <button onClick={deshacer} disabled={!puedeDeshacer} aria-label="Deshacer" className="boton-icono" style={{ opacity: puedeDeshacer ? 1 : 0.4 }} title="Deshacer (Ctrl+Z)">
               ↶
@@ -121,12 +112,12 @@ export default function BarraRobot({
             ))}
           </select>
           )}
-          {!estrecha && (
+          {/* En la tarea el plano ya viene cargado: el botón no se muestra. */}
+          {!estrecha && !enTarea && (
             <button
               onClick={() => inputDXF.current?.click()}
-              disabled={enTarea}
-              style={{ ...botonSecundario, opacity: enTarea ? 0.45 : 1 }}
-              title={enTarea ? 'En la tarea el plano ya está cargado' : 'Traer un plano DXF para usar sus curvas'}
+              style={botonSecundario}
+              title="Traer un plano DXF para usar sus curvas"
               data-abrir-dxf="si"
             >
               Abrir DXF

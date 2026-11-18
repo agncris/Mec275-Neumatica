@@ -25,7 +25,7 @@ import { Historial } from '../historial'
 import CodigoKRL from './CodigoKRL'
 import Analisis from './Analisis'
 import { enlaceEstudiar } from './estilos'
-import PlanoTarea, { BarraEjemplo } from './PlanoTarea'
+import PlanoTarea from './PlanoTarea'
 import PanelEntrega from './PanelEntrega'
 import BarraRobot from './BarraRobot'
 import AreaPrograma from './AreaPrograma'
@@ -377,7 +377,6 @@ export default function UnidadRobotica() {
     setDef(ejemploGuiadoTarea())
     setSeleccion(null)
     setModo('visual')
-    setAviso('Ejemplo del contorno. Tu tarea sigue guardada: «Volver a mi tarea» la recupera.')
   }
   const volverDelEjemplo = () => {
     let previa: Definicion | null = null
@@ -441,14 +440,12 @@ export default function UnidadRobotica() {
       setReproduciendo={setReproduciendo}
       estrecha={estrecha}
       enTarea={enTarea}
-      ejemploEnTarea={ejemploEnTarea}
       ejemploAbierto={ejemploAbierto}
       puedeDeshacer={historial.current.puedeDeshacer}
       puedeRehacer={historial.current.puedeRehacer}
       deshacer={deshacer}
       rehacer={rehacer}
       cargarEjemplo={cargarEjemplo}
-      volverDelEjemplo={volverDelEjemplo}
       inputDXF={inputDXF}
       inputDef={inputDef}
       abrirDXF={abrirDXF}
@@ -473,6 +470,8 @@ export default function UnidadRobotica() {
       setSeleccion={setSeleccion}
       nodoSel={nodoSel}
       pasoTarea={pasoTarea}
+      avanceTarea={guiaT?.avance ?? []}
+      verEjemplo={verEjemploGuiado}
       enunciado={enunciado}
       setEnunciado={setEnunciado}
       ejemploEnTarea={ejemploEnTarea}
@@ -526,7 +525,7 @@ export default function UnidadRobotica() {
   )
 
   const pestanas: Array<PestanaPanel<PestanaRobot>> = [
-    ...(enTarea && pasoTarea ? [{ id: 'plano-tarea' as const, titulo: 'Plano de la tarea', tituloCorto: 'Plano', contenido: <PlanoTarea paso={pasoTarea} avance={guiaT?.avance ?? []} checklist={ejemploEnTarea ? [] : checklistTarea} onEstudiar={irAEstudiar} ejemplo={ejemploEnTarea} /> }] : []),
+    ...(enTarea && pasoTarea ? [{ id: 'plano-tarea' as const, titulo: 'Plano de la tarea', tituloCorto: 'Plano', contenido: <PlanoTarea checklist={ejemploEnTarea ? [] : checklistTarea} onEstudiar={irAEstudiar} /> }] : []),
     {
       id: 'analisis',
       titulo: 'Análisis',
@@ -614,7 +613,7 @@ export default function UnidadRobotica() {
           barra={barra}
           izquierda={{ id: 'programa', titulo: modo === 'visual' ? 'Programa' : 'Mando', contenido: areaPrograma }}
           derecha={{ id: 'simulacion', titulo: 'Simulación', tituloCorto: '3D', contenido: areaSimulacion }}
-          inferior={{ etiqueta: 'Plano, análisis y ficha', pestanas, estado: panel, encabezado: enTarea && pasoTarea ? <BarraEjemplo ejemplo={ejemploEnTarea} onEjemplo={verEjemploGuiado} onVolver={volverDelEjemplo} onSeguir={seguirConElEjemplo} /> : undefined }}
+          inferior={{ etiqueta: 'Plano, análisis y ficha', pestanas, estado: panel }}
           estado={barraEstado}
           conCajon={entregaAbierta && enTarea && !estrecha}
         />

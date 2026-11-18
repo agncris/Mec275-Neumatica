@@ -135,6 +135,8 @@ interface Props {
   guia?: { id: string; numero: number; total: number; titulo: string; accion: string; listo?: string; por?: string; pasos?: string[]; pista?: string; pestana?: Pestana; destacar?: string }
   /** El ejemplo está abierto: no invita a seguir armando sobre ese lienzo. */
   mirandoEjemplo?: boolean
+  /** En la tarea: la paleta muestra solo estos bloques, y el resto queda tras «Ver todos los bloques». */
+  bloquesTarea?: string[]
   onDeshacer?: () => void
   puedeDeshacer?: boolean
 }
@@ -144,7 +146,7 @@ type Arrastre =
   | { tipo: 'fondo'; x: number; y: number; tx: number; ty: number }
   | { tipo: 'cable'; de?: { id: string; j: number }; a?: { id: string; i: number }; x: number; y: number; agregar: boolean }
 
-export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onSeleccionar, alto = 460, guia, mirandoEjemplo = false, onDeshacer, puedeDeshacer = false, soloLienzo = false }: Props) {
+export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onSeleccionar, alto = 460, guia, mirandoEjemplo = false, bloquesTarea, onDeshacer, puedeDeshacer = false, soloLienzo = false }: Props) {
   const tactil = useTactil()
   const svgRef = useRef<SVGSVGElement>(null)
   const [vista, setVista] = useState({ tx: 20, ty: 40, k: 0.8 })
@@ -155,6 +157,8 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
   const [ayudaCerrada, setAyudaCerrada] = usePersistente(CLAVES.robotAyudaLienzo, false)
   const [abiertas, setAbiertas] = useState<Pestana[]>(() => (guia?.pestana ? [guia.pestana] : ['Movimientos', 'Robot']))
   const paletaRef = useRef<HTMLElement>(null)
+  const [verTodos, setVerTodos] = useState(false)
+  const soloTarea = !!bloquesTarea && !verTodos
   useEffect(() => {
     if (!guia?.pestana) return
     setAbiertas((prev) => (prev.includes(guia.pestana!) ? prev : [...prev, guia.pestana!]))
@@ -365,58 +369,7 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
       }).slice(0, 10)
     : []
 
-  return (
-    <div data-editor-nodos="si" className={typeof alto === 'string' ? 'editor-nodos' : undefined} style={typeof alto === 'string' ? { height: alto } : undefined}>
-      <aside ref={paletaRef} className="paleta-nodos" data-plegada={plegada ? 'si' : 'no'} role="toolbar" aria-label="Componentes del programa">
-        <div className="paleta-nodos__barra">
-          {plegada ? (
-            <button type="button" className="paleta-nodos__plegar paleta-nodos__plegar--riel" aria-expanded={false} title="Mostrar componentes" aria-label="Mostrar componentes" onClick={() => setPlegada(false)}>
-              <span aria-hidden="true">›</span>
-              <span className="paleta-nodos__riel">Componentes</span>
-            </button>
-          ) : (
-            <>
-              <span className="paleta-nodos__titulo">Componentes</span>
-              <button type="button" className="paleta-nodos__plegar" aria-expanded title="Colapsar componentes" aria-label="Colapsar componentes" onClick={() => setPlegada(true)}>
-                ‹
-              </button>
-            </>
-          )}
-        </div>
-        {!plegada && (
-          <div className="paleta-nodos__cuerpo">
-            <p className="paleta-nodos__ayuda">
-              {mirandoEjemplo
-                ? 'Esto es el ejemplo. Para armar la tuya, pulsa «Volver a mi tarea».'
-                : guia
-                ? `Paso ${guia.numero} de ${guia.total}. El bloque con borde azul es el siguiente.`
-                : def.nodos.length === 0
-                  ? 'Empieza arrastrando un Robot y un Core.'
-                  : tactil
-                    ? 'Toca un bloque para ponerlo en el lienzo.'
-                    : 'Arrastra un bloque al lienzo, o haz clic para soltarlo al centro.'}
-            </p>
-            {PESTANAS.map((cat) => {
-              const abierta = abiertas.includes(cat)
-              const bloques = COMPONENTES.filter((c) => c.pestana === cat)
-              const tieneSiguiente = bloques.some((c) => c.tipo === guia?.destacar)
-              return (
-                <section key={cat} className="paleta-nodos__cat">
-                  <button
-                    type="button"
-                    className="paleta-nodos__cat-btn"
-                    aria-expanded={abierta}
-                    data-siguiente={!abierta && tieneSiguiente ? 'si' : undefined}
-                    onClick={() => setAbiertas((prev) => (prev.includes(cat) ? prev.filter((x) => x !== cat) : [...prev, cat]))}
-                  >
-                    <span>{cat}</span>
-                    <span aria-hidden="true">{abierta ? '−' : '+'}</span>
-                  </button>
-                  {abierta &&
-                    agrupar(bloques).map(([grupo, cs]) => (
-                      <div key={grupo} className="paleta-nodos__grupo">
-                        <span className="paleta-nodos__nombre">{grupo}</span>
-                        {cs.map((c) => (
+  const botonBloque = (c: (typeof COMPONENTES)[number], cat: Pestana) => (
                           <button
                             key={c.tipo}
                             type="button"
@@ -455,25 +408,85 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
                               <span className="bloque-nodo__glosa">{GLOSA[c.tipo] ?? c.nombre}</span>
                             </span>
                           </button>
-                        ))}
+  )
+
+  return (
+    <div data-editor-nodos="si" className={typeof alto === 'string' ? 'editor-nodos' : undefined} style={typeof alto === 'string' ? { height: alto } : undefined}>
+      <aside ref={paletaRef} className="paleta-nodos" data-plegada={plegada ? 'si' : 'no'} role="toolbar" aria-label="Componentes del programa">
+        <div className="paleta-nodos__barra">
+          {plegada ? (
+            <button type="button" className="paleta-nodos__plegar paleta-nodos__plegar--riel" aria-expanded={false} title="Mostrar componentes" aria-label="Mostrar componentes" onClick={() => setPlegada(false)}>
+              <span aria-hidden="true">›</span>
+              <span className="paleta-nodos__riel">Componentes</span>
+            </button>
+          ) : (
+            <>
+              <span className="paleta-nodos__titulo">Componentes</span>
+              <button type="button" className="paleta-nodos__plegar" aria-expanded title="Colapsar componentes" aria-label="Colapsar componentes" onClick={() => setPlegada(true)}>
+                ‹
+              </button>
+            </>
+          )}
+        </div>
+        {!plegada && (
+          <div className="paleta-nodos__cuerpo">
+            <p className="paleta-nodos__ayuda">
+              {mirandoEjemplo
+                ? 'Mira cómo se conectan los bloques del ejemplo.'
+                : guia
+                ? 'El bloque con borde azul es el que toca ahora.'
+                : def.nodos.length === 0
+                  ? 'Empieza arrastrando un Robot y un Core.'
+                  : tactil
+                    ? 'Toca un bloque para ponerlo en el lienzo.'
+                    : 'Arrastra un bloque al lienzo, o haz clic para soltarlo al centro.'}
+            </p>
+            {soloTarea && (
+              <section className="paleta-nodos__cat">
+                <div className="paleta-nodos__grupo">
+                  <span className="paleta-nodos__nombre">Bloques de esta tarea</span>
+                  {bloquesTarea!.map((t) => {
+                    const c = COMPONENTES.find((k) => k.tipo === t)
+                    return c ? botonBloque(c, c.pestana) : null
+                  })}
+                </div>
+              </section>
+            )}
+            {!soloTarea && PESTANAS.map((cat) => {
+              const abierta = abiertas.includes(cat)
+              const bloques = COMPONENTES.filter((c) => c.pestana === cat)
+              const tieneSiguiente = bloques.some((c) => c.tipo === guia?.destacar)
+              return (
+                <section key={cat} className="paleta-nodos__cat">
+                  <button
+                    type="button"
+                    className="paleta-nodos__cat-btn"
+                    aria-expanded={abierta}
+                    data-siguiente={!abierta && tieneSiguiente ? 'si' : undefined}
+                    onClick={() => setAbiertas((prev) => (prev.includes(cat) ? prev.filter((x) => x !== cat) : [...prev, cat]))}
+                  >
+                    <span>{cat}</span>
+                    <span aria-hidden="true">{abierta ? '−' : '+'}</span>
+                  </button>
+                  {abierta &&
+                    agrupar(bloques).map(([grupo, cs]) => (
+                      <div key={grupo} className="paleta-nodos__grupo">
+                        <span className="paleta-nodos__nombre">{grupo}</span>
+                        {cs.map((c) => botonBloque(c, cat))}
                       </div>
                     ))}
                 </section>
               )
             })}
+            {bloquesTarea && (
+              <button type="button" className="paleta-nodos__todos" onClick={() => setVerTodos((v) => !v)} data-ver-todos={verTodos ? 'si' : 'no'}>
+                {verTodos ? 'Solo los bloques de esta tarea' : 'Ver todos los bloques'}
+              </button>
+            )}
           </div>
         )}
       </aside>
       <div className={typeof alto === 'string' ? 'editor-nodos__lienzo' : undefined} style={typeof alto === 'string' ? undefined : { position: 'relative' }}>
-        {guia && !mirandoEjemplo && !soloLienzo && (
-          <div className="lienzo-ayuda lienzo-ayuda--barra lienzo-ayuda--paso" data-guia-paso={guia.id} style={{ display: 'block' }}>
-            <p className="u-sin-margen"><strong>Paso {guia.numero} de {guia.total} · {guia.titulo}</strong></p>
-            {/* Corto a propósito: el lienzo es angosto. Los micro pasos y el porqué están en la pestaña Plano. */}
-            <p style={{ margin: '4px 0 0' }}>{guia.accion}</p>
-            {guia.pista && <p style={{ margin: '4px 0 0', color: '#6b4200', fontWeight: 600 }}>Te falta: {guia.pista}</p>}
-            {guia.listo && <p style={{ margin: '4px 0 0', color: 'var(--tinta)' }}>Listo cuando: {guia.listo}</p>}
-          </div>
-        )}
         {!guia && def.nodos.length > 0 && !ayudaCerrada && !mirandoEjemplo && (
           <div className="lienzo-ayuda lienzo-ayuda--barra">
             <p>

@@ -1,9 +1,9 @@
-import { botonPrimario, botonSecundario } from '../components/ui'
 import { TituloArea } from '../components/banco/BancoDividido'
 import EditorNodos from './EditorNodos'
+import GuiaTarjeta from './GuiaTarjeta'
 import Mando, { type PuntoEnsenado } from './Mando'
 import { Propiedades } from './PanelParametros'
-import type { PasoTarea } from './guiaTarea'
+import { BLOQUES_TAREA, type ItemAvance, type PasoTarea } from './guiaTarea'
 import type { Modo } from './datosRobot'
 import type { Definicion, Herramienta, evaluar } from './nodos'
 import type { robotPorId } from './robots'
@@ -20,6 +20,8 @@ export default function AreaPrograma({
   setSeleccion,
   nodoSel,
   pasoTarea,
+  avanceTarea,
+  verEjemplo,
   enunciado,
   setEnunciado,
   ejemploEnTarea,
@@ -50,6 +52,8 @@ export default function AreaPrograma({
   setSeleccion: (id: string | null) => void
   nodoSel: Definicion['nodos'][number] | null
   pasoTarea: PasoTarea | null
+  avanceTarea: ItemAvance[]
+  verEjemplo: () => void
   enunciado: string | null
   setEnunciado: (t: string | null) => void
   ejemploEnTarea: boolean
@@ -95,23 +99,12 @@ export default function AreaPrograma({
           </button>
         </p>
       )}
-      {ejemploEnTarea && (
-        <div className="tarea-ejemplo" data-ejemplo-tarea="si">
-          <p>
-            <strong>Esto es un ejemplo del contorno, no tu entrega.</strong> Curve en CONTORNO, Offset +2,5, Move en Z −5 y Toolpath. Las ranuras no están. Tu tarea sigue guardada.
-          </p>
-          <span>
-            <button type="button" onClick={volverDelEjemplo} style={botonPrimario()} data-volver-tarea="si">
-              Volver a mi tarea
-            </button>
-            <button type="button" onClick={seguirConElEjemplo} style={botonSecundario} data-seguir-ejemplo="si" title="Deja este contorno en tu tarea, en lugar de lo que tenías">
-              Seguir con este contorno
-            </button>
-          </span>
-        </div>
+      {/* La guía va aquí y solo aquí. Con Entregar abierto se esconde para dejar ver el programa. */}
+      {pasoTarea && (ejemploEnTarea || !entregando) && (
+        <GuiaTarjeta paso={pasoTarea} avance={avanceTarea} ejemplo={ejemploEnTarea} onVerEjemplo={verEjemplo} onVolver={volverDelEjemplo} onSeguir={seguirConElEjemplo} />
       )}
       <div className="relleno">
-        <EditorNodos def={def} evaluacion={evaluacion} onCambiar={setDef} seleccion={seleccion} onSeleccionar={setSeleccion} alto="100%" guia={ejemploEnTarea ? undefined : (pasoTarea ?? undefined)} mirandoEjemplo={ejemploEnTarea} soloLienzo={entregando} onDeshacer={deshacer} puedeDeshacer={puedeDeshacer} />
+        <EditorNodos def={def} evaluacion={evaluacion} onCambiar={setDef} seleccion={seleccion} onSeleccionar={setSeleccion} alto="100%" guia={ejemploEnTarea ? undefined : (pasoTarea ?? undefined)} mirandoEjemplo={ejemploEnTarea} bloquesTarea={pasoTarea ? BLOQUES_TAREA : undefined} soloLienzo={entregando || ejemploEnTarea} onDeshacer={deshacer} puedeDeshacer={puedeDeshacer} />
       </div>
       {evaluacion.ciclo && <p style={{ color: 'var(--rojo-error)', fontSize: '0.86rem', margin: '6px 0 0' }}>⚠ Hay un ciclo en los cables.</p>}
       <div style={{ maxHeight: 150, overflow: 'auto', flex: 'none' }}>
