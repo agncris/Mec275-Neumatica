@@ -61,6 +61,14 @@ function crearReconocimiento(): Reconocimiento | null {
   return rec
 }
 
+/**
+ * El modelo responde con negritas en Markdown (**así**). Se muestran como negrita y no con
+ * asteriscos. Solo negrita: el resto del texto va tal cual, sin HTML.
+ */
+export function conNegritas(texto: string) {
+  return texto.split(/\*\*(.+?)\*\*/g).map((trozo, i) => (i % 2 === 1 ? <strong key={i}>{trozo}</strong> : trozo.replace(/(^|\s)\*(?=\S)|(?<=\S)\*(?=\s|$|[.,;:])/g, '$1')))
+}
+
 /** Número al azar que agrupa las preguntas de una conversación. Cambia cada vez que se abre la app. */
 const CONVERSACION = Math.random().toString(36).slice(2, 12).padEnd(10, '0')
 
@@ -238,7 +246,7 @@ export default function MecBot({ unidad }: { unidad?: string }) {
             )}
             {mensajes.map((m, i) => (
               <div key={i} className={`mecbot__turno mecbot__turno--${m.rol}`}>
-                <p className={`mecbot__globo mecbot__globo--${m.rol}`}>{m.texto}</p>
+                <p className={`mecbot__globo mecbot__globo--${m.rol}`}>{m.rol === 'mecbot' ? conNegritas(m.texto) : m.texto}</p>
                 {m.enlaces && (
                   <p className="mecbot__enlaces" data-mecbot-enlaces="si">
                     <span>Para repasar en Estudiar:</span>
