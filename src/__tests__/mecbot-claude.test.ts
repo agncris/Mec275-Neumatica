@@ -30,7 +30,7 @@ describe('MecBot con Claude', () => {
     const fetchMock = vi.fn(async (..._args: unknown[]) => respuesta(mensaje('Soy MecBot con Claude.')))
     vi.stubGlobal('fetch', fetchMock)
     const r = await pedir('¿qué es una válvula 3/2? (claude 1)', '10.0.0.1')
-    expect(r).toEqual({ status: 200, json: { texto: 'Soy MecBot con Claude.' } })
+    expect(r).toMatchObject({ status: 200, json: { texto: 'Soy MecBot con Claude.' } })
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
     expect(String(url)).toContain('api.anthropic.com/v1/messages')
     const cuerpo = JSON.parse(String(init.body))
@@ -51,7 +51,7 @@ describe('MecBot con Claude', () => {
     )
     vi.stubGlobal('fetch', fetchMock)
     const r = await pedir('¿qué es un cilindro de doble efecto? (claude 2)', '10.0.0.2')
-    expect(r).toEqual({ status: 200, json: { texto: 'Respaldo de Groq.' } })
+    expect(r).toMatchObject({ status: 200, json: { texto: 'Respaldo de Groq.' } })
     expect(fetchMock.mock.calls.some(([u]) => String(u).includes('groq'))).toBe(true)
   })
 

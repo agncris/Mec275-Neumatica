@@ -9,6 +9,8 @@ interface Mensaje {
   texto: string
   /** Si es un fallo de red, el texto de la pregunta para reenviarla. */
   reenvio?: string
+  /** Secciones de Estudiar que complementan la respuesta. */
+  enlaces?: Array<{ titulo: string; url: string }>
 }
 
 function IconoReenviar() {
@@ -112,7 +114,7 @@ export default function MecBot() {
             .map(({ rol, texto: t }) => ({ rol, texto: t })),
         }),
       })
-      const datos = (await res.json().catch(() => null)) as { texto?: string; error?: string } | null
+      const datos = (await res.json().catch(() => null)) as { texto?: string; error?: string; enlaces?: Array<{ titulo?: string; url?: string }> } | null
       const codigo = datos?.error || ''
       const respuesta = datos?.texto?.trim() || AVISOS[codigo] || AVISOS.red
       const fallo = !datos?.texto?.trim() && (FALLO_RED.has(codigo) || !AVISOS[codigo])
@@ -120,7 +122,11 @@ export default function MecBot() {
         dejarFallo(respuesta)
         return
       }
-      setMensajes([...historia, { rol: 'mecbot', texto: respuesta }, ...despues])
+      // Solo enlaces al propio sitio: la dirección viene del servidor, pero no se confía a ciegas.
+      const enlaces = (datos?.enlaces ?? [])
+        .filter((e): e is { titulo: string; url: string } => typeof e?.titulo === 'string' && typeof e?.url === 'string' && e.url.startsWith('/?unidad='))
+        .slice(0, 2)
+      setMensajes([...historia, { rol: 'mecbot', texto: respuesta, ...(enlaces.length ? { enlaces } : {}) }, ...despues])
       if (enVoz) decir(respuesta)
     } catch {
       dejarFallo(AVISOS.red)
@@ -179,6 +185,17 @@ export default function MecBot() {
             {mensajes.map((m, i) => (
               <div key={i} className={`mecbot__turno mecbot__turno--${m.rol}`}>
                 <p className={`mecbot__globo mecbot__globo--${m.rol}`}>{m.texto}</p>
+                {m.enlaces && (
+                  <p className="mecbot__enlaces" data-mecbot-enlaces="si">
+                    <span>Para repasar en Estudiar:</span>
+                    {m.enlaces.map((e) => (
+                      // En otra pestaña: así no se pierde la conversación ni el trabajo en curso.
+                      <a key={e.url} href={e.url} target="_blank" rel="noopener noreferrer" title="Se abre en otra pestaña">
+                        {e.titulo} ↗
+                      </a>
+                    ))}
+                  </p>
+                )}
                 {m.reenvio && (
                   <button
                     type="button"

@@ -68,7 +68,7 @@ export const FICHAS = [
     unidad: 'Robótica',
     ancla: 'parametrica',
     titulo: 'Programación paramétrica',
-    claves: ['parametrica', 'grasshopper', 'kuka|prc', 'kuka prc', 'rhino', 'rhinoceros', 'core'],
+    claves: ['parametrica', 'grasshopper', 'kuka|prc', 'kuka prc', 'rhino', 'rhinoceros', 'core', 'programacion visual', 'bloque', 'bloques', 'offset', 'curve', 'toolpath', 'merge', 'dout'],
     texto:
       'En la robótica paramétrica la trayectoria se define con parámetros (largos, alturas, velocidades) que se pueden cambiar y ver al instante. En MEC275 eso se hace en MecLab, en Programación visual: cambias un número en un bloque y el recorrido se actualiza al momento. Los bloques se llaman como en Grasshopper (Curve, LIN, PTP, Core). El plano DXF de la tarea ya está cargado; Curve lee la capa; Offset, Move y los bloques de trayectoria arman el recorrido; el robot, la herramienta y la base están en el Core; ▶ simula y Análisis revisa alcance, límites y singularidades; Exportar saca el KRL (.src), con una frase por línea. Ese archivo se carga después en el controlador y se prueba en T1 antes de producir. A Aula van el PDF, el json y el video: el KRL se exporta y no se sube.',
   },
@@ -343,6 +343,43 @@ export function respuestaDeApuntes(pregunta) {
     origen: 'apuntes',
     texto: `En Estudiar, ${f.unidad}, sección «${f.titulo}»:\n\n${f.texto}`,
   }
+}
+
+const RUTA_UNIDAD = { 'Neumática': 'neumatica', PLC: 'plc', CNC: 'cnc', 'Robótica': 'robotica' }
+
+/** Dirección de una sección de Estudiar (o de la unidad entera, sin ancla). Relativa al sitio. */
+export function urlEstudiar(unidad, ancla) {
+  const u = RUTA_UNIDAD[unidad]
+  if (!u) return null
+  return `/?unidad=${u}&vista=estudiar${ancla ? `#${ancla}` : ''}`
+}
+
+/**
+ * Secciones de Estudiar que complementan lo que se preguntó: hasta dos, sin repetir,
+ * y solo si la pregunta calza bien con la sección. Si no calza, no hay enlace.
+ * @param {string} pregunta
+ * @returns {{ unidad: string, titulo: string, url: string }[]}
+ */
+export function enlacesDe(pregunta) {
+  if (typeof pregunta !== 'string' || !pregunta.trim()) return []
+  const unidad = unidadPedida(pregunta)
+  if (unidad) {
+    const url = urlEstudiar(unidad, '')
+    return url ? [{ unidad, titulo: `Estudiar · ${unidad}`, url }] : []
+  }
+  const ranked = buscar(pregunta, 4).filter((r) => r.ficha.ancla && r.puntos >= 6)
+  const vistos = new Set()
+  const salida = []
+  for (const r of ranked) {
+    if (salida.length && r.puntos < ranked[0].puntos * 0.7) break
+    const clave = `${r.ficha.unidad}#${r.ficha.ancla}`
+    if (vistos.has(clave)) continue
+    vistos.add(clave)
+    const url = urlEstudiar(r.ficha.unidad, r.ficha.ancla)
+    if (url) salida.push({ unidad: r.ficha.unidad, titulo: r.ficha.titulo, url })
+    if (salida.length === 2) break
+  }
+  return salida
 }
 
 /** Apuntes que el modelo usa para no inventar. Una unidad entera va completa. */
