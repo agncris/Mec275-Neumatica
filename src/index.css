@@ -2764,3 +2764,16 @@ body:has(.banco:not(.banco--apilado)) {
   font-weight: 600;
   text-align: left;
 }
+/* En el celular la guía de la tarea va arriba del lienzo, no al lado: no cabe. */
+@media (max-width: 760px) {
+  .banco__area .relleno.programa-cuerpo {
+    flex-direction: column;
+  }
+  .banco__area .relleno.programa-cuerpo > .guia-tarea {
+    flex: 0 0 auto;
+    max-height: 42vh;
+  }
+  .banco__area .relleno.programa-cuerpo > :not(.guia-tarea) {
+    min-height: 320px;
+  }
+}

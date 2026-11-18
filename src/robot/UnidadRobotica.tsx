@@ -108,10 +108,14 @@ export default function UnidadRobotica() {
   const irAEtapa = (e: 'armar' | 'probar') => {
     setEtapaTrabajo(e)
     setModo('visual')
+    // En el celular se ve una zona a la vez: Armar muestra el programa y Probar la simulación.
+    setVistaMovil(e === 'probar' ? 'simulacion' : 'programa')
     if (e === 'probar') {
       setPlegado('riel')
-      panel.onPestana('analisis')
-      panel.onAbrir(true)
+      if (!estrecha) {
+        panel.onPestana('analisis')
+        panel.onAbrir(true)
+      }
     } else {
       setPlegado('abierto')
       if (enTarea) panel.onAbrir(false)
@@ -120,6 +124,7 @@ export default function UnidadRobotica() {
   const [entregaAbierta, setEntregaAbierta] = useState(false)
   // Armar el programa (programa ancho, guía a la vista) o probarlo en el robot (simulación ancha y Análisis).
   const [etapaTrabajo, setEtapaTrabajo] = useState<'armar' | 'probar'>('armar')
+  const [vistaMovil, setVistaMovil] = useState<string>('programa')
   const [misTrabajos, setMisTrabajos] = useState(false)
   const guia = useGuia('robotica')
   const [seleccion, setSeleccion] = useState<string | null>(null)
@@ -627,6 +632,8 @@ export default function UnidadRobotica() {
           barra={barra}
           izquierda={{ id: 'programa', titulo: modo === 'visual' ? 'Programa' : 'Mando', contenido: areaPrograma }}
           derecha={{ id: 'simulacion', titulo: 'Simulación', tituloCorto: '3D', contenido: areaSimulacion }}
+          movil={vistaMovil}
+          onMovil={setVistaMovil}
           inferior={{ etiqueta: 'Plano, análisis y ficha', pestanas, estado: panel }}
           estado={barraEstado}
           conCajon={entregaAbierta && enTarea && !estrecha}
