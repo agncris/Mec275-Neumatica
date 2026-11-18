@@ -36,7 +36,7 @@ Esta es la única fuente de reglas. `.cursor/rules/` apunta aquí.
 - `src/unidades.ts`: banderas de publicación. `src/persistencia.ts`: guardado en el navegador. Es el único archivo que toca `localStorage` y el único con claves `neumalab.*` (un test lo comprueba): para guardar algo usa `leerTexto`, `leerJson`, `guardarTexto`, `guardarJson`, `borrarClave` y agrega la clave a `CLAVES`.
 - `src/tareas/entregables.ts`: qué se entrega en cada tarea (títulos, explicaciones y nombres de archivo). Los cajones «Entregar» de las cuatro unidades leen de aquí; si cambia lo que se entrega, se cambia aquí y se vuelve a imprimir con `npm run entregables` para el enunciado.
 - `src/__tests__/`, `src/engine/__tests__/`: tests de lógica. `src/__tests__/ui-flujos.test.tsx`: flujos de la interfaz en jsdom. `e2e/`: prueba de punta a punta.
-- `api/`: función serverless de MecBot (la clave del modelo queda en el servidor). `public/`: imágenes y service worker.
+- `api/`: función serverless de MecBot (la clave del modelo queda en el servidor). `api/registro.js` guarda las consultas (archivo local y Supabase, proyecto `mec275-mecbot`, tabla en `supabase/mecbot_registro.sql`); el aviso de privacidad de `src/components/MecBot.tsx` dice qué se guarda y debe calzar con él. `npm run respaldo-mecbot` baja todo a `respaldos-mecbot/` (no se sube). `public/`: imágenes y service worker.
 
 ## Cuidados con las escenas 3D
 

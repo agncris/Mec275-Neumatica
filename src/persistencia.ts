@@ -77,6 +77,11 @@ export const CLAVES = {
   robotEntrega: 'neumalab.robot.entrega',
   robotPaleta: 'neumalab.robot.paleta.v1',
   robotAyudaLienzo: 'neumalab.robot.lienzo.ayuda.v1',
+  // MecBot
+  /** Si lee las respuestas en voz alta. Parte apagado. */
+  mecbotVoz: 'neumalab.mecbot.voz',
+  /** Si el alumno deja guardar sus consultas para investigación (ver api/registro.js). */
+  mecbotGuardar: 'neumalab.mecbot.guardar',
 } as const
 
 /** Si ya vio la guía de inicio de esa unidad. */

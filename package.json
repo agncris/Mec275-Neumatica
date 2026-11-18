@@ -14,7 +14,8 @@
     "lint": "eslint .",
     "verificar": "tsc --noEmit && vitest run",
     "e2e": "node e2e/humo.mjs",
-    "entregables": "vite-node scripts/entregables.ts"
+    "entregables": "vite-node scripts/entregables.ts",
+    "respaldo-mecbot": "node --env-file-if-exists=.env scripts/respaldo-mecbot.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.10.0",

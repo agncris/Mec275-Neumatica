@@ -3,6 +3,8 @@
  * estudio. La respuesta la arma el servidor; aquí no hay clave ni soluciones.
  */
 import { useEffect, useRef, useState } from 'react'
+import { usePersistente } from './ui'
+import { CLAVES } from '../persistencia'
 
 interface Mensaje {
   rol: 'alumno' | 'mecbot'
@@ -59,13 +61,62 @@ function crearReconocimiento(): Reconocimiento | null {
   return rec
 }
 
-export default function MecBot() {
+/** Número al azar que agrupa las preguntas de una conversación. Cambia cada vez que se abre la app. */
+const CONVERSACION = Math.random().toString(36).slice(2, 12).padEnd(10, '0')
+
+/**
+ * Qué se guarda y qué no. Debe calzar con api/registro.js: si cambia lo que se guarda,
+ * se cambia aquí también.
+ */
+function AvisoPrivacidad({ guardar, setGuardar }: { guardar: boolean; setGuardar: (v: boolean) => void }) {
+  return (
+    <details className="mecbot__privacidad" data-mecbot-privacidad="si">
+      <summary>
+        {guardar
+          ? 'Tus preguntas se guardan sin tu nombre, para investigación académica. No escribas datos personales.'
+          : 'Tus preguntas de este navegador no se guardan.'}{' '}
+        <span className="mecbot__privacidad-mas">Privacidad</span>
+      </summary>
+      <div>
+        <p>
+          <strong>Para qué.</strong> Investigación académica sobre cómo se aprende con un asistente, y mejorar el curso MEC275. No se usa para evaluarte ni
+          para poner notas.
+        </p>
+        <p>
+          <strong>Qué se guarda.</strong> Tu pregunta, la respuesta de MecBot, la fecha, la unidad de la app y un número al azar que agrupa una
+          conversación (cambia cada vez que abres la app).
+        </p>
+        <p>
+          <strong>Qué no se guarda.</strong> Tu nombre, correo, rol USM, IP, ubicación ni datos del navegador. No hay cookies ni nada que te siga. Si
+          escribes un correo, un RUT o un teléfono, se borra antes de guardar.
+        </p>
+        <p>
+          <strong>Quién lo ve y cuánto dura.</strong> Solo el profesor del curso, en una base de datos protegida (Supabase, servidor en São Paulo). No se
+          vende ni se comparte. Si se publica algo, son resultados agregados o frases sin datos que identifiquen. Se borra a los 2 años.
+        </p>
+        <p>
+          <strong>Tus derechos.</strong> Puedes dejar de guardar con la casilla de abajo, y MecBot responde igual. Para consultar o borrar lo guardado,
+          escríbele al profesor. Se sigue el Reglamento General de Protección de Datos de la UE (RGPD, art. 89, investigación) y la ley chilena de
+          datos personales (Ley 19.628 y Ley 21.719).
+        </p>
+        <label className="mecbot__leer">
+          <input type="checkbox" checked={!guardar} onChange={(e) => setGuardar(!e.target.checked)} data-mecbot-no-guardar="si" />
+          No guardar mis preguntas
+        </label>
+      </div>
+    </details>
+  )
+}
+
+export default function MecBot({ unidad }: { unidad?: string }) {
   const [abierto, setAbierto] = useState(false)
   const [mensajes, setMensajes] = useState<Mensaje[]>([])
   const [borrador, setBorrador] = useState('')
   const [pensando, setPensando] = useState(false)
   const [escuchando, setEscuchando] = useState(false)
-  const [leer, setLeer] = useState(true)
+  // La voz parte apagada: en una sala con varios computadores, que hablen todos a la vez molesta.
+  const [leer, setLeer] = usePersistente(CLAVES.mecbotVoz, false)
+  const [guardar, setGuardar] = usePersistente(CLAVES.mecbotGuardar, true)
   const listaRef = useRef<HTMLDivElement>(null)
   const recRef = useRef<Reconocimiento | null>(null)
   const puedeHablar = typeof window !== 'undefined' && 'speechSynthesis' in window
@@ -112,6 +163,9 @@ export default function MecBot() {
             .filter((m) => !m.reenvio)
             .slice(-10)
             .map(({ rol, texto: t }) => ({ rol, texto: t })),
+          unidad,
+          conversacion: CONVERSACION,
+          guardar,
         }),
       })
       const datos = (await res.json().catch(() => null)) as { texto?: string; error?: string; enlaces?: Array<{ titulo?: string; url?: string }> } | null
@@ -238,10 +292,19 @@ export default function MecBot() {
           </form>
           {puedeHablar && (
             <label className="mecbot__leer">
-              <input type="checkbox" checked={leer} onChange={(e) => setLeer(e.target.checked)} />
+              <input
+                type="checkbox"
+                checked={leer}
+                onChange={(e) => {
+                  setLeer(e.target.checked)
+                  if (!e.target.checked) window.speechSynthesis?.cancel()
+                }}
+                data-mecbot-voz="si"
+              />
               Leer la respuesta en voz alta
             </label>
           )}
+          <AvisoPrivacidad guardar={guardar} setGuardar={setGuardar} />
           <p className="mecbot__aviso">Chat MecBot es una IA y puede cometer errores.</p>
         </section>
       )}

@@ -58,7 +58,7 @@ export default defineConfig(({ mode }) => {
   // En los tests no se cargan las claves ni el registro del .env: si no, cada `npm test`
   // escribía respuestas de prueba en el registro real de MecBot.
   const env = mode === 'test' ? {} as Record<string, string> : loadEnv(mode, process.cwd(), '')
-  for (const clave of ['MEC_BOT_API_KEY', 'MEC_BOT_URL', 'MEC_BOT_MODELO', 'MEC_BOT_CLAUDE_API_KEY', 'MEC_BOT_CLAUDE_MODELO', 'MEC_BOT_TOPE_HORA', 'MEC_BOT_TOPE_DIA', 'MEC_BOT_REGISTRO']) {
+  for (const clave of ['MEC_BOT_API_KEY', 'MEC_BOT_URL', 'MEC_BOT_MODELO', 'MEC_BOT_CLAUDE_API_KEY', 'MEC_BOT_CLAUDE_MODELO', 'MEC_BOT_TOPE_HORA', 'MEC_BOT_TOPE_DIA', 'MEC_BOT_REGISTRO', 'MEC_BOT_SUPABASE_URL', 'MEC_BOT_SUPABASE_KEY']) {
     if (env[clave]) process.env[clave] = env[clave]
   }
   return {

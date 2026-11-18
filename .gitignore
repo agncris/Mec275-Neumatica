@@ -19,3 +19,5 @@ scripts/exportar-svg-layout.mts
 
 # Registro local de MecBot: preguntas de alumnos. No se sube.
 registro-mecbot*.jsonl
+# Respaldos del registro de MecBot: preguntas de alumnos. No se suben.
+respaldos-mecbot/

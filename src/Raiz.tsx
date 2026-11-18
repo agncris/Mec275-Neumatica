@@ -129,7 +129,7 @@ export default function Raiz() {
           Sin conexión: la app funciona igual y tu trabajo se guarda en este navegador.
         </p>
       )}
-      <MecBot />
+      <MecBot unidad={unidad} />
       <ErrorBoundary key={unidad} alVolver={() => cambiarUnidad('neumatica')}>
         <Suspense fallback={<p role="status" style={{ padding: 24, color: 'var(--tinta-tenue)', textAlign: 'center' }}>{unidad === 'neumatica' ? 'Abriendo el laboratorio…' : 'Abriendo la unidad…'}</p>}>
           {unidad === 'neumatica' ? <UnidadNeumatica /> : unidad === 'plc' ? <UnidadPLC /> : unidad === 'cnc' && UnidadCNC ? <UnidadCNC /> : unidad === 'robotica' && UnidadRobotica ? <UnidadRobotica /> : null}

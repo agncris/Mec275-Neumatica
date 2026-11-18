@@ -12,6 +12,7 @@
  */
 
 import { contextoDe, enlacesDe, normalizar, pideSolucion } from './materia.js'
+import { datosDeRegistro, registrar } from './registro.js'
 
 const URL_DEFECTO = 'https://api.groq.com/openai/v1/chat/completions'
 /** Groq retiró llama-3.3-70b-versatile. Este es el reemplazo que recomiendan. */
@@ -36,21 +37,6 @@ export function topes() {
   return { hora: leer('MEC_BOT_TOPE_HORA', TOPE_HORA), dia: leer('MEC_BOT_TOPE_DIA', TOPE_DIA) }
 }
 
-/**
- * Si MEC_BOT_REGISTRO tiene la ruta de un archivo, cada pregunta y su respuesta se agregan
- * ahí, una línea JSON por consulta (fecha, pregunta, respuesta). Sirve solo en local:
- * en Vercel el disco es de solo lectura. No guarda la IP ni datos del alumno.
- */
-async function registrar(pregunta, respuesta) {
-  const ruta = process.env.MEC_BOT_REGISTRO
-  if (!ruta) return
-  try {
-    const { appendFile } = await import('node:fs/promises')
-    await appendFile(ruta, JSON.stringify({ fecha: new Date().toISOString(), pregunta, respuesta }) + '\n', 'utf8')
-  } catch (e) {
-    console.error('mecbot: no se pudo escribir el registro', e && e.message)
-  }
-}
 const CACHE_MAX = 200
 /** Tamaño máximo del cuerpo de una petición: 10 mensajes de 700 letras caben de sobra. */
 export const MAX_CUERPO = 32 * 1024
@@ -131,14 +117,15 @@ function permiteModelo(ip) {
   return true
 }
 
-export async function responder(entrada, ip = 'local') {
+/** `datos`: unidad, conversación y si el alumno deja guardar la consulta (ver api/registro.js). */
+export async function responder(entrada, ip = 'local', datos = {}) {
   const mensajes = sanear(entrada)
   const pregunta = mensajes[mensajes.length - 1].texto
 
   const recordada = claveCache(mensajes)
   const guardada = recordada ? cache.get(recordada) : null
   if (guardada && Date.now() - guardada.t < 6 * 3_600_000) {
-    await registrar(pregunta, guardada.texto)
+    await registrar(pregunta, guardada.texto, datos)
     return guardada.texto
   }
 
@@ -168,7 +155,7 @@ export async function responder(entrada, ip = 'local') {
     listo = await preguntarGroq(claveGroq, sistema, mensajes)
   }
 
-  await registrar(pregunta, listo)
+  await registrar(pregunta, listo, datos)
   if (recordada) {
     cache.set(recordada, { texto: listo, t: Date.now() })
     if (cache.size > CACHE_MAX) cache.delete(cache.keys().next().value)
@@ -270,7 +257,7 @@ async function preguntarGroq(clave, sistema, mensajes) {
  */
 export async function atender(cuerpo, ip) {
   try {
-    const texto = await responder(cuerpo?.mensajes, ip)
+    const texto = await responder(cuerpo?.mensajes, ip, datosDeRegistro(cuerpo))
     // Si la pregunta calza con una sección de Estudiar, se ofrece el enlace. Sin calce, no hay enlace.
     let enlaces = []
     try {

@@ -2251,6 +2251,39 @@ body:has(.banco:not(.banco--apilado)) {
   font-size: 0.78rem;
   color: #51606f;
 }
+.mecbot__privacidad {
+  margin: 0 12px 4px;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: #51606f;
+}
+.mecbot__privacidad summary {
+  cursor: pointer;
+  list-style: none;
+}
+.mecbot__privacidad summary::-webkit-details-marker {
+  display: none;
+}
+.mecbot__privacidad-mas {
+  color: var(--azul, #1f5fa8);
+  text-decoration: underline;
+  white-space: nowrap;
+}
+.mecbot__privacidad > div {
+  max-height: 180px;
+  overflow-y: auto;
+  margin-top: 4px;
+  padding: 6px 8px;
+  border: 1px solid #d9dfe5;
+  border-radius: 8px;
+  background: #f7f9fb;
+}
+.mecbot__privacidad p {
+  margin: 0 0 6px;
+}
+.mecbot__privacidad .mecbot__leer {
+  padding: 0;
+}
 .mecbot__aviso {
   margin: 0;
   padding: 2px 12px 10px;
