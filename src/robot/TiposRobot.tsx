@@ -10,6 +10,13 @@ import { crearEscena } from '../vista3d/escena'
 import { INFO, TIPOS, armar, juntasEnTiempo, type Modelo, type Tipo } from './tiposRobotModelos'
 
 
+type Vista = { pos: [number, number, number]; objetivo: [number, number, number] }
+const VISTA_BASE: Vista = { pos: [1100, 900, 1300], objetivo: [0, 280, 0] }
+/** El brazo de 6 ejes es más alto que los demás: con la cámara de siempre se salía por arriba. */
+const VISTAS: Partial<Record<Tipo, Vista>> = {
+  angular: { pos: [1500, 1150, 1900], objetivo: [0, 520, 0] },
+}
+
 export default function TiposRobot() {
   const [tipo, setTipo] = useState<Tipo>('scara')
   const [valores, setValores] = useState<Record<Tipo, number[]>>(
@@ -29,11 +36,7 @@ export default function TiposRobot() {
       controles: { enableDamping: true },
       viewCube: {
         id: 'viewcube-tipos',
-        alInicio: () => {
-          cam.position.copy(inicio.pos)
-          ctrl.target.copy(inicio.objetivo)
-          ctrl.update()
-        },
+        alInicio: () => irAVista(estado.current.tipo),
       },
       // Con «Mover solo» apagado y la cámara quieta no hay nada nuevo que dibujar.
       soloSiCambia: true,
@@ -51,10 +54,13 @@ export default function TiposRobot() {
     const relleno = new THREE.DirectionalLight(0xd5e2f4, 0.55)
     relleno.position.set(900, 600, -700)
     escena.add(sol, relleno, new THREE.HemisphereLight(0xf4f7fb, 0xc5ced8, 0.55))
-    cam.position.set(1100, 900, 1300)
-    ctrl.target.set(0, 280, 0)
-    ctrl.update()
-    const inicio = { pos: cam.position.clone(), objetivo: ctrl.target.clone() }
+    const irAVista = (t: Tipo) => {
+      const vista = VISTAS[t] ?? VISTA_BASE
+      cam.position.set(...vista.pos)
+      ctrl.target.set(...vista.objetivo)
+      ctrl.update()
+    }
+    irAVista(estado.current.tipo)
     let actual: ({ tipo: Tipo } & Modelo) | null = null
     let t = 0
     let firma = ''
@@ -65,6 +71,7 @@ export default function TiposRobot() {
         const a = armar(e.tipo)
         escena.add(a.g)
         actual = { tipo: e.tipo, ...a }
+        irAVista(e.tipo)
       }
       t += 1 / 60
       const v = e.animar ? juntasEnTiempo(e.tipo, t) : e.valores[e.tipo]
