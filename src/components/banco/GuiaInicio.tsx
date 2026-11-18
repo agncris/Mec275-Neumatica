@@ -105,7 +105,7 @@ export const GUIA_ROBOT: PasoGuia[] = [
   },
   {
     titulo: '3 · Verifica y corrige',
-    texto: 'Pulsa ▶ y abre Análisis. Alcance: el brazo no llega. Límite: un eje no gira tanto. Singularidad: A5 cerca de 0° y la muñeca gira de golpe. Acerca la pieza o inclina la herramienta.',
+    texto: 'Pulsa ▶ y abre Análisis. Alcance: el brazo no llega. Límite: un eje no gira tanto. Muñeca estirada: A5 cerca de 0° y la muñeca gira de golpe. Acerca la pieza o inclina la herramienta.',
   },
   {
     titulo: '4 · Documenta y entrega',

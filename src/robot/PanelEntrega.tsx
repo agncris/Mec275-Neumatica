@@ -58,7 +58,7 @@ export default function PanelEntrega({
         { ok: !!sim, texto: sim ? `El Core arma un programa de ${sim.tiempo.toFixed(1)} s.` : 'El Core todavía no arma un programa: necesita comandos, robot y herramienta.' },
         ...(enTarea ? [] : [{ ok: !!def.dxf, texto: def.dxf ? `Usas el plano «${def.dxf.nombre}».` : 'No abriste un plano DXF: si el enunciado trae un plano, ábrelo con «Abrir DXF».' }]),
         { ok: errs.length === 0, texto: errs.length === 0 ? 'La simulación no encuentra errores (alcance, límites de ejes).' : `La simulación encuentra ${errs.length} error(es). El primero: ${errs[0].texto}` },
-        { ok: avs.length === 0, texto: avs.length === 0 ? 'Sin avisos de singularidades ni de cercanía a los límites.' : `${avs.length} aviso(s). Revísalos en la pestaña Análisis.` },
+        { ok: avs.length === 0, texto: avs.length === 0 ? 'La muñeca no gira de golpe y ningún eje queda justo en su límite.' : `${avs.length} aviso(s). Revísalos en la pestaña Análisis.` },
         { ok: !evaluacion.ciclo, texto: evaluacion.ciclo ? 'Hay un ciclo en los cables.' : 'Los cables no forman ciclos.' },
         ...deLaTarea,
       ]

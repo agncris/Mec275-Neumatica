@@ -51,7 +51,7 @@ export default function Mando({ modelo, herramienta, pedestal, q, onQ, puntos, o
     const s = inversa(modelo, tcp, R, herramienta.largo, q, base)
     if (s.falla === 'alcance') return setAviso('El robot no alcanza ese punto.')
     if (s.falla === 'limite') return setAviso(`Para llegar ahí, A${(s.eje ?? 0) + 1} se saldría de su rango.`)
-    setAviso(s.singular ? 'Cuidado: muñeca en singularidad (A5 ≈ 0°).' : null)
+    setAviso(s.singular ? 'Cuidado: muñeca estirada (A5 cerca de 0°). A4 y A6 pueden girar de golpe.' : null)
     onQ(s.q)
   }
 
