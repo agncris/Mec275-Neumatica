@@ -42,5 +42,5 @@ app.use((err, _req, res, next) => {
 app.get('*', (_req, res) => res.sendFile(path.join(DIST, 'index.html')))
 
 app.listen(PUERTO, () => {
-  console.log(`NeumaLab (MEC275) escuchando en el puerto ${PUERTO}`)
+  console.log(`MecLab (MEC275) escuchando en el puerto ${PUERTO}`)
 })

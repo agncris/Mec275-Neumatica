@@ -1,4 +1,4 @@
-# NeumaLab: laboratorio virtual de neumática, PLC, CNC y robótica
+# MecLab: laboratorio virtual de neumática, PLC, CNC y robótica
 
 **MEC275.** Aplicación web para el laboratorio del curso, con una pestaña por unidad. Todo el contenido y la interfaz están en español.
 

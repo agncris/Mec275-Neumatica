@@ -1,4 +1,6 @@
-# NeumaLab (MEC275): reglas para agentes
+# MecLab (MEC275): reglas para agentes
+
+Antes se llamaba NeumaLab. Las claves `neumalab.*` de `localStorage`, el nombre del paquete y el repo no cambian: así los alumnos no pierden su trabajo guardado.
 
 App web del curso MEC275: React + Vite + TypeScript. Cuatro unidades: Neumática, PLC, CNC y Robótica. Se despliega en Vercel desde `main`. El repo es público.
 

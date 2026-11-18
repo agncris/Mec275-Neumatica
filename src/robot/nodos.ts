@@ -224,7 +224,7 @@ export const COMPONENTES: Componente[] = [
     pestana: 'Trayectoria',
     grupo: 'Del plano',
     descripcion:
-      'Toma las curvas del plano DXF abierto en NeumaLab. Puedes elegir una capa y llevar el dibujo al origen.',
+      'Toma las curvas del plano DXF abierto en MecLab. Puedes elegir una capa y llevar el dibujo al origen.',
     entradas: [],
     salidas: [{ nombre: 'Curve', corto: 'C', tipo: 'curva', descripcion: 'Curvas del dibujo' }],
     params: [

@@ -278,7 +278,7 @@ describe('Revisar en Entregar', () => {
     abrir('robotica', '&vista=tarea')
     fireEvent.click(await screen.findByRole('button', { name: /Entregar/ }, ESPERA))
     await waitFor(() => expect(document.querySelector('[data-cajon-entregar="si"]')).toBeTruthy(), ESPERA)
-    for (const titulo of ['Croquis de la pieza', 'Posicionamiento del robot', 'Tu definición (los nodos)', /Ficha técnica · /, 'Tu definición (NeumaLab)', 'Video de la simulación']) {
+    for (const titulo of ['Croquis de la pieza', 'Posicionamiento del robot', 'Tu definición (los nodos)', /Ficha técnica · /, 'Tu definición (MecLab)', 'Video de la simulación']) {
       expect(screen.getAllByText(titulo).length).toBeGreaterThan(0)
     }
   }, 30000)

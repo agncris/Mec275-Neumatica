@@ -72,7 +72,7 @@ ${cuerpo}
 <line x1="6" y1="${alto - 40}" x2="${ancho - 6}" y2="${alto - 40}" stroke="${TINTA}"/>
 <text x="16" y="${alto - 22}" font-size="14" font-weight="700" fill="${TINTA}">${esc(titulo)}</text>
 <text x="16" y="${alto - 10}" font-size="11" fill="#5a6b7d">${esc(subtitulo)}</text>
-<text x="${ancho - 16}" y="${alto - 16}" font-size="11" fill="#5a6b7d" text-anchor="end">NeumaLab · MEC275 · medidas en mm</text>
+<text x="${ancho - 16}" y="${alto - 16}" font-size="11" fill="#5a6b7d" text-anchor="end">MecLab · MEC275 · medidas en mm</text>
 </svg>`
 }
 

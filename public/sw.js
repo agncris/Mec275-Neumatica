@@ -1,5 +1,5 @@
 /*
- * NeumaLab sin conexión. Después de la primera visita, la app funciona sin
+ * MecLab sin conexión. Después de la primera visita, la app funciona sin
  * internet (en el laboratorio o en la micro):
  *   · la página: primero la red (para tener siempre la última versión) y, sin
  *     red, la copia guardada;

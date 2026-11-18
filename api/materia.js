@@ -70,7 +70,7 @@ export const FICHAS = [
     titulo: 'Programación paramétrica',
     claves: ['parametrica', 'grasshopper', 'kuka|prc', 'kuka prc', 'rhino', 'rhinoceros', 'core'],
     texto:
-      'En la robótica paramétrica la trayectoria se define con parámetros (largos, alturas, velocidades) que se pueden cambiar y ver al instante. En MEC275 eso se hace en NeumaLab, en Programación visual: cambias un número en un bloque y el recorrido se actualiza al momento. Los bloques se llaman como en Grasshopper (Curve, LIN, PTP, Core). El plano DXF de la tarea ya está cargado; Curve lee la capa; Offset, Move y los bloques de trayectoria arman el recorrido; el robot, la herramienta y la base están en el Core; ▶ simula y Análisis revisa alcance, límites y singularidades; Exportar saca el KRL (.src), con una frase por línea. Ese archivo se carga después en el controlador y se prueba en T1 antes de producir. A Aula van el PDF, el json y el video: el KRL se exporta y no se sube.',
+      'En la robótica paramétrica la trayectoria se define con parámetros (largos, alturas, velocidades) que se pueden cambiar y ver al instante. En MEC275 eso se hace en MecLab, en Programación visual: cambias un número en un bloque y el recorrido se actualiza al momento. Los bloques se llaman como en Grasshopper (Curve, LIN, PTP, Core). El plano DXF de la tarea ya está cargado; Curve lee la capa; Offset, Move y los bloques de trayectoria arman el recorrido; el robot, la herramienta y la base están en el Core; ▶ simula y Análisis revisa alcance, límites y singularidades; Exportar saca el KRL (.src), con una frase por línea. Ese archivo se carga después en el controlador y se prueba en T1 antes de producir. A Aula van el PDF, el json y el video: el KRL se exporta y no se sube.',
   },
   {
     id: 'robot-movimientos',
@@ -97,7 +97,7 @@ export const FICHAS = [
     titulo: 'Colores de los componentes',
     claves: ['nodo naranjo', 'nodo rojo', 'componente gris', 'colores de los componentes'],
     texto:
-      'En NeumaLab el borde y el fondo dicen el estado: gris y blanco cuando el bloque funciona; naranjo cuando le faltan datos, depende de un nodo que falla o hay un aviso (no es un error propio); rojo cuando ese bloque recibe un dato que no corresponde, como curvas donde se piden puntos; azul cuando está seleccionado.',
+      'En MecLab el borde y el fondo dicen el estado: gris y blanco cuando el bloque funciona; naranjo cuando le faltan datos, depende de un nodo que falla o hay un aviso (no es un error propio); rojo cuando ese bloque recibe un dato que no corresponde, como curvas donde se piden puntos; azul cuando está seleccionado.',
   },
   {
     id: 'robot-usar',

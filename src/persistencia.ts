@@ -215,6 +215,6 @@ export function descargarJson(circuito: CircuitoGuardado, nombre = 'circuito-neu
 export async function leerArchivo(archivo: File): Promise<CircuitoGuardado> {
   const texto = await archivo.text()
   const dato = JSON.parse(texto)
-  if (!esCircuitoValido(dato)) throw new Error('El archivo no contiene un circuito de NeumaLab válido.')
+  if (!esCircuitoValido(dato)) throw new Error('El archivo no contiene un circuito de MecLab válido.')
   return dato
 }

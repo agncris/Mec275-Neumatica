@@ -30,7 +30,7 @@ export const SECCIONES_ROBOT: SeccionEstudio[] = [
   { id: 'componentes', indice: 'Componentes', titulo: 'Componentes de un robot de base fija', contenido: <Componentes /> },
   { id: 'grados', indice: 'Grados de libertad', titulo: 'Grados de libertad y singularidades', contenido: <GradosLibertad /> },
   { id: 'ficha-tecnica', indice: 'Ficha técnica', titulo: 'Ficha técnica: cómo elegir el robot', contenido: <FichaTecnica /> },
-  { id: 'parametrica', indice: 'Programación paramétrica', titulo: 'Programación paramétrica en NeumaLab', contenido: <ProgramacionParametrica /> },
+  { id: 'parametrica', indice: 'Programación paramétrica', titulo: 'Programación paramétrica en MecLab', contenido: <ProgramacionParametrica /> },
   { id: 'como-usar', indice: 'Cómo usar esta unidad', titulo: 'Cómo usar esta unidad', contenido: <ComoUsar /> },
 ]
 
@@ -74,7 +74,7 @@ function ComoUsar() {
         a1, a2, a3, d4, d6) sacadas de su ficha; los rangos y velocidades se toman del modelo parecido que elijas.
       </li>
       <li style={li}>
-        <strong>El trabajo se hace en NeumaLab.</strong> Los bloques se llaman como en Grasshopper (Curve, LIN, PTP, Core).
+        <strong>El trabajo se hace en MecLab.</strong> Los bloques se llaman como en Grasshopper (Curve, LIN, PTP, Core).
         Los robots tienen los rangos y velocidades de sus fichas y una geometría muy parecida a la real. El código KRL es
         de estudio: revísalo antes de usarlo en un robot real.
       </li>
@@ -89,7 +89,7 @@ export default function EstudiarRobotica({ setSeccion }: { setSeccion: (destino:
         etiqueta="Estudiar robótica"
         titulo="Estudiar · Robótica"
         descripcion="Teoría de la unidad. Al final de cada tema puedes probarlo en el Laboratorio o en la Tarea."
-        pie="NeumaLab · MEC275 — Unidad 4: Robótica industrial"
+        pie="MecLab · MEC275 — Unidad 4: Robótica industrial"
         secciones={SECCIONES_ROBOT}
       />
     </PracticaRobot.Provider>

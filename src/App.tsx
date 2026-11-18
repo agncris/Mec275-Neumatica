@@ -1,5 +1,5 @@
 /**
- * NeumaLab — laboratorio virtual de neumática (MEC275).
+ * MecLab — laboratorio virtual de neumática (MEC275).
  *
  * Dos modos, como un banco de taller:
  *  - Editar: colocar fichas, cablear puertos, ajustar parámetros.

@@ -288,7 +288,7 @@ export default function UnidadPLC() {
     if (enVisita()) return
     try {
       const p = JSON.parse(await archivo.text())
-      if (!esProgramaPLC(p)) throw new Error('Ese archivo no es un programa de PLC de NeumaLab.')
+      if (!esProgramaPLC(p)) throw new Error('Ese archivo no es un programa de PLC de MecLab.')
       cargar(p)
       setAviso(`Programa «${archivo.name}» abierto${p.planta === PLANTA_TAREA && !enTarea ? ` en ${NOMBRE_TAREA}` : ''}.`)
     } catch (e) {

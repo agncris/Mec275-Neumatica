@@ -1,5 +1,5 @@
 /**
- * Portada de NeumaLab: elige la unidad del curso. La unidad 1 (neumática)
+ * Portada de MecLab: elige la unidad del curso. La unidad 1 (neumática)
  * es el laboratorio de siempre; todas las unidades se cargan sólo cuando alguien
  * las abre (la de neumática, que es la de siempre, empieza a bajar de inmediato).
  */
@@ -65,12 +65,12 @@ export default function Raiz() {
     window.scrollTo({ top: 0 })
     document.title =
       unidad === 'plc'
-        ? 'NeumaLab — Laboratorio virtual de PLC'
+        ? 'MecLab — Laboratorio virtual de PLC'
         : unidad === 'cnc'
-          ? 'NeumaLab — Simulador de CNC'
+          ? 'MecLab — Simulador de CNC'
           : unidad === 'robotica'
-            ? 'NeumaLab — Robótica paramétrica'
-            : 'NeumaLab — Laboratorio virtual de neumática'
+            ? 'MecLab — Robótica paramétrica'
+            : 'MecLab — Laboratorio virtual de neumática'
   }, [unidad])
 
   // Otra unidad empieza en su laboratorio: la sección y el ancla de la anterior no valen.
@@ -104,10 +104,10 @@ export default function Raiz() {
               cambiarUnidad('neumatica')
             }}
             style={{ display: 'flex', alignItems: 'baseline', gap: 8, textDecoration: 'none', color: 'var(--texto)', flexShrink: 0 }}
-            title="NeumaLab · laboratorio virtual del curso MEC275"
+            title="MecLab · laboratorio virtual del curso MEC275"
             className="barra-superior__marca"
           >
-            <strong style={{ fontSize: '1.08rem', letterSpacing: '-0.01em' }}>NeumaLab</strong>
+            <strong style={{ fontSize: '1.08rem', letterSpacing: '-0.01em' }}>MecLab</strong>
             <span className="barra-superior__curso" style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--tinta-suave)' }}>
               MEC275
             </span>

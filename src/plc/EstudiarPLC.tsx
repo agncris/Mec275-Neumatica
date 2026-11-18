@@ -27,7 +27,7 @@ export default function EstudiarPLC() {
       etiqueta="Estudiar PLC"
       titulo="Estudiar · PLC"
       descripcion="Teoría de la unidad. Los programas de ejemplo y los ejercicios se abren en el Laboratorio."
-      pie="NeumaLab · MEC275 — Unidad 2: Controlador Lógico Programable · Ladder"
+      pie="MecLab · MEC275 — Unidad 2: Controlador Lógico Programable · Ladder"
       secciones={SECCIONES_PLC}
     />
   )

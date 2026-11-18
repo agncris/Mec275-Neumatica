@@ -46,7 +46,7 @@ export default function TablaNomenclatura() {
       </div>
 
       <p style={{ fontSize: '0.82rem', color: 'var(--tinta-tenue)', margin: '10px 0 0', lineHeight: 1.5 }}>
-        NeumaLab usa la numeración CETOP (1, 2, 3, 4, 5, 12, 14), que es la que verás grabada en los
+        MecLab usa la numeración CETOP (1, 2, 3, 4, 5, 12, 14), que es la que verás grabada en los
         componentes del banco.
       </p>
     </>

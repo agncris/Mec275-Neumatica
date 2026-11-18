@@ -2,7 +2,7 @@
  * Teoría de la unidad de robótica, escrita para el alumno: qué es un robot
  * industrial, fabricación en serie frente a robótica, tipos, componentes,
  * grados de libertad, cómo leer una ficha técnica y la programación
- * paramétrica en NeumaLab (Programación visual).
+ * paramétrica en MecLab (Programación visual).
  */
 import { createContext, useContext, type ReactNode } from 'react'
 import { VER_TAREA_ROBOTICA } from '../unidades'
@@ -252,7 +252,7 @@ export function ProgramacionParametrica() {
       <p style={p}>
         En la <strong>robótica paramétrica</strong> la trayectoria del robot se define con parámetros (largos, alturas,
         velocidades) que se pueden cambiar y ver el resultado al instante. En MEC275 eso se hace en esta app,{' '}
-        <strong>NeumaLab</strong>, en <strong>Programación visual</strong>: cambias un número en un bloque y el recorrido
+        <strong>MecLab</strong>, en <strong>Programación visual</strong>: cambias un número en un bloque y el recorrido
         se actualiza al momento.
       </p>
       <ol style={{ margin: '0 0 10px', paddingLeft: 20, lineHeight: 1.6 }}>

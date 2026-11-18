@@ -47,7 +47,7 @@ export function leerTrabajo(texto: string): TrabajoCNC {
   }
   const c = d?.config as ConfigCNC | undefined
   if (d?.tipo !== 'trabajo-cnc' || !c || typeof d.codigo !== 'string' || !c.torno || !c.fresa || (c.maquina !== 'torno' && c.maquina !== 'fresadora')) {
-    throw new Error('Ese archivo no es un trabajo de CNC de NeumaLab.')
+    throw new Error('Ese archivo no es un trabajo de CNC de MecLab.')
   }
   // La torreta guardada manda: así la revisión usa las mismas herramientas que el alumno.
   const config: ConfigCNC = Array.isArray(d.torreta) && d.torreta.length ? { ...c, herramientasTorno: d.torreta } : c

@@ -21,7 +21,7 @@ export default class ErrorBoundary extends Component<Props, Estado> {
   }
 
   componentDidCatch(fallo: Error, info: ErrorInfo) {
-    console.error('Falló una unidad de NeumaLab:', fallo, info.componentStack)
+    console.error('Falló una unidad de MecLab:', fallo, info.componentStack)
   }
 
   render() {

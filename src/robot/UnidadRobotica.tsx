@@ -327,7 +327,7 @@ export default function UnidadRobotica() {
     if (!f) return
     try {
       const d = JSON.parse(await f.text())
-      if (!esDefinicion(d)) throw new Error('Ese archivo no es una definición de robótica de NeumaLab.')
+      if (!esDefinicion(d)) throw new Error('Ese archivo no es una definición de robótica de MecLab.')
       // Una definición de la tarea se abre en la sección de la tarea, sea donde sea que se abra.
       if ((d as { tarea?: string }).tarea === MARCA_TAREA4 && VER_TAREA_ROBOTICA && !enTarea) setSeccion('tarea')
       // En la tarea el plano es el del enunciado: si la definición trae otro, se cambia por el de la tarea.

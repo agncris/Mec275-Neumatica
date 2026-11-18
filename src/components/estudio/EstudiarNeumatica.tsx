@@ -17,7 +17,7 @@ export default function EstudiarNeumatica({ alCargarCircuito }: { alCargarCircui
       etiqueta="Estudiar neumática"
       titulo="Estudiar · Neumática"
       descripcion="Teoría y autoevaluaciones de la unidad. Los circuitos de ejemplo se abren en el Laboratorio."
-      pie="NeumaLab · MEC275 — Neumática industrial · Simbología ISO 1219-1"
+      pie="MecLab · MEC275 — Neumática industrial · Simbología ISO 1219-1"
       secciones={[
         { id: 'practica', indice: 'Autoevaluación', titulo: 'Autoevaluación · practica con preguntas al azar', contenido: <Autoevaluacion generadores={PREGUNTAS_NEUMATICA} /> },
         { id: 'ficha', indice: 'Ficha de repaso', titulo: 'Ficha de repaso · para imprimir', contenido: <FichaNeumatica /> },

@@ -56,12 +56,12 @@ cada uno con sus articulaciones R/P movibles, grados de libertad y usos.
 
 **Practicar** (en el mismo menú «Ejemplos…»): tres ejercicios de la Clase 2 (un arco con CIR, el orden con Command Weaver, AXIS y KRL a mano), cinco fallas para diagnosticar (A a E) y la figura de una pregunta del control (una definición mal conectada). Cada uno se abre con un clic y muestra una línea de enunciado; las fallas sólo dicen «Esta definición tiene un problema. Encuéntralo.» Dos de las fallas (C: el husillo nunca se enciende; D: una ranura sin compensar) la app no las marca: se encuentran leyendo el código KRL. En ★ Tarea Robótica sí hay un aviso naranjo si la fresa corta con el husillo apagado o si el husillo queda encendido al terminar (no en los ejercicios, para no regalar esas fallas). Las definiciones están en [`ejercicios-clase2/`](ejercicios-clase2/).
 
-**Ejemplos** (de estudio): estructura básica en NeumaLab; acercarse y alejarse con PTP;
+**Ejemplos** (de estudio): estructura básica en MecLab; acercarse y alejarse con PTP;
 fresado de una placa desde un DXF de práctica (contorno compensado, taladrado de
 agujeros con Command Weaver intercalado y husillo). El KRL de los ejemplos lleva una
 frase por línea. **Teoría**: robot industrial (Devol, teach-in/playback), fabricación
 en serie frente a robótica, tipos, componentes, grados de libertad y singularidades,
-ficha técnica y programación paramétrica en NeumaLab (bloques Curve, LIN, PTP y Core).
+ficha técnica y programación paramétrica en MecLab (bloques Curve, LIN, PTP y Core).
 En la tarea el KRL se exporta y no se sube a Aula: a Aula van el PDF, el json y el video.
 
 La unidad no incluye enunciados, planos ni soluciones de evaluaciones.

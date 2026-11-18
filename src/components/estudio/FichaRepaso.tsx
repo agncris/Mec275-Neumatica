@@ -35,7 +35,7 @@ export default function FichaRepaso({ titulo, children }: { titulo: string; chil
       <div ref={caja} className="ficha-repaso">
         <h3 className="ficha-repaso__titulo">{titulo}</h3>
         {children}
-        <p className="ficha-repaso__pie">NeumaLab · MEC275</p>
+        <p className="ficha-repaso__pie">MecLab · MEC275</p>
       </div>
     </div>
   )

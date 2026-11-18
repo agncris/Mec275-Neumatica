@@ -51,7 +51,7 @@ export const TAREAS: Record<IdTarea, TareaEntregable> = {
       { id: 'circuito-png', tipo: 'imagen', titulo: 'Imagen del circuito', detalle: 'El esquema tal como está en el banco.', archivo: '{base}_circuito.png' },
     ],
     archivos: [
-      { id: 'circuito', tipo: 'archivo', titulo: 'Tu circuito (NeumaLab)', detalle: 'Se abre en la app con Archivo › Abrir y se puede simular. Incluye tu diagrama VDI.', archivo: '{base}.json' },
+      { id: 'circuito', tipo: 'archivo', titulo: 'Tu circuito (MecLab)', detalle: 'Se abre en la app con Archivo › Abrir y se puede simular. Incluye tu diagrama VDI.', archivo: '{base}.json' },
     ],
   },
   plc: {
@@ -100,7 +100,7 @@ export const TAREAS: Record<IdTarea, TareaEntregable> = {
       { id: 'ficha', tipo: 'tabla', titulo: 'Ficha técnica · {modelo}', detalle: 'Pégala en la diapositiva Robot y cita la ficha oficial de KUKA. No la subas aparte.' },
     ],
     archivos: [
-      { id: 'definicion', tipo: 'archivo', titulo: 'Tu definición (NeumaLab)', detalle: 'Súbelo a Aula junto con el PDF de la plantilla y el video. Trae el plano y tu nombre.', archivo: '{base}.json' },
+      { id: 'definicion', tipo: 'archivo', titulo: 'Tu definición (MecLab)', detalle: 'Súbelo a Aula junto con el PDF de la plantilla y el video. Trae el plano y tu nombre.', archivo: '{base}.json' },
       {
         id: 'video',
         tipo: 'video',

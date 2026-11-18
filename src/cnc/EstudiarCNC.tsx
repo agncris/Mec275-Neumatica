@@ -81,7 +81,7 @@ export default function EstudiarCNC() {
       etiqueta="Estudiar CNC"
       titulo="Estudiar · CNC"
       descripcion="Teoría de la unidad. Los programas de ejemplo se abren en el Laboratorio."
-      pie="NeumaLab · MEC275 — Unidad 3: Control Numérico Computarizado · código G"
+      pie="MecLab · MEC275 — Unidad 3: Control Numérico Computarizado · código G"
       secciones={SECCIONES_CNC}
     />
   )

@@ -392,7 +392,7 @@ function armarKRL(prog: Programa, sim: Simulacion, nombre = 'neumalab'): { texto
     '&ACCESS RVP',
     '&REL 1',
     `DEF ${nombreKRL(nombre)}( )`,
-    `; Generado por NeumaLab (MEC275) · robot ${modelo.nombre} · herramienta ${h.nombre}, largo ${h.largo} mm`,
+    `; Generado por MecLab (MEC275) · robot ${modelo.nombre} · herramienta ${h.nombre}, largo ${h.largo} mm`,
     '; Programa de estudio: revísalo y pruébalo en T1 (velocidad reducida) antes de usarlo en un robot real.',
     ';FOLD INI',
     '  BAS (#INITMOV, 0)',
@@ -521,7 +521,7 @@ export function explicarLineaKRL(texto: string): PalabraKRL[] {
     if (/^;FOLD\b/i.test(cruda)) return [{ palabra: cruda, texto: 'Abre un pliegue del editor de KUKA: agrupa las líneas de abajo para poder ocultarlas.' }]
     if (/^;ENDFOLD\b/i.test(cruda)) return [{ palabra: cruda, texto: 'Cierra el pliegue abierto con ;FOLD.' }]
     const cuerpo = cruda.replace(/^;\s*/, '')
-    if (/Generado por NeumaLab/i.test(cuerpo)) return [{ palabra: cruda, texto: 'Comentario: de qué robot y de qué herramienta sale este programa.' }]
+    if (/Generado por (MecLab|MecLab)/i.test(cuerpo)) return [{ palabra: cruda, texto: 'Comentario: de qué robot y de qué herramienta sale este programa.' }]
     if (/Programa de estudio/i.test(cuerpo)) return [{ palabra: cruda, texto: 'Comentario: conviene revisar el programa y probarlo despacio antes de un robot real.' }]
     return [{ palabra: cruda, texto: `Comentario, no se ejecuta: ${cuerpo}` }]
   }

@@ -59,7 +59,7 @@ export default function MisTrabajos({ unidad, nombreActual, actual, abrir, onCer
     if (!f) return
     try {
       const d = JSON.parse(await f.text())
-      if (!esRespaldo(d)) throw new Error('Ese archivo no es un respaldo de NeumaLab.')
+      if (!esRespaldo(d)) throw new Error('Ese archivo no es un respaldo de MecLab.')
       const n = restaurarRespaldo(d)
       refrescar()
       setMensaje(`Respaldo cargado: ${n} trabajo(s) de todas las unidades.`)

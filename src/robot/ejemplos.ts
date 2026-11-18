@@ -35,7 +35,7 @@ export const EJEMPLOS_ROBOT: EjemploRobot[] = [
   {
     id: 'basico',
     titulo: '1 · Estructura básica: rectángulo con LIN',
-    resumen: 'Las siete partes de una simulación en NeumaLab: curva, puntos, planos, comando, robot, herramienta y Core.',
+    resumen: 'Las siete partes de una simulación en MecLab: curva, puntos, planos, comando, robot, herramienta y Core.',
     definicion: () =>
       def(
         'Estructura básica',
