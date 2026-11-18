@@ -36,6 +36,8 @@ interface Props {
   llenar?: boolean
   /** El play dentro de la escena (siempre visible). */
   play?: PlayEscena
+  /** Avisa que el navegador no pudo dibujar en 3D, para que quien lo usa ofrezca otra vista. */
+  onSinWebGL?: () => void
 }
 
 interface PiezaEnEscena {
@@ -308,7 +310,9 @@ function estadoDe(motor: Motor | null, p: Pieza): { estado: EstadoPieza; presion
   return { estado, presion }
 }
 
-export default function Banco3D({ motor, llenar = false, play }: Props) {
+export default function Banco3D({ motor, llenar = false, play, onSinWebGL }: Props) {
+  const alSinWebGL = useRef(onSinWebGL)
+  alSinWebGL.current = onSinWebGL
   const tactil = useTactil()
   const contenedorRef = useRef<HTMLDivElement>(null)
   const motorRef = useRef<Motor | null>(motor)
@@ -393,6 +397,7 @@ export default function Banco3D({ motor, llenar = false, play }: Props) {
     })
     if (!base) {
       setSinWebGL(true)
+      alSinWebGL.current?.()
       return
     }
     const { renderer, escena, camara, controles } = base
@@ -764,8 +769,8 @@ export default function Banco3D({ motor, llenar = false, play }: Props) {
     >
       {sinWebGL && (
         <p style={{ padding: 24, color: 'var(--tinta)' }}>
-          Tu navegador no tiene WebGL activado, así que no puede dibujar el banco en 3D. Usa la vista Esquema o
-          Taller.
+          Tu navegador no tiene WebGL activado, así que no puede dibujar el banco en 3D. Usa la vista «Por dentro»
+          o el esquema del circuito.
         </p>
       )}
       <div style={barra}>
@@ -834,7 +839,8 @@ export default function Banco3D({ motor, llenar = false, play }: Props) {
           ))}
         </div>
       )}
-      <p style={pista}>
+      {/* Con los mandos a la derecha, la pista cede lugar para no taparlos en un área angosta. */}
+      <p style={motor && mandos.length > 0 ? { ...pista, maxWidth: 'calc(100% - 220px)' } : pista}>
         {motor
           ? `Arrastra para girar el banco · ${acercar(tactil)} · mantén pulsado un mando para accionarlo`
           : `Pulsa ▶ Simular para poner el banco en marcha · arrastra para girarlo · ${acercar(tactil)}`}
@@ -849,6 +855,10 @@ const barra: React.CSSProperties = {
   right: 8,
   zIndex: 2,
   display: 'flex',
+  // En un área angosta los botones bajan de línea en vez de tapar el cubo de vistas (a la izquierda).
+  flexWrap: 'wrap',
+  justifyContent: 'flex-end',
+  maxWidth: 'calc(100% - 132px)',
   gap: 4,
   padding: '4px 6px',
   background: 'rgba(255,255,255,0.9)',
@@ -871,7 +881,7 @@ const panelMandos: React.CSSProperties = {
   position: 'absolute',
   right: 8,
   bottom: 8,
-  zIndex: 2,
+  zIndex: 3,
   display: 'flex',
   gap: 6,
   alignItems: 'center',

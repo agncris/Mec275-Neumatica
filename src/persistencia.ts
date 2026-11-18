@@ -32,8 +32,10 @@ export const CLAVES = {
   // Neumática
   circuito: 'neumalab.circuito',
   circuitoAbierto: 'neumalab.circuito-abierto',
+  /** Antes elegía el lienzo; ahora solo decide «3D» o «Por dentro» en la simulación ('banco3d' o 'taller'). */
   bancoVista: 'neumalab.banco.vista',
   bancoPaletaPlegada: 'neumalab.banco.paleta-plegada',
+  // bancoInspector, bancoAnchoInspector y las tres de «inferior» ya no se leen (el panel de la derecha usa neumaticaPanel). Quedan para no reutilizarlas.
   bancoInspector: 'neumalab.banco.inspector',
   bancoAnchoPaleta: 'neumalab.banco.ancho-paleta',
   bancoAnchoInspector: 'neumalab.banco.ancho-inspector',
@@ -43,6 +45,8 @@ export const CLAVES = {
   banco3dSonido: 'neumalab.banco3d.sonido',
   paletaGrupos: 'neumalab.paleta.grupos',
   neumaticaEntrega: 'neumalab.neumatica.entrega',
+  neumaticaPanel: 'neumalab.neumatica.panel',
+  neumaticaBanco: 'neumalab.neumatica.banco',
   // PLC
   plcPrograma: 'neumalab.plc.programa',
   plcTarea: 'neumalab.plc.tarea',

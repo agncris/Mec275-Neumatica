@@ -7,22 +7,22 @@
  *    circular, las correderas conmutar y los vástagos moverse.
  */
 import { IconoDeshacer, IconoRehacer } from './components/IconosEdicion'
-import { BotonNuevo, botonPrimario, estiloAviso, Menu, useApaisado, useApilado, useEsEstrecha, usePersistente, useTactil } from './components/ui'
+import { BotonNuevo, botonPrimario, estiloAviso, Menu, useApaisado, useApilado, useCelular, useEsEstrecha, usePersistente, useTactil } from './components/ui'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import DiagramaEspacioFase, { hayDiagramaFase, registrarFase } from './components/DiagramaEspacioFase'
 import { DT_POR_DEFECTO, Motor, validarCircuito } from './engine'
 import BarraTiempo from './components/BarraTiempo'
 import Paleta from './components/Paleta'
-import Pizarra, { type ControlesPizarra, type Vista } from './components/Pizarra'
-import Inspector, { type PestanaInspector } from './components/banco/Inspector'
-import PanelInferior, { type PestanaInferior } from './components/banco/PanelInferior'
+import Pizarra, { type ControlesPizarra } from './components/Pizarra'
+import BancoDividido, { TituloArea } from './components/banco/BancoDividido'
+import InterruptorEtapa, { type EtapaTrabajo } from './components/banco/InterruptorEtapa'
+import { usePanelAcoplado, type PestanaPanel } from './components/banco/PanelAcoplado'
+import { ContenidoCorte, ContenidoFase, ContenidoPropiedades, ContenidoRegistro, type PestanaNeumatica } from './components/banco/PanelesNeumatica'
+import AreaSimulacionNeumatica, { type VistaSimulacion } from './components/banco/AreaSimulacionNeumatica'
 import BordeAncho from './components/banco/BordeAncho'
 import AyudaAtajos from './components/banco/AyudaAtajos'
 
-// El banco 3D arrastra three.js: se carga sólo cuando alguien lo abre.
-const Banco3D = lazy(() => import('./vista3d/Banco3D'))
-type VistaApp = Vista | 'banco3d' | 'ambos'
 // La teoría de Estudiar y el cajón de entrega se cargan solo cuando se abren.
 const PaginaNeumaticaEstudiar = lazy(() => import('./components/estudio/EstudiarNeumatica'))
 const EntregaNeumatica = lazy(() => import('./components/EntregaNeumatica'))
@@ -82,17 +82,16 @@ export default function App() {
   const [reinicioSim, setReinicioSim] = useState(0)
   const [, setFotograma] = useState(0)
   const [aviso, setAviso] = useState<string | null>(null)
-  const [vista, setVista] = usePersistente<VistaApp>(CLAVES.bancoVista, 'esquema')
+  // Lo que se guardó como vista del lienzo ya solo decide «3D» o «Por dentro» en la simulación.
+  const [vistaGuardada, setVistaGuardada] = usePersistente<string>(CLAVES.bancoVista, 'banco3d')
+  const vistaSim: VistaSimulacion = vistaGuardada === 'taller' ? 'dentro' : '3d'
+  const [sinWebGL, setSinWebGL] = useState(false)
   const [paletaPlegada, setPaletaPlegada] = usePersistente(CLAVES.bancoPaletaPlegada, false)
-  const [inspectorAbierto, setInspectorAbierto] = usePersistente(CLAVES.bancoInspector, true)
   const [anchoPaleta, setAnchoPaleta] = usePersistente<number | null>(CLAVES.bancoAnchoPaleta, null)
-  const [anchoInspector, setAnchoInspector] = usePersistente<number | null>(CLAVES.bancoAnchoInspector, null)
-  const [pestanaInspector, setPestanaInspector] = useState<PestanaInspector>('propiedades')
-  const [inferiorAbierto, setInferiorAbierto] = usePersistente(CLAVES.bancoInferior, false)
-  const [altoInferior, setAltoInferior] = usePersistente(CLAVES.bancoAltoInferior, typeof window === 'undefined' ? 200 : Math.round(Math.min(200, Math.max(130, window.innerHeight * 0.2))))
-  const [inferiorAmpliado, setInferiorAmpliado] = usePersistente(CLAVES.bancoInferiorAmpliado, false)
-  const [pestanaInferior, setPestanaInferior] = useState<PestanaInferior>('registro')
-  const [hoja, setHoja] = useState<'paleta' | 'inspector' | 'registro' | null>(null)
+  const panel = usePanelAcoplado<PestanaNeumatica>(CLAVES.neumaticaPanel, 'propiedades', true, 300)
+  // Armar el circuito (ancho, con la paleta) o probarlo en el banco (la simulación ocupa el ancho).
+  const [etapa, setEtapa] = useState<EtapaTrabajo>('armar')
+  const [hoja, setHoja] = useState<'paleta' | null>(null)
   // Laboratorio (el banco) o Estudiar; «Entregar» es un cajón sobre el laboratorio.
   const [seccion, setSeccion] = useState<'laboratorio' | 'estudiar'>(() =>
     typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('vista') === 'estudiar' ? 'estudiar' : 'laboratorio',
@@ -123,23 +122,25 @@ export default function App() {
   const seleccion = useStore((s) => s.seleccion)
   const origenCable = useStore((s) => s.origenCable)
 
-  // Al elegir una ficha se abre el inspector con sus propiedades.
+  // Al elegir una ficha se abre el panel con sus propiedades. En el celular no: las pestañas son pantallas y saltaría de lugar.
   useEffect(() => {
-    if (seleccion?.clase !== 'pieza') return
-    if (!estrecha) setInspectorAbierto(true)
-    setPestanaInspector((p) => (p === 'corte' ? p : 'propiedades'))
+    if (seleccion?.clase !== 'pieza' || celular) return
+    panel.onAbrir(true)
+    panel.onPestana(panel.pestana === 'corte' ? 'corte' : 'propiedades')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seleccion])
-  // Al simular se abre el registro.
+  // Al simular se abre el registro (tampoco en el celular: ahí se queda donde estaba).
   useEffect(() => {
-    if (modo !== 'simular') return
-    setInferiorAbierto(true)
-    setPestanaInferior('registro')
+    if (modo !== 'simular' || celular) return
+    panel.onAbrir(true)
+    panel.onPestana('registro')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modo])
   const estrecha = useEsEstrecha()
-  // Ventana mediana: el tablero arriba y el inspector debajo, bajando con la barra de desplazamiento.
-  const apilado = useApilado() && !estrecha
+  // Celular: una zona a la vez, con pestañas.
+  const celular = useCelular()
+  // Ventana mediana: el circuito arriba y la simulación debajo, bajando con la barra de desplazamiento.
+  const apilado = useApilado() && !celular
   // Celular acostado: «Laboratorio · Estudiar · Entregar» van en la fila de las unidades.
   const apaisado = useApaisado()
   const subnavAparte = estrecha && !apaisado
@@ -373,13 +374,6 @@ export default function App() {
   if (motor) ultimoRegistro.current = motor.eventos.slice(-300)
   const eventos = ultimoRegistro.current
 
-  const zonaVista: Array<[VistaApp, string, string]> = [
-    ['esquema', 'Esquema', 'Símbolos ISO 1219-1'],
-    ['taller', 'Taller', 'Los componentes por dentro'],
-    ['banco3d', '3D', 'El banco en tres dimensiones'],
-    ['ambos', 'Esquema+Taller', 'Esquema y taller a la vez, sincronizados'],
-  ]
-
   // Texto de la barra de estado según lo que está haciendo el alumno.
   const textoEstado = (() => {
     if (simulando)
@@ -485,23 +479,22 @@ export default function App() {
     },
     { texto: 'Circuito (JSON)', ayuda: 'El archivo del circuito: se vuelve a abrir en la app con «Abrir…»', onClick: guardarJson, separar: true, deshabilitado: bancoVacio, porque: 'Primero coloca fichas en el tablero' },
   ]
-  const zoomHabilitado = vista !== 'banco3d'
   const grupoZoom = (
     <span className="grupo-zoom" role="group" aria-label="Zoom del tablero">
-      <button onClick={() => controles.current?.alejar()} disabled={!zoomHabilitado} title="Alejar" aria-label="Alejar">
+      <button onClick={() => controles.current?.alejar()} title="Alejar" aria-label="Alejar">
         −
       </button>
-      <button onClick={() => controles.current?.cien()} disabled={!zoomHabilitado} title="Volver al 100 %" style={{ minWidth: 48, fontWeight: 600, fontSize: '0.82rem' }} data-zoom="si">
-        {zoomHabilitado ? `${zoom}%` : '—'}
+      <button onClick={() => controles.current?.cien()} title="Volver al 100 %" style={{ minWidth: 48, fontWeight: 600, fontSize: '0.82rem' }} data-zoom="si">
+        {zoom}%
       </button>
-      <button onClick={() => controles.current?.acercar()} disabled={!zoomHabilitado} title="Acercar" aria-label="Acercar">
+      <button onClick={() => controles.current?.acercar()} title="Acercar" aria-label="Acercar">
         +
       </button>
-      <button onClick={() => controles.current?.ajustar()} disabled={!zoomHabilitado} title="Ajustar: ver todo el circuito" aria-label="Ajustar" data-ajustar="si">
+      <button onClick={() => controles.current?.ajustar()} title="Ajustar: ver todo el circuito" aria-label="Ajustar" data-ajustar="si">
         ⤢
       </button>
       {controles.current?.hayPantallaCompleta !== false && (
-        <button onClick={() => controles.current?.pantallaCompleta()} disabled={!zoomHabilitado} title="Tablero a pantalla completa" aria-label="Pantalla completa">
+        <button onClick={() => controles.current?.pantallaCompleta()} title="Tablero a pantalla completa" aria-label="Pantalla completa">
           ⛶
         </button>
       )}
@@ -530,72 +523,150 @@ export default function App() {
       deshabilitada={!simulando}
     />
   )
-  const lienzo = (
+  /** Armar: el circuito ancho, con el panel en las propiedades. Probar: el circuito se pliega a la tira y la simulación ocupa el ancho. */
+  const irAEtapa = (e: EtapaTrabajo) => {
+    setEtapa(e)
+    panel.onAbrir(true)
+    if (e === 'probar') panel.onPestana('registro')
+    else if (!simulando) panel.onPestana('propiedades')
+  }
+  const plegado = etapa === 'probar' && !celular && !apilado ? 'riel' : 'abierto'
+
+  const areaCircuito = (
     <>
-    <div className="banco__lienzo" data-vista={vista}>
-      {vista === 'banco3d' ? (
-        <>
-          <Suspense fallback={<p className="u-vacio">Montando el banco…</p>}>
-            <Banco3D motor={motor} llenar play={playEscena} />
-          </Suspense>
-          {/* La pizarra sigue montada, oculta, para poder exportar el circuito. */}
-          <div className="u-oculto">
-            <Pizarra motor={motor} vista="esquema" />
-          </div>
-        </>
-      ) : (
-        <>
-          <div>
-            {vista === 'ambos' && <span style={rotuloVista}>Esquema · ISO 1219-1</span>}
-            <Pizarra motor={motor} vista={vista === 'taller' ? 'taller' : 'esquema'} llenar sinBarra controles={controles} onZoom={setZoom} play={playEscena} />
-          </div>
-          {vista === 'ambos' && (
-            <div>
-              <span style={rotuloVista}>Taller · por dentro</span>
-              <Pizarra motor={motor} vista="taller" soloLectura id="pizarra-taller-svg" llenar sinBarra />
+      <TituloArea
+        derecha={
+          <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+            {celular && (
+              <button onClick={() => setHoja('paleta')} disabled={simulando} title={simulando ? 'Detén la simulación para editar' : 'Agregar componentes'}>
+                ＋ Componentes
+              </button>
+            )}
+            {grupoZoom}
+          </span>
+        }
+      >
+        Circuito
+        <span style={{ fontWeight: 400, fontSize: '0.8rem', color: 'var(--tinta-suave)' }}>Símbolos ISO 1219-1</span>
+      </TituloArea>
+      <div className="circuito-cuerpo">
+        {!celular && (
+          <>
+            <div className={`banco__paleta${paletaPlegada ? ' banco__paleta--plegada' : ''}`} style={!paletaPlegada && anchoPaleta ? { width: anchoPaleta } : undefined}>
+              <Paleta plegada={paletaPlegada} onPlegar={setPaletaPlegada} deshabilitada={simulando} />
             </div>
-          )}
-        </>
-      )}
-    </div>
-    {barraTiempo}
+            {!paletaPlegada && <BordeAncho ancho={anchoPaleta} onAncho={setAnchoPaleta} min={180} max={360} lado={1} etiqueta="Cambiar el ancho de la paleta" />}
+          </>
+        )}
+        <div className="circuito-lienzo">
+          <Pizarra motor={motor} vista="esquema" llenar sinBarra controles={controles} onZoom={setZoom} />
+        </div>
+      </div>
     </>
   )
 
-  const panelInferior = (
-    <PanelInferior
-      abierto={inferiorAbierto}
-      onAbrir={setInferiorAbierto}
-      alto={altoInferior}
-      onAlto={setAltoInferior}
-      ampliado={inferiorAmpliado}
-      onAmpliar={setInferiorAmpliado}
-      pestana={pestanaInferior}
-      onPestana={setPestanaInferior}
+  const areaSimulacion = (
+    <AreaSimulacionNeumatica
       motor={motor}
-      eventos={eventos}
-    />
-  )
-  const inspector = (
-    <Inspector
-      pestana={pestanaInspector}
-      onPestana={setPestanaInspector}
-      onPlegar={() => (estrecha ? setHoja(null) : setInspectorAbierto(false))}
-      motor={motor}
-      avisos={avisosCircuito}
-      hayCortes={hayCortes}
+      vista={sinWebGL ? 'dentro' : vistaSim}
+      onVista={(v) => setVistaGuardada(v === 'dentro' ? 'taller' : 'banco3d')}
+      sinWebGL={sinWebGL}
+      onSinWebGL={() => setSinWebGL(true)}
+      play={playEscena}
+      barraTiempo={barraTiempo}
     />
   )
 
-  // Componentes, propiedades y registro en el celular: abajo en vertical; acostado
-  // van en la barra de herramientas para dejarle más alto al tablero.
-  const accionesMovil = (
+  const pestanas: Array<PestanaPanel<PestanaNeumatica>> = [
+    { id: 'propiedades', titulo: 'Propiedades', contador: avisosCircuito.length || undefined, contenido: <ContenidoPropiedades avisos={avisosCircuito} /> },
+    { id: 'corte', titulo: 'Vista en corte', tituloCorto: 'Corte', contenido: <ContenidoCorte motor={motor} hayCortes={hayCortes} /> },
+    { id: 'registro', titulo: '¿Qué está pasando?', tituloCorto: 'Registro', contador: eventos.length, contenido: <ContenidoRegistro motor={motor} eventos={eventos} />, seguirFinal: true },
+    { id: 'fase', titulo: 'Diagrama espacio-fase', tituloCorto: 'Fase', contenido: <ContenidoFase motor={motor} /> },
+  ]
+
+  const barra = (
     <>
-      <button onClick={() => setHoja('paleta')} disabled={simulando} title={simulando ? 'Detén la simulación para editar' : 'Agregar componentes'}>
-        {apaisado ? '＋ Agregar' : '＋ Componentes'}
-      </button>
-      <button onClick={() => setHoja('inspector')}>Propiedades{avisosCircuito.length ? ` ⚠${avisosCircuito.length}` : ''}</button>
-      <button onClick={() => setHoja('registro')}>Registro</button>
+      {botonSimular}
+      <BotonNuevo que="un diagrama" compacto={estrecha} deshabilitado={simulando} onClick={() => confirmarDescarte('¿Empezar un diagrama nuevo?') && limpiarPizarra()} />
+      {deshacerRehacer}
+      {selectorEjemplos}
+      {/* Un solo interruptor decide qué ocupa la pantalla: armar el circuito o probarlo en el banco. */}
+      {!celular && !apilado && <InterruptorEtapa etapa={etapa} onEtapa={irAEtapa} estrecha={estrecha} armar={['① Armar el circuito', '① Armar']} probar={['② Probar en el banco', '② Probar']} />}
+      {!estrecha && simulando && interruptorAire}
+      <span className="u-barra-derecha">
+        {estrecha ? (
+          <Menu
+            etiqueta="⋯"
+            datos="Mas"
+            ancho={300}
+            items={[
+              { texto: 'Rehacer', onClick: rehacer, deshabilitado: !puedeRehacer || simulando, porque: 'No hay nada que rehacer' },
+              { texto: aire ? 'Cortar el aire' : 'Dar el aire', ayuda: `Aire: ${aire ? 'encendido' : 'cortado'}`, onClick: alternarAire },
+              ...itemsArchivo.map((it, i) => ({ ...it, separar: i === 0 })),
+              ...itemsExportar.map((it, i) => ({ ...it, separar: i === 0 })),
+              { texto: 'Guía de inicio', ayuda: 'Los cuatro pasos para partir', onClick: guia.abrir, separar: true },
+              { texto: 'Gestos del banco', onClick: () => setAyuda(true) },
+            ]}
+          />
+        ) : (
+          <>
+            <button onClick={() => setAyuda(true)} className="boton-icono" title="Ayuda: guía de inicio, atajos y gestos" aria-label="Ayuda" data-ayuda="si">
+              ?
+            </button>
+            {apilado ? (
+              // Ventana mediana: Archivo y Exportar juntos, para que la barra quepa en una línea.
+              <Menu etiqueta="⋯" datos="Mas" items={[...itemsArchivo, ...itemsExportar.map((it, i) => ({ ...it, separar: i === 0 }))]} />
+            ) : (
+              <>
+                <Menu etiqueta="Archivo" items={itemsArchivo} />
+                <Menu etiqueta="Exportar" items={itemsExportar} />
+              </>
+            )}
+          </>
+        )}
+        {inputOculto}
+      </span>
+    </>
+  )
+
+  const barraEstado = (
+    <>
+      <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={textoEstado}>
+        {textoEstado}
+      </span>
+      {!estrecha && (
+        <span style={{ color: 'var(--tinta-suave)', whiteSpace: 'nowrap' }}>
+          {piezas.length} fichas · {mangueras.length} mangueras
+        </span>
+      )}
+      {!estrecha && avisosCircuito.length > 0 && (
+        <button
+          onClick={() => {
+            panel.onAbrir(true)
+            panel.onPestana('propiedades')
+          }}
+          style={{ border: 'none', background: 'transparent', color: 'var(--naranjo-texto)', fontWeight: 700, cursor: 'pointer', fontSize: '0.82rem' }}
+        >
+          ⚠ {avisosCircuito.length} {avisosCircuito.length === 1 ? 'aviso' : 'avisos'}
+        </button>
+      )}
+      {!estrecha && (avisosCircuito.length > 0 || bancoVacio) && (
+        <button
+          type="button"
+          onClick={() => {
+            const ancla = /cascada|pilot|bloquean/i.test(avisosCircuito[0] ?? '') ? 'cascada' : /vdi|función|funcion/i.test(avisosCircuito[0] ?? '') ? 'vdi' : 'iso'
+            try {
+              window.history.replaceState(null, '', `#${ancla}`)
+            } catch {
+              /* sin historial */
+            }
+            setSeccion('estudiar')
+          }}
+          style={{ border: 'none', background: 'transparent', color: 'var(--azul)', fontWeight: 600, cursor: 'pointer', fontSize: '0.82rem' }}
+        >
+          → Estudiar
+        </button>
+      )}
     </>
   )
 
@@ -629,171 +700,50 @@ export default function App() {
 
       {seccion === 'laboratorio' ? (
         <>
-      <main className={`banco${apilado ? ' banco--neumatica-apilado' : ''}`} aria-label="Laboratorio de neumática" style={estrecha ? { height: 'calc(100dvh - var(--alto-barra-superior) - var(--alto-subnav))' } : entregaAbierta ? { marginRight: 480 } : undefined}>
-        <h1 className="solo-lector">Unidad 1 · Neumática — laboratorio</h1>
-        <div className="banco__barra" role="toolbar" aria-label="Herramientas del banco">
-          {botonSimular}
-          <BotonNuevo que="un diagrama" compacto={estrecha} deshabilitado={simulando} onClick={() => confirmarDescarte('¿Empezar un diagrama nuevo?') && limpiarPizarra()} />
-          {deshacerRehacer}
-          {selectorEjemplos}
-          {estrecha && apaisado && <span className="banco__acciones-barra">{accionesMovil}</span>}
-          {!estrecha && (
-            <span className="segmentado" role="radiogroup" aria-label="Vista">
-              {zonaVista.map(([v, t, ayuda]) => (
-                <button key={v} role="radio" aria-checked={vista === v} onClick={() => setVista(v)} title={ayuda} data-vista-boton={v}>
-                  {t}
-                </button>
-              ))}
-            </span>
-          )}
-          {!estrecha && grupoZoom}
-          {!estrecha && simulando && interruptorAire}
-          <span className="u-barra-derecha">
-            {estrecha ? (
-              <Menu
-                etiqueta="⋯"
-                datos="Mas"
-                ancho={300}
-                items={[
-                  ...zonaVista.map(([v, t]) => ({ texto: `${vista === v ? '✓ ' : ''}Vista: ${t}`, onClick: () => setVista(v) })),
-                  { texto: 'Ajustar el tablero', ayuda: 'Ver todo el circuito', onClick: () => controles.current?.ajustar(), separar: true },
-                  { texto: 'Rehacer', onClick: rehacer, deshabilitado: !puedeRehacer || simulando, porque: 'No hay nada que rehacer' },
-                  { texto: aire ? 'Cortar el aire' : 'Dar el aire', ayuda: `Aire: ${aire ? 'encendido' : 'cortado'}`, onClick: alternarAire },
-                  ...itemsArchivo.map((it, i) => ({ ...it, separar: i === 0 })),
-                  ...itemsExportar.map((it, i) => ({ ...it, separar: i === 0 })),
-                  { texto: 'Guía de inicio', ayuda: 'Los cuatro pasos para partir', onClick: guia.abrir, separar: true },
-                  { texto: 'Gestos del banco', onClick: () => setAyuda(true) },
-                ]}
-              />
-            ) : (
-              <>
-                <button onClick={() => setAyuda(true)} className="boton-icono" title="Ayuda: guía de inicio, atajos y gestos" aria-label="Ayuda" data-ayuda="si">
-                  ?
-                </button>
-                {apilado ? (
-                  // Ventana mediana: Archivo y Exportar juntos, para que la barra quepa en una línea.
-                  <Menu etiqueta="⋯" datos="Mas" items={[...itemsArchivo, ...itemsExportar.map((it, i) => ({ ...it, separar: i === 0 }))]} />
-                ) : (
-                  <>
-                    <Menu etiqueta="Archivo" items={itemsArchivo} />
-                    <Menu etiqueta="Exportar" items={itemsExportar} />
-                  </>
-                )}
-              </>
-            )}
-            {inputOculto}
-          </span>
-        </div>
-
-        {aviso && (
-          <p role="status" style={estiloAviso}>
-            {aviso}
-          </p>
-        )}
-
-        {estrecha ? (
+      <BancoDividido<PestanaNeumatica>
+        clave={CLAVES.neumaticaBanco}
+        clase="banco--neumatica"
+        divisionInicial={0.58}
+        anchoMin={340}
+        // La paleta y el tablero necesitan ancho para armar; con Entregar abierto manda la simulación.
+        anchoFijoIzquierda={!entregaAbierta && !celular && !apilado ? 600 : undefined}
+        plegado={plegado}
+        onPlegado={(p) => irAEtapa(p === 'riel' ? 'probar' : 'armar')}
+        riel={
           <>
-            {lienzo}
-            {!apaisado && <div className="banco__acciones-movil">{accionesMovil}</div>}
+            <span style={{ writingMode: 'vertical-rl', fontSize: '0.75rem', fontWeight: 700, color: 'var(--tinta-suave)', letterSpacing: '0.04em' }}>CIRCUITO</span>
+            {/* La pizarra sigue montada, oculta, para poder exportar el circuito. */}
+            <div className="u-oculto">
+              <Pizarra motor={motor} vista="esquema" />
+            </div>
           </>
-        ) : (
-          <div className="banco__cuerpo">
-            <div className={`banco__paleta${paletaPlegada ? ' banco__paleta--plegada' : ''}`} style={!paletaPlegada && anchoPaleta ? { width: anchoPaleta } : undefined}>
-              <Paleta plegada={paletaPlegada} onPlegar={setPaletaPlegada} deshabilitada={simulando} />
-            </div>
-            {!paletaPlegada && <BordeAncho ancho={anchoPaleta} onAncho={setAnchoPaleta} min={180} max={420} lado={1} etiqueta="Cambiar el ancho de la paleta" />}
-            <div className="banco__centro">
-              {lienzo}
-              {panelInferior}
-            </div>
-            {!entregaAbierta && inspectorAbierto && <BordeAncho ancho={anchoInspector} onAncho={setAnchoInspector} min={240} max={720} lado={-1} etiqueta="Cambiar el ancho del inspector" />}
-            {!entregaAbierta && (
-            <div className={`banco__inspector${inspectorAbierto ? '' : ' banco__inspector--plegado'}`} style={inspectorAbierto && anchoInspector ? { width: anchoInspector } : undefined}>
-              {inspectorAbierto ? (
-                inspector
-              ) : (
-                <div className="banco-panel" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 4 }}>
-                  <button onClick={() => setInspectorAbierto(true)} className="boton-icono" title="Abrir el inspector (propiedades y vista en corte)" aria-label="Abrir el inspector">
-                    «
-                  </button>
-                  {avisosCircuito.length > 0 && (
-                    <span title={`${avisosCircuito.length} avisos del circuito`} style={{ marginTop: 6, color: 'var(--naranjo-texto)', fontSize: '0.8rem', fontWeight: 700 }}>
-                      ⚠{avisosCircuito.length}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-            )}
-          </div>
-        )}
+        }
+        barra={barra}
+        izquierda={{ id: 'circuito', titulo: 'Circuito', contenido: areaCircuito }}
+        derecha={{ id: 'simulacion', titulo: 'Simulación', tituloCorto: '3D', contenido: areaSimulacion }}
+        inferior={entregaAbierta && !celular ? undefined : { etiqueta: 'Propiedades, corte, registro y diagrama', pestanas, estado: panel }}
+        estado={barraEstado}
+        conCajon={entregaAbierta && !celular}
+        encabezado={<h1 className="solo-lector">Unidad 1 · Neumática — laboratorio</h1>}
+      />
+      {aviso && (
+        <p role="status" style={estiloAviso}>
+          {aviso}
+        </p>
+      )}
 
-        <div className="banco__estado" role="status" aria-live="polite" data-estado-banco="si">
-          <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={textoEstado}>
-            {textoEstado}
-          </span>
-          {!estrecha && (
-            <span style={{ color: 'var(--tinta-suave)', whiteSpace: 'nowrap' }}>
-              {piezas.length} fichas · {mangueras.length} mangueras
-            </span>
-          )}
-          {!estrecha && avisosCircuito.length > 0 && (
-            <button
-              onClick={() => {
-                setInspectorAbierto(true)
-                setPestanaInspector('propiedades')
-              }}
-              style={{ border: 'none', background: 'transparent', color: 'var(--naranjo-texto)', fontWeight: 700, cursor: 'pointer', fontSize: '0.82rem' }}
-            >
-              ⚠ {avisosCircuito.length} {avisosCircuito.length === 1 ? 'aviso' : 'avisos'}
-            </button>
-          )}
-          {!estrecha && (avisosCircuito.length > 0 || bancoVacio) && (
-            <button
-              type="button"
-              onClick={() => {
-                const ancla = /cascada|pilot|bloquean/i.test(avisosCircuito[0] ?? '') ? 'cascada' : /vdi|función|funcion/i.test(avisosCircuito[0] ?? '') ? 'vdi' : 'iso'
-                try {
-                  window.history.replaceState(null, '', `#${ancla}`)
-                } catch {
-                  /* sin historial */
-                }
-                setSeccion('estudiar')
-              }}
-              style={{ border: 'none', background: 'transparent', color: 'var(--azul)', fontWeight: 600, cursor: 'pointer', fontSize: '0.82rem' }}
-            >
-              → Estudiar
-            </button>
-          )}
-        </div>
-      </main>
-
-      {estrecha && hoja && (
+      {celular && hoja && (
         <>
           <div className="hoja-fondo" onClick={() => setHoja(null)} />
-          <div className="hoja" role="dialog" aria-label={hoja === 'paleta' ? 'Componentes' : hoja === 'inspector' ? 'Propiedades' : 'Registro'}>
+          <div className="hoja" role="dialog" aria-label="Componentes">
             <div style={{ display: 'flex', alignItems: 'center', padding: '8px 10px 4px' }}>
-              <strong style={{ fontSize: '0.95rem' }}>{hoja === 'paleta' ? 'Componentes' : hoja === 'inspector' ? 'Propiedades y vista en corte' : 'Registro y diagrama'}</strong>
+              <strong style={{ fontSize: '0.95rem' }}>Componentes</strong>
               <button onClick={() => setHoja(null)} className="boton-icono" style={{ marginLeft: 'auto' }} aria-label="Cerrar">
                 ✕
               </button>
             </div>
             <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-              {hoja === 'paleta' && <Paleta deshabilitada={simulando} onElegida={() => setHoja(null)} />}
-              {hoja === 'inspector' && inspector}
-              {hoja === 'registro' && (
-                <PanelInferior
-                  abierto
-                  fijo
-                  onAbrir={() => undefined}
-                  alto={Math.round(window.innerHeight * 0.6)}
-                  onAlto={() => undefined}
-                  pestana={pestanaInferior}
-                  onPestana={setPestanaInferior}
-                  motor={motor}
-                  eventos={eventos}
-                />
-              )}
+              <Paleta deshabilitada={simulando} onElegida={() => setHoja(null)} />
             </div>
           </div>
         </>
@@ -859,18 +809,3 @@ export default function App() {
     </>
   )
 }
-
-const rotuloVista: React.CSSProperties = {
-  position: 'absolute',
-  left: 10,
-  bottom: 8,
-  zIndex: 4,
-  padding: '2px 8px',
-  background: 'rgba(255,255,255,0.92)',
-  border: '1px solid #d0d5db',
-  borderRadius: 6,
-  fontSize: '0.78rem',
-  fontWeight: 600,
-  color: '#33475c',
-}
-

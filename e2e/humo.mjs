@@ -97,6 +97,21 @@ async function main() {
     await esperar(p.locator('[data-play-escena="si"][aria-label="Parar"]'), 'el play de la escena no pasó a ■')
     await esperar(p.locator('[data-reproductor="si"]'), 'no está la barra de tiempo')
     await esperar(p.locator('svg#pizarra-svg'), 'no hay pizarra')
+    await lienzoConDibujo(p)
+    // «Probar» pliega el circuito a la tira y deja el banco ancho; la pizarra oculta sigue para exportar.
+    await p.locator('[data-etapa="probar"]').click()
+    await esperar(p.locator('[data-plegado="riel"]'), '«Probar» no pliega el circuito')
+    await lienzoConDibujo(p)
+    igual(await p.evaluate(() => document.querySelectorAll('svg#pizarra-svg').length), 1, 'pizarras con id pizarra-svg en Probar')
+    // «Por dentro» cambia el banco 3D por los componentes en 2D, y «3D» lo devuelve.
+    await p.locator('[data-vista-sim="dentro"]').click()
+    await esperar(p.locator('svg#pizarra-taller-svg'), '«Por dentro» no muestra los componentes')
+    if (await hayWebGL(p)) {
+      await p.locator('[data-vista-sim="3d"]').click()
+      await lienzoConDibujo(p)
+    }
+    await p.locator('[data-etapa="armar"]').click()
+    await esperar(p.locator('[data-area="circuito"] svg#pizarra-svg'), '«Armar» no devuelve el circuito')
   }, navegador)
 
   await prueba('PLC: abrir, RUN y dibujar la planta 3D', async (p) => {

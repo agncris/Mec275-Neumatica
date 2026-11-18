@@ -74,9 +74,9 @@ export default function GuiaInicio({ unidad, pasos, onCerrar }: { unidad: string
 const boton: React.CSSProperties = { border: '1px solid #c6ced6', background: '#fff', color: '#33475c', borderRadius: 8, padding: '0.3rem 0.8rem', fontWeight: 600, fontSize: '0.86rem', minHeight: 34, cursor: 'pointer' }
 
 export const GUIA_NEUMATICA: PasoGuia[] = [
-  { titulo: '1 · Arma tu circuito', texto: 'Arrastra fichas desde la paleta de la izquierda al tablero (o haz clic en una para agregarla). Empieza por el Compresor + FRL, que da el aire.' },
-  { titulo: '2 · Conecta con mangueras', texto: 'Haz clic en un puerto (los círculos) y luego en otro: queda una manguera. Selecciona una ficha para ver sus propiedades a la derecha: su nombre, su letra (A, B…), el cilindro que pisa un final de carrera…' },
-  { titulo: '3 · Simula', texto: 'Pulsa ▶ Simular (o Espacio). Mantén pulsado el botón de una válvula para accionarla; la de inicio con enclavamiento queda accionada. Abajo ves lo que va pasando y el diagrama espacio-fase.' },
+  { titulo: '1 · Arma tu circuito', texto: 'Arrastra fichas desde la paleta, a la izquierda del circuito, al tablero (o haz clic en una para agregarla). Empieza por el Compresor + FRL, que da el aire.' },
+  { titulo: '2 · Conecta con mangueras', texto: 'Haz clic en un puerto (los círculos) y luego en otro: queda una manguera. Selecciona una ficha para ver sus propiedades en el panel de la derecha: su nombre, su letra (A, B…), el cilindro que pisa un final de carrera…' },
+  { titulo: '3 · Simula', texto: 'Pulsa ▶ Simular (o Espacio). Mantén pulsado el botón de una válvula para accionarla; la de inicio con enclavamiento queda accionada. El banco 3D de la derecha se pone en marcha. Con «② Probar en el banco» el circuito se pliega y el banco ocupa el ancho; en el panel ves lo que va pasando y el diagrama espacio-fase.' },
   { titulo: '4 · Entrega', texto: '¿No sabes por dónde partir? Abre un ejemplo en la barra de arriba. Cuando tengas tu tarea, «Entregar» (arriba a la derecha) te da las imágenes para tu PPT y el archivo que subes.' },
 ]
 

@@ -83,6 +83,56 @@ describe('cargar un ejemplo', () => {
   }, 30000)
 })
 
+describe('Neumática: Armar y Probar', () => {
+  const cargarEjemplo = async () => {
+    const selector = (await waitFor(() => {
+      const el = document.querySelector('[data-selector-ejemplos="si"]')
+      expect(el).toBeTruthy()
+      return el
+    }, ESPERA)) as HTMLSelectElement
+    fireEvent.change(selector, { target: { value: selector.options[1].value } })
+    await waitFor(() => expect((screen.getByRole('button', { name: /Simular/ }) as HTMLButtonElement).disabled).toBe(false))
+  }
+  const marcada = (e: string) => document.querySelector(`[data-etapa="${e}"]`)?.getAttribute('aria-checked')
+
+  it('el interruptor pliega el circuito a la tira y vuelve, sin perder el circuito ni la pizarra que se exporta', async () => {
+    abrir('neumatica')
+    await cargarEjemplo()
+    // Armar: el circuito ocupa el ancho, con su paleta y su zoom; no hay selector de vistas viejo.
+    expect(marcada('armar')).toBe('true')
+    expect(document.querySelector('[data-vista-boton]')).toBeNull()
+    expect(document.querySelector('[data-area="circuito"] svg#pizarra-svg')).toBeTruthy()
+    expect(document.querySelector('[data-area="circuito"] [data-zoom="si"]')).toBeTruthy()
+    expect(document.querySelector('[data-area="circuito"] [aria-label="Componentes"]')).toBeTruthy()
+    expect(document.querySelector('[data-plegado="riel"]')).toBeNull()
+    const piezas = document.querySelectorAll('#pizarra-svg [data-pieza]').length
+    expect(piezas).toBeGreaterThan(0)
+    // Probar: el circuito se pliega a la tira, la simulación queda con su barra de tiempo y el panel en el registro.
+    fireEvent.click(document.querySelector('[data-etapa="probar"]') as HTMLElement)
+    await waitFor(() => expect(marcada('probar')).toBe('true'))
+    expect(document.querySelector('[data-plegado="riel"]')).toBeTruthy()
+    expect(document.querySelector('[data-area="simulacion"] [data-reproductor]')).toBeTruthy()
+    expect(document.querySelector('[role="tab"][data-pestana-inferior="registro"]')?.getAttribute('aria-selected')).toBe('true')
+    // La pizarra oculta sigue ahí: de ella salen el PNG y la imagen de Entregar.
+    expect(document.querySelector('svg#pizarra-svg')).toBeTruthy()
+    // Vuelta a Armar: el circuito está intacto.
+    fireEvent.click(document.querySelector('[data-etapa="armar"]') as HTMLElement)
+    await waitFor(() => expect(marcada('armar')).toBe('true'))
+    expect(document.querySelector('[data-plegado="riel"]')).toBeNull()
+    expect(document.querySelector('[data-area="circuito"] svg#pizarra-svg')).toBeTruthy()
+    expect(document.querySelectorAll('#pizarra-svg [data-pieza]').length).toBe(piezas)
+  }, 40000)
+
+  it('sin WebGL la simulación cae a «Por dentro» y «3D» queda deshabilitado', async () => {
+    abrir('neumatica')
+    await waitFor(() => {
+      expect(document.querySelector('[data-vista-sim="dentro"]')?.getAttribute('aria-checked')).toBe('true')
+      expect((document.querySelector('[data-vista-sim="3d"]') as HTMLButtonElement).disabled).toBe(true)
+    }, ESPERA)
+    expect(document.querySelector('[data-area="simulacion"] svg#pizarra-taller-svg')).toBeTruthy()
+  }, 30000)
+})
+
 describe('Tarea 4 de Robótica', () => {
   const lienzo = () => document.querySelector('[data-guia-paso]')
   const pasoGuia = () => lienzo()?.getAttribute('data-guia-paso')

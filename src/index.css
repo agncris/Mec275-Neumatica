@@ -896,11 +896,42 @@ body.arrastrando-borde * {
   align-items: center;
   gap: 16px;
 }
-.banco--robot .banco__area:not(.banco__area--riel) {
+.banco--robot .banco__area:not(.banco__area--riel),
+.banco--neumatica .banco__area:not(.banco__area--riel) {
   padding: 12px 14px 8px;
 }
-.banco--robot .titulo-area {
+.banco--robot .titulo-area,
+.banco--neumatica .titulo-area {
   margin-bottom: 8px;
+}
+/* Neumática: el circuito es la paleta y el tablero lado a lado, dentro del área izquierda. */
+.banco__area > .circuito-cuerpo {
+  flex: 1 1 auto;
+  flex-shrink: 1;
+  min-height: 260px;
+  display: flex;
+  gap: 6px;
+  position: relative;
+}
+.circuito-cuerpo > .banco__paleta {
+  width: 192px;
+}
+.circuito-cuerpo > .banco__paleta--plegada {
+  width: 50px;
+}
+.circuito-lienzo,
+.escena-neumatica {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+.circuito-lienzo > *,
+.escena-neumatica > * {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 .flechas-cubo {
   position: absolute;
@@ -1455,44 +1486,13 @@ body.arrastrando-borde * {
   min-height: calc(100dvh - var(--alto-barra-superior));
   padding-bottom: 10px;
 }
-.banco--apilado > .banco__barra,
-.banco--neumatica-apilado > .banco__barra {
+.banco--apilado > .banco__barra {
   position: sticky;
   top: var(--alto-barra-superior);
   z-index: 30;
   background: #f6f7f9;
   padding: 4px 0;
   margin: -4px 0;
-}
-/* Neumática en ventana mediana: paleta y tablero arriba; el inspector, a lo ancho, debajo. */
-.banco.banco--neumatica-apilado {
-  height: auto;
-  min-height: calc(100dvh - var(--alto-barra-superior));
-  padding-bottom: 10px;
-}
-.banco--neumatica-apilado .banco__cuerpo {
-  flex: none;
-  flex-wrap: wrap;
-  row-gap: 8px;
-}
-.banco--neumatica-apilado .banco__paleta,
-.banco--neumatica-apilado .banco__centro {
-  height: max(480px, 76dvh);
-}
-.banco--neumatica-apilado .banco__inspector {
-  flex: 1 0 100%;
-  width: 100% !important;
-  height: 400px;
-}
-.banco--neumatica-apilado .banco__inspector--plegado {
-  height: 44px;
-}
-.banco--neumatica-apilado .borde-ancho[data-borde-ancho='derecha'] {
-  display: none;
-}
-/* «Esquema+Taller»: uno sobre otro en vez de lado a lado. */
-.banco--neumatica-apilado .banco__lienzo[data-vista='ambos'] {
-  flex-direction: column;
 }
 /* Con poco ancho, «＋ Nuevo» queda sólo como «＋». */
 @media (max-width: 1180px) {
@@ -1920,7 +1920,7 @@ body.arrastrando-borde * {
   }
 }
 /* En el laboratorio del celular la página no se mueve: sólo lo de adentro. */
-body:has(.banco:not(.banco--apilado):not(.banco--neumatica-apilado)) {
+body:has(.banco:not(.banco--apilado)) {
   overscroll-behavior: none;
 }
 
@@ -2082,31 +2082,26 @@ body:has(.banco:not(.banco--apilado):not(.banco--neumatica-apilado)) {
    celular. Las zonas van de borde a borde, sin margen gris que no se mueve, y lo
    que se desplaza por dentro pasa el movimiento a la página al llegar a su fin.
    Así se desplaza deslizando en cualquier parte, sea cual sea el tamaño de la ventana. */
-.banco.banco--apilado,
-.banco.banco--neumatica-apilado {
+.banco.banco--apilado {
   padding-left: 0;
   padding-right: 0;
 }
 .banco--apilado > .banco__barra,
 .banco--apilado > .pestanas-movil,
 .banco--apilado > .banco__estado,
-.banco--apilado > .banco__encabezado,
-.banco--neumatica-apilado > .banco__barra,
-.banco--neumatica-apilado > .banco__estado {
+.banco--apilado > .banco__encabezado {
   padding-left: max(10px, env(safe-area-inset-left));
   padding-right: max(10px, env(safe-area-inset-right));
 }
 .banco--apilado > .banco-panel,
-.banco--apilado > .panel-acoplado,
-.banco--neumatica-apilado .banco__cuerpo > * {
+.banco--apilado > .panel-acoplado {
   border-radius: 0;
   border-left: none;
   border-right: none;
 }
 .banco--apilado .banco__area,
 .banco--apilado .banco-panel,
-.banco--apilado .panel-acoplado__contenido,
-.banco--neumatica-apilado .banco-panel {
+.banco--apilado .panel-acoplado__contenido {
   overscroll-behavior: auto !important;
 }
 
