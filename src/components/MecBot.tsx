@@ -167,7 +167,7 @@ export default function MecBot() {
         <section className="mecbot__panel" role="dialog" aria-label="MecBot">
           <header className="mecbot__cabeza">
             <strong>MecBot</strong>
-            <span>Te guío para estudiar. No resuelvo las tareas.</span>
+            <span>Ayudante de laboratorio. Te guío, no resuelvo las tareas.</span>
             <button type="button" className="mecbot__cerrar" onClick={() => setAbierto(false)} aria-label="Cerrar MecBot">
               ✕
             </button>
