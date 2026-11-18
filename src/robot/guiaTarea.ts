@@ -31,6 +31,20 @@ export interface PasoTarea {
   enfocar?: string
 }
 
+/** Un bloque del mapa de la tarea: se marca cuando todos sus pasos están hechos. */
+export interface PiezaMapa {
+  id: string
+  texto: string
+  estado: 'hecho' | 'ahora' | 'falta'
+}
+
+/** Una etapa del mapa: una pregunta del proceso y los bloques que la responden. */
+export interface EtapaMapa {
+  id: string
+  titulo: string
+  piezas: PiezaMapa[]
+}
+
 export interface ItemAvance {
   id: string
   grupo: GrupoTarea
@@ -323,8 +337,52 @@ const PASOS: Def[] = [
   },
 ]
 
-/** El paso que toca ahora y el avance de toda la lista. */
-export function guiaTarea(def: Definicion): { paso: PasoTarea; avance: ItemAvance[] } {
+/**
+ * El mapa de la tarea: cuatro etapas, en el orden en que se arma y se prueba.
+ * Cada pieza agrupa los pasos de un bloque (traerlo, conectarlo y darle su valor).
+ */
+const ETAPAS: Array<{ id: string; titulo: string; piezas: Array<[string, string[]]> }> = [
+  {
+    id: 'contorno',
+    titulo: 'El contorno',
+    piezas: [
+      ['Curve CONTORNO', ['c-curve', 'c-capa']],
+      ['Offset +2,5', ['c-offset-cable', 'c-offset-d']],
+      ['Move Z -5', ['c-move']],
+      ['Toolpath', ['c-path']],
+    ],
+  },
+  {
+    id: 'cortar',
+    titulo: 'Que corte',
+    piezas: [
+      ['Encender husillo', ['husillo-on']],
+      ['Al Core y ▶', ['core']],
+    ],
+  },
+  {
+    id: 'ranuras',
+    titulo: 'Las ranuras',
+    piezas: [
+      ['Curve RANURAS', ['r-curve', 'r-capa']],
+      ['Offset -2,5', ['r-offset-cable', 'r-offset-d']],
+      ['Move Z -5', ['r-move']],
+      ['Toolpath', ['r-path']],
+    ],
+  },
+  {
+    id: 'cerrar',
+    titulo: 'Cerrar y revisar',
+    piezas: [
+      ['Ranuras al Core', ['unir-ranuras']],
+      ['Apagar husillo', ['husillo-off']],
+      ['Revisar', ['revisar']],
+    ],
+  },
+]
+
+/** El paso que toca ahora, el avance de toda la lista y el mapa por etapas. */
+export function guiaTarea(def: Definicion): { paso: PasoTarea; avance: ItemAvance[]; etapas: EtapaMapa[] } {
   const c = contexto(def)
   const hechos = PASOS.map((p) => p.hecho(c))
   // Si un paso de una cadena (contorno o ranuras) ya está hecho, los anteriores de esa cadena también.
@@ -338,8 +396,19 @@ export function guiaTarea(def: Definicion): { paso: PasoTarea; avance: ItemAvanc
   if (i < 0) i = PASOS.length - 1
   const p = PASOS[i]
   const avance: ItemAvance[] = PASOS.map((q, j) => ({ id: q.id, grupo: q.grupo, titulo: q.titulo, hecho: hechos[j], ahora: j === i }))
+  const hechoDe = new Map(PASOS.map((q, j) => [q.id, hechos[j]]))
+  const etapas: EtapaMapa[] = ETAPAS.map((e) => ({
+    id: e.id,
+    titulo: e.titulo,
+    piezas: e.piezas.map(([texto, ids]) => ({
+      id: ids[0],
+      texto,
+      estado: ids.includes(p.id) ? 'ahora' : ids.every((x) => hechoDe.get(x)) ? 'hecho' : 'falta',
+    })),
+  }))
   return {
     avance,
+    etapas,
     paso: {
       id: p.id,
       numero: i + 1,

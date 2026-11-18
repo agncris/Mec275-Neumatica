@@ -3,7 +3,7 @@ import EditorNodos from './EditorNodos'
 import GuiaTarjeta from './GuiaTarjeta'
 import Mando, { type PuntoEnsenado } from './Mando'
 import { Propiedades } from './PanelParametros'
-import { BLOQUES_TAREA, type ItemAvance, type PasoTarea } from './guiaTarea'
+import { BLOQUES_TAREA, type EtapaMapa, type PasoTarea } from './guiaTarea'
 import type { Modo } from './datosRobot'
 import type { Definicion, Herramienta, evaluar } from './nodos'
 import type { robotPorId } from './robots'
@@ -20,14 +20,13 @@ export default function AreaPrograma({
   setSeleccion,
   nodoSel,
   pasoTarea,
-  avanceTarea,
+  etapasTarea,
   verEjemplo,
   enunciado,
   setEnunciado,
   ejemploEnTarea,
   entregando = false,
   volverDelEjemplo,
-  seguirConElEjemplo,
   deshacer,
   puedeDeshacer,
   setPlegado,
@@ -52,7 +51,7 @@ export default function AreaPrograma({
   setSeleccion: (id: string | null) => void
   nodoSel: Definicion['nodos'][number] | null
   pasoTarea: PasoTarea | null
-  avanceTarea: ItemAvance[]
+  etapasTarea: EtapaMapa[]
   verEjemplo: () => void
   enunciado: string | null
   setEnunciado: (t: string | null) => void
@@ -60,7 +59,6 @@ export default function AreaPrograma({
   /** El cajón de Entregar está abierto. */
   entregando?: boolean
   volverDelEjemplo: () => void
-  seguirConElEjemplo: () => void
   deshacer: () => void
   puedeDeshacer: boolean
   setPlegado: (p: 'abierto' | 'riel' | 'oculto') => void
@@ -101,7 +99,7 @@ export default function AreaPrograma({
       )}
       {/* La guía va aquí y solo aquí. Con Entregar abierto se esconde para dejar ver el programa. */}
       {pasoTarea && (ejemploEnTarea || !entregando) && (
-        <GuiaTarjeta paso={pasoTarea} avance={avanceTarea} ejemplo={ejemploEnTarea} onVerEjemplo={verEjemplo} onVolver={volverDelEjemplo} onSeguir={seguirConElEjemplo} />
+        <GuiaTarjeta paso={pasoTarea} etapas={etapasTarea} ejemplo={ejemploEnTarea} onVerEjemplo={verEjemplo} onVolver={volverDelEjemplo} />
       )}
       <div className="relleno">
         <EditorNodos def={def} evaluacion={evaluacion} onCambiar={setDef} seleccion={seleccion} onSeleccionar={setSeleccion} alto="100%" guia={ejemploEnTarea ? undefined : (pasoTarea ?? undefined)} mirandoEjemplo={ejemploEnTarea} bloquesTarea={pasoTarea ? BLOQUES_TAREA : undefined} soloLienzo={entregando || ejemploEnTarea} onDeshacer={deshacer} puedeDeshacer={puedeDeshacer} />

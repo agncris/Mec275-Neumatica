@@ -115,11 +115,11 @@ describe('Tarea 4 de Robótica', () => {
     expect(nodosAntes).toBeGreaterThan(0)
 
     fireEvent.click(document.querySelector('[data-ver-ejemplo]') as HTMLElement)
-    await waitFor(() => expect(screen.getByText(/Estás viendo el ejemplo del contorno/)).toBeTruthy())
+    await waitFor(() => expect(screen.getByText(/Estás viendo un ejemplo/)).toBeTruthy())
     expect(document.querySelector('[data-ver-ejemplo]')).toBeNull()
 
     fireEvent.click(document.querySelector('[data-volver-tarea]') as HTMLElement)
-    await waitFor(() => expect(screen.queryByText(/Estás viendo el ejemplo del contorno/)).toBeNull())
+    await waitFor(() => expect(screen.queryByText(/Estás viendo un ejemplo/)).toBeNull())
     expect(pasoGuia()).toBe(pasoAntes)
     expect(nodos()).toBe(nodosAntes)
   }, 30000)

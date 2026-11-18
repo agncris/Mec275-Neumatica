@@ -390,13 +390,6 @@ export default function UnidadRobotica() {
     setModo('visual')
     setAviso('Volviste a tu tarea.')
   }
-  const seguirConElEjemplo = () => {
-    const actual = defRef.current
-    if (!esEjemploGuiado(actual)) return
-    borrarClave(CLAVE_ANTES_EJEMPLO)
-    setDef({ ...actual, nombre: NOMBRE_TAREA })
-    setAviso('Este contorno quedó como tu tarea. Sigue con las ranuras.')
-  }
   const ejemploEnTarea = enTarea && esEjemploGuiado(def)
   // El desplegable muestra el ejemplo abierto, también después de recargar.
   const ejemploAbierto = useMemo(() => [...EJEMPLOS_ROBOT, ...PRACTICA_ROBOT].find((e) => e.definicion().nombre === def.nombre) ?? null, [def.nombre])
@@ -470,13 +463,12 @@ export default function UnidadRobotica() {
       setSeleccion={setSeleccion}
       nodoSel={nodoSel}
       pasoTarea={pasoTarea}
-      avanceTarea={guiaT?.avance ?? []}
+      etapasTarea={guiaT?.etapas ?? []}
       verEjemplo={verEjemploGuiado}
       enunciado={enunciado}
       setEnunciado={setEnunciado}
       ejemploEnTarea={ejemploEnTarea}
       volverDelEjemplo={volverDelEjemplo}
-      seguirConElEjemplo={seguirConElEjemplo}
       deshacer={deshacer}
       puedeDeshacer={historial.current.puedeDeshacer}
       setPlegado={setPlegado}
