@@ -27,6 +27,7 @@ import {
   herramientaTorno,
   material as materialDe,
   rangoTorno,
+  torretaDe,
   type HerramientaFresa,
   type HerramientaTorno,
 } from './maquinas'
@@ -113,7 +114,7 @@ function texturaRayada(): THREE.Texture {
  * perfil (r, x). Cada tramo del perfil lleva su propia normal, así los
  * resaltes quedan con aristas vivas.
  */
-function geometriaRevolucion(perfil: Array<[number, number]>, seg = 56): THREE.BufferGeometry {
+export function geometriaRevolucion(perfil: Array<[number, number]>, seg = 56): THREE.BufferGeometry {
   const pos: number[] = []
   const nor: number[] = []
   const uv: number[] = []
@@ -152,70 +153,111 @@ function geometriaRevolucion(perfil: Array<[number, number]>, seg = 56): THREE.B
   return g
 }
 
-/** Perfil (r, z) de la pieza de torno, sin puntos repetidos en los tramos rectos. */
-function perfilTorno(ext: Float32Array, int: Float32Array, z0: number, paso: number): Array<[number, number]> {
-  const n = ext.length
+/**
+ * Perfil (r, z) de la pieza de torno, sin puntos repetidos en los tramos rectos.
+ *
+ * Las celdas sin material (exterior = interior) en los extremos se descartan: tras refrentar o tronzar
+ * quedan en cero, y si se dibujaran, el exterior cerraría con un disco la boca del agujero. Así la cara
+ * termina en la última celda con material y es una corona entre el agujero y el borde.
+ */
+export function perfilTorno(ext: Float32Array, int: Float32Array, z0: number, paso: number): Array<[number, number]> {
+  let ini = 0
+  let fin = ext.length - 1
+  while (ini < fin && ext[ini] - int[ini] <= 1e-4) ini++
+  while (fin > ini && ext[fin] - int[fin] <= 1e-4) fin--
+  const n = fin - ini + 1
   const fuera: Array<[number, number]> = []
   const dentro: Array<[number, number]> = []
   const agregar = (arr: Array<[number, number]>, val: Float32Array) => {
-    for (let i = 0; i < n; i++) {
-      const cambia = i === 0 || i === n - 1 || Math.abs(val[i] - val[i - 1]) > 1e-4 || Math.abs(val[i] - val[i + 1]) > 1e-4
+    for (let k = 0; k < n; k++) {
+      const i = ini + k
+      const cambia = k === 0 || k === n - 1 || Math.abs(val[i] - val[i - 1]) > 1e-4 || Math.abs(val[i] - val[i + 1]) > 1e-4
       if (cambia) arr.push([val[i], z0 + i * paso])
     }
   }
   agregar(fuera, ext)
   agregar(dentro, int)
-  const perfil: Array<[number, number]> = [[int[0], z0], ...fuera, [int[n - 1], z0 + (n - 1) * paso]]
+  const perfil: Array<[number, number]> = [[int[ini], z0 + ini * paso], ...fuera, [int[fin], z0 + fin * paso]]
   for (let k = dentro.length - 1; k >= 0; k--) perfil.push(dentro[k])
-  perfil.push([int[0], z0])
+  perfil.push([int[ini], z0 + ini * paso])
   return perfil
 }
 
 // ---------------------------------------------------------------------------
 // Herramientas
 // ---------------------------------------------------------------------------
+const ARRIBA = new THREE.Vector3(0, 1, 0)
+
+function nombrar<T extends THREE.Object3D>(o: T, nombre: string): T {
+  o.name = nombre
+  return o
+}
+
+/** Barra que une los puntos a y b, con la sección ancho × grueso (el largo sigue la dirección a → b). */
+function barra(a: THREE.Vector3, b: THREE.Vector3, ancho: number, grueso: number, mat: THREE.Material, nombre: string): THREE.Mesh {
+  const dir = b.clone().sub(a)
+  const largo = dir.length()
+  const m = nombrar(caja(ancho, largo, grueso, mat, 1.4), nombre)
+  m.position.copy(a).addScaledVector(dir, 0.5)
+  m.quaternion.setFromUnitVectors(ARRIBA, dir.normalize())
+  return m
+}
+
+/** Medidas de la torreta respecto de la punta de la herramienta (la torreta va por encima y por detrás del bruto). */
+export function medidasTorreta(R: number) {
+  const y = Math.max(128, R + 78)
+  return { y, z: -R * 0.35 - 22, radio: 58, grueso: 40 }
+}
+
+/** Cuánto sobresale hacia la cara el cuerpo de la broca, hasta el fin de su portabrocas y su columna (mm desde la punta). */
+export function alcanceBroca(h: HerramientaTorno, profundidad: number): number {
+  const r = (h.medida ?? 8) / 2
+  const punta = r * Math.tan((31 * Math.PI) / 180)
+  return punta + largoBroca(profundidad) + 14 + 7
+}
+
+/** Largo libre de la broca: pasa por sobre la cara con el portabrocas fuera del agujero más 24 mm de holgura. */
+export function largoBroca(profundidad: number): number {
+  return Math.max(58, profundidad + 24)
+}
+
 /**
- * Geometría visual del torno. El origen es el punto programado (el filo).
- * El inserto sí llega al material; el cuello es angosto y el mango queda
- * por encima del bruto, sesgado hacia el lado ya mecanizado y hacia la torreta.
+ * Herramienta del torno con su portaherramientas. El origen es el punto programado (el filo).
+ * `torreta` son las medidas de la torreta respecto de la punta: el porta sube hasta ella, para que
+ * la herramienta no quede flotando. `profundidad` es lo más hondo que taladra el programa con esta broca.
+ *
+ * Inserto: contorno inferior según la envolvente, arriba plano. El inserto sí llega al material;
+ * el cuello es angosto y queda por el lado ya mecanizado. Desde el cuello sube una barra hasta el
+ * centro de la torreta, siempre por encima del bruto. La broca va en el eje con el portabrocas fuera
+ * del agujero; una columna lo une con un brazo que llega a la torreta.
  */
-/**
- * Herramienta del torno con su portaherramientas. `torreta` es el centro de la torreta respecto
- * de la punta: el porta sube hasta ella, para que la herramienta no quede flotando.
- */
-function modeloHerramientaTorno(h: HerramientaTorno, radioBruto: number, torreta: { y: number; z: number }): THREE.Group {
+export function modeloHerramientaTorno(h: HerramientaTorno, radioBruto: number, torreta: { y: number; z: number }, profundidad = 0): THREE.Group {
   const g = new THREE.Group()
+  g.name = 'herramienta'
   const color = new THREE.MeshStandardMaterial({ color: h.color, metalness: 0.48, roughness: 0.38 })
+  // Punto dentro del disco de la torreta, un poco por debajo de su centro, en el plano medio.
+  const aTorreta = (x: number, bajo: number) => new THREE.Vector3(x, torreta.y - bajo, torreta.z)
   if (h.forma === 'broca') {
     const r = (h.medida ?? 8) / 2
     const punta = r * Math.tan((31 * Math.PI) / 180)
     // Saliente largo: el portabrocas queda fuera de la cara, no dentro del agujero.
-    const salida = Math.min(78, Math.max(58, radioBruto + 36))
-    const cono = new THREE.Mesh(new THREE.ConeGeometry(r, punta, 24), M.acero)
+    const salida = largoBroca(profundidad)
+    const cono = nombrar(new THREE.Mesh(new THREE.ConeGeometry(r, punta, 24), M.acero), 'broca-punta')
     cono.rotation.z = Math.PI / 2
     cono.position.x = punta / 2
     cono.castShadow = true
-    const cuerpo = cil(r * 0.96, salida, M.acero, 24)
+    const cuerpo = nombrar(cil(r * 0.96, salida, M.acero, 24), 'broca-cuerpo')
     cuerpo.rotation.z = Math.PI / 2
     cuerpo.position.x = punta + salida / 2
-    const porta = cil(r + 3, 12, color, 24, r + 5.5)
+    const porta = nombrar(cil(r + 3, 14, color, 24, r + 5.5), 'broca-portabrocas')
     porta.rotation.z = Math.PI / 2
     porta.position.x = punta + salida + 7
-    const barra = caja(11, 58, 11, M.aceroOscuro, 1.4)
-    barra.geometry.translate(0, 29, 0)
-    barra.position.set(punta + salida + 7, radioBruto + 6, -8)
-    // Brazo que une la barra con la torreta: sin él, la broca quedaba colgando en el aire.
-    const xBarra = punta + salida + 7
-    const brazo = caja(xBarra + 6, 12, 12, M.aceroOscuro, 1.4)
-    brazo.position.set(xBarra / 2, radioBruto + 58, -8)
-    const yTope = torreta.y - 20
-    const subida = Math.max(0, yTope - (radioBruto + 58))
-    if (subida > 0) {
-      const poste = caja(14, subida + 6, 14, M.aceroOscuro, 1.4)
-      poste.position.set(0, radioBruto + 58 + subida / 2, -8)
-      g.add(poste)
-    }
-    g.add(cono, cuerpo, porta, barra, brazo)
+    const xc = punta + salida + 7
+    // Columna desde el portabrocas hasta el nivel del brazo, y brazo en diagonal hasta la torreta.
+    const yBrazo = torreta.y - 8
+    const columna = barra(new THREE.Vector3(xc, 0, 0), new THREE.Vector3(xc, yBrazo, 0), 14, 14, M.aceroOscuro, 'broca-columna')
+    const brazo = barra(new THREE.Vector3(xc, yBrazo, 0), new THREE.Vector3(0, yBrazo, torreta.z), 14, 14, M.aceroOscuro, 'broca-brazo')
+    g.add(cono, cuerpo, porta, columna, brazo)
     return g
   }
   // Inserto: contorno inferior según la envolvente, arriba plano.
@@ -237,6 +279,7 @@ function modeloHerramientaTorno(h: HerramientaTorno, radioBruto: number, torreta
   const geo = new THREE.ExtrudeGeometry(forma, { depth: 4.2, bevelEnabled: false })
   geo.translate(0, 0, -2.1)
   const inserto = new THREE.Mesh(geo, h.forma === 'ranurado' ? M.acero : M.inserto)
+  inserto.name = 'inserto'
   inserto.castShadow = true
   const ranura = h.forma === 'ranurado'
   const rosca = h.forma === 'roscado'
@@ -245,62 +288,50 @@ function modeloHerramientaTorno(h: HerramientaTorno, radioBruto: number, torreta
   // El cuello no cruza la punta hacia el resalte sin mecanizar.
   const xCuello = h.forma === 'izquierda' ? anchoCuello / 2 + 0.5 : h.forma === 'derecha' ? -(anchoCuello / 2 + 0.5) : ranura ? (a + b) / 2 : 0
   // Sin tope: en un bruto grande el mango también queda por fuera del material.
-  const despeje = Math.max(28, radioBruto + 14)
+  const despeje = Math.max(30, radioBruto + 18)
   const altoCuello = despeje - alto
-  const cuello = caja(anchoCuello, altoCuello, profCuello, color, 0.2)
+  const cuello = nombrar(caja(anchoCuello, altoCuello, profCuello, color, 0.2), 'cuello')
   cuello.position.set(xCuello, alto + altoCuello / 2, 0)
-  // El mango nace en el despeje (por encima del bruto) y se inclina hacia la torreta.
-  const sesgo = h.forma === 'derecha' ? -1 : h.forma === 'izquierda' ? 1 : 0
-  const mango = caja(13, 34, 11, color, 1.4)
-  mango.geometry.translate(0, 17, 0)
-  mango.position.set(xCuello, despeje - 0.4, 0)
-  mango.rotation.z = -sesgo * 0.32
-  mango.rotation.x = -0.48
-  // Portaherramientas: del extremo del mango hasta dentro de la torreta, del mismo color que la herramienta.
-  // El extremo del mango: 34 mm inclinado 0,48 rad hacia la torreta y 0,32 rad hacia el lado.
-  const yMango = despeje + 34 * Math.cos(0.48) * Math.cos(0.32)
-  const xMango = xCuello + sesgo * 34 * Math.sin(0.32)
-  const zMango = -34 * Math.sin(0.48)
-  const yTorreta = torreta.y - 34
-  const yPie = yMango - 12
-  if (yTorreta > yPie) {
-    const alto = yTorreta - yPie
-    const porta = caja(17, alto, 17, color, 1.6)
-    porta.position.set(xMango, yPie + alto / 2, zMango)
-    g.add(porta)
-  }
-  g.add(inserto, cuello, mango)
+  // Portaherramientas: una barra del color de la herramienta, del extremo del cuello hasta dentro de la torreta.
+  const porta = barra(new THREE.Vector3(xCuello, despeje - 4, 0), aTorreta(xCuello * 0.3, 30), 15, 13, color, 'porta')
+  g.add(inserto, cuello, porta)
   return g
 }
 
-function modeloHerramientaFresa(h: HerramientaFresa, altoBruto: number): THREE.Group {
+/**
+ * Herramienta de la fresadora con su vástago y su portaherramientas. El origen es la punta. Las piezas
+ * que cortan se llaman «filo…»; el vástago, el porta y el cuello que sube a la nariz del husillo no
+ * cortan: no pueden entrar en la pieza. `despeje` es la altura del centro de la nariz sobre la punta.
+ */
+export function modeloHerramientaFresa(h: HerramientaFresa, altoBruto: number, despeje = 100): THREE.Group {
   const g = new THREE.Group()
+  g.name = 'herramienta'
   const r = h.diametro / 2
   const color = new THREE.MeshStandardMaterial({ color: h.color, metalness: 0.5, roughness: 0.4 })
   const largo = h.diametro >= 30 ? 25 : 32
   let cuerpo: THREE.Object3D
   if (h.forma === 'bola') {
-    const esf = new THREE.Mesh(new THREE.SphereGeometry(r, 24, 16), M.acero)
+    const esf = nombrar(new THREE.Mesh(new THREE.SphereGeometry(r, 24, 16), M.acero), 'filo-bola')
     esf.position.y = r
-    const c = cil(r, largo - r, M.acero, 24)
+    const c = nombrar(cil(r, largo - r, M.acero, 24), 'filo')
     c.position.y = r + (largo - r) / 2
     cuerpo = new THREE.Group().add(esf, c)
   } else if (h.forma === 'broca' || h.forma === 'grabado') {
     const ang = h.forma === 'broca' ? 31 : 45
     const punta = r * Math.tan((ang * Math.PI) / 180)
-    const cono = new THREE.Mesh(new THREE.ConeGeometry(r, punta, 24), M.acero)
+    const cono = nombrar(new THREE.Mesh(new THREE.ConeGeometry(r, punta, 24), M.acero), 'filo-punta')
     cono.rotation.x = Math.PI
     cono.position.y = punta / 2
-    const c = cil(r, largo, M.acero, 24)
+    const c = nombrar(cil(r, largo, M.acero, 24), 'filo')
     c.position.y = punta + largo / 2
     cuerpo = new THREE.Group().add(cono, c)
   } else {
-    const c = cil(r, largo, M.acero, 32)
+    const c = nombrar(cil(r, largo, M.acero, 32), 'filo')
     c.position.y = largo / 2
     // Filos helicoidales sugeridos con franjas.
     const filos = new THREE.Group()
     for (let k = 0; k < 4; k++) {
-      const f = new THREE.Mesh(new THREE.BoxGeometry(0.6, largo * 0.9, Math.max(1, r * 0.35)), M.aceroOscuro)
+      const f = nombrar(new THREE.Mesh(new THREE.BoxGeometry(0.6, largo * 0.9, Math.max(1, r * 0.35)), M.aceroOscuro), 'filo-franja')
       f.position.set(Math.cos((k * Math.PI) / 2) * r, largo / 2, Math.sin((k * Math.PI) / 2) * r)
       f.rotation.y = (-k * Math.PI) / 2
       f.rotation.z = 0.35
@@ -310,19 +341,27 @@ function modeloHerramientaFresa(h: HerramientaFresa, altoBruto: number): THREE.G
   }
   // El vástago sigue el diámetro de la fresa; el porta queda por encima del bruto.
   const salida = Math.max(largo + 18, altoBruto + 24)
-  const vastago = cil(Math.max(1.2, r * 0.92), Math.max(8, salida - largo), M.acero, 24)
+  const vastago = nombrar(cil(Math.max(1.2, r * 0.92), Math.max(8, salida - largo), M.acero, 24), 'vastago')
   vastago.position.y = largo + Math.max(8, salida - largo) / 2
   const radioPorta = Math.min(18, Math.max(r + 2.2, 7))
-  const porta = cil(radioPorta, 16, color, 28, radioPorta + 1.5)
+  const porta = nombrar(cil(radioPorta, 16, color, 28, radioPorta + 1.5), 'porta')
   porta.position.y = salida + 8
   g.add(cuerpo, vastago, porta)
+  // El porta se prolonga hasta la nariz del husillo: sin este cuello, la herramienta colgaba en el aire.
+  const yCuello = salida + 16
+  const altoCuello = despeje - yCuello
+  if (altoCuello > 0) {
+    const cuello = nombrar(cil(radioPorta + 1.5, altoCuello, color, 28, radioPorta + 1.5), 'cuello')
+    cuello.position.y = yCuello + altoCuello / 2
+    g.add(cuello)
+  }
   return g
 }
 
 // ---------------------------------------------------------------------------
 // Escenas
 // ---------------------------------------------------------------------------
-interface EscenaMaquina {
+export interface EscenaMaquina {
   raiz: THREE.Group
   caja: THREE.Box3
   punta: () => THREE.Vector3
@@ -501,7 +540,7 @@ class Refrigerante {
   }
 }
 
-function escenaTorno(sim: SimuladorCNC): EscenaMaquina {
+export function escenaTorno(sim: SimuladorCNC): EscenaMaquina {
   const pz = sim.pieza as PiezaTorno
   const raiz = new THREE.Group()
   const R = pz.bruto.diametro / 2
@@ -517,86 +556,142 @@ function escenaTorno(sim: SimuladorCNC): EscenaMaquina {
     map: tex,
     side: THREE.DoubleSide,
   })
+  const contra = contrapuntoDe(pz)
+  const tor = medidasTorreta(R)
+  const ySoporte = tor.y + 48
+  const zSoporte = -R * 0.45 - 30
+  const zFondo = -140
+
+  // Hasta dónde llega el programa: la bancada, el fondo y el contrapunto retirado se arman a esa medida,
+  // para que nada quede sin apoyo aunque el carro vaya lejos. Las brocas también dicen cuán hondo taladran.
+  let zMin = Math.min(sim.casa.z, pz.z0)
+  let zMax = sim.casa.z
+  let rMax = Math.max(R + 30, sim.casa.x / 2)
+  const hondo = new Map<number, number>()
+  const zMaxBroca = new Map<number, number>()
+  for (const p of sim.programa.pasos) {
+    const hp = herramientaTorno(p.herramienta)
+    for (const q of p.puntos) {
+      zMin = Math.min(zMin, q.z)
+      zMax = Math.max(zMax, q.z)
+      rMax = Math.max(rMax, Math.abs(q.x) / 2)
+      if (hp?.forma === 'broca') {
+        zMaxBroca.set(hp.t, Math.max(zMaxBroca.get(hp.t) ?? sim.casa.z, q.z))
+        if (Math.abs(q.x) < 0.2) hondo.set(hp.t, Math.min(Math.max(hondo.get(hp.t) ?? 0, pz.z1 - q.z), pz.bruto.largo))
+      }
+    }
+  }
+  // Con una broca en el eje el contrapunto se retira hacia la derecha: el cuerpo de la broca y su
+  // columna ocupan el sitio donde estaba. Cuánto, depende de lo largo que sea esa broca.
+  const retiroDe = (t: number): number => {
+    const h = herramientaTorno(t)
+    if (!h || h.forma !== 'broca') return 0
+    return Math.max(0, (zMaxBroca.get(t) ?? sim.casa.z) + alcanceBroca(h, hondo.get(t) ?? 0) + 8 - contra.z0)
+  }
+  let retiroMax = 0
+  for (const h of torretaDe(sim.config)) retiroMax = Math.max(retiroMax, retiroDe(h.t))
 
   // Bancada inclinada, cabezal y bandeja de viruta.
-  const largoBanco = pz.bruto.largo + 260
-  const xIzq = pz.z0 - 150
-  const bancada = caja(largoBanco, 40, 140, M.fundicion, 4)
-  bancada.position.set(xIzq + largoBanco / 2, -R - 95, -30)
+  const xIzq = Math.min(pz.z0 - 150, zMin - 70)
+  const xDer = Math.max(contra.z1 + retiroMax + 40, zMax + 70)
+  const largoBanco = xDer - xIzq
+  const xMedio = (xIzq + xDer) / 2
+  const bancada = nombrar(caja(largoBanco, 40, 140, M.fundicion, 4), 'bancada')
+  bancada.position.set(xMedio, -R - 95, -30)
   bancada.rotation.x = -0.35
-  const cabezal = caja(150, 2 * R + 160, 150, M.pintura, 8)
+  const cabezal = nombrar(caja(150, 2 * R + 160, 150, M.pintura, 8), 'cabezal')
   cabezal.position.set(pz.z0 - 45 - 75, 10, -20)
-  const bandeja = caja(largoBanco - 60, 6, 110, M.pinturaOscura, 2)
-  bandeja.position.set(xIzq + largoBanco / 2 + 30, -R - 62, 25)
-  const fondo = caja(largoBanco + 80, 2 * R + 260, 8, M.pintura, 3)
-  fondo.position.set(xIzq + largoBanco / 2, 20, -140)
-  raiz.add(bancada, cabezal, bandeja, fondo)
+  const bandeja = nombrar(caja(largoBanco - 60, 6, 110, M.pinturaOscura, 2), 'bandeja')
+  bandeja.position.set(xMedio + 30, -R - 62, 25)
+  // El fondo cubre todo el recorrido del carro (también hacia arriba) y se apoya en un zócalo que lo une a la bancada.
+  const yFondoBajo = -R - 110
+  const yFondoAlto = rMax + ySoporte + 44
+  const fondo = nombrar(caja(largoBanco + 80, yFondoAlto - yFondoBajo, 8, M.pintura, 3), 'fondo')
+  fondo.position.set(xMedio, (yFondoAlto + yFondoBajo) / 2, zFondo)
+  const zocalo = nombrar(caja(largoBanco + 80, 30, 50, M.fundicion, 3), 'zocalo')
+  zocalo.position.set(xMedio, -R - 118, -122)
+  raiz.add(bancada, cabezal, bandeja, fondo, zocalo)
 
   // Plato y garras (giran con la pieza).
   const giro = new THREE.Group()
-  const plato = cil(R + 42, 45, M.acero, 48)
+  const plato = nombrar(cil(R + 42, 45, M.acero, 48), 'plato')
   plato.rotation.z = Math.PI / 2
   plato.position.x = pz.z0 - 22.5
   giro.add(plato)
   for (let k = 0; k < 3; k++) {
     const a = (k * 2 * Math.PI) / 3
-    const garra = caja(pz.bruto.agarre, ALTO_GARRA, 16, M.aceroOscuro, 1.5)
+    const garra = nombrar(caja(pz.bruto.agarre, ALTO_GARRA, 16, M.aceroOscuro, 1.5), 'garra')
     garra.position.set(pz.z0 + pz.bruto.agarre / 2, (R + ALTO_GARRA / 2) * Math.cos(a), (R + ALTO_GARRA / 2) * Math.sin(a))
     garra.rotation.x = a
-    const base = caja(20, 28, 18, M.aceroOscuro, 2)
+    const base = nombrar(caja(20, 28, 18, M.aceroOscuro, 2), 'garra')
     base.position.set(pz.z0 - 4, (R + 22) * Math.cos(a), (R + 22) * Math.sin(a))
     base.rotation.x = a
     giro.add(garra, base)
   }
   // Pieza.
-  const pieza = new THREE.Mesh(new THREE.BufferGeometry(), matPieza)
+  const pieza = nombrar(new THREE.Mesh(new THREE.BufferGeometry(), matPieza), 'pieza')
   pieza.castShadow = true
   pieza.receiveShadow = true
   giro.add(pieza)
   raiz.add(giro)
-  // Contrapunto: el cuerpo queda en la bancada y el punto, en el eje.
-  const contra = contrapuntoDe(pz)
-  const quill = cil(contra.radio, contra.z1 - contra.z0, M.acero, 40)
+  // Contrapunto: el cuerpo queda en la bancada y el punto, en el eje. Se desliza por la bancada.
+  const contraGrupo = new THREE.Group()
+  const quill = nombrar(cil(contra.radio, contra.z1 - contra.z0, M.acero, 40), 'quill')
   quill.rotation.z = Math.PI / 2
   quill.position.x = (contra.z0 + contra.z1) / 2
-  const cuerpoContra = caja(70, contra.radio * 2 + 30, 90, M.pinturaOscura, 4)
-  cuerpoContra.position.set(contra.z1 - 20, -R - 20, 0)
-  const baseContra = caja(90, 36, 110, M.fundicion, 3)
-  baseContra.position.set(contra.z1 - 10, -R - 55, 0)
-  raiz.add(quill, cuerpoContra, baseContra)
+  // El cuerpo sube desde la base hasta pasar el eje, para que el punto siempre salga de él.
+  const baseContra = nombrar(caja(90, 36, 110, M.fundicion, 3), 'baseContra')
+  baseContra.position.set(contra.z1 - 10, -R - 58, 0)
+  const yTopeBase = -R - 58 + 18
+  const altoCuerpo = 12 - yTopeBase + 4
+  const cuerpoContra = nombrar(caja(70, altoCuerpo, 90, M.pinturaOscura, 4), 'cuerpoContra')
+  cuerpoContra.position.set(contra.z1 - 20, yTopeBase - 4 + altoCuerpo / 2, 0)
+  contraGrupo.add(quill, cuerpoContra, baseContra)
+  raiz.add(contraGrupo)
   let versionPieza = -1
+  let retiro = 0
 
   // Parte tronzada que cae a la bandeja.
   let caida: { malla: THREE.Mesh; vy: number; vx: number; listo: boolean } | null = null
 
-  // Torreta y herramienta.
+  // Torreta y herramienta. El carro cuelga del fondo por un brazo (el ram) y se mueve con la punta.
   const carro = new THREE.Group()
+  carro.name = 'carro'
   const torreta = new THREE.Group()
   // Torreta oscura y tapa de acero: se separa del carenado gris y del fondo.
-  const disco = cil(58, 40, M.fundicion, 12)
+  const disco = nombrar(cil(tor.radio, tor.grueso, M.fundicion, 12), 'disco')
   disco.rotation.x = Math.PI / 2
-  const tapa = cil(30, 44, M.acero, 24)
+  const tapa = nombrar(cil(30, 44, M.acero, 24), 'tapa')
   tapa.rotation.x = Math.PI / 2
   torreta.add(disco, tapa)
   // La torreta queda detrás y por encima del bruto: el disco no baja al cilindro.
-  torreta.position.set(0, Math.max(128, R + 78), -R * 0.35 - 22)
-  const soporte = caja(64, 44, 52, M.pinturaOscura, 4)
-  soporte.position.set(0, Math.max(176, R + 126), -R * 0.45 - 30)
-  carro.add(torreta, soporte)
+  torreta.position.set(0, tor.y, tor.z)
+  const soporte = nombrar(caja(64, 44, 52, M.pinturaOscura, 4), 'soporte')
+  soporte.position.set(0, ySoporte, zSoporte)
+  const zRamFondo = zFondo + 4
+  const zRamSoporte = zSoporte - 26 + 2
+  const ram = nombrar(caja(40, 30, zRamSoporte - zRamFondo, M.pinturaOscura, 3), 'ram')
+  ram.position.set(0, ySoporte, (zRamFondo + zRamSoporte) / 2)
+  carro.add(torreta, soporte, ram)
   raiz.add(carro)
   let herr: THREE.Group | null = null
   let tHerr = -1
   let hHerr: unknown = null
   let giroTorreta = 0
 
-  const boquilla = cil(2.2, 20, M.naranja, 12)
-  boquilla.position.set(12, Math.max(48, R + 18), -16)
-  boquilla.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(-0.22, -0.9, 0.32).normalize())
-  carro.add(boquilla)
+  // Boquilla de refrigerante: sale de la torreta por una manguera y apunta a la punta.
+  const posBoq = new THREE.Vector3(24, Math.max(48, R + 18), -16)
+  const dirBoq = new THREE.Vector3(0.4, 1.2, 1).sub(posBoq).normalize()
+  const boquilla = nombrar(cil(2.2, 20, M.naranja, 12), 'boquilla')
+  boquilla.position.copy(posBoq)
+  boquilla.quaternion.setFromUnitVectors(ARRIBA, dirBoq)
+  const salidaBoq = posBoq.clone().addScaledVector(dirBoq, 10)
+  const manguera = barra(posBoq.clone().addScaledVector(dirBoq, -9), new THREE.Vector3(24, tor.y - 45, tor.z), 5, 5, M.negro, 'manguera')
+  carro.add(boquilla, manguera)
 
   const viruta = new Viruta(mat.color, -R - 58, 1)
   const refri = new Refrigerante()
-  const contacto = sombraContacto(Math.max(78, R + 36))
+  const contacto = nombrar(sombraContacto(Math.max(78, R + 36)), 'contacto')
   contacto.rotation.x = -Math.PI / 2
   contacto.position.set(pz.z0 + pz.bruto.largo * 0.32, -R - 58.4, 18)
   raiz.add(viruta.malla, refri.puntos, contacto)
@@ -604,12 +699,11 @@ function escenaTorno(sim: SimuladorCNC): EscenaMaquina {
   const aEscena = (p: Vec3) => new THREE.Vector3(p.z, p.x / 2, 0.5)
   const tray = lineasTrayectoria(sim, aEscena)
   raiz.add(tray)
-  const marca = new THREE.Mesh(new THREE.SphereGeometry(0.7, 10, 8), new THREE.MeshBasicMaterial({ color: 0xff2d55, depthTest: false }))
+  const marca = nombrar(new THREE.Mesh(new THREE.SphereGeometry(0.7, 10, 8), new THREE.MeshBasicMaterial({ color: 0xff2d55, depthTest: false })), 'marca')
   marca.renderOrder = 11
   raiz.add(marca)
 
-  const contraCaja = contrapuntoDe(pz)
-  const caja3 = new THREE.Box3(new THREE.Vector3(pz.z0 - 60, -R - 40, -R - 20), new THREE.Vector3(contraCaja.z1 + 20, R + 70, R + 20))
+  const caja3 = new THREE.Box3(new THREE.Vector3(pz.z0 - 60, -R - 40, -R - 20), new THREE.Vector3(contra.z1 + 20, R + 70, R + 20))
   let angulo = 0
 
   return {
@@ -633,7 +727,7 @@ function escenaTorno(sim: SimuladorCNC): EscenaMaquina {
       }
       if (pz.tronzada && !caida) {
         const t = pz.tronzada
-        const malla = new THREE.Mesh(geometriaRevolucion(perfilTorno(t.ext, t.int, t.z0, 0.1)), matPieza)
+        const malla = nombrar(new THREE.Mesh(geometriaRevolucion(perfilTorno(t.ext, t.int, t.z0, 0.1)), matPieza), 'tronzada')
         malla.castShadow = true
         raiz.add(malla)
         caida = { malla, vy: 0, vx: 20, listo: false }
@@ -642,8 +736,8 @@ function escenaTorno(sim: SimuladorCNC): EscenaMaquina {
         caida.vy -= 600 * dt
         caida.malla.position.y += caida.vy * dt
         caida.malla.position.x += caida.vx * dt
-        const rMax = Math.max(...Array.from(pz.tronzada!.ext))
-        const suelo = -R - 59 + rMax
+        const rMaxT = Math.max(...Array.from(pz.tronzada!.ext))
+        const suelo = -R - 59 + rMaxT
         if (caida.malla.position.y < suelo) {
           caida.malla.position.y = suelo
           caida.listo = true
@@ -663,11 +757,18 @@ function escenaTorno(sim: SimuladorCNC): EscenaMaquina {
         hHerr = hNueva
         if (herr) carro.remove(herr)
         const h = hNueva
-        herr = h ? modeloHerramientaTorno(h, R, { y: torreta.position.y, z: torreta.position.z }) : new THREE.Group()
+        herr = h ? modeloHerramientaTorno(h, R, { y: tor.y, z: tor.z }, hondo.get(h.t) ?? 0) : new THREE.Group()
+        herr.name = 'herramienta'
         carro.add(herr)
         giroTorreta += Math.PI / 6
       }
       torreta.rotation.z += (giroTorreta - torreta.rotation.z) * Math.min(1, dt * 6)
+      // El contrapunto se retira para la broca; si hay alarma por chocar con él, se queda en su sitio y el choque se ve.
+      const choqueContra = !!s.alarma && /contrapunto/i.test(s.alarma.texto)
+      const metaRetiro = !choqueContra && hNueva?.forma === 'broca' ? retiroDe(hNueva.t) : 0
+      retiro += (metaRetiro - retiro) * Math.min(1, dt * 8)
+      if (Math.abs(retiro - metaRetiro) < 0.01) retiro = metaRetiro
+      contraGrupo.position.x = retiro
       const p = aEscena(s.pos)
       carro.position.set(p.x, p.y, 0)
       marca.position.copy(p)
@@ -675,7 +776,7 @@ function escenaTorno(sim: SimuladorCNC): EscenaMaquina {
       const corte = s.cortando
       if (corte > 0) viruta.emitir(new THREE.Vector3(p.x, p.y, 2), Math.min(4, 1 + Math.floor(corte)), new THREE.Vector3(0.5, 0.2, 1))
       viruta.actualizar(dt)
-      refri.actualizar(dt, !!paso?.refrigerante && !s.terminado, new THREE.Vector3(p.x + 8, p.y + Math.max(36, R + 8), -10), new THREE.Vector3(p.x + 0.4, p.y + 1.2, 1))
+      refri.actualizar(dt, !!paso?.refrigerante && !s.terminado, new THREE.Vector3(p.x + salidaBoq.x, p.y + salidaBoq.y, salidaBoq.z), new THREE.Vector3(p.x + 0.4, p.y + 1.2, 1))
     },
   }
 }
@@ -756,7 +857,7 @@ function mallaFresa(pz: PiezaFresa, mat: THREE.Material): { malla: THREE.Mesh; a
   return { malla, actualizar }
 }
 
-function escenaFresa(sim: SimuladorCNC): EscenaMaquina {
+export function escenaFresa(sim: SimuladorCNC): EscenaMaquina {
   const pz = sim.pieza as PiezaFresa
   const raiz = new THREE.Group()
   const { largo: L, ancho: W, alto: H } = pz.bruto
@@ -772,43 +873,79 @@ function escenaFresa(sim: SimuladorCNC): EscenaMaquina {
     side: THREE.DoubleSide,
   })
   const { malla, actualizar: actualizarMalla } = mallaFresa(pz, matPieza)
+  nombrar(malla, 'pieza')
   raiz.add(malla)
   let versionPieza = pz.version
 
+  // Hasta dónde llega el programa: la columna, el bastidor y la altura del cabezal se arman a esa medida,
+  // para que el cabezal siempre cuelgue de la columna.
+  const despejeHusillo = Math.max(100, H + 46)
+  let xMin = Math.min(0, sim.casa.x)
+  let xMax = Math.max(L, sim.casa.x)
+  let yMax = Math.max(W, sim.casa.y)
+  let zMax = sim.casa.z
+  for (const p of sim.programa.pasos) {
+    for (const q of p.puntos) {
+      xMin = Math.min(xMin, q.x)
+      xMax = Math.max(xMax, q.x)
+      yMax = Math.max(yMax, q.y)
+      zMax = Math.max(zMax, q.z)
+    }
+  }
+  const xA = xMin - 90
+  const xB = xMax + 90
+  const xMedio = (xA + xB) / 2
+  // Cara delantera de la columna: deja 30 mm entre ella y la espalda del cabezal en el punto más lejano.
+  const ESPALDA_CABEZAL = -143
+  const zColumna = -yMax + ESPALDA_CABEZAL - 30
+  const yAltoColumna = zMax + despejeHusillo + 72 + 70
+  const yBajoColumna = -H - 90
+
   // Mesa con ranuras en T, prensa y columna.
-  const mesa = caja(L + 160, 30, W + 110, M.fundicion, 3)
+  const mesa = nombrar(caja(L + 160, 30, W + 110, M.fundicion, 3), 'mesa')
   mesa.position.set(L / 2, -H - 30 - 15, -W / 2)
   raiz.add(mesa)
   for (let k = -1; k <= 1; k++) {
-    const ranura = new THREE.Mesh(new THREE.BoxGeometry(L + 160, 1, 8), M.negro)
+    const ranura = nombrar(new THREE.Mesh(new THREE.BoxGeometry(L + 160, 1, 8), M.negro), 'ranura')
     ranura.position.set(L / 2, -H - 29.5, -W / 2 + k * 35)
     raiz.add(ranura)
   }
-  const baseTornillo = caja(L + 40, 30, W + 60, M.aceroOscuro, 3)
+  // El bastidor une la mesa con la columna.
+  const zFrenteBastidor = 55
+  const bastidor = nombrar(caja(xB - xA, 30, zFrenteBastidor - (zColumna - 55), M.fundicion, 3), 'bastidor')
+  bastidor.position.set(xMedio, -H - 75, (zFrenteBastidor + zColumna - 55) / 2)
+  const baseTornillo = nombrar(caja(L + 40, 30, W + 60, M.aceroOscuro, 3), 'baseTornillo')
   baseTornillo.position.set(L / 2, -H - 15, -W / 2)
-  // Las mismas medidas que usa el simulador para avisar del choque con la prensa.
+  // Las mismas medidas que usa el simulador para avisar del choque con la prensa: las mordazas llegan
+  // hasta donde toman el bruto (altoM desde su base) y no más.
   const altoM = altoMordaza(H)
-  const mordaza1 = caja(L + SOBRA_MORDAZA * 2, altoM + 10, ESPESOR_MORDAZA, M.acero, 2)
-  mordaza1.position.set(L / 2, -H + (altoM - 10) / 2, ESPESOR_MORDAZA / 2)
+  const mordaza1 = nombrar(caja(L + SOBRA_MORDAZA * 2, altoM + 5, ESPESOR_MORDAZA, M.acero, 2), 'mordaza')
+  mordaza1.position.set(L / 2, -H + (altoM - 5) / 2, ESPESOR_MORDAZA / 2)
   const mordaza2 = mordaza1.clone()
   mordaza2.position.z = -W - ESPESOR_MORDAZA / 2
-  raiz.add(baseTornillo, mordaza1, mordaza2)
-  const columna = caja(120, 420, 110, M.pintura, 6)
-  columna.position.set(L / 2, 60, -W - 170)
+  raiz.add(bastidor, baseTornillo, mordaza1, mordaza2)
+  const columna = nombrar(caja(xB - xA, yAltoColumna - yBajoColumna, 110, M.pintura, 6), 'columna')
+  columna.position.set(xMedio, (yAltoColumna + yBajoColumna) / 2, zColumna - 55)
   raiz.add(columna)
-  const contacto = sombraContacto(Math.max(L, W) * 0.55)
+  const contacto = nombrar(sombraContacto(Math.max(L, W) * 0.55), 'contacto')
   contacto.rotation.x = -Math.PI / 2
   contacto.position.set(L / 2, -H - 29.2, -W / 2)
   raiz.add(contacto)
 
   // Cabezal (sube y baja con Z). La nariz queda por encima del bruto aunque la fresa baje al fondo.
+  // Cuelga de la columna por un brazo (el ram) que se alarga o se acorta según el cabezal avance en Y.
   const cabezal = new THREE.Group()
-  const despejeHusillo = Math.max(100, H + 46)
-  const caja1 = caja(90, 110, 130, M.pintura, 6)
+  cabezal.name = 'carro'
+  const caja1 = nombrar(caja(90, 110, 130, M.pintura, 6), 'cabezal')
   caja1.position.set(0, despejeHusillo + 72, -78)
-  const nariz = cil(26, 26, M.pinturaOscura, 40)
-  nariz.position.set(0, despejeHusillo, 0)
-  cabezal.add(caja1, nariz)
+  // La nariz sube hasta meterse en el cuerpo del cabezal (4 mm), si no, queda separada de él.
+  const nariz = nombrar(cil(26, 34, M.pinturaOscura, 40), 'nariz')
+  nariz.position.set(0, despejeHusillo + 4, 0)
+  const ram = nombrar(new THREE.Mesh(new THREE.BoxGeometry(60, 50, 10), M.pinturaOscura), 'ram')
+  ram.castShadow = true
+  ram.receiveShadow = true
+  let largoRam = -1
+  cabezal.add(caja1, nariz, ram)
   const husillo = new THREE.Group()
   husillo.position.y = 0
   cabezal.add(husillo)
@@ -818,10 +955,15 @@ function escenaFresa(sim: SimuladorCNC): EscenaMaquina {
   let hHerr: unknown = null
   let angulo = 0
 
-  const boquilla = cil(2.2, 24, M.naranja, 12)
-  boquilla.position.set(28, despejeHusillo - 8, 16)
-  boquilla.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(-0.35, -0.88, -0.15).normalize())
-  cabezal.add(boquilla)
+  // Boquilla de refrigerante: sale del cabezal por una manguera y apunta a la punta.
+  const posBoq = new THREE.Vector3(30, despejeHusillo - 8, 16)
+  const dirBoq = new THREE.Vector3(-0.35, -0.88, -0.15).normalize()
+  const boquilla = nombrar(cil(2.2, 24, M.naranja, 12), 'boquilla')
+  boquilla.position.copy(posBoq)
+  boquilla.quaternion.setFromUnitVectors(ARRIBA, dirBoq)
+  const salidaBoq = posBoq.clone().addScaledVector(dirBoq, 12)
+  const manguera = barra(posBoq.clone().addScaledVector(dirBoq, -11), new THREE.Vector3(30, despejeHusillo + 40, -30), 5, 5, M.negro, 'manguera')
+  cabezal.add(boquilla, manguera)
 
   const viruta = new Viruta(mat.color, -H - 30, 0.8)
   const refri = new Refrigerante()
@@ -832,7 +974,7 @@ function escenaFresa(sim: SimuladorCNC): EscenaMaquina {
   raiz.add(tray)
 
   // Ejes del cero pieza.
-  const ejes = new THREE.Group()
+  const ejes = nombrar(new THREE.Group(), 'ejes')
   const flecha = (dir: THREE.Vector3, color: number) => new THREE.ArrowHelper(dir, new THREE.Vector3(0, 0.3, 0), 18, color, 5, 3)
   ejes.add(flecha(new THREE.Vector3(1, 0, 0), 0xd62828), flecha(new THREE.Vector3(0, 0, -1), 0x2a9d38), flecha(new THREE.Vector3(0, 1, 0), 0x1668c7))
   raiz.add(ejes)
@@ -861,16 +1003,27 @@ function escenaFresa(sim: SimuladorCNC): EscenaMaquina {
         hHerr = hNueva
         if (herr) husillo.remove(herr)
         const h = hNueva
-        herr = h ? modeloHerramientaFresa(h, H) : new THREE.Group()
+        herr = h ? modeloHerramientaFresa(h, H, despejeHusillo) : new THREE.Group()
+        herr.name = 'herramienta'
         husillo.add(herr)
       }
       if (herr) herr.rotation.y = angulo
       const p = aEscena(s.pos)
       cabezal.position.copy(p)
+      // El ram va de la espalda del cabezal hasta dentro de la columna (2 mm).
+      const zEspalda = ESPALDA_CABEZAL + 2
+      const zColumnaLocal = zColumna - p.z - 2
+      const largo = zEspalda - zColumnaLocal
+      if (Math.abs(largo - largoRam) > 0.05) {
+        largoRam = largo
+        ram.geometry.dispose()
+        ram.geometry = new THREE.BoxGeometry(60, 50, largo)
+        ram.position.set(0, despejeHusillo + 72, (zEspalda + zColumnaLocal) / 2)
+      }
       const corte = s.cortando
       if (corte > 0) viruta.emitir(new THREE.Vector3(p.x, p.y + 1, p.z), Math.min(4, 1 + Math.floor(corte / 4)), new THREE.Vector3(0, 0.5, 0.5))
       viruta.actualizar(dt)
-      refri.actualizar(dt, !!paso?.refrigerante && !s.terminado, new THREE.Vector3(p.x + 18, p.y + despejeHusillo - 16, p.z + 8), new THREE.Vector3(p.x + 2, p.y + 2, p.z + 1))
+      refri.actualizar(dt, !!paso?.refrigerante && !s.terminado, new THREE.Vector3(p.x + salidaBoq.x, p.y + salidaBoq.y, p.z + salidaBoq.z), new THREE.Vector3(p.x + 2, p.y + 2, p.z + 1))
     },
   }
 }
