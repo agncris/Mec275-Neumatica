@@ -2671,3 +2671,69 @@ body:has(.banco:not(.banco--apilado):not(.banco--neumatica-apilado)) {
 .banco__area .relleno.programa-cuerpo > .guia-tarea {
   flex-basis: 240px;
 }
+/* Análisis de Robótica como lista de criterios: «¿Lo hace bien?». */
+.revision__titulo {
+  margin: 0 0 6px;
+  font-size: 0.9rem;
+  font-weight: 750;
+  color: #1c2733;
+}
+.revision {
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+.revision__item {
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid #b7dcc6;
+  background: #eef8f2;
+  color: #0b5a31;
+  font-size: 0.84rem;
+}
+.revision__item[data-estado='aviso'] {
+  border-color: #f0c987;
+  background: #fff6e8;
+  color: #6b4200;
+}
+.revision__item[data-estado='error'] {
+  border-color: #f1b5b5;
+  background: #fdeeee;
+  color: #8a1c1c;
+}
+.revision__linea {
+  margin: 0;
+  display: flex;
+  gap: 6px;
+}
+.revision__detalle {
+  margin: 4px 0 0 18px;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: #33414f;
+}
+.revision__detalle[data-nivel='error'] {
+  color: #8a1c1c;
+}
+.revision__ir {
+  margin-left: 4px;
+  padding: 0 6px;
+  border: 1px solid #b9c6d4;
+  border-radius: 5px;
+  background: #fff;
+  color: #0b4f9c;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+.revision__mas {
+  color: #64717f;
+}
+.revision__resumen {
+  margin: 4px 0 0;
+  font-size: 0.76rem;
+  color: #64717f;
+}

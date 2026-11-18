@@ -118,7 +118,7 @@ describe('Fallas', () => {
 
   it('Falla E: eje cerca de su límite y salto brusco', () => {
     const d = ejercicio('falla-e')
-    expect(mensajes(d, 'aviso')).toContain('Ejes cerca del límite: A6.')
+    expect(mensajes(d, 'aviso').some((t) => t.startsWith('Ejes cerca del límite: A6.'))).toBe(true)
     expect(mensajes(d, 'error').some((t) => /^Salto brusco de \d+° en un eje durante un movimiento recto/.test(t))).toBe(true)
   })
 })

@@ -9,7 +9,7 @@ export default function PlanoTarea({ checklist, onEstudiar }: { checklist: Punto
       <p style={{ margin: '0 0 2px', fontWeight: 700 }}>Criterios de éxito</p>
       <ul style={{ margin: '0 0 8px', paddingLeft: 18 }}>
         <li>El recorrido sigue el contorno y las ranuras sin chocar.</li>
-        <li>No hay singularidades ni ejes fuera de su límite.</li>
+        <li>La muñeca no gira de golpe y ningún eje pasa de su límite.</li>
         <li>El programa KRL se puede leer.</li>
       </ul>
       <p className="u-m-0-0-6">

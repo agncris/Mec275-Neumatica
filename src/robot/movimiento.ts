@@ -193,24 +193,24 @@ export function simular(prog: Programa, placa: Placa | null = null, opciones: Op
   const resolver = (tcp: V3, R: M3, semilla: number[], cmd: number): { q: number[]; estado: EstadoMuestra } => {
     const s = inversa(modelo, tcp, R, L, semilla, base0)
     if (s.falla === 'alcance') {
-      problema(cmd, 'error', `Fuera de alcance: el robot no llega a (${tcp.x.toFixed(0)}, ${tcp.y.toFixed(0)}, ${tcp.z.toFixed(0)}) mm con la herramienta en esa orientación.`)
+      problema(cmd, 'error', `Fuera de alcance: el robot no llega a (${tcp.x.toFixed(0)}, ${tcp.y.toFixed(0)}, ${tcp.z.toFixed(0)}) mm con la herramienta en esa orientación. Acerca la pieza o usa un robot más grande.`)
       return { q: semilla, estado: 'error' }
     }
     if (s.falla === 'limite' && s.eje !== undefined) {
       const [lo, hi] = modelo.limites[s.eje]
-      problema(cmd, 'error', `El eje ${nombreEje(s.eje)} tendría que ir a ${s.q[s.eje].toFixed(0)}°, fuera de su rango (${lo}° a ${hi}°).`)
+      problema(cmd, 'error', `El eje ${nombreEje(s.eje)} tendría que ir a ${s.q[s.eje].toFixed(0)}°, fuera de su rango (${lo}° a ${hi}°). Cambia cómo apunta la herramienta o dónde está la pieza.`)
       return { q: s.q, estado: 'error' }
     }
     let estado: EstadoMuestra = 'ok'
     // Singularidad de muñeca: sólo importa si A4 y A6 se ponen a girar.
     const giroMuneca = Math.abs(s.q[3] - semilla[3]) + Math.abs(s.q[5] - semilla[5])
     if (s.singular && giroMuneca > 5) {
-      problema(cmd, 'aviso', 'Muñeca en una singularidad (A5 ≈ 0°): A4 y A6 giran bruscamente. Inclina un poco la herramienta o cambia la posición de la pieza.')
+      problema(cmd, 'aviso', 'Muñeca estirada (A5 cerca de 0°): A4 y A6 giran de golpe para seguir el camino. Inclina un poco la herramienta o mueve la pieza.')
       estado = 'aviso'
     }
     const cerca = cercaDelLimite(modelo, s.q)
     if (cerca.length) {
-      problema(cmd, 'aviso', `Ejes cerca del límite: ${cerca.map(nombreEje).join(', ')}.`)
+      problema(cmd, 'aviso', `Ejes cerca del límite: ${cerca.map(nombreEje).join(', ')}. Les queda poco giro: si la pieza se corre un poco, el robot no llega.`)
       estado = 'aviso'
     }
     return { q: s.q, estado }
@@ -239,7 +239,7 @@ export function simular(prog: Programa, placa: Placa | null = null, opciones: Op
       const r = resolver(p, R, q, cmd)
       const salto = r.q.reduce((m, x, k) => Math.max(m, Math.abs(x - q[k])), 0)
       if (salto > 25 && r.estado !== 'error') {
-        problema(cmd, 'error', `Salto brusco de ${salto.toFixed(0)}° en un eje durante un movimiento recto: el robot cambia de configuración (típico al cruzar una singularidad).`)
+        problema(cmd, 'error', `Salto brusco de ${salto.toFixed(0)}° en un eje durante un movimiento recto: el robot cambia de postura a mitad del camino y la herramienta se saldría de la línea.`)
         r.estado = 'error'
       }
       q = r.q

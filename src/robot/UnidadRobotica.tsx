@@ -546,6 +546,7 @@ export default function UnidadRobotica() {
       contenido: simActiva ? (
         <Analisis
           sim={simActiva}
+          conHusillo={herrVista.tipo === 'fresa' || herrVista.tipo === 'taladro'}
           onEstudiar={irAEstudiar}
           onIr={(p) => {
             tRef.current = p.t
@@ -555,7 +556,7 @@ export default function UnidadRobotica() {
         />
       ) : (
         <p style={{ margin: 0, fontSize: '0.86rem', color: 'var(--tinta-suave)' }}>
-          Cuando haya una simulación, aquí se revisan el alcance, los límites de los ejes y las singularidades. <button type="button" onClick={() => irAEstudiar('grados')} style={enlaceEstudiar}>¿Qué es una singularidad? → Estudiar</button>
+          Cuando haya una simulación, aquí se revisa si el robot llega a todos los puntos, si algún eje pasa de su límite y si el robot cambia de postura de golpe. <button type="button" onClick={() => irAEstudiar('grados')} style={enlaceEstudiar}>¿Por qué el robot gira de golpe? → Estudiar</button>
         </p>
       ),
     },
