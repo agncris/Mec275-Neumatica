@@ -1,3 +1,4 @@
+import InterruptorEtapa from '../components/banco/InterruptorEtapa'
 import { IconoDeshacer, IconoRehacer } from '../components/IconosEdicion'
 import { BotonNuevo, botonSecundario, Menu, type ItemMenu } from '../components/ui'
 import { ETIQUETA_GRUPO, PRACTICA_ROBOT, type GrupoPractica } from './practica'
@@ -86,23 +87,14 @@ export default function BarraRobot({
       {modo === 'visual' && (
         <>
           {/* Un solo interruptor decide qué ocupa la pantalla: armar el programa o probarlo en el robot. */}
-          <span className="segmentado segmentado--etapa" role="radiogroup" aria-label="Qué estás haciendo">
-            {(
-              [
-                ['armar', estrecha ? '① Armar' : '① Armar el programa'],
-                ['probar', estrecha ? '② Probar' : '② Probar en el robot'],
-              ] as Array<['armar' | 'probar', string]>
-            ).map(([e, t]) => (
-              <button key={e} role="radio" aria-checked={etapa === e} onClick={() => onEtapa(e)} data-etapa={e} style={{ minHeight: 34 }}>
-                {t}
-              </button>
-            ))}
-          </span>
-          {ejemploEnTarea && etapa === 'probar' && (
-            <button type="button" onClick={volverDelEjemplo} className="boton-volver-tarea" data-volver-tarea="si">
-              Volver a mi tarea
-            </button>
-          )}
+          <InterruptorEtapa
+            etapa={etapa}
+            onEtapa={onEtapa}
+            estrecha={estrecha}
+            armar={['① Armar el programa', '① Armar']}
+            probar={['② Probar en el robot', '② Probar']}
+            volver={ejemploEnTarea ? volverDelEjemplo : undefined}
+          />
           <BotonNuevo que="la tarea de cero" compacto={estrecha} onClick={() => cargarEjemplo('vacio')} />
           <span style={{ display: 'inline-flex', gap: 2 }}>
             <button onClick={deshacer} disabled={!puedeDeshacer} aria-label="Deshacer" className="boton-icono" style={{ opacity: puedeDeshacer ? 1 : 0.4 }} title="Deshacer (Ctrl+Z)">
