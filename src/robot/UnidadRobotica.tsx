@@ -43,7 +43,7 @@ import {
 import { HOME, robotPorId } from './robots'
 import type { VistaRobot } from './Robot3D'
 import { ANCLAS_ESTUDIAR_ROBOT } from './anclasEstudiar'
-import { BASE_DEFECTO, CLAVE, CLAVE_ANTES_EJEMPLO, CLAVE_TAREA, definicionGuardada, HERR_MANDO, leerGuardada, leerTarea, marcasDe, type Modo, NOMBRE_TAREA, programaDelMando } from './datosRobot'
+import { baseMando, CLAVE, CLAVE_ANTES_EJEMPLO, CLAVE_TAREA, definicionGuardada, HERR_MANDO, leerGuardada, leerTarea, marcasDe, type Modo, NOMBRE_TAREA, programaDelMando } from './datosRobot'
 import { borrarClave, CLAVES, guardarJson as guardarClaveJson, leerJson } from '../persistencia'
 
 // La teoría, la ficha y las demos 3D de Estudiar se cargan solo al entrar a Estudiar.
@@ -222,7 +222,7 @@ export default function UnidadRobotica() {
     V.modelo = modeloM
     V.pedestal = 0
     V.herramienta = herrMando
-    V.base = BASE_DEFECTO
+    V.base = baseMando(modeloM.alcance)
     V.espesor = 5
     V.placa = null
     V.previa = { curvas: [], puntos: [], planos: [] }

@@ -522,6 +522,7 @@ export default function Robot3D({
     // Partes que se rehacen al cambiar el robot, la herramienta o la definición.
     let robot: ModeloArmado | null = null
     let claveRobot = ''
+    let modeloVisto = ''
     let mesa: THREE.Group | null = null
     let claveMesa = ''
     let previa: THREE.Group | null = null
@@ -603,6 +604,9 @@ export default function Robot3D({
         mundo.add(robot.raiz)
         claveRobot = kR
         cont.dataset.modelo = V.modelo.id
+        // Con otro robot (por ejemplo, de un KR 6 a un KR 120) la cámara se vuelve a encuadrar.
+        if (modeloVisto && modeloVisto !== V.modelo.id) encuadrar('iso')
+        modeloVisto = V.modelo.id
       }
       ponerEjes(robot!, V.q)
       if (robot!.giroHerramienta) {

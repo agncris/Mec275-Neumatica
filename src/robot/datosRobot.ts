@@ -26,6 +26,14 @@ export const HERR_DEFECTO: Herramienta = { tipo: 'fresa', nombre: 'Husillo con f
 export const HERR_MANDO: Herramienta = { tipo: 'ventosa', nombre: 'Ventosa de vacío', largo: 120, diametro: 40 }
 export const BASE_DEFECTO: Plano = planoXY(v(450, -150, 300))
 
+/**
+ * Dónde se dibuja la mesa en el mando manual. Es solo de referencia: con un robot grande,
+ * a 450 mm quedaría metida en su base, así que se aleja con el alcance.
+ */
+export function baseMando(alcance: number): Plano {
+  return alcance > 1000 ? planoXY(v(Math.round(alcance * 0.45), -150, 300)) : BASE_DEFECTO
+}
+
 export function leerGuardada(): Definicion {
   const d = leerJson(CLAVE)
   if (esDefinicion(d)) return d

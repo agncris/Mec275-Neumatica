@@ -89,8 +89,8 @@ export const GUIA_PLC: PasoGuia[] = [
 
 export const GUIA_CNC: PasoGuia[] = [
   { titulo: '1 · Prepara la máquina', texto: 'Pulsa «Máquina ▾» en la barra: eliges torno o fresadora y ahí mismo ves sus ejemplos resueltos. Abajo, en «Preparación», pones el material y las medidas del bruto (y cuánto toman las garras).' + (VER_TAREA_CNC ? ' La tarea está en «★ Tarea 3».' : '') },
-  { titulo: '2 · Escribe el programa', texto: 'Escribe el código G en el editor, con un comentario entre paréntesis en cada línea. Los errores se marcan en la misma línea.' },
-  { titulo: '3 · Mecaniza', texto: '▶ Ciclo corre todo el programa; ⏭ avanza bloque a bloque. Si la herramienta choca o entra en rápido al material, salta una ALARMA con la línea.' },
+  { titulo: '2 · Escribe el programa', texto: 'En «① Armar el programa» escribe el código G en el editor, con un comentario entre paréntesis en cada línea. Los errores se marcan en la misma línea.' },
+  { titulo: '3 · Mecaniza', texto: 'Pasa a «② Probar en la máquina»: el ▶ dentro de la escena corre el programa y la barra de tiempo te lleva a cualquier instante; ⏭ avanza bloque a bloque. Si la herramienta choca o entra en rápido al material, salta una ALARMA con la línea.' },
   { titulo: '4 · Revisa y entrega', texto: 'Abajo: la trayectoria 2D con sus puntos, qué hace cada bloque y la tabla de coordenadas. ' + (VER_TAREA_CNC ? 'En «★ Tarea 3» está el plano y «Entregar»: te da todo eso, el .json y el video.' : '«Exportar» descarga el .cnc y el video.') },
 ]
 
@@ -101,11 +101,11 @@ export const GUIA_ROBOT: PasoGuia[] = [
   },
   {
     titulo: '2 · Construye el recorrido',
-    texto: 'LIN corta en recta, CIR en curva y PTP solo acerca o aleja (el camino no es recto). Conecta curva → puntos → plano → movimiento → Core, y el Robot y la Tool al Core.',
+    texto: 'En «① Armar el programa» conectas los bloques; en la tarea, la guía de la izquierda dice cuál toca. LIN corta en recta, CIR en curva y PTP solo acerca o aleja (el camino no es recto). El Robot y la Tool van al Core.',
   },
   {
     titulo: '3 · Verifica y corrige',
-    texto: 'Pulsa ▶ y abre Análisis. Alcance: el brazo no llega. Límite: un eje no gira tanto. Muñeca estirada: A5 cerca de 0° y la muñeca gira de golpe. Acerca la pieza o inclina la herramienta.',
+    texto: 'Pasa a «② Probar en el robot» y pulsa ▶. «¿Lo hace bien?» revisa alcance, límites de los ejes, giros de golpe, choques y husillo, y «Ver en … s» te lleva al momento del problema.',
   },
   {
     titulo: '4 · Documenta y entrega',
