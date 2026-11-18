@@ -326,9 +326,7 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
         </p>
       )}
       <div style={barra}>
-        <button style={boton} onClick={() => { setVistaCamara('iso'); encuadrarRef.current() }} title="Volver a ver la planta entera" aria-label="Encuadrar">
-          {celular ? '⌖' : 'Encuadrar'}
-        </button>
+        {/* Volver a ver la planta entera: la casita del cubo de vistas. */}
         <button
           style={{ ...boton, background: conSonido ? 'var(--azul)' : '#fff', color: conSonido ? '#fff' : 'var(--tinta)' }}
           onClick={() => {
