@@ -9,9 +9,9 @@
  * Rhino) y se gira para three.js, que usa Y hacia arriba.
  */
 import { BotonPlayEscena, type PlayEscena } from '../components/PlayEscena'
-import { aplicarModoArrastre, girarCuadrante, zoomCamara, type LadoCubo, type ModoArrastre } from '../components/mandoCamara'
+import { aplicarModoArrastre, girarCuadrante, type LadoCubo, type ModoArrastre } from '../components/mandoCamara'
 import BotonPantallaCompleta, { usePantallaCompleta } from '../components/PantallaCompleta'
-import { useEffect, useRef, useState, type CSSProperties, type MutableRefObject, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type MutableRefObject, type ReactNode } from 'react'
 import { crearEscena } from '../vista3d/escena'
 import { type ViewCube } from '../vista3d/viewcube'
 import * as THREE from 'three'
@@ -919,53 +919,7 @@ export default function Robot3D({
           ))}
         </div>
         {play && <BotonPlayEscena play={play} />}
-        {pantalla && (
-          <div style={barraNav} data-mando-camara="si" role="toolbar" aria-label="Navegación de la cámara">
-            <button type="button" aria-pressed={modoArrastre === 'girar'} title="Girar la vista" onClick={() => setModoArrastre('girar')} style={chipNav(modoArrastre === 'girar')}>
-              Girar
-            </button>
-            <button type="button" aria-pressed={modoArrastre === 'mover'} title="Desplazar la vista" onClick={() => setModoArrastre('mover')} style={chipNav(modoArrastre === 'mover')}>
-              Mover
-            </button>
-            <button type="button" title="Acercar" aria-label="Acercar" onClick={() => controlesRef.current && zoomCamara(controlesRef.current, true)} style={chipNav(false)}>
-              +
-            </button>
-            <button type="button" title="Alejar" aria-label="Alejar" onClick={() => controlesRef.current && zoomCamara(controlesRef.current, false)} style={chipNav(false)}>
-              −
-            </button>
-            <button type="button" title="Vista inicial" onClick={() => accion.current?.('iso')} style={chipNav(false)}>
-              Inicio
-            </button>
-          </div>
-        )}
       </div>
     </div>
   )
-}
-
-const barraNav: CSSProperties = {
-  position: 'absolute',
-  top: 140,
-  left: 16,
-  zIndex: 5,
-  display: 'flex',
-  gap: 6,
-  padding: 6,
-  borderRadius: 10,
-  background: 'rgba(30,30,30,0.7)',
-  border: '1px solid rgba(255,255,255,0.08)',
-}
-
-function chipNav(activo: boolean): CSSProperties {
-  return {
-    border: '1px solid rgba(255,255,255,0.12)',
-    background: activo ? '#3a3a3a' : 'transparent',
-    color: '#e0e0e0',
-    borderRadius: 8,
-    padding: '6px 10px',
-    fontSize: '0.78rem',
-    fontWeight: 600,
-    cursor: 'pointer',
-    minWidth: 36,
-  }
 }

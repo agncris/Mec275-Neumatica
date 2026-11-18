@@ -7,9 +7,8 @@
  * hacia la derecha y el X (radio) hacia arriba, como en los planos; en la
  * fresadora X va a la derecha, Y hacia el fondo y Z hacia arriba.
  */
-import HudEscena from '../components/HudEscena'
 import { BotonPlayEscena, type PlayEscena } from '../components/PlayEscena'
-import { aplicarModoArrastre, zoomCamara, type ModoArrastre } from '../components/mandoCamara'
+import { aplicarModoArrastre, type ModoArrastre } from '../components/mandoCamara'
 import BotonPantallaCompleta, { usePantallaCompleta } from '../components/PantallaCompleta'
 import { useEffect, useRef, useState, type MutableRefObject } from 'react'
 import * as THREE from 'three'
@@ -897,7 +896,7 @@ export default function Maquina3D({
   const [pantalla, alternarPantalla] = usePantallaCompleta(envolturaRef)
   const [sinWebGL, setSinWebGL] = useState(false)
   const accionRef = useRef<((v: Vista) => void) | null>(null)
-  const [vistaActual, setVistaActual] = useState<Vista>('iso')
+  const [, setVistaActual] = useState<Vista>('iso')
   const [modoArrastre, setModoArrastre] = useState<ModoArrastre>('girar')
   const controlesRef = useRef<OrbitControls | null>(null)
   useEffect(() => {
@@ -1025,15 +1024,6 @@ export default function Maquina3D({
         <BotonPantallaCompleta activa={pantalla} onAlternar={alternarPantalla} estilo={{ border: '1px solid #c6ced6', background: 'rgba(255,255,255,0.9)', color: '#33475c', borderRadius: 6, padding: '2px 8px', fontSize: '0.78rem', cursor: 'pointer' }} />
       </div>
       {play && <BotonPlayEscena play={play} />}
-      {pantalla && (
-        <HudEscena
-          vista={vistaActual}
-          onVista={(v) => accionRef.current?.(v)}
-          modo={modoArrastre}
-          onModo={setModoArrastre}
-          onZoom={(si) => controlesRef.current && zoomCamara(controlesRef.current, si)}
-        />
-      )}
     </div>
   )
 }

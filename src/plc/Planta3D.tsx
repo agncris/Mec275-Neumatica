@@ -8,9 +8,8 @@
  * (`sim.current`) y se pone al día. Los botones de la máquina se pulsan con
  * el ratón o el dedo, igual que en el banco.
  */
-import HudEscena from '../components/HudEscena'
 import { BotonPlayEscena, type PlayEscena } from '../components/PlayEscena'
-import { aplicarModoArrastre, cursorPulsables, saltarVista, zoomCamara, type ModoArrastre, type VistaCamara } from '../components/mandoCamara'
+import { aplicarModoArrastre, cursorPulsables, saltarVista, type ModoArrastre, type VistaCamara } from '../components/mandoCamara'
 import { acercar, useCelular, useTactil } from '../components/ui'
 import { useEffect, useRef, useState, type MutableRefObject } from 'react'
 import * as THREE from 'three'
@@ -49,7 +48,7 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
   const contRef = useRef<HTMLDivElement>(null)
   const [sinWebGL, setSinWebGL] = useState(false)
   const [pantallaCompleta, setPantallaCompleta] = useState(false)
-  const [vistaCamara, setVistaCamara] = useState<VistaCamara>('iso')
+  const [, setVistaCamara] = useState<VistaCamara>('iso')
   const [modoArrastre, setModoArrastre] = useState<ModoArrastre>('girar')
   const vistaRef = useRef<(v: VistaCamara) => void>(() => {})
   const controlesRef = useRef<OrbitControls | null>(null)
@@ -368,15 +367,6 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
         )}
       </div>
       {play && <BotonPlayEscena play={play} />}
-      {pantallaCompleta && (
-        <HudEscena
-          vista={vistaCamara}
-          onVista={(v) => vistaRef.current(v)}
-          modo={modoArrastre}
-          onModo={setModoArrastre}
-          onZoom={(si) => controlesRef.current && zoomCamara(controlesRef.current, si)}
-        />
-      )}
       {acciones.length > 0 && (
         <div style={{ ...barra, left: 8, right: 'auto' }}>
           {acciones.map((a) => (

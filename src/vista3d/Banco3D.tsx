@@ -13,9 +13,8 @@
  * altura del punto de la carrera que vigilan, para que se vea a la leva
  * pisarlos.
  */
-import HudEscena from '../components/HudEscena'
 import { BotonPlayEscena, type PlayEscena } from '../components/PlayEscena'
-import { aplicarModoArrastre, cursorPulsables, saltarVista, zoomCamara, type ModoArrastre, type VistaCamara } from '../components/mandoCamara'
+import { aplicarModoArrastre, cursorPulsables, saltarVista, type ModoArrastre, type VistaCamara } from '../components/mandoCamara'
 import { acercar, useTactil } from '../components/ui'
 import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
@@ -350,7 +349,7 @@ export default function Banco3D({ motor, llenar = false, play }: Props) {
     }
   }, [])
   const [pantallaCompleta, setPantallaCompleta] = useState(false)
-  const [vistaCamara, setVistaCamara] = useState<VistaCamara>('iso')
+  const [, setVistaCamara] = useState<VistaCamara>('iso')
   const [modoArrastre, setModoArrastre] = useState<ModoArrastre>('girar')
   const encuadrarRef = useRef<() => void>(() => {})
   const vistaRef = useRef<(v: VistaCamara) => void>(() => {})
@@ -806,15 +805,6 @@ export default function Banco3D({ motor, llenar = false, play }: Props) {
         )}
       </div>
       {play && <BotonPlayEscena play={play} />}
-      {pantallaCompleta && (
-        <HudEscena
-          vista={vistaCamara}
-          onVista={(v) => vistaRef.current(v)}
-          modo={modoArrastre}
-          onModo={setModoArrastre}
-          onZoom={(acercar) => controlesRef.current && zoomCamara(controlesRef.current, acercar)}
-        />
-      )}
       {motor && mandos.length > 0 && (
         <div style={panelMandos}>
           <span style={{ fontSize: '0.72rem', color: 'var(--tinta-tenue)' }}>Mandos</span>
