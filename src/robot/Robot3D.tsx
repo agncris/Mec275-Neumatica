@@ -63,7 +63,7 @@ function fondoContraste(): THREE.CanvasTexture {
   const grad = g.createLinearGradient(0, 0, 0, 256)
   grad.addColorStop(0, '#bcd3ea')
   grad.addColorStop(0.55, '#d9e4ee')
-  grad.addColorStop(1, '#e8e4dc')
+  grad.addColorStop(1, '#e6e8ea')
   g.fillStyle = grad
   g.fillRect(0, 0, 2, 256)
   const t = new THREE.CanvasTexture(c)
@@ -71,7 +71,10 @@ function fondoContraste(): THREE.CanvasTexture {
   return t
 }
 
-const NARANJA = new THREE.MeshPhysicalMaterial({ color: 0xf15a12, metalness: 0.18, roughness: 0.28, clearcoat: 0.72, clearcoatRoughness: 0.22 })
+const NARANJA = new THREE.MeshPhysicalMaterial({ color: 0xf26a18, metalness: 0.1, roughness: 0.36, clearcoat: 0.6, clearcoatRoughness: 0.28 })
+// Tapas, motores y juntas: grafito, para que el brazo no sea un solo bloque naranjo.
+const GRAFITO = new THREE.MeshPhysicalMaterial({ color: 0x343b45, metalness: 0.3, roughness: 0.5, clearcoat: 0.2, clearcoatRoughness: 0.5 })
+const ALUMINIO = new THREE.MeshStandardMaterial({ color: 0xb4bcc5, metalness: 0.88, roughness: 0.34 })
 const NEGRO = new THREE.MeshPhysicalMaterial({ color: 0x1a1d22, metalness: 0.35, roughness: 0.46, clearcoat: 0.3, clearcoatRoughness: 0.4 })
 const GRIS = new THREE.MeshPhysicalMaterial({ color: 0xd7dde4, metalness: 0.96, roughness: 0.16, clearcoat: 0.25 })
 const MESON = new THREE.MeshStandardMaterial({ color: 0x2c3a4c, metalness: 0.55, roughness: 0.34, envMapIntensity: 1.2 })
@@ -92,6 +95,28 @@ function cil(r: number, l: number, mat: THREE.Material, eje: 'x' | 'y' | 'z', se
   m.castShadow = true
   m.receiveShadow = true
   return m
+}
+
+/** Rótulo del modelo pintado en el brazo. Una textura por texto. */
+const rotulos = new Map<string, THREE.CanvasTexture>()
+function rotuloModelo(texto: string): THREE.CanvasTexture {
+  let t = rotulos.get(texto)
+  if (!t) {
+    const c = document.createElement('canvas')
+    c.width = 512
+    c.height = 128
+    const g = c.getContext('2d')!
+    g.fillStyle = '#ffffff'
+    g.font = '700 84px system-ui, sans-serif'
+    g.textAlign = 'center'
+    g.textBaseline = 'middle'
+    g.fillText(texto, 256, 68, 492)
+    t = new THREE.CanvasTexture(c)
+    t.colorSpace = THREE.SRGBColorSpace
+    t.anisotropy = 4
+    rotulos.set(texto, t)
+  }
+  return t
 }
 
 const tv = (p: V3) => new THREE.Vector3(p.x, p.y, p.z)
@@ -152,7 +177,23 @@ function armarRobot(m: ModeloRobot, pedestal: number, h: Herramienta): ModeloArm
   raiz.add(g0)
   const pie = cil(120 * s, 40 * s, NEGRO, 'z', 40, 135 * s)
   pie.position.z = 20 * s
-  g0.add(pie)
+  // Placa de anclaje con sus cuatro pernos.
+  const placa = caja(320 * s, 320 * s, 10 * s, GRAFITO, 3 * s)
+  placa.position.z = 5 * s
+  g0.add(pie, placa)
+  for (const [sx, sy] of [
+    [-1, -1],
+    [1, -1],
+    [1, 1],
+    [-1, 1],
+  ]) {
+    const perno = cil(10 * s, 8 * s, ACERO, 'z', 6)
+    perno.position.set(sx * 135 * s, sy * 135 * s, 13 * s)
+    g0.add(perno)
+  }
+  const junta1 = cil(101 * s, 10 * s, ALUMINIO, 'z', 40)
+  junta1.position.z = 45 * s
+  g0.add(junta1)
   // A1
   const g1 = new THREE.Group()
   g0.add(g1)
@@ -162,9 +203,11 @@ function armarRobot(m: ModeloRobot, pedestal: number, h: Herramienta): ModeloArm
   hombro.position.set(m.a1 / 2, 0, m.d1 - 20 * s)
   hombro.rotation.x = Math.PI / 2
   g1.add(torre, hombro)
-  const motor1 = cil(45 * s, 90 * s, NEGRO, 'z')
+  const motor1 = cil(45 * s, 90 * s, GRAFITO, 'z')
   motor1.position.set(-80 * s, 0, m.d1 * 0.55)
-  g1.add(motor1)
+  const tapa1 = cil(47 * s, 10 * s, NEGRO, 'z')
+  tapa1.position.set(-80 * s, 0, m.d1 * 0.55 + 50 * s)
+  g1.add(motor1, tapa1)
   // A2
   const g2 = new THREE.Group()
   g2.position.set(m.a1, 0, m.d1)
@@ -173,9 +216,30 @@ function armarRobot(m: ModeloRobot, pedestal: number, h: Herramienta): ModeloArm
   const brazo = caja(m.a2, 110 * s, 90 * s, NARANJA, 14 * s)
   brazo.position.set(m.a2 / 2, -60 * s, 0)
   brazo.rotation.x = Math.PI / 2
-  const motor2 = cil(48 * s, 90 * s, NEGRO, 'y')
+  const motor2 = cil(48 * s, 90 * s, GRAFITO, 'y')
   motor2.position.set(0, 120 * s, 0)
-  g2.add(eje2, brazo, motor2)
+  const tapa2 = cil(40 * s, 6 * s, ALUMINIO, 'y')
+  tapa2.position.set(0, 168 * s, 0)
+  g2.add(eje2, brazo, motor2, tapa2)
+  // Tapas de las articulaciones A2 y A3 en la cara de afuera del brazo.
+  for (const [x, r] of [
+    [0, 56],
+    [m.a2, 46],
+  ]) {
+    const tapa = cil(r * s, 8 * s, GRAFITO, 'y', 40)
+    tapa.position.set(x, -108 * s, 0)
+    const centro = cil(r * 0.36 * s, 6 * s, ALUMINIO, 'y', 24)
+    centro.position.set(x, -113 * s, 0)
+    g2.add(tapa, centro)
+  }
+  // Rótulo del modelo, en blanco, entre las dos tapas.
+  const rotulo = new THREE.Mesh(
+    new THREE.PlaneGeometry(m.a2 * 0.5, m.a2 * 0.125),
+    new THREE.MeshStandardMaterial({ map: rotuloModelo(m.nombre.replace(/ sixx.*| \(.*/, '')), transparent: true, roughness: 0.6, polygonOffset: true, polygonOffsetFactor: -2 }),
+  )
+  rotulo.rotation.x = Math.PI / 2
+  rotulo.position.set(m.a2 / 2, -105.6 * s, 0)
+  g2.add(rotulo)
   // A3
   const g3 = new THREE.Group()
   g3.position.set(m.a2, 0, 0)
@@ -184,20 +248,35 @@ function armarRobot(m: ModeloRobot, pedestal: number, h: Herramienta): ModeloArm
   const caja3 = caja(170 * s, 130 * s, 150 * s, NARANJA)
   caja3.position.set(-30 * s, 0, m.a3)
   caja3.rotation.x = Math.PI / 2
-  g3.add(codo, caja3)
+  const tapa3 = cil(52 * s, 8 * s, GRAFITO, 'y', 40)
+  tapa3.position.set(0, 88 * s, 0)
+  const centro3 = cil(19 * s, 6 * s, ALUMINIO, 'y', 24)
+  centro3.position.set(0, 93 * s, 0)
+  // Motor de la muñeca, detrás del codo.
+  const motor4 = cil(40 * s, 70 * s, GRAFITO, 'x')
+  motor4.position.set(-150 * s, 0, m.a3)
+  g3.add(codo, caja3, tapa3, centro3, motor4)
   // A4 (antebrazo)
   const g4 = new THREE.Group()
   g4.position.set(0, 0, m.a3)
   g3.add(g4)
   const antebrazo = cil(55 * s, m.d4 - 60 * s, NARANJA, 'x', 32, 45 * s)
   antebrazo.position.x = (m.d4 - 60 * s) / 2
-  g4.add(antebrazo)
+  // Junta de giro del antebrazo (A4).
+  const junta4 = cil(59 * s, 12 * s, GRAFITO, 'x', 40)
+  junta4.position.x = 61 * s
+  g4.add(antebrazo, junta4)
   // A5 (muñeca)
   const g5 = new THREE.Group()
   g5.position.set(m.d4, 0, 0)
   g4.add(g5)
   const muneca = cil(42 * s, 110 * s, NARANJA, 'y')
   g5.add(muneca)
+  for (const lado of [-1, 1]) {
+    const tapa = cil(31 * s, 6 * s, GRAFITO, 'y', 32)
+    tapa.position.y = lado * 58 * s
+    g5.add(tapa)
+  }
   // A6 (flange)
   const g6 = new THREE.Group()
   g5.add(g6)
@@ -205,7 +284,9 @@ function armarRobot(m: ModeloRobot, pedestal: number, h: Herramienta): ModeloArm
   cuello.position.x = (m.d6 - 10 * s) / 2
   const flange = cil(32 * s, 12 * s, GRIS, 'x')
   flange.position.x = m.d6 - 6 * s
-  g6.add(cuello, flange)
+  const junta6 = cil(36 * s, 5 * s, GRAFITO, 'x')
+  junta6.position.x = m.d6 - 15 * s
+  g6.add(cuello, flange, junta6)
   // Herramienta: desde el flange (x = d6) hasta el TCP (x = d6 + largo).
   const herr = new THREE.Group()
   herr.position.x = m.d6
@@ -376,8 +457,9 @@ export default function Robot3D({
     }
     const { renderer, escena, camara, controles, cubo: gizmo, marcarSucio } = base
     renderer.outputColorSpace = THREE.SRGBColorSpace
-    renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 0.98
+    // Neutral conserva el color de la pintura. ACES lavaba el naranjo hacia el salmón.
+    renderer.toneMapping = THREE.NeutralToneMapping
+    renderer.toneMappingExposure = 0.92
     renderer.shadowMap.enabled = true
     renderer.shadowMap.type = THREE.PCFSoftShadowMap
     renderer.domElement.style.display = 'block'
@@ -391,10 +473,10 @@ export default function Robot3D({
     const mundo = new THREE.Group()
     mundo.rotation.x = -Math.PI / 2
     escena.add(mundo)
-    const piso = new THREE.Mesh(new THREE.PlaneGeometry(8000, 8000), new THREE.MeshStandardMaterial({ color: 0xcdc3b3, roughness: 0.82, metalness: 0.04, envMapIntensity: 0.6 }))
+    const piso = new THREE.Mesh(new THREE.PlaneGeometry(8000, 8000), new THREE.MeshStandardMaterial({ color: 0xaab2bc, roughness: 0.86, metalness: 0.02, envMapIntensity: 0.5 }))
     piso.receiveShadow = true
     mundo.add(piso)
-    const grilla = new THREE.GridHelper(6000, 40, 0x9c9384, 0xb3a999)
+    const grilla = new THREE.GridHelper(6000, 40, 0x8f99a6, 0xaab2bc)
     grilla.rotation.x = Math.PI / 2
     grilla.position.z = 1
     for (const m of Array.isArray(grilla.material) ? grilla.material : [grilla.material]) {
@@ -405,7 +487,7 @@ export default function Robot3D({
     const ejesMundo = new THREE.AxesHelper(250)
     ejesMundo.position.z = 1
     mundo.add(ejesMundo)
-    const sol = new THREE.DirectionalLight(0xfff1e0, 3.5)
+    const sol = new THREE.DirectionalLight(0xfff6ec, 2.7)
     sol.castShadow = true
     // Mapa de sombras según el equipo: 4096 solo en pantallas densas y lienzos anchos.
     const lado = sinDetalle ? 1024 : window.devicePixelRatio < 2 || cont.clientWidth < 700 ? 2048 : 4096
@@ -532,9 +614,26 @@ export default function Robot3D({
             [1, 1],
             [-1, 1],
           ]) {
-            const pata = caja(40, 40, Math.max(1, zTop - 30), NEGRO, 3)
-            pata.position.set(pl.x0 + w / 2 + sx * (w / 2 + 50), pl.y0 + h / 2 + sy * (h / 2 + 50), (zTop - 30) / 2)
-            g.add(pata)
+            const pata = caja(40, 40, Math.max(1, zTop - 42), GRAFITO, 3)
+            pata.position.set(pl.x0 + w / 2 + sx * (w / 2 + 50), pl.y0 + h / 2 + sy * (h / 2 + 50), 12 + (zTop - 42) / 2)
+            // Pata niveladora de acero.
+            const nivel = cil(26, 12, ACERO, 'z', 24, 30)
+            nivel.position.set(pata.position.x, pata.position.y, 6)
+            g.add(pata, nivel)
+          }
+          // Travesaños del bastidor, a un tercio de la altura.
+          if (zTop > 200) {
+            const zT = zTop * 0.3
+            for (const sy of [-1, 1]) {
+              const t = caja(w + 100, 26, 26, GRAFITO, 3)
+              t.position.set(pl.x0 + w / 2, pl.y0 + h / 2 + sy * (h / 2 + 50), zT)
+              g.add(t)
+            }
+            for (const sx of [-1, 1]) {
+              const t = caja(26, h + 100, 26, GRAFITO, 3)
+              t.position.set(pl.x0 + w / 2 + sx * (w / 2 + 50), pl.y0 + h / 2, zT)
+              g.add(t)
+            }
           }
         }
         if (V.espesor > 0) {
