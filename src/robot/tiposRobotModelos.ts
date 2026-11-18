@@ -16,6 +16,8 @@ export interface Junta {
   max: number
   valor: number
   unidad: string
+  /** Tramo del rango que recorre «Mover solo»; por defecto, el 60 % central. Los deslizadores usan todo el rango. */
+  anim?: [number, number]
 }
 
 export interface Info {
@@ -78,8 +80,8 @@ export const INFO: Record<Tipo, Info> = {
     gdl: 6,
     juntas: [
       { nombre: 'A1', clase: 'R', min: -170, max: 170, valor: 20, unidad: '°' },
-      { nombre: 'A2', clase: 'R', min: -150, max: 20, valor: -70, unidad: '°' },
-      { nombre: 'A3', clase: 'R', min: -30, max: 156, valor: 100, unidad: '°' },
+      { nombre: 'A2', clase: 'R', min: -150, max: 20, valor: -70, unidad: '°', anim: [-115, -40] },
+      { nombre: 'A3', clase: 'R', min: -30, max: 156, valor: 100, unidad: '°', anim: [20, 110] },
       { nombre: 'A4', clase: 'R', min: -185, max: 185, valor: 0, unidad: '°' },
       { nombre: 'A5', clase: 'R', min: -120, max: 120, valor: 50, unidad: '°' },
       { nombre: 'A6', clase: 'R', min: -350, max: 350, valor: 0, unidad: '°' },
@@ -122,13 +124,14 @@ const cyl = (r: number, h: number, m: THREE.Material, r2 = r) => {
   return x
 }
 
-/** Arma el robot y devuelve una función que lo pone en la posición de sus juntas (Y arriba). */
 /** Una pieza que se desliza por otra (eje prismático): debe seguir metida en su guía en todo el recorrido. */
 export interface Guia {
   nombre: string
   corredera: THREE.Mesh
   guia: THREE.Mesh
-  /** Largo mínimo (mm) que la corredera debe seguir metida en la guía, medido a lo largo de su eje de deslizamiento. */
+  /** Eje local de la corredera por el que se desliza (0 = x, 1 = y, 2 = z). */
+  eje: 0 | 1 | 2
+  /** Largo mínimo (mm) que la corredera debe seguir metida en la guía a lo largo de ese eje. */
   solape: number
 }
 
@@ -138,240 +141,230 @@ export interface Modelo {
   guias: Guia[]
 }
 
+/** Pone nombre a una malla (sirve para los mensajes del test) y la devuelve. */
+const nom = <T extends THREE.Mesh>(m: T, nombre: string): T => {
+  m.name = nombre
+  return m
+}
+
+/** Arma el robot y devuelve una función que lo pone en la posición de sus juntas (Y arriba). */
 export function armar(tipo: Tipo): Modelo {
   const g = new THREE.Group()
   const r = (x: number) => (x * Math.PI) / 180
   if (tipo === 'scara') {
-    const base = cyl(60, 40, OSC)
-    base.name = 'base'
+    const base = nom(cyl(60, 40, OSC), 'base')
     base.position.y = 20
-    const col = cyl(40, 300, NAR)
-    col.name = 'col'
+    const col = nom(cyl(40, 300, NAR), 'columna')
     col.position.y = 190
     g.add(base, col)
     const j1 = new THREE.Group()
     j1.position.y = 340
     g.add(j1)
-    const b1 = box(300, 50, 80, NAR)
-    b1.name = 'b1'
+    const b1 = nom(box(300, 50, 80, NAR), 'brazo 1')
     b1.position.x = 150
     j1.add(b1)
     const j2 = new THREE.Group()
     j2.position.x = 300
     j1.add(j2)
-    const b2 = box(250, 45, 70, NAR)
-    b2.name = 'b2'
+    const b2 = nom(box(250, 45, 70, NAR), 'brazo 2')
     b2.position.set(125, -45, 0)
-    const cab = cyl(45, 60, OSC)
-    cab.name = 'cab'
+    const cab = nom(cyl(45, 60, OSC), 'cabezal')
     cab.position.set(250, -45, 0)
     j2.add(b2, cab)
     const quill = new THREE.Group()
     quill.position.set(250, -45, 0)
     j2.add(quill)
-    const vara = cyl(12, 260, MET)
-    vara.name = 'vara'
+    // El eje vertical sube por dentro del cabezal: con la carrera completa (150 mm) sigue metido 40 mm.
+    const vara = nom(cyl(12, 290, MET), 'eje vertical')
     quill.add(vara)
-    const pinza = box(50, 20, 20, OSC)
-    pinza.name = 'pinza'
+    const pinza = nom(box(50, 20, 20, OSC), 'pinza')
     const giro = new THREE.Group()
     giro.add(pinza)
     quill.add(giro)
     return {
       g,
-      guias: [],
+      guias: [{ nombre: 'eje vertical en el cabezal', corredera: vara, guia: cab, eje: 1, solape: 40 }],
       poner: (v) => {
         j1.rotation.y = r(v[0])
         j2.rotation.y = r(v[1])
-        vara.position.y = -v[2]
+        vara.position.y = 15 - v[2]
         giro.position.y = -130 - v[2]
         giro.rotation.y = r(v[3])
       },
     }
   }
   if (tipo === 'cilindrico') {
-    const base = cyl(90, 40, OSC)
-    base.name = 'base'
+    const base = nom(cyl(90, 40, OSC), 'base')
     base.position.y = 20
     g.add(base)
     const j1 = new THREE.Group()
     j1.position.y = 40
     g.add(j1)
-    const col = cyl(35, 520, NAR)
-    col.name = 'col'
+    const col = nom(cyl(35, 520, NAR), 'columna')
     col.position.y = 260
     j1.add(col)
     const carro = new THREE.Group()
     j1.add(carro)
-    const bloque = box(110, 80, 110, NAR)
-    bloque.name = 'bloque'
+    const bloque = nom(box(110, 80, 110, NAR), 'carro')
     carro.add(bloque)
-    const brazo = box(300, 36, 36, MET)
-    brazo.name = 'brazo'
+    // El brazo no puede pasar por la columna: corre por un manguito que sale del carro.
+    const manguito = nom(box(300, 56, 56, OSC), 'manguito')
+    manguito.position.x = 205
+    carro.add(manguito)
+    const brazo = nom(box(320, 36, 36, MET), 'brazo')
     carro.add(brazo)
-    const mano = box(30, 60, 60, OSC)
-    mano.name = 'mano'
+    const mano = nom(box(30, 60, 60, OSC), 'mano')
     carro.add(mano)
     return {
       g,
-      guias: [],
+      guias: [
+        { nombre: 'carro en la columna', corredera: bloque, guia: col, eje: 1, solape: 80 },
+        { nombre: 'brazo en el manguito', corredera: brazo, guia: manguito, eje: 0, solape: 40 },
+      ],
       poner: (v) => {
         j1.rotation.y = r(v[0])
         carro.position.y = 60 + v[1]
-        brazo.position.x = 60 + v[2]
-        mano.position.x = 60 + v[2] + 160
+        brazo.position.x = 220 + v[2]
+        mano.position.x = 380 + v[2] + 15
       },
     }
   }
   if (tipo === 'esferico') {
-    const base = cyl(90, 40, OSC)
-    base.name = 'base'
+    const base = nom(cyl(90, 40, OSC), 'base')
     base.position.y = 20
-    const torre = box(120, 260, 120, NAR)
-    torre.name = 'torre'
+    const torre = nom(box(120, 280, 120, NAR), 'torre')
     g.add(base)
     const j1 = new THREE.Group()
     j1.position.y = 40
     g.add(j1)
     j1.add(torre)
-    torre.position.y = 130
+    torre.position.y = 140
     const j2 = new THREE.Group()
     j2.position.y = 300
     j1.add(j2)
-    const eje = cyl(40, 150, OSC)
-    eje.name = 'eje'
+    const eje = nom(cyl(40, 150, OSC), 'eje de elevación')
     eje.rotation.x = Math.PI / 2
-    const funda = box(260, 70, 70, NAR)
-    funda.name = 'funda'
-    funda.position.x = 110
+    const funda = nom(box(300, 70, 70, NAR), 'funda')
+    funda.position.x = 130
     j2.add(eje, funda)
-    const vara = box(300, 40, 40, MET)
-    vara.name = 'vara'
+    const vara = nom(box(340, 40, 40, MET), 'vara')
     j2.add(vara)
-    const mano = box(30, 60, 60, OSC)
-    mano.name = 'mano'
+    const mano = nom(box(30, 60, 60, OSC), 'mano')
     j2.add(mano)
     return {
       g,
-      guias: [],
+      guias: [{ nombre: 'vara en la funda', corredera: vara, guia: funda, eje: 0, solape: 40 }],
       poner: (v) => {
         j1.rotation.y = r(v[0])
         j2.rotation.z = r(v[1])
-        vara.position.x = 150 + v[2]
-        mano.position.x = 300 + v[2] + 10
+        vara.position.x = 160 + v[2]
+        mano.position.x = 330 + v[2] + 15
       },
     }
   }
   if (tipo === 'cartesiano') {
     const L = 800
     const W = 560
+    const YR = 520 // eje de los rieles
     for (const [x, z] of [
       [0, 0],
       [L, 0],
       [0, W],
       [L, W],
     ]) {
-      const p = box(40, 520, 40, OSC)
-      p.name = 'p'
-      p.position.set(x - L / 2, 260, z - W / 2)
+      const p = nom(box(40, YR, 40, OSC), 'columna')
+      p.position.set(x - L / 2, YR / 2, z - W / 2)
       g.add(p)
     }
-    const r1 = box(L + 40, 40, 40, NAR)
-    r1.name = 'r1'
-    r1.position.set(0, 520, -W / 2)
-    const r2 = r1.clone()
+    const r1 = nom(box(L + 40, 40, 40, NAR), 'riel 1')
+    r1.position.set(0, YR, -W / 2)
+    const r2 = nom(r1.clone(), 'riel 2')
     r2.position.z = W / 2
     g.add(r1, r2)
+    // La viga apoya sobre los rieles (arriba de ellos), no hundida.
+    const YV = YR + 20 + 20
     const puente = new THREE.Group()
     g.add(puente)
-    const viga = box(60, 50, W + 40, NAR)
-    viga.name = 'viga'
-    viga.position.y = 545
+    const viga = nom(box(60, 50, W + 40, NAR), 'viga')
+    viga.position.y = YV
     puente.add(viga)
     const carro = new THREE.Group()
     puente.add(carro)
-    const bloque = box(90, 90, 90, OSC)
-    bloque.name = 'bloque'
-    bloque.position.y = 545
+    const bloque = nom(box(90, 140, 90, OSC), 'carro Z')
+    bloque.position.y = YV
     carro.add(bloque)
-    const vara = box(34, 360, 34, MET)
-    vara.name = 'vara'
+    // Eje Z: un mástil que baja por el carro. Con la carrera completa (250 mm) sigue metido 40 mm
+    // y la mano queda 5 mm sobre la mesa.
+    const vara = nom(box(34, 505, 34, MET), 'mástil Z')
     carro.add(vara)
-    const mano = box(60, 20, 60, OSC)
-    mano.name = 'mano'
+    const mano = nom(box(60, 20, 60, OSC), 'mano')
     carro.add(mano)
-    const mesa = box(L - 60, 20, W - 60, MADERA)
-    mesa.name = 'mesa'
+    const mesa = nom(box(L - 60, 20, W - 60, MADERA), 'mesa')
     mesa.position.y = 10
     g.add(mesa)
     return {
       g,
-      guias: [],
+      guias: [
+        { nombre: 'viga sobre los rieles', corredera: viga, guia: r1, eje: 0, solape: 60 },
+        { nombre: 'carro en la viga', corredera: bloque, guia: viga, eje: 2, solape: 90 },
+        { nombre: 'mástil en el carro', corredera: vara, guia: bloque, eje: 1, solape: 40 },
+      ],
       poner: (v) => {
         puente.position.x = -L / 2 + 100 + v[0]
         carro.position.z = -W / 2 + 80 + v[1]
-        vara.position.y = 545 - 180 - v[2]
-        mano.position.y = 545 - 360 - v[2]
+        // La mano baja v[2] desde 275 mm de altura; el mástil sube hasta 805 - v[2].
+        mano.position.y = 275 - v[2] + 10
+        vara.position.y = 275 - v[2] + 20 + 505 / 2
       },
     }
   }
   if (tipo === 'angular') {
     // Cadena como la del KUKA (Y arriba).
-    const base = cyl(90, 40, OSC)
-    base.name = 'base'
+    const base = nom(cyl(90, 40, OSC), 'base')
     base.position.y = 20
     g.add(base)
     const j1 = new THREE.Group()
     j1.position.y = 40
     g.add(j1)
-    const torre = cyl(70, 300, NAR)
-    torre.name = 'torre'
+    const torre = nom(cyl(70, 300, NAR), 'torre')
     torre.position.y = 150
     j1.add(torre)
     const j2 = new THREE.Group()
-    j2.position.set(30, 360, 0)
+    j2.position.set(30, 350, 0)
     j1.add(j2)
-    const b = box(60, 60, 80, NAR)
-    b.name = 'b'
+    const b = nom(box(60, 60, 80, NAR), 'base del brazo')
     b.position.x = 0
-    const brazo = box(455, 70, 60, NAR)
-    brazo.name = 'brazo'
+    const brazo = nom(box(455, 70, 60, NAR), 'brazo')
     brazo.position.x = 227
-    const hombro = cyl(55, 130, NAR)
-    hombro.name = 'hombro'
+    const hombro = nom(cyl(55, 130, NAR), 'hombro')
     hombro.rotation.x = Math.PI / 2
     j2.add(b, brazo, hombro)
     const j3 = new THREE.Group()
     j3.position.x = 455
     j2.add(j3)
-    const codo = cyl(48, 120, NAR)
-    codo.name = 'codo'
+    const codo = nom(cyl(48, 120, NAR), 'codo')
     codo.rotation.x = Math.PI / 2
     j3.add(codo)
     const j4 = new THREE.Group()
     j4.position.y = 35
     j3.add(j4)
-    const ante = cyl(38, 380, NAR, 30)
-    ante.name = 'ante'
+    const ante = nom(cyl(38, 430, NAR, 30), 'antebrazo')
     ante.rotation.z = -Math.PI / 2
-    ante.position.x = 190
+    ante.position.x = 215
     j4.add(ante)
     const j5 = new THREE.Group()
     j5.position.x = 420
     j4.add(j5)
-    const mun = cyl(30, 90, NAR)
-    mun.name = 'mun'
+    const mun = nom(cyl(30, 90, NAR), 'muñeca')
     mun.rotation.x = Math.PI / 2
     j5.add(mun)
     const j6 = new THREE.Group()
     j5.add(j6)
-    const flange = cyl(24, 80, MET)
-    flange.name = 'flange'
+    const flange = nom(cyl(24, 80, MET), 'brida')
     flange.rotation.z = -Math.PI / 2
     flange.position.x = 50
-    const pinza = box(20, 50, 50, OSC)
-    pinza.name = 'pinza'
-    pinza.position.x = 100
+    const pinza = nom(box(20, 50, 50, OSC), 'pinza')
+    pinza.position.x = 95
     j6.add(flange, pinza)
     return {
       g,
@@ -392,31 +385,34 @@ export function armar(tipo: Tipo): Modelo {
   const L1 = 160
   const L2 = 360
   const H = 520
-  const marco = box(460, 30, 460, OSC)
-  marco.name = 'marco'
+  const marco = nom(box(460, 30, 460, OSC), 'marco')
   marco.position.y = H + 15
   g.add(marco)
-  const plataforma = cyl(rp + 10, 20, MET)
-  plataforma.name = 'plataforma'
+  // Cuatro columnas sobre la mesa sostienen el marco (antes colgaba en el aire).
+  for (const sx of [-1, 1]) {
+    for (const sz of [-1, 1]) {
+      const p = nom(box(36, H + 15 - 20, 36, OSC), 'columna')
+      p.position.set(sx * 210, 20 + (H + 15 - 20) / 2, sz * 210)
+      g.add(p)
+    }
+  }
+  const plataforma = nom(cyl(rp + 10, 20, MET), 'plataforma')
   g.add(plataforma)
   const brazos: Array<{ a: THREE.Mesh; b: THREE.Mesh; phi: number }> = []
   for (let i = 0; i < 3; i++) {
     const phi = (i * 2 * Math.PI) / 3
-    const a = box(L1, 24, 24, NAR)
-    a.name = 'a'
-    const b = box(L2, 12, 12, MET)
-    b.name = 'b'
+    const a = nom(box(L1, 24, 24, NAR), `brazo ${i + 1}`)
+    const b = nom(box(L2, 12, 12, MET), `barra ${i + 1}`)
     g.add(a, b)
-    const motor = cyl(26, 50, OSC)
-    motor.name = 'motor'
+    const motor = nom(cyl(26, 50, OSC), `motor ${i + 1}`)
+    // El eje del motor es tangente al círculo de la base: es el eje sobre el que gira el brazo.
     motor.rotation.z = Math.PI / 2
-    motor.rotation.y = -phi
+    motor.rotation.y = Math.PI / 2 - phi
     motor.position.set(R * Math.cos(phi), H, R * Math.sin(phi))
     g.add(motor)
     brazos.push({ a, b, phi })
   }
-  const mesa = box(500, 20, 500, MADERA)
-  mesa.name = 'mesa'
+  const mesa = nom(box(500, 20, 500, MADERA), 'mesa')
   mesa.position.y = 10
   g.add(mesa)
   const colocarBarra = (m: THREE.Mesh, p: THREE.Vector3, q: THREE.Vector3) => {
@@ -460,11 +456,12 @@ export function armar(tipo: Tipo): Modelo {
   }
 }
 
-/** Valores de las juntas en el segundo `t` del modo «Mover solo» (cada una oscila en el 60 % central de su rango). */
+/** Valores de las juntas en el segundo `t` del modo «Mover solo» (cada una oscila en su tramo `anim` o, si no lo tiene, en el 60 % central de su rango). */
 export function juntasEnTiempo(tipo: Tipo, t: number): number[] {
   return INFO[tipo].juntas.map((j, k) => {
-    const mid = (j.min + j.max) / 2
-    const amp = (j.max - j.min) * 0.3
+    const [a, b] = j.anim ?? [j.min + (j.max - j.min) * 0.2, j.max - (j.max - j.min) * 0.2]
+    const mid = (a + b) / 2
+    const amp = (b - a) / 2
     return mid + amp * Math.sin(t * (0.6 + 0.23 * k) + k)
   })
 }
