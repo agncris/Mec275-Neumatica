@@ -2736,7 +2736,7 @@ body:has(.banco:not(.banco--apilado):not(.banco--neumatica-apilado)) {
   margin: 4px 0 0;
   font-size: 0.76rem;
   color: #64717f;
-
+}
 /* CNC: el editor de código G en su caja, y en la tarea la guía como columna fija a su lado. */
 .editor-cnc {
   display: flex;
