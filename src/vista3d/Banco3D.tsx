@@ -774,17 +774,7 @@ export default function Banco3D({ motor, llenar = false, play, onSinWebGL }: Pro
         </p>
       )}
       <div style={barra}>
-        <button
-          style={boton}
-          onClick={() => {
-            setVistaCamara('iso')
-            encuadrarRef.current()
-            resaltarCambio.actual = true
-          }}
-          title="Volver a ver el banco entero"
-        >
-          Encuadrar
-        </button>
+        {/* Volver a ver el banco entero: la casita del cubo de vistas. */}
         <button
           style={{ ...boton, background: resaltarAire ? 'var(--azul)' : '#fff', color: resaltarAire ? '#fff' : 'var(--tinta)' }}
           onClick={() => setResaltarAire((v) => !v)}
