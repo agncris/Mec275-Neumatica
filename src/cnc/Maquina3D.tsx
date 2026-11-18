@@ -180,7 +180,11 @@ function perfilTorno(ext: Float32Array, int: Float32Array, z0: number, paso: num
  * El inserto sí llega al material; el cuello es angosto y el mango queda
  * por encima del bruto, sesgado hacia el lado ya mecanizado y hacia la torreta.
  */
-function modeloHerramientaTorno(h: HerramientaTorno, radioBruto: number): THREE.Group {
+/**
+ * Herramienta del torno con su portaherramientas. `torreta` es el centro de la torreta respecto
+ * de la punta: el porta sube hasta ella, para que la herramienta no quede flotando.
+ */
+function modeloHerramientaTorno(h: HerramientaTorno, radioBruto: number, torreta: { y: number; z: number }): THREE.Group {
   const g = new THREE.Group()
   const color = new THREE.MeshStandardMaterial({ color: h.color, metalness: 0.48, roughness: 0.38 })
   if (h.forma === 'broca') {
@@ -201,7 +205,18 @@ function modeloHerramientaTorno(h: HerramientaTorno, radioBruto: number): THREE.
     const barra = caja(11, 58, 11, M.aceroOscuro, 1.4)
     barra.geometry.translate(0, 29, 0)
     barra.position.set(punta + salida + 7, radioBruto + 6, -8)
-    g.add(cono, cuerpo, porta, barra)
+    // Brazo que une la barra con la torreta: sin él, la broca quedaba colgando en el aire.
+    const xBarra = punta + salida + 7
+    const brazo = caja(xBarra + 6, 12, 12, M.aceroOscuro, 1.4)
+    brazo.position.set(xBarra / 2, radioBruto + 58, -8)
+    const yTope = torreta.y - 20
+    const subida = Math.max(0, yTope - (radioBruto + 58))
+    if (subida > 0) {
+      const poste = caja(14, subida + 6, 14, M.aceroOscuro, 1.4)
+      poste.position.set(0, radioBruto + 58 + subida / 2, -8)
+      g.add(poste)
+    }
+    g.add(cono, cuerpo, porta, barra, brazo)
     return g
   }
   // Inserto: contorno inferior según la envolvente, arriba plano.
@@ -242,6 +257,19 @@ function modeloHerramientaTorno(h: HerramientaTorno, radioBruto: number): THREE.
   mango.position.set(xCuello, despeje - 0.4, 0)
   mango.rotation.z = -sesgo * 0.32
   mango.rotation.x = -0.48
+  // Portaherramientas: del extremo del mango hasta dentro de la torreta, del mismo color que la herramienta.
+  // El extremo del mango: 34 mm inclinado 0,48 rad hacia la torreta y 0,32 rad hacia el lado.
+  const yMango = despeje + 34 * Math.cos(0.48) * Math.cos(0.32)
+  const xMango = xCuello + sesgo * 34 * Math.sin(0.32)
+  const zMango = -34 * Math.sin(0.48)
+  const yTorreta = torreta.y - 34
+  const yPie = yMango - 12
+  if (yTorreta > yPie) {
+    const alto = yTorreta - yPie
+    const porta = caja(17, alto, 17, color, 1.6)
+    porta.position.set(xMango, yPie + alto / 2, zMango)
+    g.add(porta)
+  }
   g.add(inserto, cuello, mango)
   return g
 }
@@ -545,14 +573,15 @@ function escenaTorno(sim: SimuladorCNC): EscenaMaquina {
   // Torreta y herramienta.
   const carro = new THREE.Group()
   const torreta = new THREE.Group()
-  const disco = cil(58, 40, M.pintura, 12)
+  // Torreta oscura y tapa de acero: se separa del carenado gris y del fondo.
+  const disco = cil(58, 40, M.fundicion, 12)
   disco.rotation.x = Math.PI / 2
-  const tapa = cil(30, 44, M.pinturaOscura, 24)
+  const tapa = cil(30, 44, M.acero, 24)
   tapa.rotation.x = Math.PI / 2
   torreta.add(disco, tapa)
   // La torreta queda detrás y por encima del bruto: el disco no baja al cilindro.
   torreta.position.set(0, Math.max(128, R + 78), -R * 0.35 - 22)
-  const soporte = caja(64, 44, 52, M.pintura, 4)
+  const soporte = caja(64, 44, 52, M.pinturaOscura, 4)
   soporte.position.set(0, Math.max(176, R + 126), -R * 0.45 - 30)
   carro.add(torreta, soporte)
   raiz.add(carro)
@@ -635,7 +664,7 @@ function escenaTorno(sim: SimuladorCNC): EscenaMaquina {
         hHerr = hNueva
         if (herr) carro.remove(herr)
         const h = hNueva
-        herr = h ? modeloHerramientaTorno(h, R) : new THREE.Group()
+        herr = h ? modeloHerramientaTorno(h, R, { y: torreta.position.y, z: torreta.position.z }) : new THREE.Group()
         carro.add(herr)
         giroTorreta += Math.PI / 6
       }

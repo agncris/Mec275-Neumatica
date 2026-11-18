@@ -3,7 +3,7 @@
  * Girar da vueltas alrededor de la escena, Mover la desplaza y Zoom
  * acerca o aleja al arrastrar hacia arriba o abajo.
  */
-import { Vector3 } from 'three'
+import { Raycaster, Vector2, Vector3, type Camera, type Object3D } from 'three'
 import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
 /** Los mismos números que THREE.MOUSE / THREE.TOUCH (no están en los tipos de esta versión). */
@@ -128,6 +128,38 @@ export function cursoresCamara(c: OrbitControls, el: HTMLElement): () => void {
     window.removeEventListener('pointerup', alSubir)
     window.removeEventListener('pointercancel', alSubir)
     el.style.cursor = ''
+  }
+}
+
+/**
+ * Sobre un botón, una válvula o cualquier cosa que se pueda pulsar, el cursor pasa a ser
+ * la mano de «clic»; fuera de ellos vuelve al de la cámara (girar, mover o zoom).
+ */
+export function cursorPulsables(c: OrbitControls, el: HTMLElement, camara: Camera, pulsables: () => Object3D[]): () => void {
+  const rayo = new Raycaster()
+  const p = new Vector2()
+  let sobre = false
+  const mover = (e: PointerEvent) => {
+    if (e.buttons !== 0 || e.pointerType === 'touch') return
+    const r = el.getBoundingClientRect()
+    p.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1)
+    rayo.setFromCamera(p, camara)
+    const toca = rayo.intersectObjects(pulsables(), true).length > 0
+    if (toca === sobre) return
+    sobre = toca
+    if (toca) el.style.cursor = 'pointer'
+    else alSoltarModo.get(c)?.()
+  }
+  const salir = () => {
+    if (!sobre) return
+    sobre = false
+    alSoltarModo.get(c)?.()
+  }
+  el.addEventListener('pointermove', mover)
+  el.addEventListener('pointerleave', salir)
+  return () => {
+    el.removeEventListener('pointermove', mover)
+    el.removeEventListener('pointerleave', salir)
   }
 }
 

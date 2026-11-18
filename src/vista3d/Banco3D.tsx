@@ -15,7 +15,7 @@
  */
 import HudEscena from '../components/HudEscena'
 import { BotonPlayEscena, type PlayEscena } from '../components/PlayEscena'
-import { aplicarModoArrastre, saltarVista, zoomCamara, type ModoArrastre, type VistaCamara } from '../components/mandoCamara'
+import { aplicarModoArrastre, cursorPulsables, saltarVista, zoomCamara, type ModoArrastre, type VistaCamara } from '../components/mandoCamara'
 import { acercar, useTactil } from '../components/ui'
 import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
@@ -630,6 +630,8 @@ export default function Banco3D({ motor, llenar = false, play }: Props) {
     }
     renderer.domElement.addEventListener('pointerdown', onDown)
     window.addEventListener('pointerup', onUp)
+    // Sobre un pulsador o una válvula de mando, el cursor es la mano de clic.
+    const quitarCursorPulsables = cursorPulsables(controles, renderer.domElement, camara, () => pulsables)
 
     // --- bucle ------------------------------------------------------------------
     // Sólo se repinta cuando algo cambia (simulación en marcha, cámara en
@@ -699,6 +701,7 @@ export default function Banco3D({ motor, llenar = false, play }: Props) {
 
     return () => {
       renderer.domElement.removeEventListener('pointerdown', onDown)
+      quitarCursorPulsables()
       window.removeEventListener('pointerup', onUp)
       controlesRef.current = null
       base.destruir(() => {

@@ -10,7 +10,7 @@
  */
 import HudEscena from '../components/HudEscena'
 import { BotonPlayEscena, type PlayEscena } from '../components/PlayEscena'
-import { aplicarModoArrastre, saltarVista, zoomCamara, type ModoArrastre, type VistaCamara } from '../components/mandoCamara'
+import { aplicarModoArrastre, cursorPulsables, saltarVista, zoomCamara, type ModoArrastre, type VistaCamara } from '../components/mandoCamara'
 import { acercar, useCelular, useTactil } from '../components/ui'
 import { useEffect, useRef, useState, type MutableRefObject } from 'react'
 import * as THREE from 'three'
@@ -266,6 +266,8 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
     }
     renderer.domElement.addEventListener('pointerdown', onDown)
     window.addEventListener('pointerup', onUp)
+    // Sobre un mando, el cursor es la mano de clic y no el de girar.
+    const quitarCursorPulsables = cursorPulsables(controles, renderer.domElement, camara, () => planta.pulsables)
 
     const proyectada = new THREE.Vector3()
     const pan = (v: THREE.Vector3) => THREE.MathUtils.clamp(proyectada.copy(v).project(camara).x * 0.85, -1, 1)
@@ -279,6 +281,7 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
 
     return () => {
       renderer.domElement.removeEventListener('pointerdown', onDown)
+      quitarCursorPulsables()
       renderer.domElement.removeEventListener('wheel', alGirarRueda)
       window.removeEventListener('pointerup', onUp)
       controlesRef.current = null
