@@ -40,7 +40,8 @@ import TablaPuntos from './TablaPuntos'
 import PlanoTarea, { EJEMPLO_GUIADO_TORNO } from './PlanoTarea'
 import ResumenRevision from './ResumenRevision'
 import PanelEntrega from './PanelEntrega'
-import BarraCNC, { SelectorVelocidad } from './BarraCNC'
+import BarraCNC, { VELOCIDADES_CNC } from './BarraCNC'
+import BarraTiempo from '../components/BarraTiempo'
 import { useBucleSimulacion, useGrabacionCNC } from './useSimulacionCNC'
 import { botonSuave } from './estilos'
 import { SimuladorCNC, volumenPieza } from './simulador'
@@ -273,6 +274,19 @@ export default function UnidadCNC() {
     setEstado(objetivo === 0 ? 'listo' : 'pausa')
     setTick((t) => t + 1)
   }
+  /** Lleva la máquina a un instante del programa: simula de nuevo desde el inicio hasta ahí (no cambia la lógica, solo la reproduce). */
+  const buscarTiempo = (t: number) => {
+    const nuevo = new SimuladorCNC(resultado, config, casa)
+    let guarda = 0
+    while (nuevo.tiempo < t - 1e-9 && !nuevo.terminado && !nuevo.alarma && guarda++ < 100000) {
+      if (nuevo.parado) nuevo.continuar()
+      nuevo.avanzar(t - nuevo.tiempo)
+    }
+    nuevo.cortando = 0
+    vista.current.sim = nuevo
+    setEstado(nuevo.alarma ? 'alarma' : nuevo.terminado ? 'fin' : t <= 0 ? 'listo' : 'pausa')
+    setTick((n) => n + 1)
+  }
   const alFinal = () => {
     if (estado === 'fin' || estado === 'alarma') vista.current.sim = new SimuladorCNC(resultado, config, casa)
     vista.current.sim.terminar()
@@ -419,7 +433,6 @@ export default function UnidadCNC() {
   const bloqueado = estado === 'corriendo' || estado === 'bloque'
   const nombreMaquina = torno ? 'Centro de torneado' : 'Fresadora de 3 ejes'
 
-  const selectorVelocidad = <SelectorVelocidad velocidad={velocidad} setVelocidad={setVelocidad} estrecha={estrecha} />
   const itemsArchivo = [
     { texto: 'Nuevo programa', ayuda: 'Un programa en blanco para esta máquina', onClick: () => void nuevo() },
     { texto: 'Abrir…', ayuda: 'Un trabajo (.json) o un programa .cnc, .nc, .gcode o .txt (también de CNC Simulator Pro)', onClick: () => inputArchivo.current?.click() },
@@ -452,7 +465,6 @@ export default function UnidadCNC() {
       enTarea={enTarea}
       bloqueado={bloqueado}
       nuevo={nuevo}
-      selectorVelocidad={selectorVelocidad}
       maquina={maquina}
       setEligiendoMaquina={setEligiendoMaquina}
       guia={guia}
@@ -530,6 +542,15 @@ export default function UnidadCNC() {
           />
         </Suspense>
       </div>
+      <BarraTiempo
+        tiempo={Math.min(sim.tiempo, resultado.tiempoTotal)}
+        total={resultado.tiempoTotal}
+        onBuscar={buscarTiempo}
+        velocidad={velocidad}
+        velocidades={VELOCIDADES_CNC}
+        onVelocidad={setVelocidad}
+        deshabilitada={!resultado.pasos.length}
+      />
       <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 6, fontSize: '0.85rem', color: 'var(--tinta)' }}>
         <label className="u-fila-5">
           <input type="checkbox" checked={trayectoria} onChange={(e) => setTrayectoria(e.target.checked)} /> Trayectoria
@@ -542,7 +563,6 @@ export default function UnidadCNC() {
         <label className="u-fila-5" title="Husillo, corte y ejes; se activa al hacer clic en la vista 3D">
           <input type="checkbox" checked={sonido} onChange={(e) => setSonido(e.target.checked)} /> Sonido
         </label>
-        {estrecha && selectorVelocidad}
         <span className="u-suave">Arrastra para girar la vista · {acercar(tactil)}.</span>
       </div>
       <Tablero sim={sim} torno={torno} paso={paso} ultimo={ultimo} modal={estadoModal} tiempoTotal={resultado.tiempoTotal} volumen={volumen} volumenInicial={volumenInicial} />

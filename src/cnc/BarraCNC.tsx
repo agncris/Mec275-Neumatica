@@ -1,28 +1,12 @@
-import type { ReactNode, RefObject } from 'react'
+import type { RefObject } from 'react'
 import type { ItemMenu } from '../components/ui'
 import { BotonNuevo, botonPrimario, botonSecundario, Menu } from '../components/ui'
 import { type TipoMaquina } from './maquinas'
-import { rotulo, selector } from './estilos'
 import { MAQUINAS } from './SelectorMaquina'
 import { NOMBRE_TAREA } from './datosCNC'
 
-const VELOCIDADES = [0.5, 1, 2, 5, 10, 25, 60]
-
-/** El selector de velocidad de la simulación (en la barra, o junto a la máquina en pantallas estrechas). */
-export function SelectorVelocidad({ velocidad, setVelocidad, estrecha }: { velocidad: number; setVelocidad: (v: number) => void; estrecha: boolean }) {
-  return (
-  <label style={{ ...rotulo }} title="Velocidad de la simulación">
-    Velocidad
-    <select value={velocidad} onChange={(e) => setVelocidad(Number(e.target.value))} style={{ ...selector, minHeight: estrecha ? 32 : 36 }} aria-label="Velocidad" data-velocidad-cnc="si">
-      {VELOCIDADES.map((v) => (
-        <option key={v} value={v}>
-          ×{v}
-        </option>
-      ))}
-    </select>
-  </label>
-  )
-}
+/** Velocidades de la simulación: se eligen en la barra de tiempo bajo la máquina. */
+export const VELOCIDADES_CNC = [0.5, 1, 2, 5, 10, 25, 60]
 
 /** La barra de arriba de CNC: ciclo, avance por bloques, máquina, Archivo y Exportar. */
 export default function BarraCNC({
@@ -38,7 +22,6 @@ export default function BarraCNC({
   enTarea,
   bloqueado,
   nuevo,
-  selectorVelocidad,
   maquina,
   setEligiendoMaquina,
   guia,
@@ -61,7 +44,6 @@ export default function BarraCNC({
   enTarea: boolean
   bloqueado: boolean
   nuevo: () => void
-  selectorVelocidad: ReactNode
   maquina: TipoMaquina
   setEligiendoMaquina: (v: boolean) => void
   guia: { abrir: () => void }
@@ -126,7 +108,6 @@ export default function BarraCNC({
       </span>
       {/* Igual que en las otras unidades: acción principal, «Nuevo» y después los selectores. */}
       <BotonNuevo que="un programa" compacto={estrecha} deshabilitado={bloqueado} onClick={() => void nuevo()} />
-      {!estrecha && selectorVelocidad}
       {botonMaquina}
       <span className="u-barra-derecha">
         {!estrecha && (

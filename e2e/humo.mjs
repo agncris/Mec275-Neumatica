@@ -94,6 +94,8 @@ async function main() {
     await p.locator('[data-selector-ejemplos="si"]').selectOption({ index: 1 })
     await simular.click()
     await esperar(p.getByRole('button', { name: /Detener/ }), 'la simulación no arrancó')
+    await esperar(p.locator('[data-play-escena="si"][aria-label="Parar"]'), 'el play de la escena no pasó a ■')
+    await esperar(p.locator('[data-reproductor="si"]'), 'no está la barra de tiempo')
     await esperar(p.locator('svg#pizarra-svg'), 'no hay pizarra')
   }, navegador)
 
@@ -101,6 +103,7 @@ async function main() {
     await abrir(p, 'plc')
     await esperar(p.getByRole('button', { name: /RUN/ }).first(), 'no aparece ▶ RUN')
     await p.getByRole('button', { name: /RUN/ }).first().click()
+    await esperar(p.locator('[data-play-escena="si"][aria-label="Parar"]'), 'el play de la escena no pasó a ■')
     await lienzoConDibujo(p)
   }, navegador)
 
@@ -108,6 +111,8 @@ async function main() {
     await abrir(p, 'cnc')
     await esperar(p.getByRole('button', { name: /Ciclo/ }).first(), 'no aparece ▶ Ciclo')
     await p.getByRole('button', { name: /Ciclo/ }).first().click()
+    await esperar(p.locator('[data-play-escena="si"][aria-label="Pausa"]'), 'el play de la escena no pasó a ❚❚')
+    await esperar(p.locator('[data-reproductor="si"] input[type=range]'), 'no está el deslizador de tiempo')
     await lienzoConDibujo(p)
   }, navegador)
 
