@@ -70,6 +70,7 @@ describe('MecBot: revisión de la petición', () => {
 
   it('una petición buena llega al modelo y devuelve el texto', async () => {
     vi.stubEnv('MEC_BOT_API_KEY', 'clave-de-prueba')
+    vi.stubEnv('MEC_BOT_CLAUDE_API_KEY', '')
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({ choices: [{ message: { content: 'Hola, soy MecBot.' } }] }), { status: 200 }))
     vi.stubGlobal('fetch', fetchMock)
     const r = await atenderPeticion({ cabeceras: { ...JSON_OK, origin: 'https://mec275.vercel.app' }, texto: JSON.stringify({ mensajes: [{ rol: 'alumno', texto: 'pregunta única de prueba 5.3' }] }), ip: 'prueba-5-3' })

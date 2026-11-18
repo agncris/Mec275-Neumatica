@@ -17,6 +17,7 @@ describe('apuntes de MecBot', () => {
 
   it('le pregunta al modelo aunque la ficha exista', async () => {
     vi.stubEnv('MEC_BOT_API_KEY', 'clave-de-prueba')
+    vi.stubEnv('MEC_BOT_CLAUDE_API_KEY', '')
     const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => new Response(JSON.stringify({
       choices: [{ message: { content: 'Una singularidad aparece cuando A5 queda en 0.' } }],
     }), { status: 200 }))
@@ -53,6 +54,7 @@ describe('apuntes de MecBot', () => {
 
   it('pide al modelo una guía y no corta con el muro', async () => {
     vi.stubEnv('MEC_BOT_API_KEY', 'clave-de-prueba')
+    vi.stubEnv('MEC_BOT_CLAUDE_API_KEY', '')
     const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => new Response(JSON.stringify({
       choices: [{ message: { content: 'El siguiente paso es Offset en el contorno. ¿Qué bloques tienes ya en el lienzo?' } }],
     }), { status: 200 }))
@@ -98,12 +100,14 @@ describe('atender: la respuesta HTTP de MecBot', () => {
 
   it('sin clave del modelo da 503', async () => {
     vi.stubEnv('MEC_BOT_API_KEY', '')
+    vi.stubEnv('MEC_BOT_CLAUDE_API_KEY', '')
     const r = await atender({ mensajes: [{ rol: 'alumno', texto: 'pregunta que nadie ha hecho antes 8271' }] }, 'ip-2')
     expect(r).toEqual({ status: 503, json: { error: 'sin-clave' } })
   })
 
   it('una respuesta del modelo sale como { texto } con 200', async () => {
     vi.stubEnv('MEC_BOT_API_KEY', 'clave-de-prueba')
+    vi.stubEnv('MEC_BOT_CLAUDE_API_KEY', '')
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ choices: [{ message: { content: 'Respuesta de prueba.' } }] }), { status: 200 })))
     const r = await atender({ mensajes: [{ rol: 'alumno', texto: 'otra pregunta distinta 5530' }] }, 'ip-3')
     expect(r).toEqual({ status: 200, json: { texto: 'Respuesta de prueba.' } })
@@ -111,6 +115,7 @@ describe('atender: la respuesta HTTP de MecBot', () => {
 
   it('un fallo inesperado da 502 con el código red', async () => {
     vi.stubEnv('MEC_BOT_API_KEY', 'clave-de-prueba')
+    vi.stubEnv('MEC_BOT_CLAUDE_API_KEY', '')
     vi.stubGlobal('fetch', vi.fn(async () => {
       throw new Error('sin red')
     }))
