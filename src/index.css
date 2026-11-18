@@ -2584,3 +2584,36 @@ body:has(.banco:not(.banco--apilado):not(.banco--neumatica-apilado)) {
   background: #fff;
   border: 1px solid #c9d9ee;
 }
+/* Leyenda del corte sobre la escena del robot. */
+.leyenda-corte {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  margin: 0;
+  display: flex;
+  gap: 12px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 1px 3px rgba(20, 30, 40, 0.18);
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: #33414f;
+  pointer-events: none;
+}
+.leyenda-corte span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.leyenda-corte i {
+  display: inline-block;
+  width: 22px;
+  height: 0;
+}
+.leyenda-corte__hecho {
+  border-top: 3px solid #ff7a14;
+}
+.leyenda-corte__falta {
+  border-top: 2px solid rgba(22, 104, 199, 0.6);
+}

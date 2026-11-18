@@ -15,6 +15,9 @@ import { useEffect, useRef, useState, type CSSProperties, type MutableRefObject,
 import { crearEscena } from '../vista3d/escena'
 import { type ViewCube } from '../vista3d/viewcube'
 import * as THREE from 'three'
+import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js'
+import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeometry.js'
+import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { entornoEstudio, sombraContacto } from '../vista3d/realista'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
@@ -423,6 +426,7 @@ export default function Robot3D({
   const accion = useRef<((v: Vista) => void) | null>(null)
   const [vistaActual, setVistaActual] = useState<Vista>('iso')
   const [detalle, setDetalle] = useState(false)
+  const [hayCorte, setHayCorte] = useState(false)
   const detalleRef = useRef(false)
   detalleRef.current = detalle
   const grabandoRef = useRef(false)
@@ -515,6 +519,22 @@ export default function Robot3D({
     let selObj: Previa | null = null
     let simObj: Simulacion | null = null
     let camino: THREE.Line | null = null
+    // El recorrido de corte sobre la plancha: lo ya cortado en línea llena y lo que falta en línea cortada.
+    let corteHecho: LineSegments2 | null = null
+    let corteFalta: LineSegments2 | null = null
+    const tamLienzo = new THREE.Vector2()
+    let finTramo: number[] = []
+    const soltarCorte = () => {
+      for (const l of [corteHecho, corteFalta]) {
+        if (!l) continue
+        mundo.remove(l)
+        l.geometry.dispose()
+        ;(l.material as THREE.Material).dispose()
+      }
+      corteHecho = null
+      corteFalta = null
+      finTramo = []
+    }
     let stock: StockPlancha | null = null
     let claveCorte = ''
     const virutas = new Virutas()
@@ -666,18 +686,26 @@ export default function Robot3D({
           ;(camino.material as THREE.Material).dispose()
         }
         camino = null
+        soltarCorte()
         if (V.sim && V.sim.muestras.length > 1) {
           const ms = V.sim.muestras
           const corta = V.herramienta.tipo === 'fresa' || V.herramienta.tipo === 'taladro'
           const enAire = (z: number) => V.base.o.z - z < 0.12
           const pts: THREE.Vector3[] = []
           const col: number[] = []
+          const ptsCorte: THREE.Vector3[] = []
           const tono = (estado: string) => (estado === 'error' ? [0.85, 0.1, 0.1] : estado === 'aviso' ? [0.95, 0.55, 0.05] : [0.12, 0.62, 0.3])
           for (let i = 1; i < ms.length; i++) {
             const a = ms[i - 1]
             const b = ms[i]
-            // Dentro del material la marca es el surco, no la línea del centro. Un PTP no se esconde.
-            if (b.corta && corta && !enAire(a.tcp.z) && !enAire(b.tcp.z)) continue
+            // Dentro del material la marca es el surco y la línea de corte. Un PTP no se esconde.
+            if (b.corta && corta && !enAire(a.tcp.z) && !enAire(b.tcp.z)) {
+              // Sobre la cara de la plancha, para que se vea desde cualquier ángulo.
+              const zc = V.base.o.z + 0.6
+              ptsCorte.push(new THREE.Vector3(a.tcp.x, a.tcp.y, zc), new THREE.Vector3(b.tcp.x, b.tcp.y, zc))
+              finTramo.push(i)
+              continue
+            }
             pts.push(tv(a.tcp), tv(b.tcp))
             col.push(...tono(a.estado), ...tono(b.estado))
           }
@@ -688,6 +716,20 @@ export default function Robot3D({
             camino.renderOrder = 4
             mundo.add(camino)
           }
+          if (ptsCorte.length > 1) {
+            // Líneas gruesas (en píxeles), sin trazos: los tramos son cortos y los trazos se verían como ruido. Lo que falta va al revés, para dibujar solo «los últimos n» tramos.
+            const plano = (v: THREE.Vector3[]) => v.flatMap((q) => [q.x, q.y, q.z])
+            const alReves: THREE.Vector3[] = []
+            for (let t = ptsCorte.length - 2; t >= 0; t -= 2) alReves.push(ptsCorte[t], ptsCorte[t + 1])
+            const gFalta = new LineSegmentsGeometry().setPositions(plano(alReves))
+            corteFalta = new LineSegments2(gFalta, new LineMaterial({ color: 0x1668c7, linewidth: 2, transparent: true, opacity: 0.6 }))
+            corteFalta.renderOrder = 6
+            const gHecho = new LineSegmentsGeometry().setPositions(plano(ptsCorte))
+            corteHecho = new LineSegments2(gHecho, new LineMaterial({ color: 0xff7a14, linewidth: 3.5 }))
+            corteHecho.renderOrder = 7
+            mundo.add(corteFalta, corteHecho)
+          }
+          setHayCorte(!!corteFalta)
         }
         simObj = V.sim
         claveCorte = ''
@@ -711,6 +753,24 @@ export default function Robot3D({
       if (previa) previa.visible = !limpio
       if (camino) camino.visible = !limpio
       const iVis = V.sim ? indiceVisual(V.sim, V.q, V.indice) : 0
+      if (corteHecho && corteFalta) {
+        // Los tramos van en orden: los que ya terminaron se dibujan llenos y el resto cortado.
+        let k = 0
+        let hi = finTramo.length
+        while (k < hi) {
+          const m = (k + hi) >> 1
+          if (finTramo[m] <= iVis) k = m + 1
+          else hi = m
+        }
+        corteHecho.geometry.instanceCount = k
+        corteFalta.geometry.instanceCount = finTramo.length - k
+        renderer.getSize(tamLienzo)
+        corteHecho.material.resolution.copy(tamLienzo)
+        corteFalta.material.resolution.copy(tamLienzo)
+        corteHecho.visible = !limpio
+        // Con el recorrido a la vista, las líneas del dibujo estorban: se esconden al empezar a cortar.
+        if (previa && k > 0) previa.visible = false
+      }
       if (stock) stock.aplicar(iVis, ahora / 1000, !V.corriendo)
       const enCorte = !!(V.corriendo && V.sim && cortandoAhora(V.sim, iVis, V.base.o.z) && !menosMovimiento.matches && (V.herramienta.tipo === 'fresa' || V.herramienta.tipo === 'taladro'))
       if (enCorte && robot) {
@@ -786,6 +846,7 @@ export default function Robot3D({
       base.destruir()
       virutas.dispose()
       stock?.dispose()
+      soltarCorte()
       controlesRef.current = null
       gizmoRef.current = null
       onCanvas?.(null)
@@ -853,6 +914,12 @@ export default function Robot3D({
       </div>
       <div style={{ position: 'relative', flex: llena ? 1 : undefined, height: llena ? undefined : alto, minHeight: llena ? 0 : undefined, display: 'flex' }}>
         <div ref={contRef} style={{ position: 'relative', width: '100%', flex: 1, minHeight: 0, borderRadius: 8, overflow: 'hidden', background: '#e7ebf0' }} />
+        {hayCorte && (
+          <p className="leyenda-corte" aria-label="Leyenda del corte">
+            <span><i className="leyenda-corte__hecho" aria-hidden="true" />Ya cortado</span>
+            <span><i className="leyenda-corte__falta" aria-hidden="true" />Por cortar</span>
+          </p>
+        )}
         <div className="flechas-cubo" role="group" aria-label="Girar la vista 90 grados">
           {(
             [
