@@ -16,3 +16,6 @@ scripts/diag-layout.mts
 scripts/verificar-cruces.mts
 scripts/exportar-svg-layout.mts
 *.tsbuildinfo
+
+# Registro local de MecBot: preguntas de alumnos. No se sube.
+registro-mecbot*.jsonl

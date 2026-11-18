@@ -56,7 +56,7 @@ function versionDelServiceWorker(): Plugin {
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  for (const clave of ['MEC_BOT_API_KEY', 'MEC_BOT_URL', 'MEC_BOT_MODELO']) {
+  for (const clave of ['MEC_BOT_API_KEY', 'MEC_BOT_URL', 'MEC_BOT_MODELO', 'MEC_BOT_CLAUDE_API_KEY', 'MEC_BOT_CLAUDE_MODELO', 'MEC_BOT_TOPE_HORA', 'MEC_BOT_TOPE_DIA', 'MEC_BOT_REGISTRO']) {
     if (env[clave]) process.env[clave] = env[clave]
   }
   return {

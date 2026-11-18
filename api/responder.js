@@ -3,6 +3,7 @@
  * Cada pregunta la contesta el modelo, con los apuntes del curso como contexto.
  * Guía el estudio y no entrega la resolución de las tareas.
  * Hay una caché de la misma pregunta y un tope por alumno.
+ * Usa Claude si hay MEC_BOT_CLAUDE_API_KEY (con Groq de respaldo) y Groq si solo hay MEC_BOT_API_KEY.
  *
  * Límite conocido: la caché y el cupo por IP viven en la memoria de cada instancia
  * de la función. En Vercel una instancia nueva parte de cero, así que el cupo es un
@@ -16,10 +17,40 @@ const URL_DEFECTO = 'https://api.groq.com/openai/v1/chat/completions'
 /** Groq retiró llama-3.3-70b-versatile. Este es el reemplazo que recomiendan. */
 const MODELO_DEFECTO = 'openai/gpt-oss-120b'
 const MODELOS_RETIRADOS = new Set(['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'])
+/** Con MEC_BOT_CLAUDE_API_KEY, MecBot usa Claude y Groq queda de respaldo. */
+const MODELO_CLAUDE = 'claude-sonnet-5-5'
 const MAX_MENSAJES = 10
 const MAX_TEXTO = 700
 const TOPE_HORA = 12
 const TOPE_DIA = 40
+
+/**
+ * Tope por IP. Se puede cambiar con MEC_BOT_TOPE_HORA y MEC_BOT_TOPE_DIA, por ejemplo
+ * para un control con MecBot en el computador del proyector. 0 quita el tope.
+ */
+export function topes() {
+  const leer = (nombre, defecto) => {
+    const v = Number(process.env[nombre])
+    return process.env[nombre] !== undefined && process.env[nombre] !== '' && Number.isFinite(v) && v >= 0 ? v : defecto
+  }
+  return { hora: leer('MEC_BOT_TOPE_HORA', TOPE_HORA), dia: leer('MEC_BOT_TOPE_DIA', TOPE_DIA) }
+}
+
+/**
+ * Si MEC_BOT_REGISTRO tiene la ruta de un archivo, cada pregunta y su respuesta se agregan
+ * ahí, una línea JSON por consulta (fecha, pregunta, respuesta). Sirve solo en local:
+ * en Vercel el disco es de solo lectura. No guarda la IP ni datos del alumno.
+ */
+async function registrar(pregunta, respuesta) {
+  const ruta = process.env.MEC_BOT_REGISTRO
+  if (!ruta) return
+  try {
+    const { appendFile } = await import('node:fs/promises')
+    await appendFile(ruta, JSON.stringify({ fecha: new Date().toISOString(), pregunta, respuesta }) + '\n', 'utf8')
+  } catch (e) {
+    console.error('mecbot: no se pudo escribir el registro', e && e.message)
+  }
+}
 const CACHE_MAX = 200
 /** Tamaño máximo del cuerpo de una petición: 10 mensajes de 700 letras caben de sobra. */
 export const MAX_CUERPO = 32 * 1024
@@ -87,7 +118,8 @@ function permiteModelo(ip) {
     c.hora0 = ahora
     c.hora = 0
   }
-  if (c.hora >= TOPE_HORA || c.dia >= TOPE_DIA) {
+  const tope = topes()
+  if ((tope.hora > 0 && c.hora >= tope.hora) || (tope.dia > 0 && c.dia >= tope.dia)) {
     cupos.set(ip, c)
     return false
   }
@@ -103,14 +135,15 @@ export async function responder(entrada, ip = 'local') {
 
   const recordada = claveCache(mensajes)
   const guardada = recordada ? cache.get(recordada) : null
-  if (guardada && Date.now() - guardada.t < 6 * 3_600_000) return guardada.texto
+  if (guardada && Date.now() - guardada.t < 6 * 3_600_000) {
+    await registrar(pregunta, guardada.texto)
+    return guardada.texto
+  }
 
-  const clave = process.env.MEC_BOT_API_KEY
-  if (!clave) throw new ErrorBot('sin-clave', 503)
+  const claveClaude = process.env.MEC_BOT_CLAUDE_API_KEY
+  const claveGroq = process.env.MEC_BOT_API_KEY
+  if (!claveClaude && !claveGroq) throw new ErrorBot('sin-clave', 503)
   if (!permiteModelo(ip || 'local')) throw new ErrorBot('cupo', 429)
-  const url = process.env.MEC_BOT_URL || URL_DEFECTO
-  const pedido = process.env.MEC_BOT_MODELO || MODELO_DEFECTO
-  const modelo = MODELOS_RETIRADOS.has(pedido) ? MODELO_DEFECTO : pedido
   const contexto = contextoDe(pregunta)
   const limite = pideSolucion(pregunta)
     ? '\n\nEsta pregunta pide la solución hecha. No la escribas: guía el siguiente paso y pregunta qué tiene ya en el lienzo y qué aviso le aparece.'
@@ -118,6 +151,76 @@ export async function responder(entrada, ip = 'local') {
   const sistema = (contexto
     ? `${SISTEMA}\n\nApuntes del curso. Si alcanzan, responde solo con ellos y nombra la sección. No inventes números:\n\n${contexto}`
     : SISTEMA) + limite
+
+  let listo
+  if (claveClaude) {
+    try {
+      listo = await preguntarClaude(claveClaude, sistema, mensajes)
+    } catch (e) {
+      // Si Claude falla y hay clave de Groq, la pregunta sigue por Groq: el alumno no se queda sin respuesta.
+      if (!claveGroq) throw e
+      console.error('mecbot: Claude falló, sigue con Groq', e && e.codigo)
+      listo = await preguntarGroq(claveGroq, sistema, mensajes)
+    }
+  } else {
+    listo = await preguntarGroq(claveGroq, sistema, mensajes)
+  }
+
+  await registrar(pregunta, listo)
+  if (recordada) {
+    cache.set(recordada, { texto: listo, t: Date.now() })
+    if (cache.size > CACHE_MAX) cache.delete(cache.keys().next().value)
+  }
+  return listo
+}
+
+/**
+ * Claude, con el SDK oficial de Anthropic. Se usa si existe MEC_BOT_CLAUDE_API_KEY.
+ * El modelo se cambia con MEC_BOT_CLAUDE_MODELO (por defecto Claude Sonnet 5.5).
+ * Esfuerzo bajo: es un chat de respuestas cortas. Si un filtro de seguridad rechaza la
+ * pregunta, la API la reintenta sola en otro modelo (fallbacks "default").
+ */
+async function preguntarClaude(clave, sistema, mensajes) {
+  const { default: Anthropic } = await import('@anthropic-ai/sdk')
+  const cliente = new Anthropic({ apiKey: clave, timeout: 25000, maxRetries: 1 })
+  // La conversación para Claude parte con una pregunta del alumno.
+  const desde = mensajes.findIndex((m) => m.rol === 'alumno')
+  const turnos = mensajes.slice(desde).map((m) => ({ role: m.rol === 'mecbot' ? 'assistant' : 'user', content: m.texto }))
+  const modelo = process.env.MEC_BOT_CLAUDE_MODELO || MODELO_CLAUDE
+  let res
+  try {
+    res = await cliente.beta.messages.create({
+      model: modelo,
+      max_tokens: 4000,
+      betas: ['server-side-fallback-2026-07-01'],
+      fallbacks: 'default',
+      output_config: { effort: 'low' },
+      system: sistema,
+      messages: turnos,
+    })
+  } catch (e) {
+    if (e instanceof Anthropic.AuthenticationError || e instanceof Anthropic.PermissionDeniedError) throw new ErrorBot('clave-invalida', 502)
+    if (e instanceof Anthropic.RateLimitError) throw new ErrorBot('ocupado', 429)
+    console.error('mecbot: Claude no respondió', modelo, e && e.name, e && e.message)
+    throw new ErrorBot('red', 502)
+  }
+  const texto = res.content
+    .filter((b) => b.type === 'text')
+    .map((b) => b.text)
+    .join('')
+    .trim()
+  if (res.stop_reason === 'refusal' || !texto) {
+    console.error('mecbot: Claude sin respuesta', modelo, res.stop_reason)
+    throw new ErrorBot('red', 502)
+  }
+  return texto
+}
+
+/** Groq u otro servicio con el formato de chat de OpenAI. Se usa con MEC_BOT_API_KEY. */
+async function preguntarGroq(clave, sistema, mensajes) {
+  const url = process.env.MEC_BOT_URL || URL_DEFECTO
+  const pedido = process.env.MEC_BOT_MODELO || MODELO_DEFECTO
+  const modelo = MODELOS_RETIRADOS.has(pedido) ? MODELO_DEFECTO : pedido
   const ctrl = new AbortController()
   const reloj = setTimeout(() => ctrl.abort(), 25000)
   let res
@@ -155,12 +258,7 @@ export async function responder(entrada, ip = 'local') {
     console.error('mecbot: respuesta vacía', modelo, datos?.choices?.[0]?.finish_reason)
     throw new ErrorBot('red', 502)
   }
-  const listo = texto.trim()
-  if (recordada) {
-    cache.set(recordada, { texto: listo, t: Date.now() })
-    if (cache.size > CACHE_MAX) cache.delete(cache.keys().next().value)
-  }
-  return listo
+  return texto.trim()
 }
 
 /**
