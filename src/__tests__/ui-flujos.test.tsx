@@ -171,6 +171,19 @@ describe('el ejemplo guiado es una visita (CNC y PLC)', () => {
     expect(document.querySelector('[data-volver-tarea]')).toBeNull()
   }, 40000)
 
+  it('CNC: la guía muestra la barra de progreso y «Te falta esto» con un programa a medias', async () => {
+    const base = tareaVaciaCnc()
+    window.localStorage.setItem(CLAVES.cncTarea, JSON.stringify({ config: base.config, codigos: { ...base.codigos, torno: 'N10 G21\nN20 M03\n' }, nombres: base.nombres }))
+    abrir('cnc', '&vista=tarea')
+    const pista = await waitFor(() => {
+      const el = document.querySelector('[data-pista-tarea]')
+      expect(el).toBeTruthy()
+      return el as HTMLElement
+    }, ESPERA)
+    expect(pista.textContent).toMatch(/Te falta esto: Hay M03 o M04, pero no veo la velocidad S/)
+    expect(document.querySelector('[data-progreso-tarea]')?.getAttribute('aria-valuenow')).toBe('2')
+  }, 40000)
+
   it('PLC: «Ver ejemplo guiado» y «Volver a mi tarea» dejan el mismo programa, y la tarea guardada no se pisa', async () => {
     const propio = { ...tareaVaciaPlc(), nombre: 'Mi silo' }
     propio.simbolos = [{ dir: 'I0.0', nombre: 'MI_START', descripcion: '' }]

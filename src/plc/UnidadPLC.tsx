@@ -555,7 +555,7 @@ export default function UnidadPLC() {
                     <p style={{ margin: '6px 0 0' }}>Solo la memoria de marcha con START y STOP. Sirve para mirar cómo se arma un escalón. La cinta, la válvula y los pilotos quedan para tu tarea.</p>
                   </section>
                 ) : (
-                <ProcesoTarea etapas={ETAPAS_SILO} paso={pasoTarea}>
+                <ProcesoTarea etapas={ETAPAS_SILO} paso={pasoTarea} progreso>
                   <p className="u-m-8-0-0">
                     <button type="button" onClick={() => irAEstudiar(pasoTarea.id === 'probar' ? 'scan' : pasoTarea.id === 'nombrar' ? 'entradas-salidas' : 'ladder')} style={enlaceEstudiar}>
                       ¿No recuerdas este paso? → Estudiar

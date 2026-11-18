@@ -25,7 +25,26 @@ N920 M30                 ( fin de programa )
 %
 `
 
-function pasoCnc(codigo: string): PasoProceso {
+/**
+ * Lo que está a medias en el programa, dicho como falta y no como respuesta. `undefined` si no hay nada
+ * que avisar. Solo mira lo que el paso ya pide: unidades, velocidad S, avance F y parada del husillo.
+ */
+export function pistaCnc(codigo: string): string | undefined {
+  const u = codigoUtil(codigo)
+  if (/\bG20\b/i.test(u) && !/\bG21\b/i.test(u)) return 'Hay G20, que trabaja en pulgadas. La tarea va en milímetros.'
+  if (/\bM0?[34]\b/i.test(u) && !/\bS\s*\d/i.test(u)) return 'Hay M03 o M04, pero no veo la velocidad S del husillo.'
+  if (/\bG0?[123]\b/i.test(u) && !/\bF\s*\d/i.test(u)) return 'Hay un corte, pero no veo el avance F.'
+  if (/\bM(30|0?2)\b/i.test(u) && !/\bM0?5\b/i.test(u)) return 'El programa termina, pero el husillo no se detiene con M05.'
+  return undefined
+}
+
+export function pasoCnc(codigo: string): PasoProceso {
+  const paso = pasoCncBase(codigo)
+  const pista = pistaCnc(codigo)
+  return pista ? { ...paso, pista } : paso
+}
+
+function pasoCncBase(codigo: string): PasoProceso {
   const u = codigoUtil(codigo)
   const total = ETAPAS_CNC.length
   const base = { total }
@@ -58,7 +77,7 @@ export default function PlanoTarea({ codigo, checklist, onEstudiar, ejemplo }: {
           <p style={{ margin: '6px 0 0' }}>Una pasada recta con husillo y fin. Sirve para mirar cómo se arma un programa. Las cotas del plano quedan para tu tarea.</p>
         </section>
       ) : (
-      <ProcesoTarea etapas={ETAPAS_CNC} paso={paso}>
+      <ProcesoTarea etapas={ETAPAS_CNC} paso={paso} progreso>
         <p className="u-m-8-0-0">
           <button type="button" onClick={() => onEstudiar(paso.id === 'revisar' ? 'torno' : 'codigos')} style={enlaceEstudiar}>
             ¿No recuerdas el código de este paso? → Estudiar

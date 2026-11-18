@@ -14,7 +14,54 @@ export function dirsPrograma(p: ProgramaPLC): { contactos: Set<string>; bobinas:
   return { contactos, bobinas }
 }
 
+const ENTRADAS_TAREA: Array<[string, string]> = [
+  ['I0.0', 'START'],
+  ['I0.1', 'STOP'],
+  ['I0.3', 'PROX'],
+  ['I0.4', 'LEVEL'],
+]
+const PILOTOS: Array<[string, string]> = [
+  ['Q0.2', 'RUN'],
+  ['Q0.3', 'FILL'],
+  ['Q0.4', 'FULL'],
+]
+
+/**
+ * Lo que está a medias en el programa, dicho como falta y no como respuesta. `undefined` si no hay
+ * nada que avisar. Mira solo lo que el paso en curso ya pide.
+ */
+export function pistaSilo(p: ProgramaPLC, id: string): string | undefined {
+  const { contactos, bobinas } = dirsPrograma(p)
+  const nombrados = new Set(p.simbolos.filter((s) => s.nombre.trim()).map((s) => s.dir))
+  const marcas = [...bobinas].filter((d) => d.startsWith('M'))
+  if (id === 'nombrar') {
+    const sin = ENTRADAS_TAREA.filter(([d]) => !nombrados.has(d))
+    if (sin.length > 0 && sin.length < ENTRADAS_TAREA.length) return `Falta el nombre de ${sin.map(([d, n]) => `${d} (${n})`).join(' y ')}.`
+    return undefined
+  }
+  if (id === 'marcha') {
+    if (contactos.has('I0.0') && !contactos.has('I0.1')) return 'Ya lees START, pero falta STOP (I0.1) para poder parar.'
+    if (contactos.has('I0.1') && !contactos.has('I0.0')) return 'Ya lees STOP, pero falta START (I0.0) para poder arrancar.'
+    if (bobinas.size > 0) return 'Hay una bobina, pero ninguna es una marca (M) que recuerde la marcha.'
+    return undefined
+  }
+  if (marcas.length > 0 && ![...contactos].some((d) => d.startsWith('M'))) return 'La marca M quedó sin usar: ningún contacto la lee.'
+  if (id === 'llenar' && bobinas.has('Q0.1') && !contactos.has('I0.3') && !contactos.has('I0.4')) return 'La válvula Q0.1 no depende de PROX ni de LEVEL.'
+  if (id === 'probar') {
+    const sin = PILOTOS.filter(([d]) => !bobinas.has(d))
+    if (sin.length > 0) return `Faltan pilotos: ${sin.map(([d, n]) => `${d} (${n})`).join(', ')}.`
+  }
+  const aviso = revisarPrograma(p)[0]
+  return aviso ? `El diagrama avisa: ${aviso}` : undefined
+}
+
 export function pasoSilo(p: ProgramaPLC): PasoProceso {
+  const paso = pasoSiloBase(p)
+  const pista = pistaSilo(p, paso.id)
+  return pista ? { ...paso, pista } : paso
+}
+
+function pasoSiloBase(p: ProgramaPLC): PasoProceso {
   const { contactos, bobinas } = dirsPrograma(p)
   const total = ETAPAS_SILO.length
   const base = { total }
