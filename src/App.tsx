@@ -12,6 +12,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import DiagramaEspacioFase, { hayDiagramaFase, registrarFase } from './components/DiagramaEspacioFase'
 import { DT_POR_DEFECTO, Motor, validarCircuito } from './engine'
+import BarraTiempo from './components/BarraTiempo'
 import Paleta from './components/Paleta'
 import Pizarra, { type ControlesPizarra, type Vista } from './components/Pizarra'
 import Inspector, { type PestanaInspector } from './components/banco/Inspector'
@@ -74,6 +75,11 @@ export default function App() {
   const puedeRehacer = useStore((s) => s.puedeRehacer)
 
   const [motor, setMotor] = useState<Motor | null>(null)
+  // Velocidad de la simulación (cuántos pasos de motor por reloj) y «Reiniciar»: crea un motor nuevo.
+  const [velocidadSim, setVelocidadSim] = useState(1)
+  const velocidadRef = useRef(1)
+  velocidadRef.current = velocidadSim
+  const [reinicioSim, setReinicioSim] = useState(0)
   const [, setFotograma] = useState(0)
   const [aviso, setAviso] = useState<string | null>(null)
   const [vista, setVista] = usePersistente<VistaApp>(CLAVES.bancoVista, 'esquema')
@@ -206,15 +212,21 @@ export default function App() {
       }
     }
     setMotor(nuevoMotor)
+    let acumulado = 0
     const intervalo = setInterval(() => {
-      nuevoMotor.tick(DT_POR_DEFECTO)
+      // ×1 es un paso por reloj, como siempre; ×2 son dos y ×0,5 uno cada dos.
+      acumulado += velocidadRef.current
+      while (acumulado >= 1) {
+        nuevoMotor.tick(DT_POR_DEFECTO)
+        acumulado -= 1
+      }
       setFotograma((f) => f + 1)
     }, 1000 / 30)
     return () => {
       clearInterval(intervalo)
       setMotor(null)
     }
-  }, [modo])
+  }, [modo, reinicioSim])
 
   // --- atajos de teclado ----------------------------------------------------
   useEffect(() => {
@@ -390,6 +402,7 @@ export default function App() {
     titulo: bancoVacio ? 'Coloca al menos una ficha en el banco para poder simular' : 'Atajo: barra espaciadora',
     deshabilitado: bancoVacio,
     corriendo: simulando,
+    detiene: true,
   }
   const botonSimular = (
     <button
@@ -507,7 +520,18 @@ export default function App() {
     />
   )
 
+  const barraTiempo = (
+    <BarraTiempo
+      tiempo={motor?.t ?? 0}
+      velocidad={velocidadSim}
+      velocidades={[0.5, 1, 2]}
+      onVelocidad={setVelocidadSim}
+      onReiniciar={() => setReinicioSim((n) => n + 1)}
+      deshabilitada={!simulando}
+    />
+  )
   const lienzo = (
+    <>
     <div className="banco__lienzo" data-vista={vista}>
       {vista === 'banco3d' ? (
         <>
@@ -534,6 +558,8 @@ export default function App() {
         </>
       )}
     </div>
+    {barraTiempo}
+    </>
   )
 
   const panelInferior = (
