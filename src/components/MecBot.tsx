@@ -96,7 +96,7 @@ function AvisoPrivacidad({ guardar, setGuardar }: { guardar: boolean; setGuardar
         </p>
         <p>
           <strong>Qué no se guarda.</strong> Tu nombre, correo, rol USM, IP, ubicación ni datos del navegador. No hay cookies ni nada que te siga. Si
-          escribes un correo, un RUT o un teléfono, se borra antes de guardar.
+          escribes un correo, un RUT, un teléfono o tu nombre después de «soy» o «me llamo», se borra antes de guardar.
         </p>
         <p>
           <strong>Quién lo ve y cuánto dura.</strong> Solo el profesor del curso, en una base de datos protegida (Supabase, servidor en São Paulo). No se

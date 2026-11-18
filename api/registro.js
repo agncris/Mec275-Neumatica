@@ -6,7 +6,7 @@
  * Se guarda: la pregunta, la respuesta, la fecha, la unidad de la app y un número al azar
  * que agrupa una conversación (cambia cada vez que se abre la app).
  * No se guarda: nombre, correo, rol USM, IP, navegador ni ubicación. Antes de guardar se
- * borran del texto los correos, RUT y teléfonos que el alumno haya escrito.
+ * borran del texto los correos, RUT, teléfonos y el nombre tras «soy» o «me llamo».
  *
  * Dos destinos, cada uno opcional:
  * - MEC_BOT_REGISTRO: ruta de un archivo local (una línea JSON por consulta). Solo en local:
@@ -17,12 +17,14 @@
 
 const UNIDADES = new Set(['neumatica', 'plc', 'cnc', 'robotica'])
 
-/** Borra del texto lo que identifica a una persona: correos, RUT y teléfonos. */
+/** Borra del texto lo que identifica a una persona: correos, RUT, teléfonos y nombres tras «soy». */
 export function anonimizar(texto) {
   return String(texto || '')
     .replace(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g, '[correo]')
     .replace(/\b\d{1,2}\.?\d{3}\.?\d{3}-?[\dkK]\b/g, '[rut]')
     .replace(/(\+?56\s?)?\b9[\s-]?\d{4}[\s-]?\d{4}\b/g, '[teléfono]')
+    // «soy Pedro Soto», «me llamo Ana»: el nombre con mayúscula que sigue.
+    .replace(/\b([Ss]oy|[Mm]e llamo|[Mm]i nombre es)\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñü]+(\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñü]+){0,3}/g, (_, frase) => `${frase} [nombre]`)
 }
 
 /** Lo que manda el navegador junto a la pregunta, ya validado. */

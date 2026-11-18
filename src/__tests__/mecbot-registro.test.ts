@@ -16,6 +16,12 @@ describe('registro de MecBot', () => {
     expect(t).toContain('¿Qué es PTP?')
   })
 
+  it('borra el nombre tras «soy» o «me llamo», pero no la materia', () => {
+    expect(anonimizar('hola, soy Pedro Soto, ¿qué es un FRL?')).toBe('hola, soy [nombre], ¿qué es un FRL?')
+    expect(anonimizar('Me llamo Ana y no entiendo el PTP')).toBe('Me llamo [nombre] y no entiendo el PTP')
+    expect(anonimizar('soy nuevo en esto, ¿qué es un FRL?')).toBe('soy nuevo en esto, ¿qué es un FRL?')
+  })
+
   it('no toca números de la materia', () => {
     expect(anonimizar('La plancha mide 5 mm y el robot llega a 901 mm, 50.000 envases')).toBe('La plancha mide 5 mm y el robot llega a 901 mm, 50.000 envases')
   })
