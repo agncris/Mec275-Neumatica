@@ -2617,3 +2617,8 @@ body:has(.banco:not(.banco--apilado):not(.banco--neumatica-apilado)) {
 .leyenda-corte__falta {
   border-top: 2px solid rgba(22, 104, 199, 0.6);
 }
+/* Los íconos SVG (deshacer, rehacer) quedan centrados en el botón. */
+.boton-icono {
+  display: inline-grid;
+  place-items: center;
+}

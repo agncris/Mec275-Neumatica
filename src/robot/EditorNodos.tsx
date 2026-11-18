@@ -12,6 +12,7 @@
  *  - Colores como en Grasshopper: gris = bien, naranjo = faltan datos o hay
  *    un aviso, rojo = error, verde = seleccionado.
  */
+import { IconoDeshacer } from '../components/IconosEdicion'
 import { usePersistente, useTactil } from '../components/ui'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
@@ -665,7 +666,7 @@ export default function EditorNodos({ def, evaluacion, onCambiar, seleccion, onS
         <div style={{ position: 'absolute', right: 8, bottom: 8, display: 'flex', gap: 4 }}>
           {onDeshacer && (
             <button type="button" onClick={onDeshacer} disabled={!puedeDeshacer} aria-label="Deshacer" style={{ ...botonMini, minWidth: 34, fontSize: '1.05rem', opacity: puedeDeshacer ? 1 : 0.45 }} title="Deshacer (Ctrl+Z)">
-              ↶
+              <IconoDeshacer />
             </button>
           )}
           <button onClick={() => zoomCentro(1 / 1.25)} style={{ ...botonMini, minWidth: 34 }} aria-label="Alejar" title="Alejar">
@@ -778,7 +779,8 @@ function Nodo({
       <rect x={nodo.x} y={nodo.y} width={w} height={h} rx={8} fill={relleno} />
       <rect x={nodo.x} y={nodo.y} width={w} height={CABEZA} rx={8} fill={cabeza} pointerEvents="none" />
       <rect x={nodo.x} y={nodo.y + CABEZA - 8} width={w} height={8} fill={cabeza} pointerEvents="none" />
-      <rect x={nodo.x} y={nodo.y} width={w} height={h} rx={8} fill="none" stroke={borde} strokeWidth={seleccionado ? 2 : 1.25} onPointerDown={onDown} style={{ cursor: 'move' }}>
+      {/* Sin relleno pero con toda su superficie activa: con fill="none" solo el borde recibía el clic y el bloque no se seleccionaba. */}
+      <rect x={nodo.x} y={nodo.y} width={w} height={h} rx={8} fill="none" pointerEvents="all" stroke={borde} strokeWidth={seleccionado ? 2 : 1.25} onPointerDown={onDown} style={{ cursor: 'move' }}>
         <title>{titulo}</title>
       </rect>
       <text x={nodo.x + 12} y={nodo.y + 17} fontSize={13} fontWeight={700} fill="#fff" pointerEvents="none">

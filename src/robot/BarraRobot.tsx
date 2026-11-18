@@ -1,3 +1,4 @@
+import { IconoDeshacer, IconoRehacer } from '../components/IconosEdicion'
 import { BotonNuevo, botonSecundario, Menu, type ItemMenu } from '../components/ui'
 import { ETIQUETA_GRUPO, PRACTICA_ROBOT, type GrupoPractica } from './practica'
 import { EJEMPLOS_ROBOT } from './ejemplos'
@@ -78,10 +79,10 @@ export default function BarraRobot({
           <BotonNuevo que="la tarea de cero" compacto={estrecha} onClick={() => cargarEjemplo('vacio')} />
           <span style={{ display: 'inline-flex', gap: 2 }}>
             <button onClick={deshacer} disabled={!puedeDeshacer} aria-label="Deshacer" className="boton-icono" style={{ opacity: puedeDeshacer ? 1 : 0.4 }} title="Deshacer (Ctrl+Z)">
-              ↶
+              <IconoDeshacer />
             </button>
             <button onClick={rehacer} disabled={!puedeRehacer} aria-label="Rehacer" className="boton-icono" style={{ opacity: puedeRehacer ? 1 : 0.4 }} title="Rehacer (Ctrl+Shift+Z)">
-              ↷
+              <IconoRehacer />
             </button>
           </span>
           {!enTarea && (

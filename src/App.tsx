@@ -6,6 +6,7 @@
  *  - Simular: el motor corre a 30 Hz; se accionan las válvulas y se ve el aire
  *    circular, las correderas conmutar y los vástagos moverse.
  */
+import { IconoDeshacer, IconoRehacer } from './components/IconosEdicion'
 import { BotonNuevo, botonPrimario, estiloAviso, Menu, useApaisado, useApilado, useEsEstrecha, usePersistente, useTactil } from './components/ui'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -404,11 +405,11 @@ export default function App() {
   const deshacerRehacer = !simulando && (
     <span style={{ display: 'flex', gap: 0 }}>
       <button onClick={deshacer} disabled={!puedeDeshacer} title="Deshacer (Ctrl+Z)" aria-label="Deshacer" className="boton-icono" style={{ opacity: puedeDeshacer ? 1 : 0.4 }}>
-        ↶
+        <IconoDeshacer />
       </button>
       {!estrecha && (
         <button onClick={rehacer} disabled={!puedeRehacer} title="Rehacer (Ctrl+Shift+Z)" aria-label="Rehacer" className="boton-icono" style={{ opacity: puedeRehacer ? 1 : 0.4 }}>
-          ↷
+          <IconoRehacer />
         </button>
       )}
     </span>

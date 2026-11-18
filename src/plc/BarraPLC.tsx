@@ -1,3 +1,4 @@
+import { IconoDeshacer, IconoRehacer } from '../components/IconosEdicion'
 import type { RefObject } from 'react'
 import type { Notacion } from './notacion'
 import type { PLANTAS } from './plantas'
@@ -102,11 +103,11 @@ export default function BarraPLC({
       <BotonNuevo que="un programa" compacto={estrecha} onClick={nuevo} />
       <span style={{ display: 'inline-flex', gap: 2 }}>
         <button onClick={deshacer} disabled={corriendo || !puedeDeshacer} title="Deshacer (Ctrl+Z)" aria-label="Deshacer" className="boton-icono" style={{ opacity: corriendo || !puedeDeshacer ? 0.4 : 1 }}>
-          ↶
+          <IconoDeshacer />
         </button>
         {!estrecha && (
           <button onClick={rehacer} disabled={corriendo || !puedeRehacer} title="Rehacer (Ctrl+Shift+Z)" aria-label="Rehacer" className="boton-icono" style={{ opacity: corriendo || !puedeRehacer ? 0.4 : 1 }}>
-            ↷
+            <IconoRehacer />
           </button>
         )}
       </span>
