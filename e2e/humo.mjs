@@ -114,6 +114,12 @@ async function main() {
     await esperar(p.locator('[data-play-escena="si"][aria-label="Pausa"]'), 'el play de la escena no pasó a ❚❚')
     await esperar(p.locator('[data-reproductor="si"] input[type=range]'), 'no está el deslizador de tiempo')
     await lienzoConDibujo(p)
+    // «Probar» pliega el programa y deja la máquina ancha; «Armar» devuelve el editor.
+    await p.locator('[data-etapa="probar"]').click()
+    await esperar(p.locator('[data-plegado="riel"]'), '«Probar» no pliega el programa')
+    await lienzoConDibujo(p)
+    await p.locator('[data-etapa="armar"]').click()
+    await esperar(p.locator('textarea').first(), '«Armar» no devuelve el editor')
   }, navegador)
 
   await prueba('CNC: el ejemplo guiado es una visita (escribir, ver el ejemplo, recargar, volver)', async (p) => {
@@ -124,6 +130,10 @@ async function main() {
     await editor.fill(propio)
     await p.waitForTimeout(400)
     await p.locator('[data-ver-ejemplo]').click()
+    // El ejemplo se abre en «Probar» (programa plegado, «Volver a mi tarea» en la barra); «Armar» lo muestra.
+    await esperar(p.locator('[data-etapa="probar"][aria-checked="true"]'), 'el ejemplo no se abrió en «Probar»')
+    await esperar(p.locator('[data-volver-tarea]').first(), 'no aparece «Volver a mi tarea»')
+    await p.locator('[data-etapa="armar"]').click()
     await esperar(p.locator('[data-ejemplo-tarea]'), 'no aparece el aviso del ejemplo')
     if ((await editor.inputValue()) === propio) throw new Error('el ejemplo no reemplazó lo que se ve')
     // Recargar dentro del ejemplo: el programa propio sigue ahí.
@@ -134,6 +144,7 @@ async function main() {
     await p.locator('[data-ver-ejemplo]').click()
     await esperar(p.locator('[data-volver-tarea]').first(), 'no aparece «Volver a mi tarea»')
     await p.locator('[data-volver-tarea]').first().click()
+    await esperar(p.locator('[data-etapa="armar"][aria-checked="true"]'), '«Volver a mi tarea» no vuelve a «Armar»')
     igual(await p.locator('textarea').first().inputValue(), propio, 'tras volver de la tarea')
   }, navegador)
 

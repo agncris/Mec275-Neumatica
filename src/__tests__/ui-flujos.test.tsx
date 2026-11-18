@@ -145,6 +145,10 @@ describe('el ejemplo guiado es una visita (CNC y PLC)', () => {
       expect(verEjemplo()).toBeTruthy()
       return verEjemplo()
     }))
+    // El ejemplo se abre en «Probar»: el programa queda plegado. Para leerlo se pasa a «Armar».
+    await waitFor(() => expect(document.querySelector('[data-etapa="probar"]')?.getAttribute('aria-checked')).toBe('true'))
+    expect(document.querySelector('textarea')).toBeNull()
+    fireEvent.click(document.querySelector('[data-etapa="armar"]') as HTMLElement)
     await waitFor(() => expect(editor().value).toBe(EJEMPLO_GUIADO_TORNO))
     expect(screen.getAllByText(/Esto es un ejemplo, no tu entrega/).length).toBeGreaterThan(0)
     // Editar el ejemplo tampoco toca lo guardado de la tarea.
@@ -167,6 +171,8 @@ describe('el ejemplo guiado es una visita (CNC y PLC)', () => {
     const { unmount } = abrir('cnc', '&vista=tarea')
     await waitFor(() => expect(verEjemplo()).toBeTruthy(), ESPERA)
     fireEvent.click(verEjemplo())
+    await waitFor(() => expect(document.querySelector('[data-etapa="probar"]')?.getAttribute('aria-checked')).toBe('true'))
+    fireEvent.click(document.querySelector('[data-etapa="armar"]') as HTMLElement)
     await waitFor(() => expect((document.querySelector('textarea') as HTMLTextAreaElement).value).toBe(EJEMPLO_GUIADO_TORNO))
     unmount()
     abrir('cnc', '&vista=tarea')
@@ -185,6 +191,32 @@ describe('el ejemplo guiado es una visita (CNC y PLC)', () => {
     }, ESPERA)
     expect(pista.textContent).toMatch(/Te falta esto: Hay M03 o M04, pero no veo la velocidad S/)
     expect(document.querySelector('[data-progreso-tarea]')?.getAttribute('aria-valuenow')).toBe('2')
+  }, 40000)
+
+  it('CNC: el interruptor pasa de Armar a Probar y vuelve, y la guía ofrece «Probar en la máquina»', async () => {
+    const base = tareaVaciaCnc()
+    const completo = 'N10 G21 G90\nN20 M03 S900\nN30 G00 X50 Z2\nN40 G01 Z-12 F90\nN50 M05\nN60 M30\n'
+    window.localStorage.setItem(CLAVES.cncTarea, JSON.stringify({ config: base.config, codigos: { ...base.codigos, torno: completo }, nombres: base.nombres }))
+    abrir('cnc', '&vista=tarea')
+    const marcada = (e: string) => document.querySelector(`[data-etapa="${e}"]`)?.getAttribute('aria-checked')
+    await waitFor(() => expect(document.querySelector('textarea')).toBeTruthy(), ESPERA)
+    // Armar: editor y guía a la vista, el programa no está plegado.
+    expect(marcada('armar')).toBe('true')
+    expect(document.querySelector('[data-guia-cnc]')).toBeTruthy()
+    expect(document.querySelector('[data-plegado="riel"]')).toBeNull()
+    // Con el programa completo, la guía ofrece probarlo.
+    fireEvent.click(document.querySelector('[data-ir-probar]') as HTMLElement)
+    // Probar: el programa se pliega a la tira y la máquina queda con el play y la barra de tiempo.
+    await waitFor(() => expect(marcada('probar')).toBe('true'))
+    expect(document.querySelector('[data-plegado="riel"]')).toBeTruthy()
+    expect(document.querySelector('textarea')).toBeNull()
+    expect(document.querySelector('[data-reproductor]')).toBeTruthy()
+    expect(document.querySelector('[data-volver-tarea]')).toBeNull()
+    // Vuelta a Armar con el interruptor: el programa propio sigue intacto.
+    fireEvent.click(document.querySelector('[data-etapa="armar"]') as HTMLElement)
+    await waitFor(() => expect((document.querySelector('textarea') as HTMLTextAreaElement)?.value).toBe(completo))
+    expect(marcada('armar')).toBe('true')
+    expect(document.querySelector('[data-plegado="riel"]')).toBeNull()
   }, 40000)
 
   it('PLC: «Ver ejemplo guiado» y «Volver a mi tarea» dejan el mismo programa, y la tarea guardada no se pisa', async () => {

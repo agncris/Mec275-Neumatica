@@ -66,9 +66,41 @@ function pasoCncBase(codigo: string): PasoProceso {
   return { ...base, id: 'revisar', numero: 6, titulo: 'Probar el ciclo y leer el checklist', donde: 'El botón ▶ Ciclo, junto a la máquina, y el checklist del panel derecho.', accion: 'Corre el ciclo. Si salta una alarma o una pasada queda muy profunda, vuelve a esa línea. El checklist no califica: avisa lo que falta.', listo: 'El checklist del panel derecho queda en verde y la simulación llega al final.' }
 }
 
-/** El plano de la tarea, con el proceso arriba y un solo paso abierto. */
-export default function PlanoTarea({ codigo, checklist, onEstudiar, ejemplo }: { codigo: string; checklist: PuntoRevision[]; onEstudiar: (ancla: string) => void; ejemplo: boolean }) {
+/** El proceso de la tarea: el paso en curso, el avance, lo que falta y, cuando ya se puede, el botón para probar. */
+export function GuiaCNC({ codigo, onEstudiar, onProbar, onVerPlano, onVerEjemplo }: { codigo: string; onEstudiar: (ancla: string) => void; onProbar?: () => void; onVerPlano?: () => void; onVerEjemplo?: () => void }) {
   const paso = pasoCnc(codigo)
+  return (
+    <ProcesoTarea etapas={ETAPAS_CNC} paso={paso} progreso>
+      {onProbar && (paso.id === 'cerrar' || paso.id === 'revisar') && (
+        <button type="button" className="guia-tarea__principal guia-tarea__probar" onClick={onProbar} data-ir-probar="si">
+          Probar en la máquina →
+        </button>
+      )}
+      <p className="u-m-8-0-0">
+        <button type="button" onClick={() => onEstudiar(paso.id === 'revisar' ? 'torno' : 'codigos')} style={enlaceEstudiar}>
+          ¿No recuerdas el código de este paso? → Estudiar
+        </button>
+      </p>
+      {onVerPlano && (
+        <p className="u-m-8-0-0">
+          <button type="button" onClick={onVerPlano} style={enlaceEstudiar} data-ver-plano="si">
+            Ver el plano y el checklist
+          </button>
+        </p>
+      )}
+      {onVerEjemplo && (
+        <p className="u-m-8-0-0">
+          <button type="button" onClick={onVerEjemplo} style={enlaceEstudiar} data-ver-ejemplo="si" title="Abre un programa a medias para mirarlo. Tu tarea queda guardada.">
+            Ver un ejemplo
+          </button>
+        </p>
+      )}
+    </ProcesoTarea>
+  )
+}
+
+/** El plano de la tarea. Con `sinProceso` el proceso no se repite (ya está a la vista junto al programa). */
+export default function PlanoTarea({ codigo, checklist, onEstudiar, ejemplo, sinProceso = false, onProbar }: { codigo: string; checklist: PuntoRevision[]; onEstudiar: (ancla: string) => void; ejemplo: boolean; sinProceso?: boolean; onProbar?: () => void }) {
   return (
     <div data-plano-tarea="si">
       {ejemplo ? (
@@ -77,13 +109,7 @@ export default function PlanoTarea({ codigo, checklist, onEstudiar, ejemplo }: {
           <p style={{ margin: '6px 0 0' }}>Una pasada recta con husillo y fin. Sirve para mirar cómo se arma un programa. Las cotas del plano quedan para tu tarea.</p>
         </section>
       ) : (
-      <ProcesoTarea etapas={ETAPAS_CNC} paso={paso} progreso>
-        <p className="u-m-8-0-0">
-          <button type="button" onClick={() => onEstudiar(paso.id === 'revisar' ? 'torno' : 'codigos')} style={enlaceEstudiar}>
-            ¿No recuerdas el código de este paso? → Estudiar
-          </button>
-        </p>
-      </ProcesoTarea>
+        !sinProceso && <GuiaCNC codigo={codigo} onEstudiar={onEstudiar} onProbar={onProbar} />
       )}
       <p style={{ margin: '8px 0 6px', fontSize: '0.82rem', color: 'var(--tinta-suave)' }}>
         Pieza 1, cotas en mm. En el torno, X se programa en diámetro y el cero del programa va en la cara frontal, sobre el eje.

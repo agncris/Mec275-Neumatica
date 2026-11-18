@@ -10,6 +10,7 @@ import { acercar, estiloAviso, useEsEstrecha, useTactil } from '../components/ui
 import BancoDividido, { TituloArea } from '../components/banco/BancoDividido'
 import { enlaceEstudiar } from '../components/banco/ProcesoTarea'
 import { usePanelAcoplado, type PestanaPanel } from '../components/banco/PanelAcoplado'
+import { type EtapaTrabajo } from '../components/banco/InterruptorEtapa'
 import SubnavUnidad, { seccionDeLaUrl, useSeccionUnidad, type SeccionUnidad } from '../components/banco/SubnavUnidad'
 import MisTrabajos from '../components/banco/MisTrabajos'
 import GuiaInicio, { GUIA_CNC, useGuia } from '../components/banco/GuiaInicio'
@@ -37,7 +38,7 @@ import Preparacion from './PanelPreparacion'
 import Revision from './Revision'
 import Tablero from './Tablero'
 import TablaPuntos from './TablaPuntos'
-import PlanoTarea, { EJEMPLO_GUIADO_TORNO } from './PlanoTarea'
+import PlanoTarea, { EJEMPLO_GUIADO_TORNO, GuiaCNC } from './PlanoTarea'
 import ResumenRevision from './ResumenRevision'
 import PanelEntrega from './PanelEntrega'
 import BarraCNC, { VELOCIDADES_CNC } from './BarraCNC'
@@ -66,6 +67,24 @@ export default function UnidadCNC() {
   const [entregaAbierta, setEntregaAbierta] = useState(false)
   const [misTrabajos, setMisTrabajos] = useState(false)
   const guia = useGuia('cnc')
+  // Armar el programa (editor ancho, guía a la vista) o probarlo en la máquina (3D ancha y trayectoria).
+  const [etapa, setEtapa] = useState<EtapaTrabajo>('armar')
+  // En el celular las áreas son pestañas: Armar muestra el programa y Probar la máquina.
+  const [vistaMovil, setVistaMovil] = useState<string>('programa')
+  const irAEtapa = (e: EtapaTrabajo) => {
+    setEtapa(e)
+    if (estrecha) {
+      setVistaMovil(e === 'probar' ? 'maquina' : 'programa')
+      return
+    }
+    if (e === 'probar') {
+      panel.onPestana('plano')
+      panel.onAbrir(true)
+    } else if (enTarea) {
+      panel.onAbrir(false)
+    }
+  }
+  const plegado = estrecha || etapa === 'armar' ? 'abierto' : 'riel'
   const inicial = useMemo(() => (seccionDeLaUrl() === 'tarea' && VER_TAREA_CNC ? leerTarea() : leerGuardado()), [])
   const [config, setConfig] = useState<ConfigCNC>(inicial.config)
   const [codigos, setCodigos] = useState(inicial.codigos)
@@ -89,7 +108,10 @@ export default function UnidadCNC() {
       trabajoPrevio.current = null
       borrarClave(CLAVES.cncAntesEjemplo)
       panel.onPestana(s === 'tarea' ? 'plano-tarea' : 'preparacion')
-      panel.onAbrir(true)
+      // En la tarea se parte armando, con la guía junto al programa y el plano a un clic.
+      panel.onAbrir(s !== 'tarea')
+      setEtapa('armar')
+      setVistaMovil('programa')
     }
     setSeccionCruda(s)
   }
@@ -174,7 +196,7 @@ export default function UnidadCNC() {
   useEffect(() => {
     if (!enTarea) return
     panel.onPestana('plano-tarea')
-    panel.onAbrir(true)
+    panel.onAbrir(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   const [checklistTarea, setChecklistTarea] = useState<PuntoRevision[]>([])
@@ -217,6 +239,7 @@ export default function UnidadCNC() {
     setCodigo(EJEMPLO_GUIADO_TORNO)
     setNombres((x) => ({ ...x, [maquina]: 'Ejemplo guiado' }))
     setAviso('Ejemplo guiado. Tu tarea sigue guardada: «Volver a mi tarea» la recupera.')
+    irAEtapa('probar')
   }
   const volverDelEjemplo = () => {
     const previo = trabajoPrevio.current ?? leerTareaAntesEjemplo() ?? leerTarea()
@@ -228,6 +251,7 @@ export default function UnidadCNC() {
     setEstado('listo')
     setEjemplo(false)
     setAviso('Volviste a tu tarea.')
+    irAEtapa('armar')
   }
 
   useEffect(() => {
@@ -399,7 +423,19 @@ export default function UnidadCNC() {
     }
   }
 
-  const irA = (n: number) => editor.current?.irALinea(n)
+  // Si el programa está plegado (se está probando), se vuelve a armar y recién ahí se va a la línea.
+  const lineaPendiente = useRef<number | null>(null)
+  const irA = (n: number) => {
+    if (editor.current) return editor.current.irALinea(n)
+    lineaPendiente.current = n
+    irAEtapa('armar')
+  }
+  useEffect(() => {
+    if (lineaPendiente.current === null || !editor.current) return
+    const n = lineaPendiente.current
+    lineaPendiente.current = null
+    editor.current.irALinea(n)
+  })
 
   const cambiarMaquina = (m: TipoMaquina) => {
     setConfig((c) => ({ ...c, maquina: m, material: m === 'torno' && c.material === 'madera' ? 'laton' : c.material }))
@@ -463,6 +499,9 @@ export default function UnidadCNC() {
       hayErrores={hayErrores}
       estrecha={estrecha}
       enTarea={enTarea}
+      etapa={etapa}
+      onEtapa={irAEtapa}
+      volverDelEjemplo={ejemploEnTarea ? volverDelEjemplo : undefined}
       bloqueado={bloqueado}
       nuevo={nuevo}
       maquina={maquina}
@@ -477,6 +516,8 @@ export default function UnidadCNC() {
     />
   )
 
+  // La guía va junto al editor en la tarea, salvo mientras se mira el ejemplo o se entrega (ahí manda la máquina) y en el celular.
+  const guiaAlLado = enTarea && !ejemploEnTarea && !entregaAbierta && !estrecha
   const areaPrograma = (
     <>
       <TituloArea>
@@ -493,18 +534,26 @@ export default function UnidadCNC() {
       {!/\bG0?[123]\b/i.test(codigo.replace(/\(.*?\)/g, '').replace(/;.*/g, '')) && (
         <p className="u-ayuda-tinta">G00 sólo se acerca. Para cortar escribe G01 (recta) o G02/G03 (arco), con avance F. Ctrl+Z deshace.</p>
       )}
-      <div className="relleno" style={{ minHeight: 220 }}>
-        <EditorGcode
-          ref={editor}
-          codigo={codigo}
-          onCambiar={setCodigo}
-          lineaActiva={lineaActiva}
-          seleccion={cursor}
-          diagnosticos={resultado.diagnosticos}
-          onCursor={setCursor}
-          soloLectura={bloqueado}
-          alto="100%"
-        />
+      {/* Armando la tarea, la guía es una columna fija junto al editor. En el ejemplo la guía se esconde. */}
+      <div className={`relleno${guiaAlLado ? ' programa-cuerpo' : ''}`} style={{ minHeight: 220 }}>
+        {guiaAlLado && (
+          <div className="guia-cnc" data-guia-cnc="si">
+            <GuiaCNC codigo={codigo} onEstudiar={irAEstudiar} onProbar={() => irAEtapa('probar')} onVerPlano={() => (panel.onPestana('plano-tarea'), panel.onAbrir(true))} onVerEjemplo={panel.abierto ? undefined : verEjemploGuiado} />
+          </div>
+        )}
+        <div className="editor-cnc">
+          <EditorGcode
+            ref={editor}
+            codigo={codigo}
+            onCambiar={setCodigo}
+            lineaActiva={lineaActiva}
+            seleccion={cursor}
+            diagnosticos={resultado.diagnosticos}
+            onCursor={setCursor}
+            soloLectura={bloqueado}
+            alto="100%"
+          />
+        </div>
       </div>
         <div style={{ maxHeight: '30%', overflow: 'auto', flexShrink: 0 }}>
         <Revision resultado={resultado} errores={errores} avisos={avisosProg} irA={irA} onEstudiar={irAEstudiar} />
@@ -590,7 +639,7 @@ export default function UnidadCNC() {
             id: 'plano-tarea' as const,
             titulo: 'Plano de la Tarea 3',
             tituloCorto: 'Plano',
-            contenido: <PlanoTarea codigo={codigo} checklist={ejemploEnTarea ? [] : checklistTarea} onEstudiar={irAEstudiar} ejemplo={ejemploEnTarea} />,
+            contenido: <PlanoTarea codigo={codigo} checklist={ejemploEnTarea ? [] : checklistTarea} onEstudiar={irAEstudiar} ejemplo={ejemploEnTarea} sinProceso={guiaAlLado} onProbar={etapa === 'armar' ? () => irAEtapa('probar') : undefined} />,
           },
         ]
       : []),
@@ -684,6 +733,13 @@ export default function UnidadCNC() {
           clave={CLAVES.cncBanco}
           divisionInicial={0.42}
           anchoMin={340}
+          // Armando, el editor tiene ancho (con la guía al lado en la tarea). Con Entregar abierto manda la máquina.
+          anchoFijoIzquierda={etapa === 'armar' && !entregaAbierta && !estrecha ? (enTarea ? 820 : 560) : undefined}
+          plegado={plegado}
+          onPlegado={(p) => irAEtapa(p === 'riel' ? 'probar' : 'armar')}
+          riel={<span style={{ writingMode: 'vertical-rl', fontSize: '0.75rem', fontWeight: 700, color: 'var(--tinta-suave)', letterSpacing: '0.04em' }}>PROGRAMA</span>}
+          movil={vistaMovil}
+          onMovil={setVistaMovil}
           barra={barra}
           izquierda={{ id: 'programa', titulo: 'Programa', contenido: areaPrograma }}
           derecha={{ id: 'maquina', titulo: 'Máquina', contenido: areaMaquina }}

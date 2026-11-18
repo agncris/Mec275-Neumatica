@@ -1,6 +1,7 @@
 import type { RefObject } from 'react'
 import type { ItemMenu } from '../components/ui'
 import { BotonNuevo, botonPrimario, botonSecundario, Menu } from '../components/ui'
+import InterruptorEtapa, { type EtapaTrabajo } from '../components/banco/InterruptorEtapa'
 import { type TipoMaquina } from './maquinas'
 import { MAQUINAS } from './SelectorMaquina'
 import { NOMBRE_TAREA } from './datosCNC'
@@ -20,6 +21,9 @@ export default function BarraCNC({
   hayErrores,
   estrecha,
   enTarea,
+  etapa,
+  onEtapa,
+  volverDelEjemplo,
   bloqueado,
   nuevo,
   maquina,
@@ -42,6 +46,11 @@ export default function BarraCNC({
   hayErrores: boolean
   estrecha: boolean
   enTarea: boolean
+  /** Armar el programa o probarlo en la máquina. */
+  etapa: EtapaTrabajo
+  onEtapa: (e: EtapaTrabajo) => void
+  /** Solo mientras se mira el ejemplo de la tarea. */
+  volverDelEjemplo?: () => void
   bloqueado: boolean
   nuevo: () => void
   maquina: TipoMaquina
@@ -77,6 +86,15 @@ export default function BarraCNC({
   )
   return (
     <>
+      {/* Un solo interruptor decide qué ocupa la pantalla: armar el programa o probarlo en la máquina. */}
+      <InterruptorEtapa
+        etapa={etapa}
+        onEtapa={onEtapa}
+        estrecha={estrecha}
+        armar={['① Armar el programa', '① Armar']}
+        probar={['② Probar en la máquina', '② Probar']}
+        volver={volverDelEjemplo}
+      />
       {estado === 'corriendo' ? (
         <button onClick={() => setEstado('pausa')} style={{ ...botonPrimario(false, '#ffa726'), color: 'var(--texto)' }} data-control="pausa">
           ❚❚ Pausa
