@@ -97,13 +97,29 @@ export default function UnidadRobotica() {
   // Antes se podía ocultar del todo y no quedaba cómo volver. Solo se colapsa a una tira.
   const plegado = plegadoGuardado === 'oculto' ? 'riel' : plegadoGuardado
   // Al entrar directo a la tarea (enlace ?vista=tarea) se ve primero el plano.
+  // En la tarea se parte armando: la guía está junto al lienzo y el plano queda a un clic en el panel.
   useEffect(() => {
     if (!enTarea) return
     panel.onPestana('plano-tarea')
-    panel.onAbrir(true)
+    panel.onAbrir(false)
+    setPlegado('abierto')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+  const irAEtapa = (e: 'armar' | 'probar') => {
+    setEtapaTrabajo(e)
+    setModo('visual')
+    if (e === 'probar') {
+      setPlegado('riel')
+      panel.onPestana('analisis')
+      panel.onAbrir(true)
+    } else {
+      setPlegado('abierto')
+      if (enTarea) panel.onAbrir(false)
+    }
+  }
   const [entregaAbierta, setEntregaAbierta] = useState(false)
+  // Armar el programa (programa ancho, guía a la vista) o probarlo en el robot (simulación ancha y Análisis).
+  const [etapaTrabajo, setEtapaTrabajo] = useState<'armar' | 'probar'>('armar')
   const [misTrabajos, setMisTrabajos] = useState(false)
   const guia = useGuia('robotica')
   const [seleccion, setSeleccion] = useState<string | null>(null)
@@ -376,7 +392,7 @@ export default function UnidadRobotica() {
     setReproduciendo(false)
     setDef(ejemploGuiadoTarea())
     setSeleccion(null)
-    setModo('visual')
+    irAEtapa('probar')
   }
   const volverDelEjemplo = () => {
     let previa: Definicion | null = null
@@ -387,7 +403,7 @@ export default function UnidadRobotica() {
     setReproduciendo(false)
     setDef(siguiente)
     setSeleccion(null)
-    setModo('visual')
+    irAEtapa('armar')
     setAviso('Volviste a tu tarea.')
   }
   const ejemploEnTarea = enTarea && esEjemploGuiado(def)
@@ -433,6 +449,10 @@ export default function UnidadRobotica() {
       setReproduciendo={setReproduciendo}
       estrecha={estrecha}
       enTarea={enTarea}
+      etapa={etapaTrabajo}
+      onEtapa={irAEtapa}
+      ejemploEnTarea={ejemploEnTarea}
+      volverDelEjemplo={volverDelEjemplo}
       ejemploAbierto={ejemploAbierto}
       puedeDeshacer={historial.current.puedeDeshacer}
       puedeRehacer={historial.current.puedeRehacer}
@@ -465,6 +485,7 @@ export default function UnidadRobotica() {
       pasoTarea={pasoTarea}
       etapasTarea={guiaT?.etapas ?? []}
       verEjemplo={verEjemploGuiado}
+      irAProbar={() => irAEtapa('probar')}
       enunciado={enunciado}
       setEnunciado={setEnunciado}
       ejemploEnTarea={ejemploEnTarea}
@@ -598,7 +619,7 @@ export default function UnidadRobotica() {
           anchoMin={340}
           // La paleta ocupa unos 250 px: con menos de 560 el lienzo de nodos no se puede usar.
           // Con Entregar abierto no se arma el programa: ahí manda la simulación, que es lo que se graba.
-          anchoFijoIzquierda={modo === 'visual' && !entregaAbierta ? 560 : undefined}
+          anchoFijoIzquierda={modo === 'visual' && !entregaAbierta ? (enTarea && etapaTrabajo === 'armar' ? 860 : 560) : undefined}
           plegado={estrecha ? 'abierto' : plegado}
           onPlegado={setPlegado}
           riel={<span style={{ writingMode: 'vertical-rl', fontSize: '0.75rem', fontWeight: 700, color: 'var(--tinta-suave)', letterSpacing: '0.04em' }}>{modo === 'visual' ? 'PROGRAMA' : 'MANDO'}</span>}

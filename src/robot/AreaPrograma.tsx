@@ -22,6 +22,7 @@ export default function AreaPrograma({
   pasoTarea,
   etapasTarea,
   verEjemplo,
+  irAProbar,
   enunciado,
   setEnunciado,
   ejemploEnTarea,
@@ -53,6 +54,7 @@ export default function AreaPrograma({
   pasoTarea: PasoTarea | null
   etapasTarea: EtapaMapa[]
   verEjemplo: () => void
+  irAProbar: () => void
   enunciado: string | null
   setEnunciado: (t: string | null) => void
   ejemploEnTarea: boolean
@@ -97,11 +99,11 @@ export default function AreaPrograma({
           </button>
         </p>
       )}
-      {/* La guía va aquí y solo aquí. Con Entregar abierto se esconde para dejar ver el programa. */}
-      {pasoTarea && (ejemploEnTarea || !entregando) && (
-        <GuiaTarjeta paso={pasoTarea} etapas={etapasTarea} ejemplo={ejemploEnTarea} onVerEjemplo={verEjemplo} onVolver={volverDelEjemplo} />
-      )}
-      <div className="relleno">
+      {/* La guía es una columna fija junto al lienzo, para no quitarle alto. Con Entregar abierto se esconde. */}
+      <div className={`relleno${pasoTarea ? ' programa-cuerpo' : ''}`}>
+        {pasoTarea && (ejemploEnTarea || !entregando) && (
+          <GuiaTarjeta paso={pasoTarea} etapas={etapasTarea} ejemplo={ejemploEnTarea} onVerEjemplo={verEjemplo} onVolver={volverDelEjemplo} onProbar={irAProbar} />
+        )}
         <EditorNodos def={def} evaluacion={evaluacion} onCambiar={setDef} seleccion={seleccion} onSeleccionar={setSeleccion} alto="100%" guia={ejemploEnTarea ? undefined : (pasoTarea ?? undefined)} mirandoEjemplo={ejemploEnTarea} bloquesTarea={pasoTarea ? BLOQUES_TAREA : undefined} soloLienzo={entregando || ejemploEnTarea} onDeshacer={deshacer} puedeDeshacer={puedeDeshacer} />
       </div>
       {evaluacion.ciclo && <p style={{ color: 'var(--rojo-error)', fontSize: '0.86rem', margin: '6px 0 0' }}>⚠ Hay un ciclo en los cables.</p>}

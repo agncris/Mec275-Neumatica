@@ -2622,3 +2622,52 @@ body:has(.banco:not(.banco--apilado):not(.banco--neumatica-apilado)) {
   display: inline-grid;
   place-items: center;
 }
+/* Programa de la tarea: la guía es una columna fija a la izquierda del lienzo. */
+.banco__area .relleno.programa-cuerpo {
+  flex-direction: row;
+  gap: 8px;
+}
+.banco__area .relleno.programa-cuerpo > .guia-tarea {
+  flex: 0 0 250px;
+  max-height: none;
+  margin: 0;
+}
+.banco__area .relleno.programa-cuerpo > .guia-tarea .mapa-tarea {
+  flex-direction: column;
+}
+.banco__area .relleno.programa-cuerpo > .guia-tarea .guia-tarea__cabeza {
+  flex-wrap: wrap;
+}
+.banco__area .relleno.programa-cuerpo > :not(.guia-tarea) {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.guia-tarea__probar {
+  display: block;
+  width: 100%;
+  margin: 6px 0 4px;
+}
+/* Interruptor Armar / Probar: más visible que el resto de la barra. */
+.segmentado--etapa button[aria-checked='true'] {
+  background: #1668c7;
+  color: #fff;
+}
+.boton-volver-tarea {
+  min-height: 34px;
+  padding: 0.35rem 0.9rem;
+  border: none;
+  border-radius: 8px;
+  background: #0e7a43;
+  color: #fff;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+/* Con la guía al lado, la paleta (solo los bloques de la tarea) se angosta para dejarle ancho al lienzo. */
+.programa-cuerpo .editor-nodos .paleta-nodos:not([data-plegada='si']) {
+  width: 186px;
+}
+.banco__area .relleno.programa-cuerpo > .guia-tarea {
+  flex-basis: 240px;
+}

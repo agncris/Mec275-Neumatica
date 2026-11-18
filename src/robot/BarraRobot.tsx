@@ -12,6 +12,10 @@ export default function BarraRobot({
   setReproduciendo,
   estrecha,
   enTarea,
+  etapa,
+  onEtapa,
+  ejemploEnTarea,
+  volverDelEjemplo,
   ejemploAbierto,
   puedeDeshacer,
   puedeRehacer,
@@ -33,6 +37,11 @@ export default function BarraRobot({
   setReproduciendo: (v: boolean) => void
   estrecha: boolean
   enTarea: boolean
+  /** Armar el programa o probarlo en el robot. */
+  etapa: 'armar' | 'probar'
+  onEtapa: (e: 'armar' | 'probar') => void
+  ejemploEnTarea: boolean
+  volverDelEjemplo: () => void
   ejemploAbierto: { id: string; titulo: string } | null
   puedeDeshacer: boolean
   puedeRehacer: boolean
@@ -76,6 +85,24 @@ export default function BarraRobot({
       </span>
       {modo === 'visual' && (
         <>
+          {/* Un solo interruptor decide qué ocupa la pantalla: armar el programa o probarlo en el robot. */}
+          <span className="segmentado segmentado--etapa" role="radiogroup" aria-label="Qué estás haciendo">
+            {(
+              [
+                ['armar', estrecha ? '① Armar' : '① Armar el programa'],
+                ['probar', estrecha ? '② Probar' : '② Probar en el robot'],
+              ] as Array<['armar' | 'probar', string]>
+            ).map(([e, t]) => (
+              <button key={e} role="radio" aria-checked={etapa === e} onClick={() => onEtapa(e)} data-etapa={e} style={{ minHeight: 34 }}>
+                {t}
+              </button>
+            ))}
+          </span>
+          {ejemploEnTarea && etapa === 'probar' && (
+            <button type="button" onClick={volverDelEjemplo} className="boton-volver-tarea" data-volver-tarea="si">
+              Volver a mi tarea
+            </button>
+          )}
           <BotonNuevo que="la tarea de cero" compacto={estrecha} onClick={() => cargarEjemplo('vacio')} />
           <span style={{ display: 'inline-flex', gap: 2 }}>
             <button onClick={deshacer} disabled={!puedeDeshacer} aria-label="Deshacer" className="boton-icono" style={{ opacity: puedeDeshacer ? 1 : 0.4 }} title="Deshacer (Ctrl+Z)">

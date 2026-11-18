@@ -115,11 +115,14 @@ describe('Tarea 4 de Robótica', () => {
     expect(nodosAntes).toBeGreaterThan(0)
 
     fireEvent.click(document.querySelector('[data-ver-ejemplo]') as HTMLElement)
-    await waitFor(() => expect(screen.getByText(/Estás viendo un ejemplo/)).toBeTruthy())
+    // El ejemplo se abre en «Probar»: el programa se pliega y «Volver a mi tarea» queda en la barra.
+    await waitFor(() => expect(document.querySelector('[data-volver-tarea]')).toBeTruthy())
+    expect(document.querySelector('[data-etapa="probar"]')?.getAttribute('aria-checked')).toBe('true')
     expect(document.querySelector('[data-ver-ejemplo]')).toBeNull()
 
     fireEvent.click(document.querySelector('[data-volver-tarea]') as HTMLElement)
-    await waitFor(() => expect(screen.queryByText(/Estás viendo un ejemplo/)).toBeNull())
+    await waitFor(() => expect(document.querySelector('[data-volver-tarea]')).toBeNull())
+    expect(document.querySelector('[data-etapa="armar"]')?.getAttribute('aria-checked')).toBe('true')
     expect(pasoGuia()).toBe(pasoAntes)
     expect(nodos()).toBe(nodosAntes)
   }, 30000)

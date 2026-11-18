@@ -12,12 +12,15 @@ export default function GuiaTarjeta({
   ejemplo,
   onVerEjemplo,
   onVolver,
+  onProbar,
 }: {
   paso: PasoTarea
   etapas: EtapaMapa[]
   ejemplo: boolean
   onVerEjemplo: () => void
   onVolver: () => void
+  /** Pasa a «Probar en el robot». */
+  onProbar?: () => void
 }) {
   if (ejemplo) {
     return (
@@ -28,6 +31,11 @@ export default function GuiaTarjeta({
           <button type="button" className="guia-tarea__principal" onClick={onVolver} data-volver-tarea="si">
             Volver a mi tarea
           </button>
+          {onProbar && (
+            <button type="button" className="guia-tarea__secundario" onClick={onProbar}>
+              Verlo cortar →
+            </button>
+          )}
         </div>
       </section>
     )
@@ -87,6 +95,11 @@ export default function GuiaTarjeta({
         <p className="guia-tarea__por">
           <strong>Por qué:</strong> {paso.por}
         </p>
+        {onProbar && (paso.id === 'core' || paso.id === 'revisar') && (
+          <button type="button" className="guia-tarea__principal guia-tarea__probar" onClick={onProbar} data-ir-probar="si">
+            Probar en el robot →
+          </button>
+        )}
         <details className="guia-tarea__mas">
           <summary>Cómo se hace, clic a clic</summary>
           <ol>
