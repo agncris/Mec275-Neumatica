@@ -140,3 +140,19 @@ La regla para partir archivos: mover, no reescribir. Cada extracción va en su c
 | Tests | 464 | 493 |
 | Líneas del README | 631 | 69 |
 | Pruebas de punta a punta | 0 | 5 recorridos (`npm run e2e`, también en el CI) |
+
+## Estado al 18-nov-2026: esqueleto común y escenas 3D
+
+Hecho (todo en `main`, publicado en Vercel):
+- Las cuatro unidades usan el mismo esqueleto: programa o circuito a la izquierda, simulación 3D a la derecha con cubo de vistas, play dentro de la escena y barra de tiempo, panel acoplado y el interruptor «Armar / Probar» (`InterruptorEtapa`). Neumática pasó a este esqueleto el 18-nov.
+- Fuera de las escenas: los botones de vista, el panel Girar, Mover y Zoom, y Encuadrar (lo hace el cubo de vistas).
+- El Análisis de Robótica es una lista «¿Lo hace bien?» con cinco criterios y sin la palabra «singularidad» fuera de Estudiar.
+- Escenas sin piezas en el aire ni que atraviesen otras: tipos de robot de Estudiar (`robot-tipos-geometria.test.ts`) y torno y fresadora (`cnc-escena3d.test.ts`, `colisiones3d.ts`). Si se agrega un modelo 3D, estos tests deben pasar.
+- Revisado en navegador real: grabación de video, las cuatro plantas del PLC, pantalla completa, cursor de mano sobre los mandos, celular y 1280×720.
+
+Pendiente:
+- Guía de tarea común a las cuatro unidades (hoy cada una tiene su pieza). Es un rediseño.
+- «Te falta esto» y barra de progreso en la guía de Neumática. Baja prioridad: la tarea de esa unidad ya pasó.
+- Prueba con tres alumnos haciendo la tarea sin ayuda, y medir dónde se traban.
+- Carga inicial (2.5), estilos en línea (meta de 400), contraste en estados poco comunes y cupo de MecBot por IP (hoy en memoria de cada instancia).
+- Vercel corta los deploys si se hacen muchos en un día («Deployment rate limited»): junta los cambios en pocos push.
