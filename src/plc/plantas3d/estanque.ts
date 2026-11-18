@@ -34,7 +34,7 @@ export function escenaEstanque(): Escena {
     new THREE.CylinderGeometry(R, R, ALTO, 48, 1, true),
     // Vidrio sin «transmission»: con ella, three.js no deja ver el agua
     // (transparente) que hay detrás de la pared.
-    new THREE.MeshPhysicalMaterial({ color: 0xeef6ff, roughness: 0.05, clearcoat: 1, transparent: true, opacity: 0.16, depthWrite: false, side: THREE.DoubleSide }),
+    new THREE.MeshPhysicalMaterial({ color: 0xcfe2f4, roughness: 0.05, clearcoat: 1, transparent: true, opacity: 0.26, depthWrite: false, side: THREE.DoubleSide }),
   )
   pared.position.set(xT, Y0 + ALTO / 2, 0.1)
   pared.renderOrder = 2

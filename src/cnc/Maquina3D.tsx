@@ -49,7 +49,7 @@ const PLANO_CORTE = new THREE.Plane(new THREE.Vector3(0, 0, -1), 0)
 type Vista = 'iso' | 'frente' | 'arriba' | 'lado'
 
 const M = {
-  pintura: new THREE.MeshPhysicalMaterial({ color: 0x5e6b76, metalness: 0.22, roughness: 0.46, clearcoat: 0.28, clearcoatRoughness: 0.4 }),
+  pintura: new THREE.MeshPhysicalMaterial({ color: 0x929dab, metalness: 0.14, roughness: 0.48, clearcoat: 0.3, clearcoatRoughness: 0.4 }),
   pinturaOscura: new THREE.MeshPhysicalMaterial({ color: 0x3a444d, metalness: 0.34, roughness: 0.4, clearcoat: 0.22 }),
   acero: new THREE.MeshPhysicalMaterial({ color: 0xc5ccd4, metalness: 0.96, roughness: 0.18, clearcoat: 0.28, envMapIntensity: 1.25 }),
   aceroOscuro: new THREE.MeshPhysicalMaterial({ color: 0x4e585f, metalness: 0.88, roughness: 0.3, envMapIntensity: 1.1 }),
@@ -68,7 +68,7 @@ function fondoMaquina(): THREE.CanvasTexture {
   const grad = g.createLinearGradient(0, 0, 0, 256)
   grad.addColorStop(0, '#c4d8ec')
   grad.addColorStop(0.5, '#e1e9f0')
-  grad.addColorStop(1, '#e9e3d9')
+  grad.addColorStop(1, '#e3e6ea')
   g.fillStyle = grad
   g.fillRect(0, 0, 2, 256)
   const t = new THREE.CanvasTexture(c)
@@ -895,8 +895,9 @@ export default function Maquina3D({
     }
     const { renderer, escena, camara, controles } = base
     renderer.outputColorSpace = THREE.SRGBColorSpace
-    renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 1.05
+    // Neutral conserva los colores de la pintura y del plástico. ACES los lavaba.
+    renderer.toneMapping = THREE.NeutralToneMapping
+    renderer.toneMappingExposure = 0.94
     renderer.shadowMap.enabled = true
     renderer.shadowMap.type = THREE.PCFSoftShadowMap
     renderer.localClippingEnabled = true
@@ -906,13 +907,13 @@ export default function Maquina3D({
 
     const pmrem = new THREE.PMREMGenerator(renderer)
     escena.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
-    escena.environmentIntensity = 1.2
+    escena.environmentIntensity = 0.95
     escena.background = fondoMaquina()
     const sol = solSuave(0xfff3e4, 2.8)
     sol.shadow.normalBias = 2.2
     sol.shadow.bias = -0.0006
     sol.shadow.radius = 2.5
-    escena.add(sol, sol.target, new THREE.HemisphereLight(0xf7f8fa, 0x8a8178, 0.62))
+    escena.add(sol, sol.target, new THREE.HemisphereLight(0xf7f8fa, 0x8a9099, 0.62))
 
     controlesRef.current = controles
 

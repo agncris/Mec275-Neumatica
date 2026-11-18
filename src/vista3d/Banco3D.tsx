@@ -250,7 +250,7 @@ function fondoDegradado(): THREE.Texture {
   const g = c.createLinearGradient(0, 0, 0, 256)
   g.addColorStop(0, '#c4d8ec')
   g.addColorStop(0.55, '#dde6ee')
-  g.addColorStop(1, '#cfc7b9')
+  g.addColorStop(1, '#d3d7dc')
   c.fillStyle = g
   c.fillRect(0, 0, 4, 256)
   const t = new THREE.CanvasTexture(lienzo)
@@ -397,8 +397,9 @@ export default function Banco3D({ motor, llenar = false, play }: Props) {
     }
     const { renderer, escena, camara, controles } = base
     renderer.outputColorSpace = THREE.SRGBColorSpace
-    renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 1.05
+    // Neutral conserva los colores de la pintura y del plástico. ACES los lavaba.
+    renderer.toneMapping = THREE.NeutralToneMapping
+    renderer.toneMappingExposure = 0.94
     renderer.shadowMap.enabled = true
     renderer.shadowMap.type = THREE.PCFSoftShadowMap
     renderer.domElement.style.display = 'block'
@@ -407,6 +408,7 @@ export default function Banco3D({ motor, llenar = false, play }: Props) {
     const pmrem = new THREE.PMREMGenerator(renderer)
     const entorno = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
     escena.environment = entorno
+    escena.environmentIntensity = 0.85
     escena.background = fondoDegradado()
     escena.fog = new THREE.Fog(0xcfd4da, 2.6, 6)
 

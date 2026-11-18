@@ -7,8 +7,8 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 
 export function calidadRender(renderer: THREE.WebGLRenderer) {
   renderer.outputColorSpace = THREE.SRGBColorSpace
-  renderer.toneMapping = THREE.ACESFilmicToneMapping
-  renderer.toneMappingExposure = 1.08
+  renderer.toneMapping = THREE.NeutralToneMapping
+  renderer.toneMappingExposure = 0.94
   renderer.shadowMap.enabled = true
   renderer.shadowMap.type = THREE.PCFSoftShadowMap
 }
@@ -22,7 +22,7 @@ export function fondoTaller(): THREE.CanvasTexture {
   const grad = g.createLinearGradient(0, 0, 0, 256)
   grad.addColorStop(0, '#bcd3ea')
   grad.addColorStop(0.55, '#d9e4ee')
-  grad.addColorStop(1, '#e8e4dc')
+  grad.addColorStop(1, '#e3e6ea')
   g.fillStyle = grad
   g.fillRect(0, 0, 2, 256)
   const t = new THREE.CanvasTexture(c)
@@ -73,7 +73,7 @@ export function pisoHormigon(radio: number): THREE.Mesh {
   const c = document.createElement('canvas')
   c.width = c.height = 512
   const g = c.getContext('2d')!
-  g.fillStyle = '#cdc3b3'
+  g.fillStyle = '#b9bfc6'
   g.fillRect(0, 0, 512, 512)
   for (let i = 0; i < 2200; i++) {
     const x = Math.random() * 512

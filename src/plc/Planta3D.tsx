@@ -133,8 +133,9 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
     }
     const { renderer, escena, camara, controles } = base
     renderer.outputColorSpace = THREE.SRGBColorSpace
-    renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 1.05
+    // Neutral conserva los colores de la pintura y del plástico. ACES los lavaba.
+    renderer.toneMapping = THREE.NeutralToneMapping
+    renderer.toneMappingExposure = 0.94
     renderer.shadowMap.enabled = true
     renderer.shadowMap.type = THREE.PCFSoftShadowMap
     renderer.localClippingEnabled = true
@@ -144,7 +145,7 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
     const pmrem = new THREE.PMREMGenerator(renderer)
     const entorno = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
     escena.environment = entorno
-    escena.environmentIntensity = 1.2
+    escena.environmentIntensity = 0.9
     escena.background = fondoTaller()
 
     ponerNotacionEscena(notacion)
@@ -172,7 +173,7 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
     // Pared de laboratorio y mesa.
     const pared = new THREE.Mesh(
       new THREE.PlaneGeometry(tam.x + 1.2, tam.y + 0.8),
-      new THREE.MeshStandardMaterial({ color: 0xe7e1d6, roughness: 0.92 }),
+      new THREE.MeshStandardMaterial({ color: 0xbfc8d2, roughness: 0.9 }),
     )
     pared.position.set(centro.x, centro.y, -0.005)
     pared.receiveShadow = true
@@ -184,7 +185,7 @@ export default function Planta3D({ sim, version, acciones, onAccion, notacion, a
     mesa.receiveShadow = true
     escena.add(pared, mesa)
 
-    const sol = new THREE.DirectionalLight(0xfff1e0, 3)
+    const sol = new THREE.DirectionalLight(0xfff6ec, 2.6)
     sol.position.set(centro.x - 0.5, centro.y + 1.0, 1.3)
     sol.target.position.copy(centro)
     sol.castShadow = true
