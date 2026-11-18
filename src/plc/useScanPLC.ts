@@ -22,6 +22,7 @@ export function useScanPLC({
   avisoPlantaRef,
   corriendo,
   setFotograma,
+  velocidad = 1,
 }: {
   simRef: MutableRefObject<SimPLC>
   programaRef: MutableRefObject<ProgramaPLC>
@@ -32,7 +33,11 @@ export function useScanPLC({
   avisoPlantaRef: MutableRefObject<{ mensaje: string; hasta: number } | null>
   corriendo: boolean
   setFotograma: (f: (n: number) => number) => void
+  /** ×1 es un barrido por reloj de 20 ms; ×2 son dos, ×0,5 uno cada dos relojes. */
+  velocidad?: number
 }) {
+  const velocidadRef = useRef(velocidad)
+  velocidadRef.current = velocidad
   // RUN / STOP: al pasar a RUN el PLC arranca con la memoria limpia.
   const primeraVez = useRef(true)
   useEffect(() => {
@@ -111,9 +116,14 @@ export function useScanPLC({
   // El bucle: scan del PLC + física de la planta, 50 veces por segundo (se detiene en pausa).
   useEffect(() => {
     let tiempo = 0
+    let acumulado = 0
     const id = setInterval(() => {
       if (simRef.current.corriendo && pausadoRef.current) return
-      pasoRef.current()
+      acumulado += velocidadRef.current
+      while (acumulado >= 1) {
+        pasoRef.current()
+        acumulado -= 1
+      }
       tiempo += DT
       if (tiempo >= 0.066) {
         tiempo = 0

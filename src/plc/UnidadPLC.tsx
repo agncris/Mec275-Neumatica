@@ -33,6 +33,7 @@ import {
   type IdPlanta,
   type ProgramaPLC,
 } from './ladder'
+import BarraTiempo from '../components/BarraTiempo'
 import { PLANTAS, crearPlanta } from './plantas'
 import { type Notacion } from './notacion'
 import type { SimPLC } from './Planta3D'
@@ -74,6 +75,7 @@ export default function UnidadPLC() {
   const [ejemplo, setEjemplo] = useState(false)
   const trabajoPrevio = useRef<{ programa: ProgramaPLC; historial: Historial<ProgramaPLC> } | null>(null)
   const [corriendo, setCorriendo] = useState(false)
+  const [velocidadSim, setVelocidadSim] = useState(1)
   const [version, setVersion] = useState(0)
   const [, setFotograma] = useState(0)
   const [aviso, setAviso] = useState<string | null>(null)
@@ -181,7 +183,19 @@ export default function UnidadPLC() {
     setVersion((v) => v + 1)
   }, [programa.planta])
 
-  const { pausado, setPausado, barridosRef, unBarrido } = useScanPLC({ simRef, programaRef, forzadosRef, notacionRef, flujosRef, eventosRef, avisoPlantaRef, corriendo, setFotograma })
+  /** Vuelve la planta al reposo, en STOP y con el reloj en cero (lo mismo que al montar otra planta). */
+  const reiniciarPlanta = () => {
+    setCorriendo(false)
+    simRef.current.planta = crearPlanta(programaRef.current.planta)
+    simRef.current.mandos = {}
+    simRef.current.estado = estadoInicial()
+    simRef.current.corriendo = false
+    flujosRef.current = null
+    eventosRef.current = []
+    setVersion((v) => v + 1)
+  }
+
+  const { pausado, setPausado, barridosRef, unBarrido } = useScanPLC({ simRef, programaRef, forzadosRef, notacionRef, flujosRef, eventosRef, avisoPlantaRef, corriendo, setFotograma, velocidad: velocidadSim })
 
   // Espacio: RUN / STOP.
   useEffect(() => {
@@ -479,12 +493,14 @@ export default function UnidadPLC() {
             play={{
               etiqueta: corriendo ? '■ STOP' : '▶ RUN',
               onClick: () => setCorriendo((c) => !c),
-              titulo: 'Atajo: barra espaciadora',
+              titulo: corriendo ? 'Pasar a STOP (atajo: barra espaciadora)' : 'Pasar a RUN (atajo: barra espaciadora)',
               corriendo,
+              detiene: true,
             }}
           />
         </Suspense>
       </div>
+      <BarraTiempo tiempo={simRef.current.estado.t ?? 0} velocidad={velocidadSim} velocidades={[0.5, 1, 2]} onVelocidad={setVelocidadSim} onReiniciar={reiniciarPlanta} />
       {avisoPlantaRef.current && avisoPlantaRef.current.hasta > Date.now() && (
         <p role="alert" style={{ margin: '8px 0 0', padding: '0.45rem 0.7rem', background: '#fff4e5', border: '1px solid #f0c98a', borderRadius: 8, color: '#8a3b00', fontSize: '0.86rem' }}>
           ⚠ {avisoPlantaRef.current.mensaje}
