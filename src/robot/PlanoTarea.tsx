@@ -1,3 +1,4 @@
+import { BarraEjemplo as BarraEjemploTarea } from '../components/banco/EjemploTarea'
 import { enlaceEstudiar } from './estilos'
 import type { ItemAvance, PasoTarea } from './guiaTarea'
 import type { PuntoRevisionTarea } from './tarea4'
@@ -5,25 +6,16 @@ import type { PuntoRevisionTarea } from './tarea4'
 /** Barra del ejemplo: va por encima de las pestañas del panel, no dentro de Plano. */
 export function BarraEjemplo({ ejemplo, onEjemplo, onVolver, onSeguir }: { ejemplo: boolean; onEjemplo: () => void; onVolver: () => void; onSeguir: () => void }) {
   return (
-    <>
-      {ejemplo && <p className="panel-acoplado__encabezado__aviso">Estás viendo el ejemplo del contorno. No es tu entrega.</p>}
-      <div className="tarea-accion">
-          {ejemplo ? (
-            <>
-              <button type="button" className="tarea-accion__principal" onClick={onVolver} data-volver-tarea="si">
-                Volver a mi tarea
-              </button>
-              <button type="button" className="tarea-accion__secundario" onClick={onSeguir} data-seguir-ejemplo="si" title="Deja este contorno en tu tarea, en lugar de lo que tenías">
-                Seguir con este contorno
-              </button>
-            </>
-          ) : (
-            <button type="button" className="tarea-accion__principal" onClick={onEjemplo} data-ver-ejemplo="si">
-              Ver el ejemplo del contorno
-            </button>
-          )}
-        </div>
-    </>
+    <BarraEjemploTarea
+      ejemplo={ejemplo}
+      aviso="Estás viendo el ejemplo del contorno. No es tu entrega."
+      etiquetaVer="Ver el ejemplo del contorno"
+      onVer={onEjemplo}
+      onVolver={onVolver}
+      etiquetaSeguir="Seguir con este contorno"
+      tituloSeguir="Deja este contorno en tu tarea, en lugar de lo que tenías"
+      onSeguir={onSeguir}
+    />
   )
 }
 

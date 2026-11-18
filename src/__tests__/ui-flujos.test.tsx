@@ -7,6 +7,10 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import Raiz from '../Raiz'
+import { CLAVES } from '../persistencia'
+import { tareaVacia as tareaVaciaCnc } from '../cnc/datosCNC'
+import { tareaVacia as tareaVaciaPlc } from '../plc/datosPLC'
+import { EJEMPLO_GUIADO_TORNO } from '../cnc/PlanoTarea'
 
 const errorOriginal = console.error
 afterAll(() => {
@@ -119,6 +123,88 @@ describe('Tarea 4 de Robótica', () => {
     expect(pasoGuia()).toBe(pasoAntes)
     expect(nodos()).toBe(nodosAntes)
   }, 30000)
+})
+
+describe('el ejemplo guiado es una visita (CNC y PLC)', () => {
+  const verEjemplo = () => document.querySelector('[data-ver-ejemplo]') as HTMLElement
+  const volver = () => document.querySelector('[data-volver-tarea]') as HTMLElement
+
+  it('CNC: «Ver ejemplo guiado» y «Volver a mi tarea» dejan el mismo programa, y la tarea guardada no se pisa', async () => {
+    const propio = 'N10 G21 G90\nN20 M03 S900\nN30 G00 X50 Z2\nN40 G01 Z-12 F90\nN50 M30\n'
+    const base = tareaVaciaCnc()
+    const guardado = JSON.stringify({ config: base.config, codigos: { ...base.codigos, torno: propio }, nombres: { ...base.nombres, torno: 'Mi pieza' } })
+    window.localStorage.setItem(CLAVES.cncTarea, guardado)
+    abrir('cnc', '&vista=tarea')
+    const editor = () => document.querySelector('textarea') as HTMLTextAreaElement
+    await waitFor(() => expect(editor()?.value).toBe(propio), ESPERA)
+
+    fireEvent.click(await waitFor(() => {
+      expect(verEjemplo()).toBeTruthy()
+      return verEjemplo()
+    }))
+    await waitFor(() => expect(editor().value).toBe(EJEMPLO_GUIADO_TORNO))
+    expect(screen.getAllByText(/Esto es un ejemplo, no tu entrega/).length).toBeGreaterThan(0)
+    // Editar el ejemplo tampoco toca lo guardado de la tarea.
+    fireEvent.change(editor(), { target: { value: `${EJEMPLO_GUIADO_TORNO}\nN5 G04 P1\n` } })
+    await new Promise((r) => setTimeout(r, 50))
+    expect(window.localStorage.getItem(CLAVES.cncTarea)).toBe(guardado)
+    expect(window.localStorage.getItem(CLAVES.cncAntesEjemplo)).toBe(guardado)
+
+    fireEvent.click(volver())
+    await waitFor(() => expect(editor().value).toBe(propio))
+    expect(document.querySelector('[data-volver-tarea]')).toBeNull()
+    expect(window.localStorage.getItem(CLAVES.cncAntesEjemplo)).toBeNull()
+    expect(JSON.parse(window.localStorage.getItem(CLAVES.cncTarea) as string).codigos.torno).toBe(propio)
+  }, 40000)
+
+  it('CNC: recargar estando en el ejemplo deja el programa propio', async () => {
+    const propio = 'N10 G21\nN20 M30\n'
+    const base = tareaVaciaCnc()
+    window.localStorage.setItem(CLAVES.cncTarea, JSON.stringify({ config: base.config, codigos: { ...base.codigos, torno: propio }, nombres: base.nombres }))
+    const { unmount } = abrir('cnc', '&vista=tarea')
+    await waitFor(() => expect(verEjemplo()).toBeTruthy(), ESPERA)
+    fireEvent.click(verEjemplo())
+    await waitFor(() => expect((document.querySelector('textarea') as HTMLTextAreaElement).value).toBe(EJEMPLO_GUIADO_TORNO))
+    unmount()
+    abrir('cnc', '&vista=tarea')
+    await waitFor(() => expect((document.querySelector('textarea') as HTMLTextAreaElement)?.value).toBe(propio), ESPERA)
+    expect(document.querySelector('[data-volver-tarea]')).toBeNull()
+  }, 40000)
+
+  it('PLC: «Ver ejemplo guiado» y «Volver a mi tarea» dejan el mismo programa, y la tarea guardada no se pisa', async () => {
+    const propio = { ...tareaVaciaPlc(), nombre: 'Mi silo' }
+    propio.simbolos = [{ dir: 'I0.0', nombre: 'MI_START', descripcion: '' }]
+    const guardado = JSON.stringify(propio)
+    window.localStorage.setItem(CLAVES.plcTarea, guardado)
+    abrir('plc', '&vista=tarea')
+    await waitFor(() => expect(screen.getByText(/Programa Ladder · Mi silo/)).toBeTruthy(), ESPERA)
+
+    fireEvent.click(verEjemplo())
+    await waitFor(() => expect(screen.getByText(/Programa Ladder · Ejemplo guiado/)).toBeTruthy())
+    expect(screen.getAllByText(/Esto es un ejemplo, no tu entrega/).length).toBeGreaterThan(0)
+    await new Promise((r) => setTimeout(r, 50))
+    expect(window.localStorage.getItem(CLAVES.plcTarea)).toBe(guardado)
+    expect(window.localStorage.getItem(CLAVES.plcAntesEjemplo)).toBe(guardado)
+
+    fireEvent.click(volver())
+    await waitFor(() => expect(screen.getByText(/Programa Ladder · Mi silo/)).toBeTruthy())
+    expect(document.querySelector('[data-volver-tarea]')).toBeNull()
+    expect(window.localStorage.getItem(CLAVES.plcAntesEjemplo)).toBeNull()
+    expect(window.localStorage.getItem(CLAVES.plcTarea)).toBe(guardado)
+  }, 40000)
+
+  it('PLC: recargar estando en el ejemplo deja el programa propio', async () => {
+    const propio = { ...tareaVaciaPlc(), nombre: 'Mi silo' }
+    window.localStorage.setItem(CLAVES.plcTarea, JSON.stringify(propio))
+    const { unmount } = abrir('plc', '&vista=tarea')
+    await waitFor(() => expect(verEjemplo()).toBeTruthy(), ESPERA)
+    fireEvent.click(verEjemplo())
+    await waitFor(() => expect(screen.getByText(/Programa Ladder · Ejemplo guiado/)).toBeTruthy())
+    unmount()
+    abrir('plc', '&vista=tarea')
+    await waitFor(() => expect(screen.getByText(/Programa Ladder · Mi silo/)).toBeTruthy(), ESPERA)
+    expect(document.querySelector('[data-volver-tarea]')).toBeNull()
+  }, 40000)
 })
 
 describe('Revisar en Entregar', () => {

@@ -111,6 +111,54 @@ async function main() {
     await lienzoConDibujo(p)
   }, navegador)
 
+  await prueba('CNC: el ejemplo guiado es una visita (escribir, ver el ejemplo, recargar, volver)', async (p) => {
+    await abrir(p, 'cnc', '&vista=tarea')
+    const editor = p.locator('textarea').first()
+    await esperar(editor, 'no aparece el editor de código G')
+    const propio = 'N10 G21 G90\nN20 M03 S900\nN30 G00 X50 Z2\nN40 G01 Z-12 F90\nN50 M30\n'
+    await editor.fill(propio)
+    await p.waitForTimeout(400)
+    await p.locator('[data-ver-ejemplo]').click()
+    await esperar(p.locator('[data-ejemplo-tarea]'), 'no aparece el aviso del ejemplo')
+    if ((await editor.inputValue()) === propio) throw new Error('el ejemplo no reemplazó lo que se ve')
+    // Recargar dentro del ejemplo: el programa propio sigue ahí.
+    await p.reload()
+    await p.getByText('Saltar la guía').click({ timeout: 2000 }).catch(() => {})
+    await esperar(p.locator('textarea').first(), 'no vuelve el editor tras recargar')
+    igual(await p.locator('textarea').first().inputValue(), propio, 'tras recargar en el ejemplo')
+    await p.locator('[data-ver-ejemplo]').click()
+    await esperar(p.locator('[data-volver-tarea]').first(), 'no aparece «Volver a mi tarea»')
+    await p.locator('[data-volver-tarea]').first().click()
+    igual(await p.locator('textarea').first().inputValue(), propio, 'tras volver de la tarea')
+  }, navegador)
+
+  await prueba('PLC: el ejemplo guiado es una visita (ver el ejemplo, recargar, volver)', async (p) => {
+    await abrir(p, 'plc', '&vista=tarea')
+    await esperar(p.locator('[data-ver-ejemplo]'), 'no aparece «Ver ejemplo guiado»')
+    // Un programa propio de la tarea: se deja guardado como lo dejaría el autoguardado.
+    const propio = await p.evaluate(() => {
+      const g = JSON.parse(localStorage.getItem('neumalab.plc.tarea'))
+      g.nombre = 'Mi silo'
+      g.simbolos = [{ dir: 'I0.0', nombre: 'MI_START', descripcion: '' }]
+      const texto = JSON.stringify(g)
+      localStorage.setItem('neumalab.plc.tarea', texto)
+      return texto
+    })
+    await p.reload()
+    await p.getByText('Saltar la guía').click({ timeout: 2000 }).catch(() => {})
+    await esperar(p.getByText(/Programa Ladder · Mi silo/), 'no abre el programa propio')
+    await p.locator('[data-ver-ejemplo]').click()
+    await esperar(p.getByText(/Programa Ladder · Ejemplo guiado/), 'no muestra el ejemplo')
+    igual(await p.evaluate(() => localStorage.getItem('neumalab.plc.tarea')), propio, 'lo guardado mientras se ve el ejemplo')
+    await p.reload()
+    await p.getByText('Saltar la guía').click({ timeout: 2000 }).catch(() => {})
+    await esperar(p.getByText(/Programa Ladder · Mi silo/), 'tras recargar en el ejemplo no vuelve el programa propio')
+    await p.locator('[data-ver-ejemplo]').click()
+    await p.locator('[data-volver-tarea]').first().click()
+    await esperar(p.getByText(/Programa Ladder · Mi silo/), 'no vuelve el programa propio')
+    igual(await p.evaluate(() => localStorage.getItem('neumalab.plc.tarea')), propio, 'lo guardado tras volver')
+  }, navegador)
+
   await prueba('Robótica: la guía de la Tarea 4 avanza al agregar un bloque', async (p) => {
     await abrir(p, 'robotica', '&vista=tarea')
     const guia = p.locator('[data-guia-paso]')

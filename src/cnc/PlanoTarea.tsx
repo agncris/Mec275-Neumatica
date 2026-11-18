@@ -1,5 +1,4 @@
 import ProcesoTarea, { enlaceEstudiar, type PasoProceso } from '../components/banco/ProcesoTarea'
-import { botonSuave } from './estilos'
 import { type PuntoRevision } from './trabajo'
 
 const ETAPAS_CNC = ['Unidades', 'Husillo', 'Acercar', 'Cortar', 'Cerrar', 'Revisar']
@@ -49,20 +48,24 @@ function pasoCnc(codigo: string): PasoProceso {
 }
 
 /** El plano de la tarea, con el proceso arriba y un solo paso abierto. */
-export default function PlanoTarea({ codigo, checklist, onEstudiar, onEjemplo }: { codigo: string; checklist: PuntoRevision[]; onEstudiar: (ancla: string) => void; onEjemplo: () => void }) {
+export default function PlanoTarea({ codigo, checklist, onEstudiar, ejemplo }: { codigo: string; checklist: PuntoRevision[]; onEstudiar: (ancla: string) => void; ejemplo: boolean }) {
   const paso = pasoCnc(codigo)
   return (
     <div data-plano-tarea="si">
+      {ejemplo ? (
+        <section className="proceso" aria-label="Proceso de la tarea" data-paso-ahora="ejemplo">
+          <p style={{ margin: 0, fontWeight: 700 }}>Ejemplo guiado. No es tu entrega.</p>
+          <p style={{ margin: '6px 0 0' }}>Una pasada recta con husillo y fin. Sirve para mirar cómo se arma un programa. Las cotas del plano quedan para tu tarea.</p>
+        </section>
+      ) : (
       <ProcesoTarea etapas={ETAPAS_CNC} paso={paso}>
         <p className="u-m-8-0-0">
-          <button type="button" onClick={onEjemplo} style={botonSuave}>
-            Ver ejemplo guiado
-          </button>{' '}
           <button type="button" onClick={() => onEstudiar(paso.id === 'revisar' ? 'torno' : 'codigos')} style={enlaceEstudiar}>
             ¿No recuerdas el código de este paso? → Estudiar
           </button>
         </p>
       </ProcesoTarea>
+      )}
       <p style={{ margin: '8px 0 6px', fontSize: '0.82rem', color: 'var(--tinta-suave)' }}>
         Pieza 1, cotas en mm. En el torno, X se programa en diámetro y el cero del programa va en la cara frontal, sobre el eje.
       </p>

@@ -46,6 +46,8 @@ export const CLAVES = {
   // PLC
   plcPrograma: 'neumalab.plc.programa',
   plcTarea: 'neumalab.plc.tarea',
+  /** Lo que había en la tarea antes de abrir el ejemplo guiado. */
+  plcAntesEjemplo: 'neumalab.plc.tarea.antes-ejemplo',
   plcDirecciones: 'neumalab.plc.direcciones',
   plcPanel: 'neumalab.plc.panel',
   plcBanco: 'neumalab.plc.banco.v2',
@@ -55,6 +57,8 @@ export const CLAVES = {
   // CNC
   cnc: 'neumalab.cnc',
   cncTarea: 'neumalab.cnc.tarea',
+  /** Lo que había en la tarea antes de abrir el ejemplo guiado. */
+  cncAntesEjemplo: 'neumalab.cnc.tarea.antes-ejemplo',
   cncPanel: 'neumalab.cnc.panel',
   cncBanco: 'neumalab.cnc.banco.v2',
   cncEntrega: 'neumalab.cnc.entrega',

@@ -45,9 +45,10 @@ import { useBucleSimulacion, useGrabacionCNC } from './useSimulacionCNC'
 import { botonSuave } from './estilos'
 import { SimuladorCNC, volumenPieza } from './simulador'
 import type { VistaCNC } from './Maquina3D'
-import { CLAVE, CLAVE_TAREA, NOMBRE_TAREA, leerGuardado, leerTarea } from './datosCNC'
+import { CLAVE, CLAVE_TAREA, NOMBRE_TAREA, leerGuardado, leerTarea, leerTareaAntesEjemplo, type Guardado } from './datosCNC'
 import { type Estado } from './datosCNC'
-import { CLAVES, guardarJson as guardarClaveJson } from '../persistencia'
+import { borrarClave, CLAVES, guardarJson as guardarClaveJson } from '../persistencia'
+import { AvisoEjemplo, BarraEjemplo } from '../components/banco/EjemploTarea'
 
 const Maquina3D = lazy(() => import('./Maquina3D'))
 // La teoría, la ficha y la autoevaluación de Estudiar se cargan solo al entrar a Estudiar.
@@ -69,6 +70,9 @@ export default function UnidadCNC() {
   const [codigos, setCodigos] = useState(inicial.codigos)
   const [nombres, setNombres] = useState(inicial.nombres)
   const maquina = config.maquina
+  /** El ejemplo guiado es una visita: mientras dura no se guarda sobre la tarea, que queda en `trabajoPrevio` y en el almacenamiento. */
+  const [ejemplo, setEjemplo] = useState(false)
+  const trabajoPrevio = useRef<Guardado | null>(null)
   /** Entrar o salir de la tarea cambia de programa y de preparación: cada uno se guarda por su lado. */
   const setSeccion = (s: SeccionUnidad) => {
     if ((s === 'tarea') !== enTarea) {
@@ -79,6 +83,10 @@ export default function UnidadCNC() {
       setEstado('listo')
       setEntregaAbierta(false)
       setEligiendoMaquina(false)
+      // Cambiar de sección termina la visita al ejemplo: la tarea sigue guardada.
+      setEjemplo(false)
+      trabajoPrevio.current = null
+      borrarClave(CLAVES.cncAntesEjemplo)
       panel.onPestana(s === 'tarea' ? 'plano-tarea' : 'preparacion')
       panel.onAbrir(true)
     }
@@ -140,8 +148,10 @@ export default function UnidadCNC() {
 
   // Guardado automático: la tarea y el laboratorio se guardan cada uno por su lado.
   useEffect(() => {
+    // El ejemplo es una visita: no pisa la tarea guardada.
+    if (ejemplo) return
     guardarClaveJson(enTarea ? CLAVE_TAREA : CLAVE, { config, codigos, nombres })
-  }, [config, codigos, nombres, enTarea])
+  }, [config, codigos, nombres, enTarea, ejemplo])
 
   // Un enlace con un programa (#cnc=…) lo abre en su máquina, con su preparación.
   useEffect(() => {
@@ -186,11 +196,37 @@ export default function UnidadCNC() {
     }
     setSeccion('estudiar')
   }
+  const ejemploEnTarea = enTarea && ejemplo
+  /** Mientras se ve el ejemplo no se cambia el programa por otro camino: primero se vuelve a la tarea. */
+  const enVisita = () => {
+    if (!ejemploEnTarea) return false
+    setAviso('Estás viendo el ejemplo. Pulsa «Volver a mi tarea» antes de cambiar el programa.')
+    return true
+  }
   const verEjemploGuiado = () => {
-    if (!window.confirm('Se reemplaza el programa por un ejemplo a medias: una sola pasada recta, con husillo y fin. No es la pieza del plano. ¿Seguir?')) return
+    if (ejemploEnTarea) return
+    // La tarea se guarda entera (programa, preparación y nombres) antes de mostrar el ejemplo.
+    const previo: Guardado = { config, codigos, nombres }
+    trabajoPrevio.current = previo
+    guardarClaveJson(CLAVE_TAREA, previo)
+    guardarClaveJson(CLAVES.cncAntesEjemplo, previo)
+    setEjemplo(true)
+    setEntregaAbierta(false)
     setEstado('listo')
     setCodigo(EJEMPLO_GUIADO_TORNO)
-    setAviso('Ejemplo guiado cargado. Mira cómo se acerca y corta una recta, y reemplaza esa pasada por las cotas del plano.')
+    setNombres((x) => ({ ...x, [maquina]: 'Ejemplo guiado' }))
+    setAviso('Ejemplo guiado. Tu tarea sigue guardada: «Volver a mi tarea» la recupera.')
+  }
+  const volverDelEjemplo = () => {
+    const previo = trabajoPrevio.current ?? leerTareaAntesEjemplo() ?? leerTarea()
+    trabajoPrevio.current = null
+    borrarClave(CLAVES.cncAntesEjemplo)
+    setConfig(previo.config)
+    setCodigos(previo.codigos)
+    setNombres(previo.nombres)
+    setEstado('listo')
+    setEjemplo(false)
+    setAviso('Volviste a tu tarea.')
   }
 
   useEffect(() => {
@@ -245,6 +281,7 @@ export default function UnidadCNC() {
   }
 
   const cargarEjemplo = (id: string) => {
+    if (enVisita()) return false
     const ej = EJEMPLOS_CNC.find((e) => e.id === id)
     if (!ej) return false
     const actual = codigos[ej.maquina]
@@ -264,6 +301,7 @@ export default function UnidadCNC() {
   }
 
   const nuevo = (m: TipoMaquina = maquina) => {
+    if (enVisita()) return false
     const actual = codigos[m]
     const sinCambios = EJEMPLOS_CNC.some((e) => e.codigo === actual) || actual === programaNuevo(m) || !actual.trim()
     if (!sinCambios && !window.confirm(`¿Empezar un programa nuevo? Se reemplaza tu programa de ${m === 'torno' ? 'torno' : 'fresadora'}.`)) return false
@@ -300,6 +338,7 @@ export default function UnidadCNC() {
 
   const abrir = async (archivo: File | undefined) => {
     if (!archivo) return
+    if (enVisita()) return
     try {
       const texto = await archivo.text()
       if (/\.json$/i.test(archivo.name) || texto.trimStart().startsWith('{')) {
@@ -434,6 +473,11 @@ export default function UnidadCNC() {
           {textoEstado[estado][0]}
         </span>
       </TituloArea>
+      {ejemploEnTarea && (
+        <AvisoEjemplo onVolver={volverDelEjemplo}>
+          <strong>Esto es un ejemplo, no tu entrega.</strong> Una sola pasada recta, a medias. Tu programa de la tarea sigue guardado.
+        </AvisoEjemplo>
+      )}
       {!/\bG0?[123]\b/i.test(codigo.replace(/\(.*?\)/g, '').replace(/;.*/g, '')) && (
         <p className="u-ayuda-tinta">G00 sólo se acerca. Para cortar escribe G01 (recta) o G02/G03 (arco), con avance F. Ctrl+Z deshace.</p>
       )}
@@ -526,7 +570,7 @@ export default function UnidadCNC() {
             id: 'plano-tarea' as const,
             titulo: 'Plano de la Tarea 3',
             tituloCorto: 'Plano',
-            contenido: <PlanoTarea codigo={codigo} checklist={checklistTarea} onEstudiar={irAEstudiar} onEjemplo={verEjemploGuiado} />,
+            contenido: <PlanoTarea codigo={codigo} checklist={ejemploEnTarea ? [] : checklistTarea} onEstudiar={irAEstudiar} ejemplo={ejemploEnTarea} />,
           },
         ]
       : []),
@@ -612,7 +656,7 @@ export default function UnidadCNC() {
         seccion={seccion}
         onSeccion={setSeccion}
         tarea={VER_TAREA_CNC ? NOMBRE_TAREA : undefined}
-        entregar={enTarea ? { abierto: entregaAbierta, onAlternar: () => setEntregaAbierta((a) => !a), etiqueta: 'Entregar Tarea CNC', etiquetaCorta: 'Entregar' } : undefined}
+        entregar={enTarea ? { abierto: entregaAbierta, onAlternar: () => (ejemploEnTarea && !entregaAbierta ? setAviso('Estás viendo el ejemplo: vuelve a tu tarea antes de entregar.') : setEntregaAbierta((a) => !a)), etiqueta: 'Entregar Tarea CNC', etiquetaCorta: 'Entregar' } : undefined}
       />
       {seccion !== 'estudiar' ? (
         <BancoDividido<PestanaCNC>
@@ -623,7 +667,12 @@ export default function UnidadCNC() {
           barra={barra}
           izquierda={{ id: 'programa', titulo: 'Programa', contenido: areaPrograma }}
           derecha={{ id: 'maquina', titulo: 'Máquina', contenido: areaMaquina }}
-          inferior={{ etiqueta: 'Preparación, trayectoria y tablas', pestanas, estado: panel }}
+          inferior={{
+            etiqueta: 'Preparación, trayectoria y tablas',
+            pestanas,
+            estado: panel,
+            encabezado: enTarea ? <BarraEjemplo ejemplo={ejemploEnTarea} aviso="Estás viendo el ejemplo guiado. No es tu entrega." etiquetaVer="Ver ejemplo guiado" onVer={verEjemploGuiado} onVolver={volverDelEjemplo} /> : undefined,
+          }}
           estado={barraEstado}
           conCajon={entregaAbierta && enTarea && !estrecha}
         />
@@ -656,6 +705,7 @@ export default function UnidadCNC() {
             if (!d?.config || typeof d.codigo !== 'string') return 'Ese trabajo no es un programa de CNC válido.'
             const m = d.config.maquina
             if (enTarea && m !== 'torno') return 'La Tarea 3 se hace en el centro de torneado.'
+            if (ejemploEnTarea) return 'Estás viendo el ejemplo. Pulsa «Volver a mi tarea» antes de abrir otro trabajo.'
             setEstado('listo')
             setConfig(d.config)
             setCodigos((x) => ({ ...x, [m]: d.codigo as string }))

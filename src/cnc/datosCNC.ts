@@ -49,9 +49,9 @@ export function tareaVacia(): Guardado {
   }
 }
 
-export function leerTarea(): Guardado {
+/** Un guardado de la tarea, con lo que falte rellenado desde la tarea en blanco. `null` si no tiene la forma. */
+function tareaDeGuardado(g: Partial<Guardado> | null): Guardado | null {
   try {
-    const g = leerJson(CLAVE_TAREA) as Partial<Guardado> | null
     if (g && g.config && g.codigos && typeof g.codigos.torno === 'string') {
       const base = tareaVacia()
       return {
@@ -63,5 +63,14 @@ export function leerTarea(): Guardado {
   } catch {
     // Dato guardado con una forma inesperada: se parte de la tarea en blanco.
   }
-  return tareaVacia()
+  return null
+}
+
+export function leerTarea(): Guardado {
+  return tareaDeGuardado(leerJson(CLAVE_TAREA) as Partial<Guardado> | null) ?? tareaVacia()
+}
+
+/** La copia de la tarea que se guarda al abrir el ejemplo guiado. `null` si no hay. */
+export function leerTareaAntesEjemplo(): Guardado | null {
+  return tareaDeGuardado(leerJson(CLAVES.cncAntesEjemplo) as Partial<Guardado> | null)
 }

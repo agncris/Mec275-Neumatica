@@ -43,7 +43,8 @@ import BarraPLC from './BarraPLC'
 import { useScanPLC } from './useScanPLC'
 import { CLAVE, CLAVE_TAREA, esProgramaPLC, leerGuardado, leerTarea, NOMBRE_TAREA, PLANTA_TAREA, tareaVacia, type Evento } from './datosPLC'
 import { ETAPAS_SILO, pasoSilo, checklistSilo, ejemploGuiadoSilo } from './procesoSilo'
-import { CLAVES, guardarJson, guardarTexto, leerTexto } from '../persistencia'
+import { borrarClave, CLAVES, guardarJson, guardarTexto, leerJson, leerTexto } from '../persistencia'
+import { AvisoEjemplo, BarraEjemplo } from '../components/banco/EjemploTarea'
 
 const Planta3D = lazy(() => import('./Planta3D'))
 // La teoría, la ficha y la autoevaluación de Estudiar se cargan solo al entrar a Estudiar.
@@ -69,6 +70,9 @@ export default function UnidadPLC() {
     if (siguiente) setProgramaCrudo(siguiente)
     setHayHistoria((n) => n + 1)
   }, [])
+  /** El ejemplo guiado es una visita: mientras dura no se guarda sobre la tarea, que queda en `trabajoPrevio` y en el almacenamiento. */
+  const [ejemplo, setEjemplo] = useState(false)
+  const trabajoPrevio = useRef<{ programa: ProgramaPLC; historial: Historial<ProgramaPLC> } | null>(null)
   const [corriendo, setCorriendo] = useState(false)
   const [version, setVersion] = useState(0)
   const [, setFotograma] = useState(0)
@@ -100,6 +104,10 @@ export default function UnidadPLC() {
       historialRef.current = new Historial<ProgramaPLC>()
       setProgramaCrudo(s === 'tarea' ? leerTarea() : leerGuardado())
       setEntregaAbierta(false)
+      // Cambiar de sección termina la visita al ejemplo: la tarea sigue guardada.
+      setEjemplo(false)
+      trabajoPrevio.current = null
+      borrarClave(CLAVES.plcAntesEjemplo)
     }
     setSeccionCruda(s)
     if (s === 'tarea') {
@@ -144,8 +152,10 @@ export default function UnidadPLC() {
 
   // Guardado automático del programa.
   useEffect(() => {
+    // El ejemplo es una visita: no pisa la tarea guardada.
+    if (ejemplo) return
     guardarJson(enTarea ? CLAVE_TAREA : CLAVE, programa)
-  }, [programa, enTarea])
+  }, [programa, enTarea, ejemplo])
 
   // Un enlace con un programa (#plc=…) lo abre, avisando si reemplaza el que había.
   useEffect(() => {
@@ -211,7 +221,14 @@ export default function UnidadPLC() {
   const estado: EstadoPLC = sim.estado
 
   const hayContenido = programa.escalones.some((e) => e.bobinas.some(Boolean) || e.celdas.some((f) => f.some((c) => c.tipo !== 'vacio')))
-  const confirmar = (mensaje: string) => !hayContenido || window.confirm(`${mensaje}\nSe perderá el programa que tienes en el editor.`)
+  const ejemploEnTarea = enTarea && ejemplo
+  /** Mientras se ve el ejemplo no se cambia el programa por otro camino: primero se vuelve a la tarea. */
+  const enVisita = () => {
+    if (!ejemploEnTarea) return false
+    setAviso('Estás viendo el ejemplo. Pulsa «Volver a mi tarea» antes de cambiar el programa.')
+    return true
+  }
+  const confirmar = (mensaje: string) => !enVisita() && (!hayContenido || window.confirm(`${mensaje}\nSe perderá el programa que tienes en el editor.`))
 
   const cambiarPlanta = (id: IdPlanta) => {
     const cableado = PLANTAS[id].cableado
@@ -254,6 +271,7 @@ export default function UnidadPLC() {
 
   const abrir = async (archivo: File | undefined) => {
     if (!archivo) return
+    if (enVisita()) return
     try {
       const p = JSON.parse(await archivo.text())
       if (!esProgramaPLC(p)) throw new Error('Ese archivo no es un programa de PLC de NeumaLab.')
@@ -334,6 +352,33 @@ export default function UnidadPLC() {
     />
   )
 
+  const verEjemploGuiado = () => {
+    if (ejemploEnTarea) return
+    // La tarea se guarda entera (programa y su deshacer) antes de mostrar el ejemplo.
+    const previo = programaRef.current
+    trabajoPrevio.current = { programa: previo, historial: historialRef.current }
+    guardarJson(CLAVE_TAREA, previo)
+    guardarJson(CLAVES.plcAntesEjemplo, previo)
+    setCorriendo(false)
+    setEjemplo(true)
+    setEntregaAbierta(false)
+    historialRef.current = new Historial<ProgramaPLC>()
+    setProgramaCrudo({ ...ejemploGuiadoSilo(), nombre: 'Ejemplo guiado' })
+    setAviso('Ejemplo guiado. Tu tarea sigue guardada: «Volver a mi tarea» la recupera.')
+  }
+  const volverDelEjemplo = () => {
+    const guardada = leerJson(CLAVES.plcAntesEjemplo)
+    const previo = trabajoPrevio.current?.programa ?? (esProgramaPLC(guardada) ? guardada : leerTarea())
+    historialRef.current = trabajoPrevio.current?.historial ?? new Historial<ProgramaPLC>()
+    trabajoPrevio.current = null
+    borrarClave(CLAVES.plcAntesEjemplo)
+    setCorriendo(false)
+    setProgramaCrudo(previo)
+    setHayHistoria((n) => n + 1)
+    setEjemplo(false)
+    setAviso('Volviste a tu tarea.')
+  }
+
   const barra = (
     <BarraPLC
       corriendo={corriendo}
@@ -364,6 +409,11 @@ export default function UnidadPLC() {
 
   const areaPrograma = (
     <>
+      {ejemploEnTarea && (
+        <AvisoEjemplo onVolver={volverDelEjemplo}>
+          <strong>Esto es un ejemplo, no tu entrega.</strong> Solo la memoria de marcha, a medias. Tu programa de la tarea sigue guardado.
+        </AvisoEjemplo>
+      )}
       {ejercicioActual && <TarjetaEjercicio ejercicio={ejercicioActual} programa={programa} notacion={notacion} />}
       {/* Acostado en el celular el título se omite: el estado RUN/STOP ya está en el botón. */}
       {(!acostado || (corriendo && pausado)) && (
@@ -487,12 +537,6 @@ export default function UnidadPLC() {
     }
     setSeccion('estudiar')
   }
-  const verEjemploGuiado = () => {
-    if (!window.confirm('Se reemplaza el programa por un ejemplo a medias: la memoria de marcha con START y STOP. No mueve la cinta ni abre la válvula. ¿Seguir?')) return
-    setCorriendo(false)
-    setPrograma(ejemploGuiadoSilo())
-    setAviso('Ejemplo guiado cargado. La marca M0.0 queda en marcha; la cinta, la válvula y los pilotos van en los escalones de abajo.')
-  }
   const pasoTarea = enTarea ? pasoSilo(programa) : null
   const checklistTarea = enTarea ? checklistSilo(programa) : []
 
@@ -505,19 +549,23 @@ export default function UnidadPLC() {
             tituloCorto: 'Proceso',
             contenido: (
               <div data-plano-tarea="si">
+                {ejemploEnTarea ? (
+                  <section className="proceso" aria-label="Proceso de la tarea" data-paso-ahora="ejemplo">
+                    <p style={{ margin: 0, fontWeight: 700 }}>Ejemplo guiado. No es tu entrega.</p>
+                    <p style={{ margin: '6px 0 0' }}>Solo la memoria de marcha con START y STOP. Sirve para mirar cómo se arma un escalón. La cinta, la válvula y los pilotos quedan para tu tarea.</p>
+                  </section>
+                ) : (
                 <ProcesoTarea etapas={ETAPAS_SILO} paso={pasoTarea}>
                   <p className="u-m-8-0-0">
-                    <button type="button" onClick={verEjemploGuiado} style={botonSuave}>
-                      Ver ejemplo guiado
-                    </button>{' '}
                     <button type="button" onClick={() => irAEstudiar(pasoTarea.id === 'probar' ? 'scan' : pasoTarea.id === 'nombrar' ? 'entradas-salidas' : 'ladder')} style={enlaceEstudiar}>
                       ¿No recuerdas este paso? → Estudiar
                     </button>
                   </p>
                 </ProcesoTarea>
+                )}
                 <p style={{ margin: '8px 0 6px', fontSize: '0.84rem', color: 'var(--tinta)' }}>{PLANTAS.silo.resumen}</p>
                 <ul style={{ margin: 0, paddingLeft: 0, listStyle: 'none' }} data-checklist-tarea="si">
-                  {checklistTarea.map((p) => (
+                  {(ejemploEnTarea ? [] : checklistTarea).map((p) => (
                     <li key={p.texto} style={{ margin: '2px 0', fontSize: '0.84rem', color: p.ok ? 'var(--verde-oscuro)' : 'var(--naranjo-aviso)' }}>
                       {p.ok ? '✓' : '☐'} {p.texto}
                     </li>
@@ -574,7 +622,7 @@ export default function UnidadPLC() {
         seccion={seccion}
         onSeccion={setSeccion}
         tarea={NOMBRE_TAREA}
-        entregar={enTarea ? { abierto: entregaAbierta, onAlternar: () => setEntregaAbierta((a) => !a), etiqueta: 'Entregar Tarea PLC', etiquetaCorta: 'Entregar' } : undefined}
+        entregar={enTarea ? { abierto: entregaAbierta, onAlternar: () => (ejemploEnTarea && !entregaAbierta ? setAviso('Estás viendo el ejemplo: vuelve a tu tarea antes de entregar.') : setEntregaAbierta((a) => !a)), etiqueta: 'Entregar Tarea PLC', etiquetaCorta: 'Entregar' } : undefined}
       />
       {seccion !== 'estudiar' ? (
         <BancoDividido<PestanaPLC>
@@ -585,7 +633,12 @@ export default function UnidadPLC() {
           barra={barra}
           izquierda={{ id: 'programa', titulo: 'Programa', contenido: areaPrograma }}
           derecha={{ id: 'planta', titulo: 'Planta', contenido: areaPlanta }}
-          inferior={{ etiqueta: enTarea ? 'Proceso, entradas y registro' : 'Entradas, tablas y registro', pestanas, estado: panel }}
+          inferior={{
+            etiqueta: enTarea ? 'Proceso, entradas y registro' : 'Entradas, tablas y registro',
+            pestanas,
+            estado: panel,
+            encabezado: enTarea ? <BarraEjemplo ejemplo={ejemploEnTarea} aviso="Estás viendo el ejemplo guiado. No es tu entrega." etiquetaVer="Ver ejemplo guiado" onVer={verEjemploGuiado} onVolver={volverDelEjemplo} /> : undefined,
+          }}
           estado={barraEstado}
           movil={movil}
           onMovil={setMovil}
@@ -634,6 +687,7 @@ export default function UnidadPLC() {
           actual={() => programa}
           abrir={(dato) => {
             if (!esProgramaPLC(dato)) return 'Ese trabajo no es un programa de PLC válido.'
+            if (ejemploEnTarea) return 'Estás viendo el ejemplo. Pulsa «Volver a mi tarea» antes de abrir otro trabajo.'
             cargar(dato)
           }}
           onCerrar={() => setMisTrabajos(false)}
