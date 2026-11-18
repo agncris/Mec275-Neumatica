@@ -991,30 +991,7 @@ export default function Maquina3D({
     <div ref={envolturaRef} style={{ position: 'relative', height: pantalla ? '100%' : typeof alto === 'string' ? alto : undefined, background: 'var(--fondo-gris)' }}>
       <div ref={contRef} style={{ width: '100%', height: pantalla ? '100%' : alto, borderRadius: 8, overflow: 'hidden', background: 'var(--fondo-gris)' }} />
       <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 4 }}>
-        {(
-          [
-            ['iso', '3D'],
-            ['frente', 'Frente'],
-            ['arriba', 'Arriba'],
-          ] as Array<[Vista, string]>
-        ).map(([v, t]) => (
-          <button
-            key={v}
-            onClick={() => accionRef.current?.(v)}
-            aria-pressed={vistaActual === v}
-            style={{
-              border: '1px solid var(--borde)',
-              background: vistaActual === v ? 'var(--tinta)' : 'rgba(255,255,255,0.9)',
-              color: vistaActual === v ? '#fff' : 'var(--tinta)',
-              borderRadius: 6,
-              padding: '2px 8px',
-              fontSize: '0.78rem',
-              cursor: 'pointer',
-            }}
-          >
-            {t}
-          </button>
-        ))}
+        {/* Las vistas (3D, frente, arriba) están en el cubo de vistas. */}
         <BotonPantallaCompleta activa={pantalla} onAlternar={alternarPantalla} estilo={{ border: '1px solid #c6ced6', background: 'rgba(255,255,255,0.9)', color: '#33475c', borderRadius: 6, padding: '2px 8px', fontSize: '0.78rem', cursor: 'pointer' }} />
       </div>
       {pantalla && (

@@ -21,13 +21,6 @@ const AYUDA: Record<ModoArrastre, string> = {
   zoom: 'Arrastra arriba o abajo para acercar · o usa + y −',
 }
 
-const VISTAS: Array<{ id: VistaCamara; etiqueta: string }> = [
-  { id: 'arriba', etiqueta: 'Arriba' },
-  { id: 'lado', etiqueta: 'Lado' },
-  { id: 'iso', etiqueta: '3D' },
-  { id: 'frente', etiqueta: 'Frente' },
-]
-
 const chip: CSSProperties = {
   border: '1px solid #c6ced6',
   background: 'rgba(255,255,255,0.95)',
@@ -60,13 +53,12 @@ export function BotonPlayEscena({ play }: { play: PlayEscena }) {
 
 export default function HudEscena({
   play,
-  vista,
-  onVista,
   modo,
   onModo,
   onZoom,
 }: {
   play?: PlayEscena
+  /** Ya no se usan: las vistas están en el cubo de vistas. Se aceptan para no romper a quien las pase. */
   vista?: VistaCamara
   onVista?: (v: VistaCamara) => void
   modo: ModoArrastre
@@ -76,14 +68,6 @@ export default function HudEscena({
   return (
     <>
       <div style={mando} data-mando-camara="si">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 4, justifyItems: 'center' }}>
-          <span />
-          <VistaBoton id="arriba" actual={vista} onVista={onVista} />
-          <span />
-          <VistaBoton id="lado" actual={vista} onVista={onVista} />
-          <VistaBoton id="iso" actual={vista} onVista={onVista} />
-          <VistaBoton id="frente" actual={vista} onVista={onVista} />
-        </div>
         <div role="group" aria-label="Qué hace el arrastre" className="u-fila-4">
           {(
             [
@@ -125,27 +109,6 @@ export default function HudEscena({
         </div>
       )}
     </>
-  )
-}
-
-function VistaBoton({ id, actual, onVista }: { id: VistaCamara; actual?: VistaCamara; onVista?: (v: VistaCamara) => void }) {
-  const etiqueta = VISTAS.find((v) => v.id === id)?.etiqueta ?? id
-  const activo = actual === id
-  return (
-    <button
-      type="button"
-      aria-pressed={activo}
-      onClick={() => onVista?.(id)}
-      style={{
-        ...chip,
-        minWidth: 64,
-        background: activo ? 'var(--tinta)' : 'rgba(255,255,255,0.95)',
-        color: activo ? '#fff' : 'var(--tinta)',
-        fontWeight: 600,
-      }}
-    >
-      {etiqueta}
-    </button>
   )
 }
 

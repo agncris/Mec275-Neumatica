@@ -263,12 +263,22 @@ function armarRobot(m: ModeloRobot, pedestal: number, h: Herramienta): ModeloArm
   const g4 = new THREE.Group()
   g4.position.set(0, 0, m.a3)
   g3.add(g4)
-  const antebrazo = cil(55 * s, m.d4 - 60 * s, NARANJA, 'x', 32, 45 * s)
-  antebrazo.position.x = (m.d4 - 60 * s) / 2
+  // El antebrazo llega hasta la horquilla de la muñeca: entre los dos no queda aire.
+  const largoAnte = m.d4 - 70 * s
+  const antebrazo = cil(55 * s, largoAnte, NARANJA, 'x', 32, 45 * s)
+  antebrazo.position.x = largoAnte / 2
   // Junta de giro del antebrazo (A4).
   const junta4 = cil(59 * s, 12 * s, GRAFITO, 'x', 40)
   junta4.position.x = 61 * s
-  g4.add(antebrazo, junta4)
+  // Horquilla: un puente detrás de la muñeca y dos placas a los lados, como en un KUKA real.
+  const puente = caja(44 * s, 150 * s, 76 * s, NARANJA, 8 * s)
+  puente.position.x = m.d4 - 62 * s
+  g4.add(antebrazo, junta4, puente)
+  for (const lado of [-1, 1]) {
+    const placaM = caja(96 * s, 14 * s, 84 * s, NARANJA, 6 * s)
+    placaM.position.set(m.d4 - 30 * s, lado * 68 * s, 0)
+    g4.add(placaM)
+  }
   // A5 (muñeca)
   const g5 = new THREE.Group()
   g5.position.set(m.d4, 0, 0)
@@ -424,7 +434,7 @@ export default function Robot3D({
   const [pantalla, alternarPantalla] = usePantallaCompleta(envolturaRef)
   const [sinWebGL, setSinWebGL] = useState(false)
   const accion = useRef<((v: Vista) => void) | null>(null)
-  const [vistaActual, setVistaActual] = useState<Vista>('iso')
+  const [, setVistaActual] = useState<Vista>('iso')
   const [detalle, setDetalle] = useState(false)
   const [hayCorte, setHayCorte] = useState(false)
   const detalleRef = useRef(false)
@@ -870,33 +880,7 @@ export default function Robot3D({
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginBottom: 8, flex: 'none' }}>
         <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>{encabezado}</div>
         <div style={{ marginLeft: 'auto', display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 8, flex: '1 1 240px' }} role="toolbar" aria-label="Vistas de la simulación">
-          {!pantalla &&
-            (
-              [
-                ['iso', '3D'],
-                ['frente', 'Frente'],
-                ['lado', 'Lado'],
-                ['arriba', 'Arriba'],
-              ] as Array<[Vista, string]>
-            ).map(([v, t]) => (
-              <button
-                key={v}
-                onClick={() => accion.current?.(v)}
-                aria-pressed={vistaActual === v}
-                style={{
-                  border: '1px solid var(--borde-suave)',
-                  background: vistaActual === v ? 'var(--tinta)' : '#fff',
-                  color: vistaActual === v ? '#fff' : 'var(--tinta-suave)',
-                  borderRadius: 8,
-                  padding: '4px 10px',
-                  fontSize: '0.8rem',
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                }}
-              >
-                {t}
-              </button>
-            ))}
+          {/* Las vistas (3D, frente, lado, arriba) están en el cubo de vistas. */}
           {!sinDetalle && (
           <button
             type="button"
