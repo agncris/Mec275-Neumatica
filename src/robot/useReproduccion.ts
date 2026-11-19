@@ -23,7 +23,8 @@ export function useReproduccion({ nombre, avisar }: { nombre: string | undefined
     const c = canvasRef.current
     if (!c || !puedeGrabar) return avisar('Este navegador no permite grabar video.')
     const tipo = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'].find((t) => MediaRecorder.isTypeSupported(t))
-    const rec = new MediaRecorder(c.captureStream(30), tipo ? { mimeType: tipo, videoBitsPerSecond: 6_000_000 } : undefined)
+    // 2,5 Mbps: la simulación completa de la Tarea 4 (unos 136 s) queda bajo los 50 MB que acepta Aula. A 6 Mbps pasaba.
+    const rec = new MediaRecorder(c.captureStream(30), tipo ? { mimeType: tipo, videoBitsPerSecond: 2_500_000 } : undefined)
     const partes: Blob[] = []
     rec.ondataavailable = (e) => e.data.size && partes.push(e.data)
     rec.onstop = () => {
